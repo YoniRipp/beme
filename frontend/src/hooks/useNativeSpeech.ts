@@ -23,7 +23,7 @@ interface UseNativeSpeechReturn {
  * Returns empty/no-op implementations when not running in a native context.
  */
 export function useNativeSpeech(options: UseNativeSpeechOptions = {}): UseNativeSpeechReturn {
-  const { language = 'he-IL', onPartialResult } = options;
+  const { language = '', onPartialResult } = options;
   const [isListening, setIsListening] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
   const [currentTranscript, setCurrentTranscript] = useState('');

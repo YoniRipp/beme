@@ -1,29 +1,16 @@
 import { useCallback, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { Mic, Lock, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { queryKeys } from '@/lib/queryClient';
-import { useSchedule } from '@/hooks/useSchedule';
-import { useTransactions } from '@/hooks/useTransactions';
-import { useEnergy } from '@/hooks/useEnergy';
-import { useWorkouts } from '@/hooks/useWorkouts';
-import { useGoals } from '@/hooks/useGoals';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { executeVoiceAction, type VoiceExecutorContext } from '@/lib/voiceActionExecutor';
+import { useVoiceExecution } from '@/hooks/useVoiceExecution';
 import { toast } from '@/components/shared/ToastProvider';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn } from '@/lib/utils';
 
 export function VoiceMicHero() {
   const { isPro, subscribe } = useSubscription();
-  const queryClient = useQueryClient();
+  const { processAndNotify } = useVoiceExecution();
   const [statusText, setStatusText] = useState('');
-
-  const { scheduleItems, addScheduleItems, updateScheduleItem, deleteScheduleItem, getScheduleItemById } = useSchedule();
-  const { transactions, addTransaction, updateTransaction, deleteTransaction } = useTransactions();
-  const { foodEntries, addFoodEntry, updateFoodEntry, deleteFoodEntry, updateCheckIn, addCheckIn, deleteCheckIn, getCheckInByDate } = useEnergy();
-  const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts();
-  const { goals, addGoal, updateGoal, deleteGoal } = useGoals();
 
   const {
     isAvailable,
@@ -34,15 +21,6 @@ export function VoiceMicHero() {
     stopListening,
     getVoiceResult,
   } = useSpeechRecognition();
-
-  const voiceContext = {
-    scheduleItems, addScheduleItems, updateScheduleItem, deleteScheduleItem, getScheduleItemById,
-    transactions, addTransaction, updateTransaction, deleteTransaction,
-    foodEntries, addFoodEntry, updateFoodEntry, deleteFoodEntry,
-    addCheckIn, updateCheckIn, deleteCheckIn, getCheckInByDate,
-    workouts, addWorkout, updateWorkout, deleteWorkout,
-    goals, addGoal, updateGoal, deleteGoal,
-  } as VoiceExecutorContext;
 
   const handleMicClick = useCallback(async () => {
     if (!isPro) {
@@ -56,47 +34,14 @@ export function VoiceMicHero() {
         await stopListening();
         const result = await getVoiceResult();
 
-        if (!result || result.actions.length === 0 || result.actions[0].intent === 'unknown') {
-          setStatusText('');
-          toast.error('No speech captured or not understood. Try again.');
-          return;
-        }
+        const r = await processAndNotify(result);
 
-        const succeeded: string[] = [];
-        const failed: { action: string; reason: string }[] = [];
-
-        if (result.results) {
-          for (const r of result.results) {
-            if (r.success) succeeded.push(r.message ?? r.intent);
-            else failed.push({ action: r.intent, reason: r.message ?? 'Failed' });
-          }
-          await queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.schedule });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.workouts });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.foodEntries });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.checkIns });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.goals });
-        } else {
-          for (const action of result.actions) {
-            try {
-              const r = await executeVoiceAction(action, voiceContext);
-              if (r.success) succeeded.push(r.message ?? action.intent);
-              else failed.push({ action: action.intent, reason: r.message ?? 'Failed' });
-            } catch (e) {
-              failed.push({ action: action.intent ?? 'unknown', reason: e instanceof Error ? e.message : 'Failed' });
-            }
-          }
-        }
-
-        if (succeeded.length > 0 && failed.length === 0) {
-          const msg = succeeded.length === 1 ? succeeded[0] : `Done: ${succeeded.join(', ')}`;
+        if (r.succeeded.length > 0 && r.failed.length === 0) {
+          const msg = r.succeeded.length === 1 ? r.succeeded[0] : `Done: ${r.succeeded.join(', ')}`;
           setStatusText(msg);
-          toast.success(msg);
-        } else if (succeeded.length > 0) {
-          toast.success(`Added ${succeeded.length} item(s). ${failed.length} failed.`);
-          setStatusText(`${succeeded.length} added, ${failed.length} failed`);
-        } else if (failed.length > 0) {
-          toast.error('Voice action failed', { description: failed[0].reason });
+        } else if (r.succeeded.length > 0) {
+          setStatusText(`${r.succeeded.length} added, ${r.failed.length} failed`);
+        } else {
           setStatusText('');
         }
 
@@ -120,7 +65,7 @@ export function VoiceMicHero() {
       setStatusText('');
       toast.error('Could not start recording', { description: e instanceof Error ? e.message : 'Check microphone permissions.' });
     }
-  }, [isPro, subscribe, isListening, isAvailable, startListening, stopListening, getVoiceResult, voiceContext, queryClient]);
+  }, [isPro, subscribe, isListening, isAvailable, startListening, stopListening, getVoiceResult, processAndNotify]);
 
   const state = isListening ? 'listening' : isProcessing ? 'processing' : 'idle';
 

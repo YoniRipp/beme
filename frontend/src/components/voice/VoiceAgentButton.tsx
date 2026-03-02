@@ -1,15 +1,8 @@
 import { useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { Mic, Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { queryKeys } from '@/lib/queryClient';
-import { useSchedule } from '@/hooks/useSchedule';
-import { useTransactions } from '@/hooks/useTransactions';
-import { useEnergy } from '@/hooks/useEnergy';
-import { useWorkouts } from '@/hooks/useWorkouts';
-import { useGoals } from '@/hooks/useGoals';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { executeVoiceAction, type VoiceExecutorContext } from '@/lib/voiceActionExecutor';
+import { useVoiceExecution } from '@/hooks/useVoiceExecution';
 import { toast } from '@/components/shared/ToastProvider';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -22,12 +15,7 @@ interface VoiceAgentButtonProps {
 
 export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonProps = {}) {
   const { isPro } = useSubscription();
-  const queryClient = useQueryClient();
-  const { scheduleItems, addScheduleItems, updateScheduleItem, deleteScheduleItem, getScheduleItemById } = useSchedule();
-  const { transactions, addTransaction, updateTransaction, deleteTransaction } = useTransactions();
-  const { foodEntries, addFoodEntry, updateFoodEntry, deleteFoodEntry, updateCheckIn, addCheckIn, deleteCheckIn, getCheckInByDate } = useEnergy();
-  const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts();
-  const { goals, addGoal, updateGoal, deleteGoal } = useGoals();
+  const { processAndNotify } = useVoiceExecution();
 
   const {
     isAvailable,
@@ -37,34 +25,6 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
     stopListening,
     getVoiceResult,
   } = useSpeechRecognition();
-
-  const voiceContext = {
-    scheduleItems,
-    addScheduleItems,
-    updateScheduleItem,
-    deleteScheduleItem,
-    getScheduleItemById,
-    transactions,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-    foodEntries,
-    addFoodEntry,
-    updateFoodEntry,
-    deleteFoodEntry,
-    addCheckIn,
-    updateCheckIn,
-    deleteCheckIn,
-    getCheckInByDate,
-    workouts,
-    addWorkout,
-    updateWorkout,
-    deleteWorkout,
-    goals,
-    addGoal,
-    updateGoal,
-    deleteGoal,
-  } as VoiceExecutorContext;
 
   const handleClick = useCallback(async () => {
     if (onTogglePanel != null) {
@@ -81,49 +41,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
       try {
         await stopListening();
         const result = await getVoiceResult();
-
-        if (!result || result.actions.length === 0 || result.actions[0].intent === 'unknown') {
-          toast.error('No speech captured or not understood. Try again.');
-          return;
-        }
-
-        const succeeded: string[] = [];
-        const failed: { action: string; reason: string }[] = [];
-
-        if (result.results) {
-          for (const r of result.results) {
-            if (r.success) succeeded.push(r.message ?? r.intent);
-            else failed.push({ action: r.intent, reason: r.message ?? 'Could not complete action. Please try again.' });
-          }
-          await queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.schedule });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.workouts });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.foodEntries });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.checkIns });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.goals });
-        } else {
-          for (const action of result.actions) {
-            try {
-              const r = await executeVoiceAction(action, voiceContext);
-              if (r.success) {
-                succeeded.push(r.message ?? action.intent);
-              } else {
-                failed.push({ action: action.intent, reason: r.message ?? 'Could not complete action. Please try again.' });
-              }
-            } catch (e) {
-              failed.push({ action: action.intent ?? 'unknown', reason: e instanceof Error ? e.message : 'Could not complete action. Please try again.' });
-            }
-          }
-        }
-
-        if (succeeded.length > 0 && failed.length === 0) {
-          toast.success(succeeded.length === 1 ? succeeded[0] : `Done: ${succeeded.join(', ')}`);
-        } else if (succeeded.length > 0 && failed.length > 0) {
-          toast.success(`Added ${succeeded.length} item(s). ${failed.length} failed: ${failed.map((f) => f.reason).join('; ')}`);
-        } else if (failed.length > 0) {
-          const msg = failed[0].reason;
-          toast.error('Voice action failed', { description: msg });
-        }
+        await processAndNotify(result);
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Network or server error. Please try again.';
         toast.error('Voice processing failed', { description: msg });
@@ -142,7 +60,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
       const msg = e instanceof Error ? e.message : 'Could not start listening. Please check microphone permissions.';
       toast.error('Could not start recording', { description: msg });
     }
-  }, [onTogglePanel, isPro, isListening, isAvailable, startListening, stopListening, getVoiceResult, voiceContext, queryClient]);
+  }, [onTogglePanel, isPro, isListening, isAvailable, startListening, stopListening, getVoiceResult, processAndNotify]);
 
   const state = isListening ? 'listening' : isProcessing ? 'processing' : 'idle';
   const isActive = onTogglePanel != null ? panelOpen : state === 'listening' || state === 'processing';
