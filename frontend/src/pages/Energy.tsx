@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useEnergy } from '@/hooks/useEnergy';
 import { FoodEntry, type DailyCheckIn } from '@/types/energy';
-import { PageTitle } from '@/components/layout/PageTitle';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { SleepEditModal } from '@/components/energy/SleepEditModal';
 import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
@@ -214,8 +213,6 @@ export function Energy() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <PageTitle title="Energy" subtitle="Track your daily energy" />
-
       <ContentWithLoading loading={energyLoading} loadingText="Loading energy...">
       {/* Calories Balance Card */}
       <Card className="p-6">

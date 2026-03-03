@@ -61,7 +61,7 @@ describe('Settings Page', () => {
 
   it('renders settings page with title', () => {
     render(<Settings />, { wrapper });
-    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /currency/i })).toBeInTheDocument();
   });
 
   it('displays currency section', () => {

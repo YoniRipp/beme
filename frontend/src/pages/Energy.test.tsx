@@ -36,9 +36,11 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('Energy Page', () => {
-  it('renders energy page', () => {
+  it('renders energy page', async () => {
     render(<Energy />, { wrapper });
-    expect(screen.getByRole('heading', { name: /^energy$/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/calorie balance/i)).toBeInTheDocument();
+    });
   });
 
   it('shows calorie balance section', async () => {

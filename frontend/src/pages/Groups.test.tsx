@@ -36,7 +36,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 describe('Groups Page', () => {
   it('renders groups page with title', () => {
     render(<Groups />, { wrapper });
-    expect(screen.getByText(/my groups/i)).toBeInTheDocument();
+    expect(screen.getByText(/new group/i)).toBeInTheDocument();
   });
 
   it('displays new group button', () => {

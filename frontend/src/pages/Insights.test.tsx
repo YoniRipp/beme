@@ -69,7 +69,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 describe('Insights Page', () => {
   it('renders insights page with title', () => {
     render(<Insights />, { wrapper });
-    expect(screen.getByRole('heading', { name: /^insights$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /financial insights/i })).toBeInTheDocument();
   });
 
   it('displays financial insights section', () => {

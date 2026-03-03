@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { Workout } from '@/types/workout';
-import { PageTitle } from '@/components/layout/PageTitle';
 import { WorkoutCard } from '@/components/body/WorkoutCard';
 import { WorkoutModal } from '@/components/body/WorkoutModal';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
@@ -97,8 +96,6 @@ export function Body() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <PageTitle title="Body" subtitle="Workouts & Tracking" />
-
       <div>
         <div className="flex items-center gap-3 mb-4">
           <h2 className="text-xl font-semibold flex-1">Workouts</h2>

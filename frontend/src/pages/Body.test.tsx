@@ -50,7 +50,7 @@ describe('Body Page', () => {
 
   it('renders body page', () => {
     render(<Body />, { wrapper });
-    expect(screen.getByText(/body/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /workouts/i })).toBeInTheDocument();
   });
 
   it('shows workouts section', () => {

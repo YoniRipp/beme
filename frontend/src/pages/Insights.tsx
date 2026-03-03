@@ -4,7 +4,6 @@ import { useSettings } from '@/hooks/useSettings';
 import { useExchangeRates } from '@/features/money/useExchangeRates';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
-import { PageTitle } from '@/components/layout/PageTitle';
 import { useSubscription } from '@/hooks/useSubscription';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import {
@@ -96,7 +95,6 @@ export function Insights() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <PageTitle title="Insights" subtitle="Analytics and trends" />
       {isPro ? (
         <AiInsightsSection />
       ) : (

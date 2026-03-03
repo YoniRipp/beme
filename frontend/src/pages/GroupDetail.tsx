@@ -5,7 +5,6 @@ import { useGroups } from '@/hooks/useGroups';
 import { useSchedule } from '@/hooks/useSchedule';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useSettings } from '@/hooks/useSettings';
-import { PageTitle } from '@/components/layout/PageTitle';
 import { ScheduleItem as ScheduleItemComponent } from '@/components/home/ScheduleItem';
 import { ScheduleModal } from '@/components/home/ScheduleModal';
 import { GroupSettingsModal } from '@/components/groups/GroupSettingsModal';
@@ -133,11 +132,6 @@ export function GroupDetail() {
           </Button>
         )}
       </div>
-
-      <PageTitle
-        title={group.name}
-        subtitle={group.description || `${group.type} · ${group.members.length} members`}
-      />
 
       <div>
         <h3 className="text-sm font-medium text-muted-foreground mb-2">Members</h3>

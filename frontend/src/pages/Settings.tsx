@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useSettings } from '@/hooks/useSettings';
-import { PageTitle } from '@/components/layout/PageTitle';
 import { toast } from 'sonner';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { DEFAULT_SETTINGS } from '@/types/settings';
@@ -40,8 +39,6 @@ export function Settings() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <PageTitle title="Settings" subtitle="Manage your preferences" />
-
       <SubscriptionSection />
       <AccountSection />
       <CurrencySection />

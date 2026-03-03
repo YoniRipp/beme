@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useGroups } from '@/hooks/useGroups';
 import { useApp } from '@/context/AppContext';
 import { Group, GroupInvitation } from '@/types/group';
-import { PageTitle } from '@/components/layout/PageTitle';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { GroupCard } from '@/components/groups/GroupCard';
 import { GroupInvitations } from '@/components/groups/GroupInvitations';
@@ -49,8 +48,6 @@ export function Groups() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <PageTitle title="My Groups" subtitle="Manage shared groups, expenses and tasks" />
-
       {myInvitations.length > 0 && (
         <Card className="p-4">
           <h2 className="text-lg font-semibold mb-3">Invitations for you</h2>

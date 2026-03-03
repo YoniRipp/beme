@@ -126,10 +126,6 @@ export function Money() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="mb-6 border-b border-border pb-4">
-        <p className="text-sm text-muted-foreground">Where does the money go?</p>
-      </div>
-
       {/* Balance / summary at top (bank-style) */}
       <Card className="p-5 bg-muted/40">
         <div className="flex flex-wrap items-center justify-between gap-4">
