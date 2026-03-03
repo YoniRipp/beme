@@ -55,6 +55,7 @@ const pillars = [
 export function TrustSection() {
   return (
     <section
+      aria-label="Privacy and performance"
       className="py-24 lg:py-32 bg-muted"
     >
       <div className="mx-auto max-w-6xl px-6 lg:px-8">

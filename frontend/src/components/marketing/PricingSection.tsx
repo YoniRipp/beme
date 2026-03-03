@@ -40,9 +40,10 @@ export function PricingSection() {
   return (
     <section
       id="pricing"
-      className="py-24 lg:py-32 bg-background"
+      aria-label="Pricing"
+      className="py-24 lg:py-32 bg-background overflow-visible"
     >
-      <div className="mx-auto max-w-6xl px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-6 lg:px-8 overflow-visible">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -60,31 +61,28 @@ export function PricingSection() {
           </p>
         </motion.div>
 
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-5 md:grid-cols-2 overflow-visible">
           {plans.map((plan, i) => (
-            <motion.div
-              key={plan.name}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.1 }}
-              className={`relative flex flex-col rounded-2xl p-7 transition-all duration-200 ${
-                !plan.popular
-                  ? 'border border-border hover:border-primary/30 hover:shadow-lg'
-                  : ''
-              }`}
-              style={{
-                backgroundColor: plan.popular ? 'hsl(var(--primary))' : 'hsl(var(--card))',
-              }}
-            >
+            <div key={plan.name} className={`relative ${plan.popular ? 'pt-6' : ''}`}>
               {plan.popular && (
-                <div className="absolute -top-3 left-6">
-                  <span className="rounded-full bg-primary/20 px-3 py-1 text-[10px] font-bold text-primary">
+                <div className="absolute top-0 left-6 z-10">
+                  <span className="rounded-full bg-primary px-3 py-1 text-[10px] font-bold text-primary-foreground">
                     Most Popular
                   </span>
                 </div>
               )}
-
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
+                className={`relative flex flex-col rounded-2xl p-7 transition-all duration-200 ${
+                  !plan.popular ? 'border border-border hover:border-primary/30 hover:shadow-lg' : ''
+                }`}
+                style={{
+                  backgroundColor: plan.popular ? 'hsl(var(--primary))' : 'hsl(var(--card))',
+                }}
+              >
               <div className="mb-6">
                 <h3 className={`mb-1 text-sm font-semibold ${plan.popular ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                   {plan.name}
@@ -117,12 +115,14 @@ export function PricingSection() {
 
               <Link
                 to="/signup"
+                aria-label={`${plan.cta} - ${plan.name} plan`}
                 className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all hover:opacity-90 ${plan.popular ? 'bg-primary-foreground text-primary' : 'border border-border bg-muted text-foreground'}`}
               >
                 {plan.cta}
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
-            </motion.div>
+              </motion.div>
+            </div>
           ))}
         </div>
       </div>

@@ -82,6 +82,8 @@ export function Navbar() {
           </div>
 
           <button
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileOpen}
             className={`p-2 md:hidden ${scrolled ? 'text-primary' : 'text-primary-foreground'}`}
             onClick={() => setMobileOpen(!mobileOpen)}
           >

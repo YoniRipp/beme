@@ -8,7 +8,7 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative flex min-h-screen items-center pt-16 bg-primary">
+    <section aria-label="Hero" className="relative flex min-h-screen items-center pt-16 bg-primary">
       <div className="mx-auto w-full max-w-6xl px-6 py-24 lg:px-8 lg:py-32">
         <div className="grid items-center gap-16 lg:grid-cols-2">
           <motion.div

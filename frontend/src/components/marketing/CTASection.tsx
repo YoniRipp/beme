@@ -8,7 +8,7 @@ export function CTASection() {
   };
 
   return (
-    <section className="font-sans py-24 lg:py-32 bg-primary">
+    <section aria-label="Call to action" className="font-sans py-24 lg:py-32 bg-primary">
       <div className="mx-auto max-w-6xl px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

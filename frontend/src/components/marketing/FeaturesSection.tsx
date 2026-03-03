@@ -81,6 +81,7 @@ export function FeaturesSection() {
   return (
     <section
       id="features"
+      aria-label="Features"
       className="py-24 lg:py-32 bg-background"
     >
       <div className="mx-auto max-w-6xl px-6 lg:px-8">
