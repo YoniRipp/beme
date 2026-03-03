@@ -113,7 +113,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   currency: 'USD',
   dateFormat: 'DD/MM/YYYY',
   units: 'metric',
-  theme: 'system',
+  theme: 'light',
   balanceDisplayColor: 'green',
   balanceDisplayLayout: 'with_income_expenses',
 };

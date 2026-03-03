@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  THEMES,
   BALANCE_DISPLAY_COLORS,
   BALANCE_DISPLAY_LAYOUTS,
 } from '@/types/settings';
@@ -19,11 +18,6 @@ import { SettingsSection } from './SettingsSection';
 
 export function AppearanceSection() {
   const { settings, updateSettings } = useSettings();
-
-  const handleThemeChange = (value: string) => {
-    updateSettings({ theme: value as (typeof settings)['theme'] });
-    toast.success('Theme updated');
-  };
 
   const handleBalanceColorChange = (value: string) => {
     updateSettings({ balanceDisplayColor: value as (typeof settings)['balanceDisplayColor'] });
@@ -50,24 +44,6 @@ export function AppearanceSection() {
   return (
     <SettingsSection icon={Palette} title="Appearance" iconColor="text-primary">
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Label>Theme</Label>
-          <Select value={settings.theme} onValueChange={handleThemeChange}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {THEMES.map((theme) => (
-                <SelectItem key={theme.value} value={theme.value}>
-                  {theme.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-sm text-muted-foreground">
-            Choose light, dark, or follow system preference
-          </p>
-        </div>
         <div className="space-y-2">
           <Label>Accent color</Label>
           <Select value={settings.balanceDisplayColor} onValueChange={handleBalanceColorChange}>
