@@ -1,0 +1,125 @@
+---
+description: BMe project rules for Cursor AI
+globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+---
+
+# BMe Project Rules
+
+## Overview
+
+BMe is a life management monorepo with React/Vite frontend, Node/Express backend, and React Native mobile app. It tracks finances, workouts, energy/food, schedule, and goals with voice input via Gemini AI.
+
+## Tech Stack
+
+- **Backend**: Node.js 20+, Express, TypeScript, PostgreSQL/pgvector, Redis/BullMQ
+- **Frontend**: React 18, Vite, Tailwind CSS, shadcn/ui, React Query
+- **Mobile**: React Native with Expo, Capacitor
+- **AI**: Google Gemini API for voice and embeddings
+- **Payments**: Stripe
+
+## Code Style
+
+### General Rules
+- Use ES Modules (`import`/`export`), never CommonJS
+- TypeScript strict mode - no `any` types
+- Descriptive variable names (no single letters except loop indices)
+- Max 120 characters per line
+
+### Backend Patterns
+```typescript
+// Route handler pattern
+export const handler = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const result = await service.method(userId, req.body);
+  sendJson(res, result);
+});
+
+// Zod validation
+const schema = z.object({
+  name: z.string().min(1).max(255),
+  amount: z.number().min(0),
+});
+```
+
+### Frontend Patterns
+```tsx
+// Component with hooks
+export function Component() {
+  const { data, isLoading } = useQuery({ queryKey: ['key'], queryFn: api.fetch });
+  
+  if (isLoading) return <Skeleton />;
+  
+  return <div>{data}</div>;
+}
+```
+
+## Forbidden Patterns
+
+- `console.log` in production code (use `logger`)
+- Raw SQL string concatenation (use parameterized queries)
+- `any` type annotations
+- `// @ts-ignore` without explanation
+- Empty catch blocks
+- Secrets in code
+
+## File Organization
+
+### Backend
+```
+backend/src/
+├── routes/      # HTTP endpoints
+├── controllers/ # Request handlers
+├── services/    # Business logic
+├── models/      # Data access
+├── middleware/  # Auth, validation
+└── events/      # Async processing
+```
+
+### Frontend
+```
+frontend/src/
+├── pages/       # Route components
+├── components/  # UI components by domain
+├── features/    # Domain modules (api.ts, hooks/)
+├── hooks/       # Shared hooks
+├── context/     # React contexts
+└── lib/         # Utilities
+```
+
+## Testing
+
+- Co-locate tests: `foo.ts` → `foo.test.ts`
+- Use Vitest with @testing-library/react
+- Mock external services (Gemini, Stripe, Redis)
+
+## Database
+
+- Migrations in `backend/migrations/`
+- Use `pgm.sql()` for raw SQL
+- Always write down migrations
+- Use parameterized queries only
+
+## Voice System
+
+Key files for voice commands:
+- `backend/voice/tools.js` - Gemini function declarations
+- `backend/src/services/voice.ts` - VOICE_PROMPT and handlers
+- `backend/src/services/voiceExecutor.ts` - Action execution
+
+## MCP Integration
+
+BMe has an MCP server at `backend/mcp-server/index.js` for AI assistant integration.
+
+## Common Commands
+
+```bash
+# Dev servers
+cd backend && npm run dev
+cd frontend && npm run dev
+
+# Testing
+npm test
+
+# Migrations
+cd backend && npm run migrate:up
+```
