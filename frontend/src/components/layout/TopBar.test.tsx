@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { TopBar } from './TopBar';
@@ -53,32 +53,16 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('TopBar', () => {
-  it('renders account menu trigger', () => {
+  it('renders sign out button', () => {
     render(<TopBar />, { wrapper });
-    expect(screen.getByRole('button', { name: 'Account menu' })).toBeInTheDocument();
-  });
-
-  it('menu contains Settings and Sign out when opened', async () => {
-    const user = userEvent.setup();
-    render(<TopBar />, { wrapper });
-
-    const trigger = screen.getByRole('button', { name: 'Account menu' });
-    await user.click(trigger);
-
-    expect(screen.getByRole('menuitem', { name: /settings/i })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /sign out/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
   });
 
   it('clicking Sign out calls logout', async () => {
     const user = userEvent.setup();
     render(<TopBar />, { wrapper });
 
-    const trigger = screen.getByRole('button', { name: 'Account menu' });
-    await user.click(trigger);
-
-    const signOut = await screen.findByRole('menuitem', { name: /sign out/i });
-    await waitFor(() => expect(signOut).toBeVisible());
-    fireEvent.click(signOut);
+    await user.click(screen.getByRole('button', { name: /sign out/i }));
 
     expect(mockLogout).toHaveBeenCalled();
   });
