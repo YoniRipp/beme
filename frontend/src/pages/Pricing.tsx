@@ -66,7 +66,7 @@ export function Pricing() {
             </div>
             <CardDescription>AI-powered life tracking</CardDescription>
             <p className="text-3xl font-bold">
-              $4.99<span className="text-sm font-normal text-muted-foreground">/month</span>
+              $7.99<span className="text-sm font-normal text-muted-foreground">/month</span>
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
