@@ -5,6 +5,7 @@ import { useEnergy } from '@/hooks/useEnergy';
 import { useSchedule } from '@/hooks/useSchedule';
 import { useGoals } from '@/hooks/useGoals';
 import { DashboardHero } from '@/components/home/DashboardHero';
+import { DailySummary } from '@/components/home/DailySummary';
 import { VoiceMicHero } from '@/components/voice/VoiceMicHero';
 import { ScheduleItem } from '@/components/home/ScheduleItem';
 import { ScheduleModal } from '@/components/home/ScheduleModal';
@@ -116,6 +117,8 @@ export function Home() {
         energyScore={undefined}
       />
 
+      <DailySummary />
+
       <VoiceMicHero />
 
       {isNewUser && (
@@ -127,8 +130,47 @@ export function Home() {
         </Card>
       )}
 
-      {/* Single column: Today's Schedule on top, Goals below */}
+      {/* Goals first (MyFitnessPal style), then Today's Schedule */}
       <div className="space-y-4 sm:space-y-6">
+        <Card>
+          <CardContent className="p-5">
+            <SectionHeader title="Goals" subtitle="Track what matters" />
+            <ContentWithLoading loading={goalsLoading} loadingText="Loading goals..." error={goalsError}>
+              <div className="space-y-3">
+                {goals.length === 0 ? (
+                  <Card
+                    className="p-8 border-2 border-dashed border-border cursor-pointer hover:border-primary transition-colors text-center"
+                    onClick={() => {
+                      setEditingGoal(undefined);
+                      setGoalModalOpen(true);
+                    }}
+                  >
+                    <Plus className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                    <p className="text-lg font-medium mb-1">Add your first goal</p>
+                    <p className="text-sm text-muted-foreground">Tap to track your progress</p>
+                  </Card>
+                ) : (
+                  <>
+                    {goals.map((goal) => (
+                      <GoalCard key={goal.id} goal={goal} onEdit={handleGoalEdit} />
+                    ))}
+                    <Card
+                      className="p-6 border-2 border-dashed border-border cursor-pointer hover:border-primary transition-colors text-center bg-muted"
+                      onClick={() => {
+                        setEditingGoal(undefined);
+                        setGoalModalOpen(true);
+                      }}
+                    >
+                      <Plus className="w-8 h-8 mx-auto text-primary" />
+                      <p className="text-sm font-medium mt-2 text-muted-foreground">Add another goal</p>
+                    </Card>
+                  </>
+                )}
+              </div>
+            </ContentWithLoading>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardContent className="p-5">
             <SectionHeader
@@ -170,45 +212,6 @@ export function Home() {
                     >
                       <Plus className="w-8 h-8 mx-auto text-primary" />
                       <p className="text-sm font-medium mt-2 text-muted-foreground">Add another schedule item</p>
-                    </Card>
-                  </>
-                )}
-              </div>
-            </ContentWithLoading>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <SectionHeader title="Goals" subtitle="Track what matters" />
-            <ContentWithLoading loading={goalsLoading} loadingText="Loading goals..." error={goalsError}>
-              <div className="space-y-3">
-                {goals.length === 0 ? (
-                  <Card
-                    className="p-8 border-2 border-dashed border-border cursor-pointer hover:border-primary transition-colors text-center"
-                    onClick={() => {
-                      setEditingGoal(undefined);
-                      setGoalModalOpen(true);
-                    }}
-                  >
-                    <Plus className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                    <p className="text-lg font-medium mb-1">Add your first goal</p>
-                    <p className="text-sm text-muted-foreground">Tap to track your progress</p>
-                  </Card>
-                ) : (
-                  <>
-                    {goals.map((goal) => (
-                      <GoalCard key={goal.id} goal={goal} onEdit={handleGoalEdit} />
-                    ))}
-                    <Card
-                      className="p-6 border-2 border-dashed border-border cursor-pointer hover:border-primary transition-colors text-center bg-muted"
-                      onClick={() => {
-                        setEditingGoal(undefined);
-                        setGoalModalOpen(true);
-                      }}
-                    >
-                      <Plus className="w-8 h-8 mx-auto text-primary" />
-                      <p className="text-sm font-medium mt-2 text-muted-foreground">Add another goal</p>
                     </Card>
                   </>
                 )}

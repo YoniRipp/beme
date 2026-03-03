@@ -7,7 +7,7 @@ import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Moon, Plus, Trash2, Pencil } from 'lucide-react';
+import { Moon, Plus, Trash2, Pencil, UtensilsCrossed } from 'lucide-react';
 import { isSameDay, startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
 
@@ -212,32 +212,34 @@ export function Energy() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 pb-24">
       <ContentWithLoading loading={energyLoading} loadingText="Loading energy...">
       {/* Calories Balance Card */}
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Calorie Balance</h3>
-        
-        {/* Period selector cards */}
-        <div className="grid grid-cols-4 gap-2 mb-4">
+
+        {/* Period selector — horizontally scrollable on mobile */}
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
           {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
             const range = getPeriodRange(period, now);
-            const periodEntries = foodEntries.filter(f => 
+            const periodEntries = foodEntries.filter(f =>
               isWithinInterval(new Date(f.date), range)
             );
             const periodCal = periodEntries.reduce((sum, e) => sum + e.calories, 0);
-            
+
             return (
-              <Card
+              <button
                 key={period}
-                className={`p-2 cursor-pointer transition-all hover:scale-105 ${
-                  caloriePeriod === period ? 'ring-2 ring-primary shadow-lg' : ''
+                className={`flex-shrink-0 px-3 py-2 rounded-xl border text-left transition-all min-w-[80px] ${
+                  caloriePeriod === period
+                    ? 'border-primary bg-primary/10 shadow-sm'
+                    : 'border-border bg-card hover:bg-muted'
                 }`}
                 onClick={() => setCaloriePeriod(period)}
               >
-                <p className="text-xs text-muted-foreground capitalize mb-1">{period}</p>
+                <p className="text-xs text-muted-foreground capitalize">{period}</p>
                 <p className="text-sm font-semibold">{periodCal} cal</p>
-              </Card>
+              </button>
             );
           })}
         </div>
@@ -333,26 +335,28 @@ export function Energy() {
       </Card>
 
       {/* Sleep Hours Card */}
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Hours Slept</h3>
-        
-        {/* Period selector cards */}
-        <div className="grid grid-cols-4 gap-2 mb-4">
+
+        {/* Period selector — horizontally scrollable on mobile */}
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
           {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
             const sleep = sleepData[period];
             return (
-              <Card
+              <button
                 key={period}
-                className={`p-2 cursor-pointer transition-all hover:scale-105 ${
-                  sleepPeriod === period ? 'ring-2 ring-primary shadow-lg' : ''
+                className={`flex-shrink-0 px-3 py-2 rounded-xl border text-left transition-all min-w-[80px] ${
+                  sleepPeriod === period
+                    ? 'border-primary bg-primary/10 shadow-sm'
+                    : 'border-border bg-card hover:bg-muted'
                 }`}
                 onClick={() => setSleepPeriod(period)}
               >
-                <p className="text-xs text-muted-foreground capitalize mb-1">{period}</p>
+                <p className="text-xs text-muted-foreground capitalize">{period}</p>
                 <p className="text-sm font-semibold">
                   {sleep.hours > 0 ? `${sleep.hours.toFixed(1)}h` : '—'}
                 </p>
-              </Card>
+              </button>
             );
           })}
         </div>
@@ -419,6 +423,16 @@ export function Energy() {
         </Card>
       </Card>
       </ContentWithLoading>
+
+      {/* Floating Add Food button — visible on mobile */}
+      <button
+        className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-95 transition-all sm:hidden"
+        onClick={handleAddFood}
+        aria-label="Add food entry"
+      >
+        <UtensilsCrossed className="w-4 h-4" />
+        Log Food
+      </button>
 
       <SleepEditModal
         open={sleepModalOpen}

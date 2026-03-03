@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
 @layer base {
   :root {
     /* base44 palette (hex ref: sage #7C9A82, cream #FAFAF7, charcoal #2D3436, terracotta #C67B5C, gold #C4A962, stone #636E72, mist #DFE6E9, cream-warm #F5F0E8, border #E8E5DF) */

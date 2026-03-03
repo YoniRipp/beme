@@ -196,7 +196,7 @@ export function Landing() {
                 </div>
                 <p className="text-sm text-muted-foreground">AI-powered life tracking</p>
                 <p className="mt-2 text-3xl font-bold">
-                  $4.99<span className="text-sm font-normal text-muted-foreground">/month</span>
+                  $7.99<span className="text-sm font-normal text-muted-foreground">/month</span>
                 </p>
               </div>
               <ul className="space-y-2">

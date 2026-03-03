@@ -5,6 +5,8 @@ import { FoodEntry } from '@/types/energy';
 import { foodEntryFormSchema, type FoodEntryFormValues } from '@/schemas/foodEntry';
 import { useDebounce } from '@/hooks/useDebounce';
 import { searchFoods, lookupOrCreateFood, type FoodSearchResult } from '@/features/energy/api';
+import { lookupBarcode } from '@/features/energy/barcodeLookup';
+import { BarcodeScanner } from '@/components/energy/BarcodeScanner';
 import {
   Dialog,
   DialogContent,
@@ -22,8 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ScanBarcode } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface FoodEntryModalProps {
   open: boolean;
@@ -73,6 +76,8 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
   const [searchError, setSearchError] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isLookingUp, setIsLookingUp] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [isScanLooking, setIsScanLooking] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -248,6 +253,41 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
     }
   }, [searchQuery, handleSelectFood]);
 
+  const handleBarcodeDetected = useCallback(async (barcode: string) => {
+    setScannerOpen(false);
+    setIsScanLooking(true);
+    try {
+      const product = await lookupBarcode(barcode);
+      if (!product) {
+        toast.error('Product not found. Please enter nutrition details manually.');
+        return;
+      }
+      const base: Per100g = {
+        calories: Math.round(product.calories),
+        protein:  Math.round(product.protein  * 10) / 10,
+        carbs:    Math.round(product.carbs    * 10) / 10,
+        fats:     Math.round(product.fat      * 10) / 10,
+      };
+      setPer100g(base);
+      setIsLiquid(product.isLiquid);
+      setServingSizesMl(null);
+      setServingType('');
+      setPortionGrams(DEFAULT_REFERENCE_GRAMS);
+      const scaled = scaleFromPer100g(base, DEFAULT_REFERENCE_GRAMS);
+      setValue('name', product.name);
+      setValue('calories', scaled.calories.toString());
+      setValue('protein',  scaled.protein.toString());
+      setValue('carbs',    scaled.carbs.toString());
+      setValue('fats',     scaled.fats.toString());
+      void trigger();
+      toast.success(`Found: ${product.name}`);
+    } catch {
+      toast.error('Could not look up this barcode. Please enter details manually.');
+    } finally {
+      setIsScanLooking(false);
+    }
+  }, [setValue, trigger]);
+
   const onSubmit = (data: FoodEntryFormValues) => {
     onSave({
       date: entry ? entry.date : new Date(),
@@ -273,8 +313,16 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
     (isSearching || searchResults.length > 0 || !!searchError);
 
   return (
+    <>
+      {scannerOpen && (
+        <BarcodeScanner
+          onDetected={handleBarcodeDetected}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
+
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{entry ? 'Edit Food Entry' : 'Add Food Entry'}</DialogTitle>
         </DialogHeader>
@@ -282,23 +330,41 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
           <div className="space-y-4">
             <div ref={searchContainerRef} className="relative">
               <Label htmlFor="food-search">Search food (optional)</Label>
-              <Input
-                id="food-search"
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setDropdownOpen(true);
-                }}
-                onFocus={() => searchQuery.trim().length >= MIN_SEARCH_LENGTH && setDropdownOpen(true)}
-                onBlur={handleSearchBlur}
-                placeholder="e.g., chicken, apple"
-                aria-label="Search for food to auto-fill nutrients"
-                aria-autocomplete="list"
-                aria-expanded={showDropdown}
-                aria-controls="food-search-results"
-                className={cn(showDropdown && 'rounded-b-none border-b-0')}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="food-search"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setDropdownOpen(true);
+                  }}
+                  onFocus={() => searchQuery.trim().length >= MIN_SEARCH_LENGTH && setDropdownOpen(true)}
+                  onBlur={handleSearchBlur}
+                  placeholder="e.g., chicken, apple"
+                  aria-label="Search for food to auto-fill nutrients"
+                  aria-autocomplete="list"
+                  aria-expanded={showDropdown}
+                  aria-controls="food-search-results"
+                  className={cn('flex-1', showDropdown && 'rounded-b-none border-b-0')}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  disabled={isScanLooking}
+                  onClick={() => setScannerOpen(true)}
+                  title="Scan barcode"
+                  aria-label="Scan product barcode"
+                >
+                  {isScanLooking ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ScanBarcode className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
               {showDropdown && (
                 <div
                   id="food-search-results"
@@ -543,5 +609,6 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
