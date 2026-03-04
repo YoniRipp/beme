@@ -34,11 +34,9 @@ export function Terms() {
         aspects of your daily life. The Service provides tools for:
       </p>
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
-        <li>Financial tracking, including income, expenses, budgets, and savings goals</li>
         <li>Body and workout logging with exercise details, sets, reps, and weight tracking</li>
         <li>Energy and nutrition management, including food logging, calorie tracking, and macronutrient breakdowns</li>
-        <li>Schedule management with daily planning, recurring events, and category-based organization</li>
-        <li>Goal setting and progress tracking across health, fitness, and financial domains</li>
+        <li>Goal setting and progress tracking across health and fitness domains</li>
         <li>Group collaboration for households, projects, and shared activities</li>
         <li>AI-powered features including voice input via Google Gemini, natural language processing for data entry, and AI-generated insights</li>
       </ul>
@@ -71,10 +69,10 @@ export function Terms() {
         BeMe offers two service tiers:
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        <strong>Free Plan:</strong> Includes manual tracking for money, workouts, nutrition,
-        schedule, and goals. You can log transactions, record workouts, track food and
-        calories, manage your daily schedule, and set goals at no cost. The Free Plan provides
-        the core functionality needed to manage your daily life.
+        <strong>Free Plan:</strong> Includes manual tracking for workouts, nutrition,
+        sleep, and goals. You can record workouts, track food and
+        calories, log sleep, and set goals at no cost. The Free Plan provides
+        the core functionality needed to manage your wellness.
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         <strong>Pro Plan:</strong> Unlocks AI-powered features including voice input for
@@ -127,16 +125,16 @@ export function Terms() {
 
       <h2 className="text-xl font-semibold mt-8 mb-3">6. User Content and Data</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        You retain full ownership of all data you enter into BeMe, including your financial
-        records, workout logs, food entries, schedule items, goals, and any other personal
+        You retain full ownership of all data you enter into BeMe, including your
+        workout logs, food entries, goals, and any other personal
         information ("User Content"). By using the Service, you grant BeMe a limited,
         non-exclusive, worldwide license to process, store, and display your User Content
         solely for the purpose of providing and improving the Service.
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         You are solely responsible for the accuracy, completeness, and legality of the data
-        you enter. BeMe does not verify the accuracy of user-entered data such as financial
-        transactions, calorie counts, or workout metrics. If you use voice input or AI
+        you enter. BeMe does not verify the accuracy of user-entered data such as
+        calorie counts or workout metrics. If you use voice input or AI
         features to enter data, you should review the parsed results for accuracy before
         relying on them.
       </p>
@@ -159,7 +157,6 @@ export function Terms() {
         <li>Impersonate any person or entity, or falsely state or misrepresent your affiliation with a person or entity</li>
         <li>Attempt to gain unauthorized access to other users' accounts, data, or any part of the Service not intended for you</li>
         <li>Upload or transmit malicious code, viruses, or any other harmful content</li>
-        <li>Use the Service to engage in any form of financial fraud or money laundering</li>
         <li>Resell, sublicense, or commercially exploit the Service without our express written permission</li>
       </ul>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
@@ -190,9 +187,9 @@ export function Terms() {
           program, or making significant changes to your health routine.
         </li>
         <li>
-          BeMe is not a substitute for professional medical, nutritional, or financial advice.
-          You should consult qualified professionals for decisions related to your health,
-          dietary needs, or financial planning.
+          BeMe is not a substitute for professional medical or nutritional advice.
+          You should consult qualified professionals for decisions related to your health
+          and dietary needs.
         </li>
       </ul>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
@@ -235,7 +232,7 @@ export function Terms() {
         consequential, or punitive damages, including but not limited to loss of profits, data,
         or goodwill, arising out of or in connection with your use of the Service. You
         acknowledge that decisions you make based on data displayed in BeMe -- including
-        financial decisions, dietary choices, and exercise routines -- are made at your own
+        dietary choices and exercise routines -- are made at your own
         risk.
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">

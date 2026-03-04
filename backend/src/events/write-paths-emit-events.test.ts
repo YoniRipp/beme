@@ -5,15 +5,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../config/index.js', () => ({ config: { isRedisConfigured: false } }));
-vi.mock('../models/schedule.js', () => ({ create: vi.fn(), createBatch: vi.fn(), update: vi.fn(), deleteById: vi.fn(), findByUserId: vi.fn() }));
 vi.mock('../models/workout.js', () => ({ create: vi.fn(), update: vi.fn(), deleteById: vi.fn(), findByUserId: vi.fn() }));
 vi.mock('../models/foodEntry.js', () => ({ create: vi.fn(), update: vi.fn(), deleteById: vi.fn(), findByUserId: vi.fn() }));
 vi.mock('../models/dailyCheckIn.js', () => ({ create: vi.fn(), update: vi.fn(), deleteById: vi.fn(), findByUserId: vi.fn() }));
 vi.mock('../models/goal.js', () => ({ create: vi.fn(), update: vi.fn(), deleteById: vi.fn(), findByUserId: vi.fn() }));
 
 import { subscribe } from './bus.js';
-import * as scheduleService from '../services/schedule.js';
-import * as scheduleModel from '../models/schedule.js';
 import * as workoutService from '../services/workout.js';
 import * as workoutModel from '../models/workout.js';
 import * as foodEntryService from '../services/foodEntry.js';
@@ -26,19 +23,6 @@ import * as goalModel from '../models/goal.js';
 describe('write paths emit events (per context)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it('schedule: create emits schedule.ScheduleItemAdded', async () => {
-    const item = { id: 's1', title: 'Meeting', date: '2025-02-24', startTime: '09:00', endTime: '10:00', category: 'Other' };
-    scheduleModel.create.mockResolvedValue(item);
-    const received = [];
-    subscribe('schedule.ScheduleItemAdded', (e) => received.push(e));
-
-    await scheduleService.create('user-1', { title: 'Meeting', startTime: '09:00', endTime: '10:00' });
-
-    expect(received).toHaveLength(1);
-    expect(received[0].type).toBe('schedule.ScheduleItemAdded');
-    expect(received[0].payload.title).toBe('Meeting');
   });
 
   it('body: create emits body.WorkoutCreated', async () => {
