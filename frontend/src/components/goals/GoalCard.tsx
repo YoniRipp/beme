@@ -2,7 +2,7 @@ import { Goal, GoalType } from '@/types/goals';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Flame, Dumbbell, DollarSign, Moon, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
+import { Flame, Dumbbell, Moon, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
 import { useGoals } from '@/hooks/useGoals';
 import { useGoalProgress } from '@/features/goals/useGoalProgress';
 import { useState } from 'react';
@@ -13,23 +13,20 @@ import { toast } from 'sonner';
 const GOAL_ICONS: Record<GoalType, React.ReactNode> = {
   calories: <Flame className="w-5 h-5 text-orange-600" />,
   workouts: <Dumbbell className="w-5 h-5 text-blue-600" />,
-  savings: <DollarSign className="w-5 h-5 text-green-600" />,
   sleep: <Moon className="w-5 h-5 text-indigo-600" />,
 };
 const GOAL_TYPE_BORDER: Record<GoalType, string> = {
   calories: 'border-l-4 border-l-amber-500',
   workouts: 'border-l-4 border-l-green-500',
-  savings: 'border-l-4 border-l-emerald-500',
   sleep: 'border-l-4 border-l-indigo-500',
 };
 const GOAL_LABELS: Record<GoalType, string> = {
   calories: 'calories',
   workouts: 'workouts',
-  savings: '% saved',
   sleep: 'h avg',
 };
 const formatGoalValue = (type: GoalType, value: number) =>
-  type === 'savings' ? `${value}%` : type === 'sleep' ? `${value.toFixed(1)}h` : value.toLocaleString();
+  type === 'sleep' ? `${value.toFixed(1)}h` : value.toLocaleString();
 
 interface GoalCardProps {
   goal: Goal;

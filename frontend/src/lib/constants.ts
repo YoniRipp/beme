@@ -1,8 +1,6 @@
 import { User } from '@/types/user';
-import { Transaction } from '@/types/transaction';
 import { Workout } from '@/types/workout';
 import { DailyCheckIn } from '@/types/energy';
-import { ScheduleItem } from '@/types/schedule';
 
 // Mock User (fallback for tests or when auth is not required)
 export const MOCK_USER: User = {
@@ -11,60 +9,6 @@ export const MOCK_USER: User = {
   email: 'jonathan@example.com',
   role: 'user',
 };
-
-// Sample Transactions
-export const SAMPLE_TRANSACTIONS: Transaction[] = [
-  {
-    id: 'trans-001',
-    date: new Date(2025, 0, 15),
-    type: 'income',
-    amount: 5000,
-    currency: 'USD',
-    category: 'Salary',
-    description: 'Monthly salary',
-    isRecurring: true
-  },
-  {
-    id: 'trans-002',
-    date: new Date(2025, 0, 14),
-    type: 'expense',
-    amount: 50,
-    currency: 'USD',
-    category: 'Food',
-    description: 'Grocery shopping',
-    isRecurring: false
-  },
-  {
-    id: 'trans-003',
-    date: new Date(2025, 0, 13),
-    type: 'expense',
-    amount: 30,
-    currency: 'USD',
-    category: 'Transportation',
-    description: 'Gas',
-    isRecurring: false
-  },
-  {
-    id: 'trans-004',
-    date: new Date(2025, 0, 12),
-    type: 'expense',
-    amount: 100,
-    currency: 'USD',
-    category: 'Entertainment',
-    description: 'Concert tickets',
-    isRecurring: false
-  },
-  {
-    id: 'trans-005',
-    date: new Date(2025, 0, 10),
-    type: 'income',
-    amount: 500,
-    currency: 'USD',
-    category: 'Freelance',
-    description: 'Web design project',
-    isRecurring: false
-  }
-];
 
 // Sample Workouts
 export const SAMPLE_WORKOUTS: Workout[] = [
@@ -123,54 +67,6 @@ export const SAMPLE_ENERGY: DailyCheckIn[] = [
     id: 'energy-003',
     date: new Date(2025, 0, 14),
     sleepHours: 8
-  }
-];
-
-// Sample Schedule
-export const SAMPLE_SCHEDULE: ScheduleItem[] = [
-  {
-    id: 'schedule-001',
-    date: '2025-02-14',
-    title: 'Morning Routine',
-    startTime: '07:00',
-    endTime: '07:30',
-    category: 'Personal',
-    emoji: '🧘',
-    order: 1,
-    isActive: true
-  },
-  {
-    id: 'schedule-002',
-    date: '2025-02-14',
-    title: 'Work',
-    startTime: '09:00',
-    endTime: '17:00',
-    category: 'Work',
-    emoji: '💼',
-    order: 2,
-    isActive: true
-  },
-  {
-    id: 'schedule-003',
-    date: '2025-02-14',
-    title: 'Workout',
-    startTime: '18:00',
-    endTime: '19:30',
-    category: 'Exercise',
-    emoji: '💪',
-    order: 3,
-    isActive: true
-  },
-  {
-    id: 'schedule-004',
-    date: '2025-02-14',
-    title: 'Sleep',
-    startTime: '23:00',
-    endTime: '07:00',
-    category: 'Sleep',
-    emoji: '😴',
-    order: 4,
-    isActive: true
   }
 ];
 

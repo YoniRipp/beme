@@ -34,7 +34,6 @@ export function Terms() {
         aspects of your daily life. The Service provides tools for:
       </p>
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
-        <li>Financial tracking, including income, expenses, budgets, and savings goals</li>
         <li>Body and workout logging with exercise details, sets, reps, and weight tracking</li>
         <li>Energy and nutrition management, including food logging, calorie tracking, and macronutrient breakdowns</li>
         <li>Schedule management with daily planning, recurring events, and category-based organization</li>

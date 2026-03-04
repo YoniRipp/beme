@@ -12,18 +12,6 @@ export {
 // Auth
 export { authApi, type ApiUser, type AuthResponse } from '@/core/api/auth';
 
-// Schedule
-export {
-  scheduleApi,
-  type ApiScheduleItem,
-} from '@/core/api/schedule';
-
-// Transactions
-export {
-  transactionsApi,
-  type ApiTransaction,
-} from '@/core/api/transactions';
-
 // Goals
 export { goalsApi, type ApiGoal } from '@/core/api/goals';
 

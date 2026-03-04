@@ -143,7 +143,6 @@ export function GoalModal({ open, onOpenChange, onSave, goal }: GoalModalProps) 
               <p className="text-sm text-muted-foreground mt-1">
                 {formData.type === 'calories' && 'Target calories for this period'}
                 {formData.type === 'workouts' && 'Target number of workouts for this period'}
-                {formData.type === 'savings' && 'Target savings rate percentage for this period'}
                 {formData.type === 'sleep' && 'Target average sleep hours for this period'}
               </p>
             </div>

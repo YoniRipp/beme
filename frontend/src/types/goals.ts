@@ -10,5 +10,5 @@ export interface Goal {
   // Note: 'current' is calculated, not stored
 }
 
-export const GOAL_TYPES: GoalType[] = ['calories', 'workouts', 'savings', 'sleep'];
+export const GOAL_TYPES: GoalType[] = ['calories', 'workouts', 'sleep'];
 export const GOAL_PERIODS: GoalPeriod[] = ['daily', 'weekly', 'monthly', 'yearly'];
