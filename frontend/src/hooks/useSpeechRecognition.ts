@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useRef, useState, useMemo } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useNativeSpeech } from './useNativeSpeech';
 import { useWebSpeech } from './useWebSpeech';
@@ -34,7 +34,7 @@ export function useSpeechRecognition(
 ): UseSpeechRecognitionReturn {
   const { language = '', onPartialResult } = options;
   const [isProcessing, setIsProcessing] = useState(false);
-  const [lastResult, setLastResult] = useState<VoiceUnderstandResult | null>(null);
+  const lastResultRef = useRef<VoiceUnderstandResult | null>(null);
 
   const isNative = Capacitor.isNativePlatform();
 
@@ -49,7 +49,7 @@ export function useSpeechRecognition(
   );
 
   const startListening = useCallback(async (): Promise<void> => {
-    setLastResult(null);
+    lastResultRef.current = null;
     await impl.startListening();
   }, [impl]);
 
@@ -62,28 +62,30 @@ export function useSpeechRecognition(
         setIsProcessing(true);
         try {
           const result = await understandTranscript(transcript, language);
-          setLastResult(result);
+          lastResultRef.current = result;
         } catch (e) {
           console.error('Failed to understand transcript:', e);
-          setLastResult({
+          const errorResult: VoiceUnderstandResult = {
             actions: [{ intent: 'unknown', message: e instanceof Error ? e.message : 'Could not understand. Please try again.' }],
-          });
+          };
+          lastResultRef.current = errorResult;
         } finally {
           setIsProcessing(false);
         }
       } else {
-        setLastResult({ actions: [{ intent: 'unknown' }] });
+        const emptyResult: VoiceUnderstandResult = { actions: [{ intent: 'unknown' }] };
+        lastResultRef.current = emptyResult;
       }
     } else {
       // Web: the result was already processed in useWebSpeech
       const webResult = await web.getVoiceResult();
-      setLastResult(webResult);
+      lastResultRef.current = webResult;
     }
   }, [impl, useNativeImpl, web, language]);
 
   const getVoiceResult = useCallback(async (): Promise<VoiceUnderstandResult> => {
-    return lastResult ?? { actions: [{ intent: 'unknown' }] };
-  }, [lastResult]);
+    return lastResultRef.current ?? { actions: [{ intent: 'unknown' }] };
+  }, []);
 
   return {
     isNative: useNativeImpl,
