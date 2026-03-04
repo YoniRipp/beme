@@ -48,7 +48,7 @@ export function Privacy() {
           recurrence settings.
         </li>
         <li>
-          <strong>Goals:</strong> Personal goals related to calories, workouts, and sleep, including
+          <strong>Goals:</strong> Personal goals related to calories, workouts, and savings, including
           target values and time periods.
         </li>
         <li>
