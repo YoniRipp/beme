@@ -63,7 +63,7 @@ export function TopBar() {
         <div className="flex items-center gap-4">
           <SidebarTrigger className="shrink-0" />
           <Link to="/" className="shrink-0 flex items-center" aria-label="BeMe home">
-            <img src="/logo.png" alt="BeMe" className="h-8 w-auto object-contain" />
+            <img src="/logo.png" alt="BeMe" className="h-8 w-auto rounded-full object-contain" />
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger

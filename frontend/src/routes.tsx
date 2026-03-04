@@ -36,6 +36,12 @@ const Pricing = lazy(() =>
 const Landing = lazy(() =>
   import('./pages/Landing').then((m) => ({ default: m.Landing }))
 );
+const Privacy = lazy(() =>
+  import('./pages/Privacy').then((m) => ({ default: m.Privacy }))
+);
+const Terms = lazy(() =>
+  import('./pages/Terms').then((m) => ({ default: m.Terms }))
+);
 const NotFound = lazy(() =>
   import('./pages/NotFound').then((m) => ({ default: m.NotFound }))
 );
@@ -240,6 +246,22 @@ export function AppRoutes() {
           element={
             <Suspense fallback={<LoadingSpinner text="Loading..." />}>
               <Landing />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <Suspense fallback={<LoadingSpinner text="Loading..." />}>
+              <Privacy />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <Suspense fallback={<LoadingSpinner text="Loading..." />}>
+              <Terms />
             </Suspense>
           }
         />

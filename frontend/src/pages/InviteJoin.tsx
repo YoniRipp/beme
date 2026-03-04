@@ -167,7 +167,7 @@ export function InviteJoin() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <img src="/logo.png" alt="BeMe" className="mx-auto max-w-[160px] w-auto h-16 object-contain" />
+          <img src="/logo.png" alt="BeMe" className="mx-auto max-w-[160px] w-auto h-16 rounded-full object-contain" />
           <CardTitle>Join {invitation.groupName}</CardTitle>
           <CardDescription>
             You're invited to join this group. Sign up or log in with <strong>{invitation.email}</strong> to join.

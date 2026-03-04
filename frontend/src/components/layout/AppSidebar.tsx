@@ -39,7 +39,7 @@ export function AppSidebar() {
           className="flex items-center gap-2 px-2 py-2 min-w-0"
           aria-label="BeMe home"
         >
-          <img src="/logo.png" alt="" className="h-7 w-auto object-contain" />
+          <img src="/logo.png" alt="" className="h-7 w-auto rounded-full object-contain" />
           <span className="font-semibold text-lg truncate">BeMe</span>
         </Link>
       </SidebarHeader>

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -70,12 +71,39 @@ const PRO_FEATURES = [
 ];
 
 export function Landing() {
+  const pricingRef = useRef<HTMLDivElement>(null);
+  const [pricingVisible, setPricingVisible] = useState(false);
+
+  useEffect(() => {
+    const el = pricingRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setPricingVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background scroll-smooth">
+      {/* Skip to content (a11y) */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+      >
+        Skip to content
+      </a>
+
       {/* Navigation */}
-      <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <nav role="navigation" aria-label="Main" className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <img src="/logo.png" alt="BeMe" className="h-10 w-auto object-contain" />
+          <img src="/logo.png" alt="BeMe" className="h-10 w-auto rounded-full object-contain" />
           <div className="flex items-center gap-3">
             <Link to="/login">
               <Button variant="ghost" size="sm">Sign in</Button>
@@ -88,7 +116,7 @@ export function Landing() {
       </nav>
 
       {/* Hero */}
-      <section className="mx-auto max-w-4xl px-6 py-20 text-center">
+      <section id="main-content" aria-label="Hero" className="mx-auto max-w-4xl px-6 py-20 text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
           One app for your{' '}
           <span className="text-primary">whole life</span>
@@ -112,7 +140,7 @@ export function Landing() {
       </section>
 
       {/* Features Grid */}
-      <section className="mx-auto max-w-6xl px-6 py-16">
+      <section aria-label="Features" className="mx-auto max-w-6xl px-6 py-16">
         <div className="text-center">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Everything you need, nothing you don't
@@ -121,11 +149,11 @@ export function Landing() {
             BeMe consolidates your daily tracking into a single, intelligent app.
           </p>
         </div>
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
           {FEATURES.map((feature) => (
-            <Card key={feature.title} className="transition-shadow hover:shadow-md">
+            <Card key={feature.title} className="transition-shadow hover:shadow-md" role="listitem">
               <CardContent className="flex flex-col gap-3 p-6">
-                <feature.icon className="h-8 w-8 text-primary" />
+                <feature.icon className="h-8 w-8 text-primary" aria-hidden="true" />
                 <h3 className="font-semibold">{feature.title}</h3>
                 <p className="text-sm text-muted-foreground">{feature.description}</p>
               </CardContent>
@@ -135,10 +163,10 @@ export function Landing() {
       </section>
 
       {/* Voice Demo Section */}
-      <section className="bg-muted/50 py-16">
+      <section aria-label="Voice demo" className="bg-muted/50 py-16">
         <div className="mx-auto max-w-4xl px-6 text-center">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-            <Mic className="h-10 w-10 text-primary" />
+            <Mic className="h-10 w-10 text-primary" aria-hidden="true" />
           </div>
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Talk, don't type
@@ -151,7 +179,7 @@ export function Landing() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="mx-auto max-w-4xl px-6 py-16">
+      <section id="pricing" aria-label="Pricing" className="mx-auto max-w-4xl px-6 py-16">
         <div className="text-center">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Simple pricing</h2>
           <p className="mt-2 text-muted-foreground">
@@ -159,9 +187,9 @@ export function Landing() {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
+        <div ref={pricingRef} className="mt-10 grid gap-6 md:grid-cols-2">
           {/* Free */}
-          <Card>
+          <Card className={pricingVisible ? 'animate-reveal' : 'opacity-0'}>
             <CardContent className="p-6 space-y-4">
               <div>
                 <h3 className="text-xl font-bold">Free</h3>
@@ -170,10 +198,10 @@ export function Landing() {
                   $0<span className="text-sm font-normal text-muted-foreground">/month</span>
                 </p>
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-2" role="list">
                 {FREE_FEATURES.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" aria-hidden="true" />
                     {f}
                   </li>
                 ))}
@@ -185,7 +213,7 @@ export function Landing() {
           </Card>
 
           {/* Pro */}
-          <Card className="border-primary ring-1 ring-primary">
+          <Card className={`border-primary ring-1 ring-primary ${pricingVisible ? 'animate-reveal-delay' : 'opacity-0'}`}>
             <CardContent className="p-6 space-y-4">
               <div>
                 <div className="flex items-center gap-2">
@@ -199,10 +227,10 @@ export function Landing() {
                   $7.99<span className="text-sm font-normal text-muted-foreground">/month</span>
                 </p>
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-2" role="list">
                 {PRO_FEATURES.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm">
-                    <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                    <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
                     {f}
                   </li>
                 ))}
@@ -225,6 +253,8 @@ export function Landing() {
             <Link to="/login" className="hover:text-foreground transition-colors">Sign in</Link>
             <Link to="/signup" className="hover:text-foreground transition-colors">Sign up</Link>
             <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
+            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
           </div>
         </div>
       </footer>
