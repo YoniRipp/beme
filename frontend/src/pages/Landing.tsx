@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Mic,
   Sparkles,
@@ -16,7 +19,11 @@ import {
   BarChart3,
   Quote,
   ChevronDown,
+  Mail,
+  Clock,
 } from 'lucide-react';
+
+/* ─── Data ─── */
 
 const FEATURES = [
   {
@@ -146,6 +153,35 @@ const FAQ = [
   },
 ];
 
+/* ─── Helpers ─── */
+
+function RevealSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className={`${visible ? 'animate-reveal' : 'opacity-0'} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
@@ -168,6 +204,8 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+/* ─── Landing Page ─── */
+
 export function Landing() {
   const pricingRef = useRef<HTMLDivElement>(null);
   const [pricingVisible, setPricingVisible] = useState(false);
@@ -189,7 +227,7 @@ export function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background scroll-smooth">
+    <div className="min-h-screen bg-background">
       {/* Skip to content (a11y) */}
       <a
         href="#main-content"
@@ -199,9 +237,14 @@ export function Landing() {
       </a>
 
       {/* Navigation */}
-      <nav role="navigation" aria-label="Main" className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <nav role="navigation" aria-label="Main" className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <img src="/logo.png" alt="BeMe" className="h-10 w-auto rounded-full object-contain" />
+          <div className="hidden items-center gap-6 text-sm text-muted-foreground sm:flex">
+            <a href="#features" className="hover:text-foreground transition-colors">Features</a>
+            <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
+            <a href="#contact" className="hover:text-foreground transition-colors">Contact</a>
+          </div>
           <div className="flex items-center gap-3">
             <Link to="/login">
               <Button variant="ghost" size="sm">Sign in</Button>
@@ -238,103 +281,111 @@ export function Landing() {
       </section>
 
       {/* Features Grid */}
-      <section aria-label="Features" className="mx-auto max-w-6xl px-6 py-16">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Everything you need, nothing you don't
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            BeMe consolidates your daily tracking into a single, intelligent app.
-          </p>
-        </div>
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
-          {FEATURES.map((feature) => (
-            <Card key={feature.title} className="transition-shadow hover:shadow-md" role="listitem">
-              <CardContent className="flex flex-col gap-3 p-6">
-                <feature.icon className="h-8 w-8 text-primary" aria-hidden="true" />
-                <h3 className="font-semibold">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Voice Demo Section */}
-      <section aria-label="Voice demo" className="bg-muted/50 py-16">
-        <div className="mx-auto max-w-4xl px-6 text-center">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-            <Mic className="h-10 w-10 text-primary" aria-hidden="true" />
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Talk, don't type
-          </h2>
-          <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-            Say things like "I had a chicken salad for lunch", "bench press 3 sets of 10 at 135",
-            or "paid $45 for groceries" — BeMe understands and logs it instantly.
-          </p>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section aria-label="How it works" className="mx-auto max-w-4xl px-6 py-16">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Get started in 3 steps
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            From sign-up to insights in minutes.
-          </p>
-        </div>
-        <div className="mt-12 grid gap-8 sm:grid-cols-3">
-          {HOW_IT_WORKS.map((step) => (
-            <div key={step.step} className="flex flex-col items-center text-center">
-              <div className="relative mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground text-lg font-bold">
-                {step.step}
-              </div>
-              <step.icon className="mb-3 h-8 w-8 text-primary" aria-hidden="true" />
-              <h3 className="font-semibold">{step.title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Social Proof / Testimonials */}
-      <section aria-label="Testimonials" className="bg-muted/50 py-16">
-        <div className="mx-auto max-w-5xl px-6">
+      <section id="features" aria-label="Features" className="mx-auto max-w-6xl px-6 py-16">
+        <RevealSection>
           <div className="text-center">
             <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              Trusted by people who take control of their lives
+              Everything you need, nothing you don't
             </h2>
+            <p className="mt-2 text-muted-foreground">
+              BeMe consolidates your daily tracking into a single, intelligent app.
+            </p>
           </div>
-
-          {/* Stats */}
-          <div className="mt-10 flex flex-col items-center justify-center gap-6 sm:flex-row sm:gap-12">
-            {STATS.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Testimonials */}
-          <div className="mt-10 grid gap-6 sm:grid-cols-3">
-            {TESTIMONIALS.map((t) => (
-              <Card key={t.name} className="transition-shadow hover:shadow-md">
-                <CardContent className="p-6 space-y-4">
-                  <Quote className="h-6 w-6 text-primary/30" aria-hidden="true" />
-                  <p className="text-sm text-muted-foreground leading-relaxed">"{t.quote}"</p>
-                  <div>
-                    <p className="text-sm font-semibold">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.role}</p>
-                  </div>
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
+            {FEATURES.map((feature) => (
+              <Card key={feature.title} className="transition-shadow hover:shadow-md" role="listitem">
+                <CardContent className="flex flex-col gap-3 p-6">
+                  <feature.icon className="h-8 w-8 text-primary" aria-hidden="true" />
+                  <h3 className="font-semibold">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
-        </div>
+        </RevealSection>
+      </section>
+
+      {/* Voice Demo Section */}
+      <section aria-label="Voice demo" className="bg-muted/50 py-16">
+        <RevealSection>
+          <div className="mx-auto max-w-4xl px-6 text-center">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+              <Mic className="h-10 w-10 text-primary" aria-hidden="true" />
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Talk, don't type
+            </h2>
+            <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
+              Say things like "I had a chicken salad for lunch", "bench press 3 sets of 10 at 135",
+              or "paid $45 for groceries" — BeMe understands and logs it instantly.
+            </p>
+          </div>
+        </RevealSection>
+      </section>
+
+      {/* How It Works */}
+      <section aria-label="How it works" className="mx-auto max-w-4xl px-6 py-16">
+        <RevealSection>
+          <div className="text-center">
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Get started in 3 steps
+            </h2>
+            <p className="mt-2 text-muted-foreground">
+              From sign-up to insights in minutes.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-8 sm:grid-cols-3">
+            {HOW_IT_WORKS.map((step) => (
+              <div key={step.step} className="flex flex-col items-center text-center">
+                <div className="relative mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground text-lg font-bold">
+                  {step.step}
+                </div>
+                <step.icon className="mb-3 h-8 w-8 text-primary" aria-hidden="true" />
+                <h3 className="font-semibold">{step.title}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </RevealSection>
+      </section>
+
+      {/* Social Proof / Testimonials */}
+      <section aria-label="Testimonials" className="bg-muted/50 py-16">
+        <RevealSection>
+          <div className="mx-auto max-w-5xl px-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                Trusted by people who take control of their lives
+              </h2>
+            </div>
+
+            {/* Stats */}
+            <div className="mt-10 flex flex-col items-center justify-center gap-6 sm:flex-row sm:gap-12">
+              {STATS.map((stat) => (
+                <div key={stat.label} className="text-center">
+                  <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Testimonials */}
+            <div className="mt-10 grid gap-6 sm:grid-cols-3">
+              {TESTIMONIALS.map((t) => (
+                <Card key={t.name} className="transition-shadow hover:shadow-md">
+                  <CardContent className="p-6 space-y-4">
+                    <Quote className="h-6 w-6 text-primary/30" aria-hidden="true" />
+                    <p className="text-sm text-muted-foreground leading-relaxed">"{t.quote}"</p>
+                    <div>
+                      <p className="text-sm font-semibold">{t.name}</p>
+                      <p className="text-xs text-muted-foreground">{t.role}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </RevealSection>
       </section>
 
       {/* Pricing Section — 3 Cards */}
@@ -434,17 +485,86 @@ export function Landing() {
       </section>
 
       {/* FAQ */}
-      <section aria-label="Frequently asked questions" className="mx-auto max-w-2xl px-6 py-16">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Frequently asked questions
-          </h2>
-        </div>
-        <div className="mt-10 rounded-lg border bg-card p-6">
-          {FAQ.map((item) => (
-            <FaqItem key={item.q} q={item.q} a={item.a} />
-          ))}
-        </div>
+      <section aria-label="Frequently asked questions" className="bg-muted/50 py-16">
+        <RevealSection>
+          <div className="mx-auto max-w-2xl px-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                Frequently asked questions
+              </h2>
+            </div>
+            <div className="mt-10 rounded-lg border bg-card p-6">
+              {FAQ.map((item) => (
+                <FaqItem key={item.q} q={item.q} a={item.a} />
+              ))}
+            </div>
+          </div>
+        </RevealSection>
+      </section>
+
+      {/* Contact */}
+      <section id="contact" aria-label="Contact" className="mx-auto max-w-5xl px-6 py-16">
+        <RevealSection>
+          <div className="text-center">
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Get in touch</h2>
+            <p className="mt-2 text-muted-foreground">
+              Have a question, suggestion, or just want to say hello? We'd love to hear from you.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-10 md:grid-cols-2">
+            {/* Contact info */}
+            <div className="space-y-6">
+              <div className="flex items-start gap-3">
+                <Mail className="mt-1 h-5 w-5 text-primary" aria-hidden="true" />
+                <div>
+                  <p className="font-medium">Email us</p>
+                  <a href="mailto:support@beme.app" className="text-sm text-primary hover:underline">
+                    support@beme.app
+                  </a>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Clock className="mt-1 h-5 w-5 text-primary" aria-hidden="true" />
+                <div>
+                  <p className="font-medium">Response time</p>
+                  <p className="text-sm text-muted-foreground">We typically respond within 24 hours.</p>
+                </div>
+              </div>
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">
+                    For account-related issues, please include your registered email address so we can help you faster.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Contact form (visual placeholder) */}
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-name">Name</Label>
+                  <Input id="contact-name" placeholder="Your name" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-email">Email</Label>
+                  <Input id="contact-email" type="email" placeholder="you@example.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-message">Message</Label>
+                  <Textarea id="contact-message" placeholder="How can we help?" rows={4} />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => alert('Contact form coming soon! For now, email us at support@beme.app')}
+                >
+                  Send Message
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </RevealSection>
       </section>
 
       {/* Footer */}
@@ -453,12 +573,14 @@ export function Landing() {
           <p className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} BeMe. All rights reserved.
           </p>
-          <div className="flex gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
             <Link to="/login" className="hover:text-foreground transition-colors">Sign in</Link>
             <Link to="/signup" className="hover:text-foreground transition-colors">Sign up</Link>
             <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
+            <Link to="/about" className="hover:text-foreground transition-colors">About</Link>
             <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+            <a href="#contact" className="hover:text-foreground transition-colors">Contact</a>
           </div>
         </div>
       </footer>
