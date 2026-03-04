@@ -8,10 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Mic,
   Sparkles,
-  DollarSign,
   Dumbbell,
   Apple,
-  Calendar,
   Target,
   Check,
   ArrowRight,
@@ -29,17 +27,12 @@ const FEATURES = [
   {
     icon: Mic,
     title: 'Voice-First Tracking',
-    description: 'Just speak naturally. "I spent $12 on lunch" or "30 minute run" — BeMe handles the rest.',
+    description: 'Just speak naturally. "I had oatmeal for breakfast" or "30 minute run" — BeMe handles the rest.',
   },
   {
     icon: Sparkles,
     title: 'AI Insights',
-    description: 'Get personalized recommendations based on your habits across health, finances, and productivity.',
-  },
-  {
-    icon: DollarSign,
-    title: 'Money Management',
-    description: 'Track income, expenses, and budgets. Understand where your money goes at a glance.',
+    description: 'Get personalized recommendations based on your wellness habits across fitness, nutrition, and sleep.',
   },
   {
     icon: Dumbbell,
@@ -52,23 +45,17 @@ const FEATURES = [
     description: 'Track meals and macros with AI-powered food lookup. No more manual calorie counting.',
   },
   {
-    icon: Calendar,
-    title: 'Daily Schedule',
-    description: 'Organize your day with a flexible schedule. Build routines that stick.',
-  },
-  {
     icon: Target,
     title: 'Goal Setting',
-    description: 'Set measurable goals across all life domains and track your progress over time.',
+    description: 'Set measurable goals for workouts, calories, and more — track your progress over time.',
   },
 ];
 
 const FREE_FEATURES = [
   'Manual data entry for all domains',
-  'Money tracking (income & expenses)',
   'Workout logging',
   'Food & nutrition tracking',
-  'Daily schedule management',
+  'Sleep & energy check-ins',
   'Goal setting & tracking',
 ];
 
@@ -92,29 +79,29 @@ const HOW_IT_WORKS = [
     icon: BarChart3,
     step: 2,
     title: 'Track your life',
-    description: 'Log meals, workouts, money, and schedule — by voice or manually.',
+    description: 'Log meals, workouts, sleep, and goals — by voice or manually.',
   },
   {
     icon: Sparkles,
     step: 3,
     title: 'Get AI insights',
-    description: 'BeMe connects the dots and shows you patterns across your health, finances, and habits.',
+    description: 'BeMe connects the dots and shows you patterns across your fitness, nutrition, and habits.',
   },
 ];
 
 const TESTIMONIALS = [
   {
-    quote: 'I used to track my food in one app, budget in another, and workouts in a third. BeMe replaced all of them.',
+    quote: 'I used to track my food in one app, workouts in another, and sleep in a third. BeMe replaced all of them.',
     name: 'Sarah M.',
     role: 'Fitness Enthusiast',
   },
   {
-    quote: 'The voice feature is a game changer. I just say "spent $45 on groceries" and it\'s done.',
+    quote: 'The voice feature is a game changer. I just say "chicken salad for lunch" and it\'s done.',
     name: 'James R.',
     role: 'Software Engineer',
   },
   {
-    quote: 'Finally seeing how my spending, sleep, and energy connect. The insights are surprisingly useful.',
+    quote: 'Finally seeing how my sleep, workouts, and energy connect. The insights are surprisingly useful.',
     name: 'Priya K.',
     role: 'Freelance Designer',
   },
@@ -141,11 +128,11 @@ const FAQ = [
   },
   {
     q: 'How is BeMe different from MyFitnessPal or YNAB?',
-    a: 'Those are great single-purpose tools. BeMe combines health, fitness, nutrition, finances, schedule, and goals in one app with AI that connects insights across all areas.',
+    a: 'Those are great single-purpose tools. BeMe combines fitness, nutrition, sleep, and goals in one app with AI that connects insights across all areas.',
   },
   {
     q: 'Can I use BeMe without the AI features?',
-    a: 'Yes. The Free plan includes full manual tracking for all domains — money, workouts, food, schedule, and goals. AI features are Pro-only.',
+    a: 'Yes. The Free plan includes full manual tracking for workouts, food, sleep, and goals. AI features are Pro-only.',
   },
   {
     q: 'Does BeMe work offline?',
@@ -209,6 +196,13 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 export function Landing() {
   const pricingRef = useRef<HTMLDivElement>(null);
   const [pricingVisible, setPricingVisible] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const el = pricingRef.current;
@@ -227,7 +221,7 @@ export function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background scroll-smooth">
       {/* Skip to content (a11y) */}
       <a
         href="#main-content"
@@ -237,20 +231,33 @@ export function Landing() {
       </a>
 
       {/* Navigation */}
-      <nav role="navigation" aria-label="Main" className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <img src="/logo.png" alt="BeMe" className="h-10 w-auto rounded-full object-contain" />
-          <div className="hidden items-center gap-6 text-sm text-muted-foreground sm:flex">
-            <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-            <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
-            <a href="#contact" className="hover:text-foreground transition-colors">Contact</a>
+      <nav
+        role="navigation"
+        aria-label="Main"
+        className={`sticky top-0 z-40 transition-all duration-300 ${
+          scrolled
+            ? 'bg-background/95 backdrop-blur-md shadow-sm border-b border-border/50'
+            : 'bg-transparent'
+        }`}
+      >
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
+          <a href="#main-content" className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="" className="h-9 w-9 rounded-full object-contain" />
+            <span className="text-lg font-bold tracking-tight text-foreground">BeMe</span>
+          </a>
+          <div className="hidden items-center gap-8 text-sm font-medium text-muted-foreground sm:flex">
+            <a href="#features" className="transition-colors hover:text-primary">Features</a>
+            <a href="#pricing" className="transition-colors hover:text-primary">Pricing</a>
+            <a href="#faq" className="transition-colors hover:text-primary">FAQ</a>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link to="/login">
-              <Button variant="ghost" size="sm">Sign in</Button>
+              <Button variant="ghost" size="sm" className="rounded-full text-xs sm:text-sm">Sign in</Button>
             </Link>
             <Link to="/signup">
-              <Button size="sm">Get Started</Button>
+              <Button size="sm" className="gap-1.5 rounded-full px-4">
+                Start Free <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
             </Link>
           </div>
         </div>
@@ -263,7 +270,7 @@ export function Landing() {
           <span className="text-primary">whole life</span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          Track your health, finances, schedule, and goals — all in one place.
+          Track your body, energy, and goals — all in one place.
           Just speak and BeMe takes care of the rest.
         </p>
         <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
@@ -317,7 +324,7 @@ export function Landing() {
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
               Say things like "I had a chicken salad for lunch", "bench press 3 sets of 10 at 135",
-              or "paid $45 for groceries" — BeMe understands and logs it instantly.
+              or "I slept 7 hours last night" — BeMe understands and logs it instantly.
             </p>
           </div>
         </RevealSection>
@@ -485,7 +492,7 @@ export function Landing() {
       </section>
 
       {/* FAQ */}
-      <section aria-label="Frequently asked questions" className="bg-muted/50 py-16">
+      <section id="faq" aria-label="Frequently asked questions" className="bg-muted/50 py-16">
         <RevealSection>
           <div className="mx-auto max-w-2xl px-6">
             <div className="text-center">
