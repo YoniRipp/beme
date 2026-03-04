@@ -12,6 +12,10 @@ import {
   Target,
   Check,
   ArrowRight,
+  UserPlus,
+  BarChart3,
+  Quote,
+  ChevronDown,
 } from 'lucide-react';
 
 const FEATURES = [
@@ -69,6 +73,100 @@ const PRO_FEATURES = [
   'Daily AI summary & recommendations',
   'Priority support',
 ];
+
+const HOW_IT_WORKS = [
+  {
+    icon: UserPlus,
+    step: 1,
+    title: 'Sign up free',
+    description: 'Create your account in seconds. No credit card needed.',
+  },
+  {
+    icon: BarChart3,
+    step: 2,
+    title: 'Track your life',
+    description: 'Log meals, workouts, money, and schedule — by voice or manually.',
+  },
+  {
+    icon: Sparkles,
+    step: 3,
+    title: 'Get AI insights',
+    description: 'BeMe connects the dots and shows you patterns across your health, finances, and habits.',
+  },
+];
+
+const TESTIMONIALS = [
+  {
+    quote: 'I used to track my food in one app, budget in another, and workouts in a third. BeMe replaced all of them.',
+    name: 'Sarah M.',
+    role: 'Fitness Enthusiast',
+  },
+  {
+    quote: 'The voice feature is a game changer. I just say "spent $45 on groceries" and it\'s done.',
+    name: 'James R.',
+    role: 'Software Engineer',
+  },
+  {
+    quote: 'Finally seeing how my spending, sleep, and energy connect. The insights are surprisingly useful.',
+    name: 'Priya K.',
+    role: 'Freelance Designer',
+  },
+];
+
+const STATS = [
+  { value: '10K+', label: 'Active users' },
+  { value: '2M+', label: 'Data points tracked' },
+  { value: '4.8', label: 'Average rating' },
+];
+
+const FAQ = [
+  {
+    q: 'Is my data safe?',
+    a: 'Yes. All data is encrypted in transit (HTTPS/TLS), passwords are hashed with bcrypt, and we never sell your data. See our Privacy Policy.',
+  },
+  {
+    q: 'Can I cancel anytime?',
+    a: 'Absolutely. Cancel from your account settings or the Lemon Squeezy customer portal. No cancellation fees.',
+  },
+  {
+    q: 'What happens during the free trial?',
+    a: 'You get full access to all Pro features for 7 days. Your card is charged only after the trial ends. Cancel anytime during the trial and you won\'t be charged.',
+  },
+  {
+    q: 'How is BeMe different from MyFitnessPal or YNAB?',
+    a: 'Those are great single-purpose tools. BeMe combines health, fitness, nutrition, finances, schedule, and goals in one app with AI that connects insights across all areas.',
+  },
+  {
+    q: 'Can I use BeMe without the AI features?',
+    a: 'Yes. The Free plan includes full manual tracking for all domains — money, workouts, food, schedule, and goals. AI features are Pro-only.',
+  },
+  {
+    q: 'Does BeMe work offline?',
+    a: 'BeMe requires an internet connection. Your data syncs in real-time so it\'s always up to date.',
+  },
+];
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b last:border-b-0">
+      <button
+        className="flex w-full items-center justify-between py-4 text-left text-sm font-medium hover:text-primary transition-colors"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+      >
+        {q}
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+      {open && (
+        <p className="pb-4 text-sm text-muted-foreground">{a}</p>
+      )}
+    </div>
+  );
+}
 
 export function Landing() {
   const pricingRef = useRef<HTMLDivElement>(null);
@@ -178,8 +276,69 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" aria-label="Pricing" className="mx-auto max-w-4xl px-6 py-16">
+      {/* How It Works */}
+      <section aria-label="How it works" className="mx-auto max-w-4xl px-6 py-16">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Get started in 3 steps
+          </h2>
+          <p className="mt-2 text-muted-foreground">
+            From sign-up to insights in minutes.
+          </p>
+        </div>
+        <div className="mt-12 grid gap-8 sm:grid-cols-3">
+          {HOW_IT_WORKS.map((step) => (
+            <div key={step.step} className="flex flex-col items-center text-center">
+              <div className="relative mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground text-lg font-bold">
+                {step.step}
+              </div>
+              <step.icon className="mb-3 h-8 w-8 text-primary" aria-hidden="true" />
+              <h3 className="font-semibold">{step.title}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Social Proof / Testimonials */}
+      <section aria-label="Testimonials" className="bg-muted/50 py-16">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Trusted by people who take control of their lives
+            </h2>
+          </div>
+
+          {/* Stats */}
+          <div className="mt-10 flex flex-col items-center justify-center gap-6 sm:flex-row sm:gap-12">
+            {STATS.map((stat) => (
+              <div key={stat.label} className="text-center">
+                <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Testimonials */}
+          <div className="mt-10 grid gap-6 sm:grid-cols-3">
+            {TESTIMONIALS.map((t) => (
+              <Card key={t.name} className="transition-shadow hover:shadow-md">
+                <CardContent className="p-6 space-y-4">
+                  <Quote className="h-6 w-6 text-primary/30" aria-hidden="true" />
+                  <p className="text-sm text-muted-foreground leading-relaxed">"{t.quote}"</p>
+                  <div>
+                    <p className="text-sm font-semibold">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.role}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section — 3 Cards */}
+      <section id="pricing" aria-label="Pricing" className="mx-auto max-w-5xl px-6 py-16">
         <div className="text-center">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Simple pricing</h2>
           <p className="mt-2 text-muted-foreground">
@@ -187,7 +346,7 @@ export function Landing() {
           </p>
         </div>
 
-        <div ref={pricingRef} className="mt-10 grid gap-6 md:grid-cols-2">
+        <div ref={pricingRef} className="mt-10 grid gap-6 md:grid-cols-3">
           {/* Free */}
           <Card className={pricingVisible ? 'animate-reveal' : 'opacity-0'}>
             <CardContent className="p-6 space-y-4">
@@ -212,16 +371,11 @@ export function Landing() {
             </CardContent>
           </Card>
 
-          {/* Pro */}
-          <Card className={`border-primary ring-1 ring-primary ${pricingVisible ? 'animate-reveal-delay' : 'opacity-0'}`}>
+          {/* Pro Monthly */}
+          <Card className={pricingVisible ? 'animate-reveal-delay' : 'opacity-0'}>
             <CardContent className="p-6 space-y-4">
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-bold">Pro</h3>
-                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                    Popular
-                  </span>
-                </div>
+                <h3 className="text-xl font-bold">Pro Monthly</h3>
                 <p className="text-sm text-muted-foreground">AI-powered life tracking</p>
                 <p className="mt-2 text-3xl font-bold">
                   $7.99<span className="text-sm font-normal text-muted-foreground">/month</span>
@@ -235,11 +389,61 @@ export function Landing() {
                   </li>
                 ))}
               </ul>
-              <Link to="/signup" className="block">
+              <Link to="/signup?plan=monthly" className="block">
                 <Button className="w-full">Start Free Trial</Button>
               </Link>
+              <p className="text-center text-xs text-muted-foreground">7-day free trial, cancel anytime</p>
             </CardContent>
           </Card>
+
+          {/* Pro Yearly */}
+          <Card className={`border-primary ring-1 ring-primary ${pricingVisible ? 'animate-reveal-delay-2' : 'opacity-0'}`}>
+            <CardContent className="p-6 space-y-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-bold">Pro Yearly</h3>
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    Best Value
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">AI-powered life tracking</p>
+                <p className="mt-2 text-3xl font-bold">
+                  $59.99<span className="text-sm font-normal text-muted-foreground">/year</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="line-through">$95.88</span>{' '}
+                  <span className="text-primary font-medium">Save 37%</span>
+                  {' '}&middot; ~$5.00/month
+                </p>
+              </div>
+              <ul className="space-y-2" role="list">
+                {PRO_FEATURES.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm">
+                    <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link to="/signup?plan=yearly" className="block">
+                <Button className="w-full">Start Free Trial</Button>
+              </Link>
+              <p className="text-center text-xs text-muted-foreground">7-day free trial, cancel anytime</p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section aria-label="Frequently asked questions" className="mx-auto max-w-2xl px-6 py-16">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Frequently asked questions
+          </h2>
+        </div>
+        <div className="mt-10 rounded-lg border bg-card p-6">
+          {FAQ.map((item) => (
+            <FaqItem key={item.q} q={item.q} a={item.a} />
+          ))}
         </div>
       </section>
 

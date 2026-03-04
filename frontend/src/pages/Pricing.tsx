@@ -1,8 +1,9 @@
-import { useState } from 'react';
 import { Check, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAuth } from '@/context/AuthContext';
 
 const FREE_FEATURES = [
   'Manual data entry for all domains',
@@ -22,21 +23,13 @@ const PRO_FEATURES = [
   'Priority support',
 ];
 
-const MONTHLY_PRICE = '$7.99';
-const YEARLY_PRICE = '$59.99';
-
-type BillingPeriod = 'monthly' | 'yearly';
-
 export function Pricing() {
-  const { isPro, subscribe, subscribeYearly } = useSubscription();
-  const [period, setPeriod] = useState<BillingPeriod>('monthly');
-
-  const price = period === 'monthly' ? MONTHLY_PRICE : YEARLY_PRICE;
-  const periodLabel = period === 'monthly' ? '/month' : '/year';
-  const handleUpgrade = period === 'monthly' ? subscribe : subscribeYearly;
+  const { user } = useAuth();
+  const { isPro, startTrial } = useSubscription();
+  const isLoggedIn = !!user;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 p-6">
+    <div className="mx-auto max-w-5xl space-y-8 p-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Simple pricing</h1>
         <p className="mt-2 text-muted-foreground">
@@ -44,28 +37,7 @@ export function Pricing() {
         </p>
       </div>
 
-      {/* Billing period toggle */}
-      <div className="flex justify-center">
-        <div className="inline-flex rounded-lg border p-1">
-          <Button
-            variant={period === 'monthly' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setPeriod('monthly')}
-          >
-            Monthly
-          </Button>
-          <Button
-            variant={period === 'yearly' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setPeriod('yearly')}
-          >
-            Yearly
-            <span className="ml-1 text-xs opacity-75">Save 37%</span>
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-3">
         {/* Free tier */}
         <Card>
           <CardHeader>
@@ -87,18 +59,13 @@ export function Pricing() {
           </CardContent>
         </Card>
 
-        {/* Pro tier */}
-        <Card className="border-primary ring-1 ring-primary">
+        {/* Pro Monthly */}
+        <Card>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-xl">Pro</CardTitle>
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                Popular
-              </span>
-            </div>
+            <CardTitle className="text-xl">Pro Monthly</CardTitle>
             <CardDescription>AI-powered life tracking</CardDescription>
             <p className="text-3xl font-bold">
-              {price}<span className="text-sm font-normal text-muted-foreground">{periodLabel}</span>
+              $7.99<span className="text-sm font-normal text-muted-foreground">/month</span>
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -111,14 +78,56 @@ export function Pricing() {
               ))}
             </ul>
             {isPro ? (
-              <Button className="w-full" disabled>
-                Current Plan
-              </Button>
+              <Button className="w-full" disabled>Current Plan</Button>
+            ) : isLoggedIn ? (
+              <Button className="w-full" onClick={() => startTrial('monthly')}>Start Free Trial</Button>
             ) : (
-              <Button className="w-full" onClick={handleUpgrade}>
-                Upgrade to Pro
-              </Button>
+              <Link to="/signup?plan=monthly" className="block">
+                <Button className="w-full">Start Free Trial</Button>
+              </Link>
             )}
+            <p className="text-center text-xs text-muted-foreground">7-day free trial, cancel anytime</p>
+          </CardContent>
+        </Card>
+
+        {/* Pro Yearly */}
+        <Card className="border-primary ring-1 ring-primary">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-xl">Pro Yearly</CardTitle>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                Best Value
+              </span>
+            </div>
+            <CardDescription>AI-powered life tracking</CardDescription>
+            <p className="text-3xl font-bold">
+              $59.99<span className="text-sm font-normal text-muted-foreground">/year</span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <span className="line-through">$95.88</span>{' '}
+              <span className="text-primary font-medium">Save 37%</span>
+              {' '}&middot; ~$5.00/month
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ul className="space-y-2">
+              {PRO_FEATURES.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm">
+                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            {isPro ? (
+              <Button className="w-full" disabled>Current Plan</Button>
+            ) : isLoggedIn ? (
+              <Button className="w-full" onClick={() => startTrial('yearly')}>Start Free Trial</Button>
+            ) : (
+              <Link to="/signup?plan=yearly" className="block">
+                <Button className="w-full">Start Free Trial</Button>
+              </Link>
+            )}
+            <p className="text-center text-xs text-muted-foreground">7-day free trial, cancel anytime</p>
           </CardContent>
         </Card>
       </div>
