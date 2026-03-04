@@ -9,6 +9,7 @@ import * as userActivityLog from '../models/userActivityLog.js';
 import * as adminStatsService from '../services/adminStats.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { sendJson } from '../utils/response.js';
+import { escapeLike } from '../utils/escapeLike.js';
 
 const router = Router();
 
@@ -63,7 +64,7 @@ router.get('/api/admin/users/search', requireAuth, requireAdmin, async (req, res
       return res.json([]);
     }
     const pool = getPool();
-    const pattern = `%${q}%`;
+    const pattern = `%${escapeLike(q)}%`;
     const result = await pool.query(
       `SELECT id, email, name, role, created_at FROM users
        WHERE email ILIKE $1 OR name ILIKE $1

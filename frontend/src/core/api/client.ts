@@ -56,6 +56,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     res = await fetch(`${API_BASE}${path}`, {
       method,
       signal: controller.signal,
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       ...(body != null ? { body: JSON.stringify(body) } : {}),
     });
