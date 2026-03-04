@@ -24,6 +24,10 @@ vi.mock('../services/appLog.js', () => ({
   listLogs: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock('../services/adminStats.js', () => ({
+  getAll: vi.fn().mockResolvedValue({}),
+}));
+
 import adminRouter from './admin.js';
 
 function createApp() {

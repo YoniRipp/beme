@@ -14,6 +14,7 @@ import apiRouter from './src/routes/index.js';
 import { createWebhookRouter } from './src/routes/subscription.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
 import { requestIdMiddleware } from './src/middleware/requestId.js';
+import cookieParser from 'cookie-parser';
 import { logger } from './src/lib/logger.js';
 
 const apiLimiterBase = {
@@ -61,10 +62,11 @@ export async function createApp() {
   const app = express();
   app.set('trust proxy', 1);
   const corsOrigin = config.corsOrigin;
-  const corsOptions = { origin: corsOrigin };
+  const corsOptions = { origin: corsOrigin, credentials: true };
   app.use(cors(corsOptions));
   logger.info({ corsOrigin: config.corsOrigin, nodeEnv: process.env.NODE_ENV }, 'CORS configured');
   app.use(helmet({ crossOriginOpenerPolicy: false }));
+  app.use(cookieParser());
 
   // Lemon Squeezy webhook needs raw body for HMAC signature verification — mount BEFORE express.json()
   if (config.lemonSqueezyApiKey) {

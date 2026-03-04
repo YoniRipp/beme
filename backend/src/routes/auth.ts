@@ -20,6 +20,22 @@ const AUTH_CODE_TTL_MS = 60 * 1000; // 1 minute - auth codes are short-lived
 const PKCE_PREFIX = 'pkce:';
 const AUTH_CODE_PREFIX = 'authCode:';
 
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  path: '/',
+};
+
+function setTokenCookie(res: Response, token: string) {
+  res.cookie('token', token, COOKIE_OPTIONS);
+}
+
+function clearTokenCookie(res: Response) {
+  res.clearCookie('token', { path: '/' });
+}
+
 async function generateAuthCode(token: string): Promise<string> {
   const code = crypto.randomBytes(32).toString('hex');
   await kvSet(AUTH_CODE_PREFIX + code, JSON.stringify({ token }), AUTH_CODE_TTL_MS);
@@ -80,6 +96,7 @@ async function register(req: Request, res: Response) {
       { expiresIn: TOKEN_EXPIRY }
     );
     publishEvent('auth.UserRegistered', { userId: user.id, email: user.email, name: user.name }, user.id).catch(() => {});
+    setTokenCookie(res, token);
     res.status(201).json({ user, token });
   } catch (e: unknown) {
     const err = e as Record<string, unknown>;
@@ -99,19 +116,32 @@ async function login(req: Request, res: Response) {
     }
     const pool = getPool();
     const result = await pool.query(
-      'SELECT id, email, name, role, password_hash, auth_provider, provider_id, subscription_status, subscription_current_period_end FROM users WHERE email = $1',
+      'SELECT id, email, name, role, password_hash, auth_provider, provider_id, subscription_status, subscription_current_period_end, failed_login_attempts, locked_until FROM users WHERE email = $1',
       [email.trim().toLowerCase()]
     );
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
     const row = result.rows[0];
+    // Check lockout
+    if (row.locked_until && new Date(row.locked_until) > new Date()) {
+      return res.status(429).json({ error: 'Account temporarily locked due to too many failed attempts. Please try again later.' });
+    }
     if (!row.password_hash) {
       return res.status(401).json({ error: 'This account uses social sign-in. Sign in with your provider instead.' });
     }
     const match = await bcrypt.compare(password, row.password_hash);
     if (!match) {
+      const attempts = (row.failed_login_attempts || 0) + 1;
+      const lockUntil = attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+      await pool.query(
+        'UPDATE users SET failed_login_attempts = $1, locked_until = $2 WHERE id = $3',
+        [attempts, lockUntil, row.id]
+      );
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    if (row.failed_login_attempts > 0) {
+      await pool.query('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = $1', [row.id]);
     }
     const user = rowToUser(row);
     const token = jwt.sign(
@@ -120,6 +150,7 @@ async function login(req: Request, res: Response) {
       { expiresIn: TOKEN_EXPIRY }
     );
     publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'email' }, user.id).catch(() => {});
+    setTokenCookie(res, token);
     res.json({ user, token });
   } catch (e: unknown) {
     logger.error({ err: e }, 'login error');
@@ -245,6 +276,7 @@ async function loginGoogle(req: Request, res: Response) {
       name,
     });
     publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'google' }, user.id).catch(() => {});
+    setTokenCookie(res, jwtToken);
     res.json({ user, token: jwtToken });
   } catch (e: unknown) {
     logger.error({ err: e }, 'loginGoogle error');
@@ -285,6 +317,7 @@ async function loginFacebook(req: Request, res: Response) {
       name,
     });
     publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'facebook' }, user.id).catch(() => {});
+    setTokenCookie(res, jwtToken);
     res.json({ user, token: jwtToken });
   } catch (e: unknown) {
     logger.error({ err: e }, 'loginFacebook error');
@@ -325,6 +358,7 @@ async function loginTwitter(req: Request, res: Response) {
       name,
     });
     publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'twitter' }, user.id).catch(() => {});
+    setTokenCookie(res, jwtToken);
     res.json({ user, token: jwtToken });
   } catch (e: unknown) {
     logger.error({ err: e }, 'loginTwitter error');
@@ -516,15 +550,24 @@ async function exchangeCode(req: Request, res: Response) {
     }
     const payload = jwt.verify(token, config.jwtSecret!);
     const pool = getPool();
-    const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [payload.sub]);
+    const { rows } = await pool.query(
+      'SELECT id, email, name, role, created_at, subscription_status, subscription_current_period_end FROM users WHERE id = $1',
+      [(payload as { sub?: string }).sub]
+    );
     if (!rows[0]) {
       return res.status(404).json({ error: 'User not found' });
     }
+    setTokenCookie(res, token);
     res.json({ user: rowToUser(rows[0]), token });
   } catch (e: unknown) {
     logger.error({ err: e }, 'exchangeCode error');
     res.status(400).json({ error: 'Invalid auth code' });
   }
+}
+
+function logout(_req: Request, res: Response) {
+  clearTokenCookie(res);
+  res.json({ message: 'Logged out' });
 }
 
 const router = Router();
@@ -539,5 +582,6 @@ router.post('/api/auth/exchange', exchangeCode);
 router.get('/api/auth/me', requireAuth, me);
 router.post('/api/auth/forgot-password', forgotPassword);
 router.post('/api/auth/reset-password', resetPassword);
+router.post('/api/auth/logout', logout);
 
 export default router;

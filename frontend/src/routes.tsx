@@ -12,6 +12,10 @@ const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })
 const Body = lazy(() => import('./pages/Body').then((m) => ({ default: m.Body })));
 const Energy = lazy(() => import('./pages/Energy').then((m) => ({ default: m.Energy })));
 const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })));
+const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'));
+const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
+const AdminActivityPage = lazy(() => import('./pages/admin/AdminActivityPage'));
+const AdminSystemPage = lazy(() => import('./pages/admin/AdminSystemPage'));
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 const Insights = lazy(() => import('./pages/Insights').then((m) => ({ default: m.Insights })));
 const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })));
@@ -139,7 +143,40 @@ function ProtectedAppRoutes() {
               </Suspense>
             </AdminRouteGuard>
           }
-        />
+        >
+          <Route
+            index
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading overview..." />}>
+                <AdminOverview />
+              </Suspense>
+            }
+          />
+          <Route
+            path="users"
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading users..." />}>
+                <AdminUsersPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="activity"
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading activity..." />}>
+                <AdminActivityPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="system"
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading system..." />}>
+                <AdminSystemPage />
+              </Suspense>
+            }
+          />
+        </Route>
         <Route
           path="*"
           element={

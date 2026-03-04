@@ -10,6 +10,10 @@ const port = Number(process.env.PORT) || 3000;
 const app = express();
 app.use((_req, res, next) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' " + (process.env.VITE_API_URL || 'http://localhost:3000')
+  );
   next();
 });
 app.use(express.static(dist));

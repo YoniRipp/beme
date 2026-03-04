@@ -1,6 +1,7 @@
 /**
  * Authentication middleware.
  */
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { config } from '../config/index.js';
@@ -8,13 +9,15 @@ import { getPool } from '../db/pool.js';
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : req.cookies?.token;
+  if (!token) {
     return res.status(401).json({ error: 'Missing or invalid Authorization header' });
   }
-  const token = authHeader.slice(7);
 
   // MCP server: accept shared secret and impersonate a user (for Cursor MCP integration)
-  if (config.mcpSecret && config.mcpUserId && token === config.mcpSecret) {
+  if (config.mcpSecret && config.mcpUserId &&
+      token.length === config.mcpSecret.length &&
+      crypto.timingSafeEqual(Buffer.from(token), Buffer.from(config.mcpSecret))) {
     req.user = { id: config.mcpUserId, email: 'mcp@local', role: 'user' };
     return next();
   }

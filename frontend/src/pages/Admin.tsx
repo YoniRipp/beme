@@ -1,11 +1,5 @@
-import { AdminUsersTable } from '@/components/admin/AdminUsersTable';
-import { AdminLogs } from '@/components/admin/AdminLogs';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 
 export function Admin() {
-  return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <AdminUsersTable />
-      <AdminLogs />
-    </div>
-  );
+  return <AdminLayout />;
 }

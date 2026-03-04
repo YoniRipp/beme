@@ -3,16 +3,9 @@
  */
 import { Pool } from 'pg';
 import { getPool } from '../db/pool.js';
+import { escapeLike } from '../utils/escapeLike.js';
 
 const REFERENCE_GRAMS = 100;
-
-/** Escape LIKE wildcards (% and _) so they are matched literally. */
-function escapeLike(s: string): string {
-  return String(s)
-    .replace(/\\/g, '\\\\')
-    .replace(/%/g, '\%')
-    .replace(/_/g, '\_');
-}
 
 /** Use "uncooked" consistently (not "raw") for display. */
 function normalizePreparationName(name: string, preparation: string | null | undefined): string {

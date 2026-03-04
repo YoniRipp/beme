@@ -6,6 +6,10 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { getPool } from '../db/index.js';
 import * as appLog from '../services/appLog.js';
 import * as userActivityLog from '../models/userActivityLog.js';
+import * as adminStatsService from '../services/adminStats.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
+import { sendJson } from '../utils/response.js';
+import { escapeLike } from '../utils/escapeLike.js';
 
 const router = Router();
 
@@ -60,7 +64,7 @@ router.get('/api/admin/users/search', requireAuth, requireAdmin, async (req, res
       return res.json([]);
     }
     const pool = getPool();
-    const pattern = `%${q}%`;
+    const pattern = `%${escapeLike(q)}%`;
     const result = await pool.query(
       `SELECT id, email, name, role, created_at FROM users
        WHERE email ILIKE $1 OR name ILIKE $1
@@ -73,5 +77,10 @@ router.get('/api/admin/users/search', requireAuth, requireAdmin, async (req, res
     next(e);
   }
 });
+
+router.get('/api/admin/stats', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+  const stats = await adminStatsService.getAll();
+  sendJson(res, stats);
+}));
 
 export default router;

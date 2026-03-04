@@ -37,10 +37,8 @@ const EVENT_TYPE_ALL = '__all__';
 const EVENT_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: EVENT_TYPE_ALL, label: 'All' },
   { value: 'auth.', label: 'Auth' },
-  { value: 'money.', label: 'Money' },
   { value: 'energy.', label: 'Energy' },
   { value: 'body.', label: 'Body' },
-  { value: 'schedule.', label: 'Schedule' },
   { value: 'goals.', label: 'Goals' },
   { value: 'voice.', label: 'Voice' },
 ];
