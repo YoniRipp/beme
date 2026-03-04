@@ -6,8 +6,7 @@ These rules guide the migration to event-driven, multi-service design. Follow th
 
 ## 1. Domain logic stays inside its context
 
-- **Money** logic (balances, categories, validation) lives only in the Money context. No other context implements money rules.
-- **Schedule**, **Body**, **Energy**, **Goals**, **Voice** same: each context owns its domain logic and data access.
+- **Body**, **Energy**, **Goals**, **Voice**: each context owns its domain logic and data access.
 - No "god" service that orchestrates business rules across contexts. Orchestration is via events and optional thin BFF/gateway for reads.
 
 ---
@@ -22,7 +21,7 @@ These rules guide the migration to event-driven, multi-service design. Follow th
 
 ## 3. Event types are a versioned public contract
 
-- Changing an event's payload in a breaking way requires a new type or version (e.g. `money.TransactionCreated.v2`).
+- Changing an event's payload in a breaking way requires a new type or version (e.g. `body.WorkoutCreated.v2`).
 - Old consumers can keep consuming old events until deprecated. New consumers subscribe to new types.
 - No undocumented or ad-hoc event shapes.
 
@@ -38,7 +37,7 @@ These rules guide the migration to event-driven, multi-service design. Follow th
 ## 5. Cross-context: no sync writes; read strategy
 
 - **No sync HTTP write calls between services.** When a flow spans contexts (e.g. dashboard or voice action), the client (or BFF) calls the owning service’s API to perform the write; that service publishes events. Other contexts do not call another service’s API to perform a write—they react via event consumers if needed.
-- **Read strategy:** The gateway/BFF is the single entrypoint. It aggregates read APIs from each service (proxy by path, e.g. `/api/money/*`, `/api/schedule/*`). No service calls another service for reads in the write path; for read-only aggregation the gateway calls each service’s read API. Optionally a read-model consumer can build views from events and serve reads.
+- **Read strategy:** The gateway/BFF is the single entrypoint. It aggregates read APIs from each service (proxy by path, e.g. `/api/workouts/*`, `/api/food-entries/*`). No service calls another service for reads in the write path; for read-only aggregation the gateway calls each service’s read API. Optionally a read-model consumer can build views from events and serve reads.
 
 ---
 

@@ -1,6 +1,6 @@
 # BMe MCP Server
 
-MCP server that exposes BMe schedule, transactions, and goals as tools and resources. All data is read/written only via the BMe backend API (your DB); no external APIs.
+MCP server that exposes BMe goals, workouts, and other domain data as tools and resources. All data is read/written only via the BMe backend API (your DB); no external APIs.
 
 ## Prerequisites
 
@@ -14,9 +14,9 @@ MCP server that exposes BMe schedule, transactions, and goals as tools and resou
 
 Create a `.env` in this directory or set the variables in the environment (or in Cursor’s MCP `env` for `BEME_API_URL` and `BEME_MCP_TOKEN`).
 
-### Authenticated API access (schedule, transactions, goals)
+### Authenticated API access (goals, workouts, etc.)
 
-The schedule, transactions, and goals API routes require a logged-in user. To allow the MCP server to act as a specific user:
+The goals, workouts, and other domain API routes require a logged-in user. To allow the MCP server to act as a specific user:
 
 1. **Backend** (e.g. `backend/.env` or `backend/.env.development`):
    - **BEME_MCP_SECRET**: A shared secret (e.g. a long random string). Keep it private.
@@ -25,7 +25,7 @@ The schedule, transactions, and goals API routes require a logged-in user. To al
 2. **MCP / Cursor** (e.g. in `.cursor/mcp.json` under `env`, or in this directory’s `.env`):
    - **BEME_MCP_TOKEN**: Set to the same value as `BEME_MCP_SECRET`.
 
-If these are not set, unauthenticated calls to schedule/transactions/goals will return 401.
+If these are not set, unauthenticated calls to goals/workouts/etc. will return 401.
 
 ## Run
 
@@ -62,21 +62,13 @@ Add the BMe MCP server in Cursor settings (e.g. `.cursor/mcp.json` or Cursor MCP
 }
 ```
 
-Use the absolute path for your BMe project in `cwd`. Ensure the BMe backend is running so the MCP server can call its API. For schedule/transactions/goals tools, set `BEME_MCP_TOKEN` and the backend’s `BEME_MCP_SECRET` and `BEME_MCP_USER_ID` as described above.
+Use the absolute path for your BMe project in `cwd`. Ensure the BMe backend is running so the MCP server can call its API. For authenticated tools, set `BEME_MCP_TOKEN` and the backend’s `BEME_MCP_SECRET` and `BEME_MCP_USER_ID` as described above.
 
 ## Tools
 
-- **add_schedule_item** — Add one item to the daily schedule (title, startTime, endTime, category).
-- **list_schedule** — List active schedule items.
-- **delete_schedule_item** — Remove a schedule item by id.
-- **add_transaction** — Add income or expense (type, amount, category, description, date, isRecurring).
-- **list_transactions** — List transactions (optional: month, type).
-- **get_balance** — Get balance for the current or given month.
-- **add_goal** — Add a goal (type: calories/workouts/savings, target, period).
+- **add_goal** — Add a goal (type: calories/workouts, target, period).
 - **list_goals** — List all goals.
 
 ## Resources
 
-- **beme://schedule/today** — Today's schedule (JSON).
-- **beme://transactions/this_month** — This month's transactions (JSON).
 - **beme://goals** — Current goals (JSON).

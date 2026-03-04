@@ -11,11 +11,11 @@ React 18 SPA built with Vite, TypeScript, React Query, Tailwind CSS, and shadcn/
 - Capacitor (mobile): `npm run cap:sync`, `npm run cap:ios`, `npm run cap:android`
 
 ## Architecture
-- `src/pages/` -- Top-level page components (Home, Body, Energy, Money, Groups, Insights)
-- `src/hooks/` -- Data-fetching hooks (wrap React Query: useGoals, useWorkouts, useTransactions, etc.)
-- `src/features/` -- Feature-specific logic (goals, groups, money)
+- `src/pages/` -- Top-level page components (Home, Body, Energy, Goals, Insights)
+- `src/hooks/` -- Data-fetching hooks (wrap React Query: useGoals, useWorkouts, useEnergy, etc.)
+- `src/features/` -- Feature-specific logic (goals)
 - `src/components/` -- Reusable UI components organized by domain (layout/, goals/, home/, energy/)
-- `src/context/` -- React contexts (GoalsContext, ScheduleContext)
+- `src/context/` -- React contexts (GoalsContext, WorkoutContext, EnergyContext)
 - `src/lib/` -- Utilities (date ranges, API client)
 
 ## Patterns

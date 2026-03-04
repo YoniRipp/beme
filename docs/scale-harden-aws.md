@@ -112,7 +112,7 @@ Do these in order. Each item is a concrete deliverable.
 
 13. **CI: security and E2E**  
     - Run `npm audit` in CI; fail on high/critical. Enable Dependabot (or Snyk) for dependency updates.  
-    - Add E2E tests (e.g. Playwright) for critical flows (login, create transaction, voice); run in CI.  
+    - Add E2E tests (e.g. Playwright) for critical flows (login, create workout, voice); run in CI.
     - **Why:** Catch vulnerabilities and regressions before deploy.
 
 14. **Deploy pipeline**  

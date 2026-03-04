@@ -23,7 +23,7 @@ Deep review of the website, backend, mobile app, and overall architecture — wi
 **Issue:** `docs/architecture-principles.md` and `docs/bounded-contexts.md` describe a mature event-driven system with strict bounded contexts. In reality:
 - Events labeled "future" (e.g., `identity.UserRegistered`) are not implemented
 - Cross-context reads happen via direct DB queries (shared `DATABASE_URL`), not via APIs
-- Event consumers (`transactionAnalytics`, `statsAggregator`, `userActivityLog`) are thin — most domain logic still lives in synchronous request paths
+- Event consumers (`statsAggregator`, `userActivityLog`) are thin — most domain logic still lives in synchronous request paths
 
 **Impact:** The docs create false confidence. A new developer reads them and assumes guardrails that don't exist, then accidentally introduces cross-context coupling.
 
@@ -35,13 +35,13 @@ Deep review of the website, backend, mobile app, and overall architecture — wi
 
 ### 1.3 No Database Transactions Where They Matter
 
-**Issue:** Many write paths (create transaction, create workout, voice executor actions) perform multiple DB operations without wrapping them in a SQL transaction. The voice executor calls multiple domain writes sequentially — if the second fails, the first isn't rolled back.
+**Issue:** Many write paths (create workout, create food entry, voice executor actions) perform multiple DB operations without wrapping them in a SQL transaction. The voice executor calls multiple domain writes sequentially — if the second fails, the first isn't rolled back.
 
 **Impact:** A voice command like "Add a workout and log 500 calories" could succeed on the workout but fail on the food entry, leaving data inconsistent.
 
-**Recommendation:** Create a `withTransaction(pool, callback)` utility. Use it in the voice executor, batch schedule adds, and any multi-row write. The pool already supports `client.query('BEGIN')` as shown in `schema.ts`.
+**Recommendation:** Create a `withTransaction(pool, callback)` utility. Use it in the voice executor and any multi-row write. The pool already supports `client.query('BEGIN')` as shown in `schema.ts`.
 
-**Files:** `backend/src/services/voiceExecutor.ts`, `backend/src/controllers/schedule.ts`, `backend/src/db/pool.ts`
+**Files:** `backend/src/services/voiceExecutor.ts`, `backend/src/db/pool.ts`
 
 ---
 
@@ -138,11 +138,11 @@ Deep review of the website, backend, mobile app, and overall architecture — wi
 
 ### 3.1 Eight Context Providers Is Too Many
 
-**Issue:** `Providers.tsx` nests 8+ context providers: Auth, App, Transaction, Workout, Energy, Schedule, Group, Goals, Notification. Each wraps TanStack Query mutations. Any state change in a provider re-renders all its children.
+**Issue:** `Providers.tsx` nests multiple context providers: Auth, App, Workout, Energy, Goals, Notification. Each wraps TanStack Query mutations. Any state change in a provider re-renders all its children.
 
 **Impact:** Performance degradation as the app grows. The 140+ `useMemo`/`useCallback` calls are symptoms of fighting this architecture.
 
-**Recommendation:** You already use TanStack Query — lean into it. Replace domain contexts (Transaction, Workout, Energy, Schedule, Goals) with custom hooks that call React Query directly. Keep AuthContext and AppContext (they hold true client state). This eliminates provider nesting and gives automatic render optimization from React Query's selector support.
+**Recommendation:** You already use TanStack Query — lean into it. Replace domain contexts (Workout, Energy, Goals) with custom hooks that call React Query directly. Keep AuthContext and AppContext (they hold true client state). This eliminates provider nesting and gives automatic render optimization from React Query's selector support.
 
 Example: Replace `WorkoutContext` with `useWorkouts()`, `useAddWorkout()`, `useUpdateWorkout()` hooks that call React Query directly. The `features/body/` folder already has the API layer — wire hooks to it without the Context wrapper.
 
@@ -190,7 +190,7 @@ Example: Replace `WorkoutContext` with `useWorkouts()`, `useAddWorkout()`, `useU
 
 ### 3.5 The Dashboard Fetches Too Much Data
 
-**Issue:** `Home.tsx` renders `FinancialSummary`, `ScheduleWidget`, `QuickStats`, etc. Each triggers its own React Query fetch. On initial load, this fires 5-8 parallel API requests.
+**Issue:** `Home.tsx` renders `QuickStats` and other dashboard components. Each triggers its own React Query fetch. On initial load, this fires multiple parallel API requests.
 
 **Impact:** Slow initial load, especially on mobile.
 
@@ -322,7 +322,7 @@ User: "drank 2 liters of water" → name: "Water", serving_type: "bottle", servi
 - Voice executor has no test for multi-action scenarios
 
 **Recommendation (priority order):**
-1. Add Playwright E2E tests for top 3 user flows (auth, add/view transaction, voice command)
+1. Add Playwright E2E tests for top 3 user flows (auth, add/view workout, voice command)
 2. Add integration tests for event publish-consume cycle (test Redis instance)
 3. Add multi-action voice executor tests
 

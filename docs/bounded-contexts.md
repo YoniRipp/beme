@@ -62,8 +62,3 @@ Bounded contexts define ownership of data and behavior. Each context will eventu
 
 **Events (future):** `voice.VoiceJobRequested`, `voice.VoiceJobCompleted`, `voice.VoiceJobFailed`.
 
----
-
-## Groups (optional context)
-
-Groups and invitations can be a separate context or live under Identity. For simplicity, group membership can stay in Identity or a dedicated **Groups** context owning `groups`, `group_members`, `group_invitations`. Events: `groups.GroupCreated`, `groups.MemberAdded`, etc. Deferred until service extraction.

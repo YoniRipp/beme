@@ -1,12 +1,12 @@
 # BeMe Frontend
 
-React single-page application for the BeMe life-management app: dashboard, money, body, energy, schedule, goals, groups, settings, and insights. When `VITE_API_URL` is set and the user is authenticated, all domain data is loaded and saved via the backend API.
+React single-page application for the BeMe wellness app: dashboard, body, energy, goals, settings, and insights. When `VITE_API_URL` is set and the user is authenticated, all domain data is loaded and saved via the backend API.
 
 When the backend is deployed as a gateway with extracted services, set `VITE_API_URL` to the gateway URL; the client still talks to a single origin. No frontend code changes are required for gateway vs monolith.
 
 ## Overview
 
-The frontend is a TypeScript React app built with Vite. It uses React Router for navigation; server data (goals, transactions, schedule, workouts, energy) is fetched and cached with TanStack Query; auth and UI state use React Context. Forms use React Hook Form with Zod validation. The central API client sends a JWT on every request. Public routes are login, signup, and OAuth callback; all other routes are protected and require a logged-in user when the backend is in use.
+The frontend is a TypeScript React app built with Vite. It uses React Router for navigation; server data (goals, workouts, energy) is fetched and cached with TanStack Query; auth and UI state use React Context. Forms use React Hook Form with Zod validation. The central API client sends a JWT on every request. Public routes are login, signup, and OAuth callback; all other routes are protected and require a logged-in user when the backend is in use.
 
 ## Tech Stack
 
@@ -48,12 +48,10 @@ frontend/
 │   │   ├── layout/         # Layout, TopBar, BottomNav
 │   │   ├── shared/         # EmptyState, ConfirmationDialog, LoadingSpinner, ThemeToggle, ToastProvider, etc.
 │   │   ├── ui/             # Shadcn primitives (button, card, dialog, input, label, tabs, etc.)
-│   │   ├── home/           # Dashboard stats, FinancialSummary, ScheduleItem, ScheduleModal
-│   │   ├── money/          # TransactionCard, TransactionList, TransactionModal, MonthlyChart
+│   │   ├── home/           # Dashboard stats, QuickStats
 │   │   ├── body/           # WorkoutCard, WorkoutModal, ExerciseList, charts
 │   │   ├── energy/         # WellnessCard, DailyCheckInModal, FoodEntryModal, CalorieTrendChart, etc.
 │   │   ├── goals/          # GoalCard, GoalModal
-│   │   ├── groups/         # GroupCard, CreateGroupModal, MemberList, GroupSettingsModal
 │   │   ├── voice/          # VoiceAgentButton, VoiceAgentPanel
 │   │   ├── auth/           # SocialLoginButtons
 │   │   ├── settings/       # AdminUsersSection
@@ -62,30 +60,25 @@ frontend/
 │   │   ├── AuthContext.tsx # user, login, logout, register, loginWithProvider, loadUser
 │   │   ├── AppContext.tsx
 │   │   └── NotificationContext.tsx
-│   │   # Feature contexts are re-exported from features (Transaction, Workout, Energy, Schedule, Group, Goals)
-│   ├── schemas/            # Zod schemas (transaction, workout, foodEntry, voice)
+│   │   # Feature contexts are re-exported from features (Workout, Energy, Goals)
+│   ├── schemas/            # Zod schemas (workout, foodEntry, voice)
 │   ├── core/
 │   │   └── api/
 │   │       ├── client.ts   # getApiBase, getToken, setToken, request, handleUnauthorized
 │   │       ├── auth.ts     # login, register, me, google, etc.
 │   │       ├── food.ts
 │   │       ├── goals.ts
-│   │       ├── schedule.ts
-│   │       ├── transactions.ts
 │   │       ├── users.ts
 │   │       └── workouts.ts
 │   ├── features/
 │   │   ├── auth/           # auth API and types
-│   │   ├── money/          # api, mappers, TransactionContext, useBalanceByPeriod, useTransactionFilters, components
 │   │   ├── body/           # api, mappers
 │   │   ├── energy/         # api, mappers
 │   │   ├── goals/          # api, useGoalProgress
-│   │   ├── schedule/       # api, mappers
-│   │   ├── settings/       # settings logic
-│   │   └── groups/         # groups logic
+│   │   └── settings/       # settings logic
 │   ├── hooks/
-│   │   ├── useTransactions.ts, useWorkouts.ts, useEnergy.ts, useSchedule.ts, useGoals.ts
-│   │   ├── useDebounce.ts, useLocalStorage.ts, useSettings.ts, useFormat.ts, useGroups.ts
+│   │   ├── useWorkouts.ts, useEnergy.ts, useGoals.ts
+│   │   ├── useDebounce.ts, useLocalStorage.ts, useSettings.ts, useFormat.ts
 │   │   └── *.test.ts
 │   ├── lib/
 │   │   ├── constants.ts    # MOCK_USER, SAMPLE_*, LIMITS, DEFAULTS, VALIDATION_RULES
@@ -98,11 +91,11 @@ frontend/
 │   │   ├── export.ts
 │   │   └── api.ts         # Re-exports for API/token
 │   ├── pages/
-│   │   ├── Home.tsx, Money.tsx, Body.tsx, Energy.tsx, Groups.tsx, Insights.tsx, Settings.tsx
+│   │   ├── Home.tsx, Body.tsx, Energy.tsx, Goals.tsx, Insights.tsx, Settings.tsx
 │   │   ├── Login.tsx, Signup.tsx, AuthCallback.tsx
 │   │   └── *.test.tsx
 │   └── types/
-│       ├── user.ts, transaction.ts, workout.ts, energy.ts, schedule.ts, goals.ts, group.ts, settings.ts
+│       ├── user.ts, workout.ts, energy.ts, goals.ts, settings.ts
 ├── index.html
 ├── vite.config.ts         # React plugin, @ alias to src, Vitest config
 ├── tailwind.config.js
@@ -140,7 +133,7 @@ See the [root README](../README.md) for backend/frontend env pairing (e.g. Googl
 ## Auth and Routing
 
 - **Public routes**: `/login`, `/signup`, `/auth/callback`.
-- **Protected routes**: Everything else (`/`, `/money`, `/body`, `/energy`, `/groups`, `/insights`, `/settings`) is wrapped in `ProtectedRoutes` in [src/routes.tsx](src/routes.tsx). If there is no user (and auth has finished loading), the app redirects to `/login`.
+- **Protected routes**: Everything else (`/`, `/body`, `/energy`, `/goals`, `/insights`, `/settings`) is wrapped in `ProtectedRoutes` in [src/routes.tsx](src/routes.tsx). If there is no user (and auth has finished loading), the app redirects to `/login`.
 
 [AuthContext](src/context/AuthContext.tsx) loads the current user by calling `GET /api/auth/me` when a token exists in storage. On 401 (e.g. expired token), the API client clears the token and dispatches `auth:logout`; the context listens and clears the user so the next render redirects to login.
 
@@ -149,7 +142,7 @@ See the [root README](../README.md) for backend/frontend env pairing (e.g. Googl
 [Providers.tsx](src/Providers.tsx):
 
 1. **Outer (all routes)**: `ErrorBoundary` → `ToastProvider` → `AuthProvider` → router.
-2. **Inside protected routes** (after auth check): `QueryClientProvider` → `AppProvider` → `TransactionProvider` → `WorkoutProvider` → `EnergyProvider` → `ScheduleProvider` → `GroupProvider` → `GoalsProvider` → `NotificationProvider` → app content.
+2. **Inside protected routes** (after auth check): `QueryClientProvider` → `AppProvider` → `WorkoutProvider` → `EnergyProvider` → `GoalsProvider` → `NotificationProvider` → app content.
 
 Feature providers use TanStack Query (useQuery for lists, useMutation for add/update/delete) and update the cache on success. They expose the same interface (e.g. `goals`, `goalsLoading`, `addGoal`) so existing hooks like `useGoals()` are unchanged.
 
@@ -158,14 +151,14 @@ Feature providers use TanStack Query (useQuery for lists, useMutation for add/up
 The API base URL (`VITE_API_URL`) may point to the main backend or a gateway that routes to multiple services; the frontend is unchanged in either case. See the root README **Architecture** for the technology flow.
 
 1. User logs in → backend returns JWT → frontend stores token and sets user in AuthContext.
-2. Protected app mounts → AppProviders mount → `QueryClientProvider` wraps feature providers. Each feature provider (e.g. TransactionProvider, GoalsProvider) uses `useQuery` to fetch its list (e.g. transactions, goals); the query key and API call live in the provider.
-3. `request()` in [src/core/api/client.ts](src/core/api/client.ts) uses `VITE_API_URL` and attaches `Authorization: Bearer <token>`. API responses for transactions are parsed with Zod in [src/core/api/transactions.ts](src/core/api/transactions.ts).
+2. Protected app mounts → AppProviders mount → `QueryClientProvider` wraps feature providers. Each feature provider (e.g. GoalsProvider, WorkoutProvider) uses `useQuery` to fetch its list (e.g. goals, workouts); the query key and API call live in the provider.
+3. `request()` in [src/core/api/client.ts](src/core/api/client.ts) uses `VITE_API_URL` and attaches `Authorization: Bearer <token>`.
 4. Mutations (add/update/delete) use `useMutation` and on success update the query cache via `queryClient.setQueryData`, so the UI reflects changes without a refetch.
-5. Pages and components consume context (e.g. `useTransactions()`, `useGoals()`) and call context actions to add/update/delete. Forms (TransactionModal, WorkoutModal, FoodEntryModal) use React Hook Form with Zod resolver for validation.
+5. Pages and components consume context (e.g. `useWorkouts()`, `useGoals()`) and call context actions to add/update/delete. Forms (WorkoutModal, FoodEntryModal, GoalModal) use React Hook Form with Zod resolver for validation.
 
 ## Voice
 
-[src/lib/voiceApi.ts](src/lib/voiceApi.ts) exposes `understand(text)`, which sends `POST /api/voice/understand` with the user’s utterance. The backend (Gemini) returns a list of actions (e.g. `add_schedule`, `add_transaction`). The frontend parses these into [VoiceAction](src/lib/voiceApi.ts) and the voice UI ([src/components/voice/VoiceAgentPanel.tsx](src/components/voice/VoiceAgentPanel.tsx)) applies them by calling the relevant context APIs (schedule, transactions, workouts, food, energy/check-in, goals).
+[src/lib/voiceApi.ts](src/lib/voiceApi.ts) exposes `understand(text)`, which sends `POST /api/voice/understand` with the user’s utterance. The backend (Gemini) returns a list of actions (e.g. `add_workout`, `add_food`). The frontend parses these into [VoiceAction](src/lib/voiceApi.ts) and the voice UI ([src/components/voice/VoiceAgentPanel.tsx](src/components/voice/VoiceAgentPanel.tsx)) applies them by calling the relevant context APIs (workouts, food, energy/check-in, goals).
 
 ## Theming
 
@@ -175,7 +168,7 @@ Settings store the theme (light / dark / system). Inside protected routes, [rout
 
 - **Runner**: Vitest; **DOM**: jsdom; **components**: Testing Library.
 - **Setup**: [src/setupTests.ts](src/setupTests.ts).
-- Tests live next to source (e.g. `AppContext.test.tsx`, `TransactionContext.test.tsx`, `EnergyContext.test.tsx`, `WorkoutContext.test.tsx`, `GoalsContext.test.tsx`, `Body.test.tsx`, `Money.test.tsx`, `Energy.test.tsx`, `Groups.test.tsx`, `Home.test.tsx`, `Settings.test.tsx`) and in `components/shared/` (e.g. `EmptyState.test.tsx`, `SearchBar.test.tsx`), plus hooks and lib tests (`useDebounce.test.ts`, `useLocalStorage.test.ts`, `analytics.test.ts`, `validation.test.ts`, etc.).
+- Tests live next to source (e.g. `AppContext.test.tsx`, `EnergyContext.test.tsx`, `WorkoutContext.test.tsx`, `GoalsContext.test.tsx`, `Body.test.tsx`, `Energy.test.tsx`, `Home.test.tsx`, `Settings.test.tsx`) and in `components/shared/` (e.g. `EmptyState.test.tsx`, `SearchBar.test.tsx`), plus hooks and lib tests (`useDebounce.test.ts`, `useLocalStorage.test.ts`, `analytics.test.ts`, `validation.test.ts`, etc.).
 
 Run: `npm run test` (or `test:ui` / `test:coverage`) from `frontend/` or `npm run test` from repo root.
 

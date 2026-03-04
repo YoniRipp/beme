@@ -11,7 +11,7 @@ Every event MUST have:
 | Field | Type | Description |
 |-------|------|-------------|
 | `eventId` | string (UUID) | Unique id for this event. Producers MUST assign a unique eventId (e.g. UUID) to every event. Used for deduplication and idempotent consumption. |
-| `type` | string | Event type, e.g. `money.TransactionCreated`, `schedule.ScheduleItemAdded`. Format: `context.Verb` or `context.NounVerb`. Version suffix optional: `money.TransactionCreated.v1`. |
+| `type` | string | Event type, e.g. `body.WorkoutCreated`, `energy.FoodEntryCreated`. Format: `context.Verb` or `context.NounVerb`. Version suffix optional: `body.WorkoutCreated.v1`. |
 | `payload` | object | Domain-specific data. Structure is defined per event type. |
 | `metadata` | object | Common metadata. See below. |
 
@@ -34,15 +34,16 @@ Every event MUST have:
 ```json
 {
   "eventId": "550e8400-e29b-41d4-a716-446655440000",
-  "type": "money.TransactionCreated",
+  "type": "body.WorkoutCreated",
   "payload": {
-    "id": "tx-uuid",
+    "id": "workout-uuid",
     "date": "2025-02-24",
-    "type": "expense",
-    "amount": 10.5,
-    "currency": "USD",
-    "category": "Food",
-    "description": "Coffee"
+    "title": "Morning Strength",
+    "type": "strength",
+    "duration_minutes": 45,
+    "exercises": [
+      { "name": "Squat", "sets": 3, "reps": 5, "weight": 100 }
+    ]
   },
   "metadata": {
     "userId": "user-123",
@@ -56,8 +57,6 @@ Every event MUST have:
 
 ## Event types (catalog)
 
-- **Money:** `money.TransactionCreated`, `money.TransactionUpdated`, `money.TransactionDeleted`
-- **Schedule:** `schedule.ScheduleItemAdded`, `schedule.ScheduleItemUpdated`, `schedule.ScheduleItemDeleted`, `schedule.ScheduleBatchAdded`
 - **Body:** `body.WorkoutCreated`, `body.WorkoutUpdated`, `body.WorkoutDeleted`
 - **Energy:** `energy.FoodEntryCreated`, `energy.FoodEntryUpdated`, `energy.FoodEntryDeleted`, `energy.CheckInCreated`, `energy.CheckInUpdated`
 - **Goals:** `goals.GoalCreated`, `goals.GoalUpdated`, `goals.GoalDeleted`
@@ -71,4 +70,4 @@ Payload shape per type is defined in code (e.g. Zod schema) and should match the
 
 - **Idempotency:** Consumers MUST be idempotent. Use `eventId` (and optionally `payload.id`) to deduplicate. Processing the same event twice must not change outcome. When in doubt, upsert by `eventId` so duplicate delivery leaves state correct.
 - **Ordering:** If ordering matters, use one queue per aggregate (e.g. per user) or include `version` / `sequenceId` in payload and handle out-of-order in the consumer.
-- **Versioning:** When changing payload shape, introduce a new event type or version (e.g. `money.TransactionCreated.v2`) and support both until old consumers are retired.
+- **Versioning:** When changing payload shape, introduce a new event type or version (e.g. `body.WorkoutCreated.v2`) and support both until old consumers are retired.
