@@ -19,12 +19,6 @@ vi.mock('@/features/energy/api', () => ({
   dailyCheckInsApi: { list: vi.fn().mockResolvedValue([]), add: vi.fn(), update: vi.fn(), delete: vi.fn() },
   searchFoods: vi.fn().mockResolvedValue([]),
 }));
-vi.mock('@/features/money/api', () => ({
-  transactionsApi: { list: vi.fn().mockResolvedValue([]), add: vi.fn(), update: vi.fn(), delete: vi.fn() },
-}));
-vi.mock('@/lib/exchangeRates', () => ({
-  fetchRates: vi.fn().mockResolvedValue({ rates: {} }),
-}));
 
 // Mock recharts components
 vi.mock('recharts', () => ({
@@ -58,17 +52,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('Insights Page', () => {
-  it('renders insights page with title', () => {
-    render(<Insights />, { wrapper });
-    expect(screen.getByRole('heading', { name: /financial insights/i })).toBeInTheDocument();
-  });
-
-  it('displays financial insights section', () => {
-    render(<Insights />, { wrapper });
-    expect(screen.getByRole('heading', { name: /financial insights/i })).toBeInTheDocument();
-  });
-
-  it('displays fitness insights section', () => {
+it('displays fitness insights section', () => {
     render(<Insights />, { wrapper });
     expect(screen.getByRole('heading', { name: /fitness insights/i })).toBeInTheDocument();
   });
@@ -78,12 +62,7 @@ describe('Insights Page', () => {
     expect(screen.getByRole('heading', { name: /health insights/i })).toBeInTheDocument();
   });
 
-  it('displays spending trend', () => {
-    render(<Insights />, { wrapper });
-    expect(screen.getByRole('tab', { name: /spending trend/i })).toBeInTheDocument();
-  });
-
-  it('displays workout frequency', () => {
+it('displays workout frequency', () => {
     render(<Insights />, { wrapper });
     const elements = screen.getAllByText(/workout frequency/i);
     expect(elements.length).toBeGreaterThanOrEqual(1);

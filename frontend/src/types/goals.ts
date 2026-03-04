@@ -1,4 +1,4 @@
-export type GoalType = 'calories' | 'workouts' | 'savings' | 'sleep';
+export type GoalType = 'calories' | 'workouts' | 'sleep';
 export type GoalPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface Goal {
@@ -10,5 +10,5 @@ export interface Goal {
   // Note: 'current' is calculated, not stored
 }
 
-export const GOAL_TYPES: GoalType[] = ['calories', 'workouts', 'savings', 'sleep'];
+export const GOAL_TYPES: GoalType[] = ['calories', 'workouts', 'sleep'];
 export const GOAL_PERIODS: GoalPeriod[] = ['daily', 'weekly', 'monthly', 'yearly'];

@@ -4,16 +4,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { executeActions } from './voiceExecutor.js';
 
-const mockTransactionCreate = vi.fn();
-const mockTransactionUpdate = vi.fn();
-const mockTransactionRemove = vi.fn();
-const mockTransactionList = vi.fn();
-
-const mockScheduleCreateBatch = vi.fn();
-const mockScheduleUpdate = vi.fn();
-const mockScheduleRemove = vi.fn();
-const mockScheduleList = vi.fn();
-
 const mockWorkoutCreate = vi.fn();
 const mockWorkoutUpdate = vi.fn();
 const mockWorkoutRemove = vi.fn();
@@ -33,20 +23,6 @@ const mockGoalCreate = vi.fn();
 const mockGoalUpdate = vi.fn();
 const mockGoalRemove = vi.fn();
 const mockGoalList = vi.fn();
-
-vi.mock('./transaction.js', () => ({
-  create: (...args: unknown[]) => mockTransactionCreate(...args),
-  update: (...args: unknown[]) => mockTransactionUpdate(...args),
-  remove: (...args: unknown[]) => mockTransactionRemove(...args),
-  list: (...args: unknown[]) => mockTransactionList(...args),
-}));
-
-vi.mock('./schedule.js', () => ({
-  createBatch: (...args: unknown[]) => mockScheduleCreateBatch(...args),
-  update: (...args: unknown[]) => mockScheduleUpdate(...args),
-  remove: (...args: unknown[]) => mockScheduleRemove(...args),
-  list: (...args: unknown[]) => mockScheduleList(...args),
-}));
 
 vi.mock('./workout.js', () => ({
   create: (...args: unknown[]) => mockWorkoutCreate(...args),
@@ -96,16 +72,15 @@ describe('voiceExecutor', () => {
 
       const results = await executeActions(
         [
-          { intent: 'add_transaction', type: 'expense', amount: 10 },
           { intent: 'add_workout', title: 'Run' },
+          { intent: 'add_food', name: 'Apple' },
         ],
         userId
       );
 
       expect(results).toHaveLength(2);
-      expect(results[0]).toEqual({ intent: 'add_transaction', success: false, message: 'Database not configured' });
-      expect(results[1]).toEqual({ intent: 'add_workout', success: false, message: 'Database not configured' });
-      expect(mockTransactionCreate).not.toHaveBeenCalled();
+      expect(results[0]).toEqual({ intent: 'add_workout', success: false, message: 'Database not configured' });
+      expect(results[1]).toEqual({ intent: 'add_food', success: false, message: 'Database not configured' });
       expect(mockWorkoutCreate).not.toHaveBeenCalled();
     });
   });
@@ -116,158 +91,6 @@ describe('voiceExecutor', () => {
 
       expect(results).toHaveLength(1);
       expect(results[0]).toEqual({ intent: 'unknown', success: false, message: 'Could not understand' });
-    });
-  });
-
-  describe('add_transaction', () => {
-    it('creates transaction and returns success', async () => {
-      mockTransactionCreate.mockResolvedValue(undefined);
-
-      const results = await executeActions(
-        [
-          {
-            intent: 'add_transaction',
-            type: 'expense',
-            amount: 50,
-            category: 'Food',
-            description: 'Coffee',
-          },
-        ],
-        userId
-      );
-
-      expect(results).toEqual([{ intent: 'add_transaction', success: true }]);
-      expect(mockTransactionCreate).toHaveBeenCalledWith(userId, {
-        type: 'expense',
-        amount: 50,
-        currency: 'USD',
-        category: 'Food',
-        description: 'Coffee',
-        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-        isRecurring: false,
-      });
-    });
-  });
-
-  describe('edit_transaction', () => {
-    it('returns failure when transaction not found (by id)', async () => {
-      mockTransactionList.mockResolvedValue({ items: [], total: 0 });
-
-      const results = await executeActions(
-        [{ intent: 'edit_transaction', transactionId: 'tx-99', amount: 20 }],
-        userId
-      );
-
-      expect(results).toEqual([{ intent: 'edit_transaction', success: false, message: 'Transaction not found' }]);
-      expect(mockTransactionUpdate).not.toHaveBeenCalled();
-    });
-
-    it('updates transaction when found by description', async () => {
-      const tx = { id: 'tx-1', description: 'Coffee purchase', date: '2025-02-24' };
-      mockTransactionList.mockResolvedValue({ items: [tx], total: 1 });
-      mockTransactionUpdate.mockResolvedValue(undefined);
-
-      const results = await executeActions(
-        [{ intent: 'edit_transaction', description: 'coffee', amount: 25 }],
-        userId
-      );
-
-      expect(results).toEqual([{ intent: 'edit_transaction', success: true }]);
-      expect(mockTransactionUpdate).toHaveBeenCalledWith(userId, 'tx-1', expect.objectContaining({ amount: 25 }));
-    });
-  });
-
-  describe('delete_transaction', () => {
-    it('returns failure when transaction not found', async () => {
-      mockTransactionList.mockResolvedValue({ items: [], total: 0 });
-
-      const results = await executeActions(
-        [{ intent: 'delete_transaction', transactionId: 'tx-99' }],
-        userId
-      );
-
-      expect(results).toEqual([{ intent: 'delete_transaction', success: false, message: 'Transaction not found' }]);
-      expect(mockTransactionRemove).not.toHaveBeenCalled();
-    });
-
-    it('removes transaction when found by transactionId', async () => {
-      const tx = { id: 'tx-1', description: 'Coffee' };
-      mockTransactionList.mockResolvedValue({ items: [tx], total: 1 });
-      mockTransactionRemove.mockResolvedValue(undefined);
-
-      const results = await executeActions(
-        [{ intent: 'delete_transaction', transactionId: 'tx-1' }],
-        userId
-      );
-
-      expect(results).toEqual([{ intent: 'delete_transaction', success: true }]);
-      expect(mockTransactionRemove).toHaveBeenCalledWith(userId, 'tx-1');
-    });
-  });
-
-  describe('add_schedule', () => {
-    it('returns failure when no items', async () => {
-      const results = await executeActions([{ intent: 'add_schedule', items: [] }], userId);
-
-      expect(results).toEqual([{ intent: 'add_schedule', success: false, message: 'No schedule items' }]);
-      expect(mockScheduleCreateBatch).not.toHaveBeenCalled();
-    });
-
-    it('creates schedule batch and returns success', async () => {
-      mockScheduleCreateBatch.mockResolvedValue(undefined);
-
-      const results = await executeActions(
-        [
-          {
-            intent: 'add_schedule',
-            items: [{ title: 'Meeting', startTime: '09:00', endTime: '10:00', category: 'Work' }],
-          },
-        ],
-        userId
-      );
-
-      expect(results).toEqual([{ intent: 'add_schedule', success: true, message: 'Added 1 item(s)' }]);
-      expect(mockScheduleCreateBatch).toHaveBeenCalledWith(userId, [
-        expect.objectContaining({
-          title: 'Meeting',
-          startTime: '09:00',
-          endTime: '10:00',
-          category: 'Work',
-        }),
-      ]);
-    });
-  });
-
-  describe('edit_schedule', () => {
-    it('returns failure when schedule item not found', async () => {
-      mockScheduleList.mockResolvedValue([]);
-
-      const results = await executeActions(
-        [{ intent: 'edit_schedule', itemTitle: 'Unknown', startTime: '10:00' }],
-        userId
-      );
-
-      expect(results).toEqual([{ intent: 'edit_schedule', success: false, message: 'Schedule item not found' }]);
-      expect(mockScheduleUpdate).not.toHaveBeenCalled();
-    });
-
-    it('updates schedule when found by itemId', async () => {
-      const item = { id: 's1', title: 'Meeting', date: '2025-02-24' };
-      mockScheduleList.mockResolvedValue([item]);
-      mockScheduleUpdate.mockResolvedValue(undefined);
-
-      const results = await executeActions(
-        [{ intent: 'edit_schedule', itemId: 's1', startTime: '10:00', endTime: '11:00' }],
-        userId
-      );
-
-      expect(results).toEqual([{ intent: 'edit_schedule', success: true }]);
-      expect(mockScheduleUpdate).toHaveBeenCalledWith(userId, 's1', {
-        startTime: '10:00',
-        endTime: '11:00',
-        title: undefined,
-        category: undefined,
-      });
     });
   });
 
@@ -405,15 +228,15 @@ describe('voiceExecutor', () => {
 
   describe('error handling', () => {
     it('captures service errors and returns failure', async () => {
-      mockTransactionCreate.mockRejectedValue(new Error('DB connection failed'));
+      mockWorkoutCreate.mockRejectedValue(new Error('DB connection failed'));
 
       const results = await executeActions(
-        [{ intent: 'add_transaction', type: 'expense', amount: 10 }],
+        [{ intent: 'add_workout', title: 'Run', type: 'cardio' }],
         userId
       );
 
       expect(results).toEqual([
-        { intent: 'add_transaction', success: false, message: 'DB connection failed' },
+        { intent: 'add_workout', success: false, message: 'DB connection failed' },
       ]);
     });
   });

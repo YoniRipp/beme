@@ -1,12 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { startOfMonth, endOfMonth, isAfter } from 'date-fns';
 import {
   LayoutDashboard,
-  Wallet,
   Dumbbell,
   Zap,
-  Calendar,
   Target,
   Menu,
   X,
@@ -20,12 +17,8 @@ import {
   LogOut,
   User,
 } from 'lucide-react';
-import { useSettings } from '@/hooks/useSettings';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
-import { useTransactions } from '@/hooks/useTransactions';
-import { useExchangeRates } from '@/features/money/useExchangeRates';
-import { HeaderBalance } from './HeaderBalance';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,8 +30,6 @@ import { VoiceAgentButton } from '../voice/VoiceAgentButton';
 
 const ROUTE_TO_TITLE: Record<string, string> = {
   '/': 'Dashboard',
-  '/schedule': 'Schedule',
-  '/money': 'Money',
   '/body': 'Body',
   '/energy': 'Energy',
   '/goals': 'Goals',
@@ -50,10 +41,8 @@ const ROUTE_TO_TITLE: Record<string, string> = {
 
 const SIDEBAR_NAV_BASE = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { name: 'Money', path: '/money', icon: Wallet },
   { name: 'Body', path: '/body', icon: Dumbbell },
   { name: 'Energy', path: '/energy', icon: Zap },
-  { name: 'Schedule', path: '/schedule', icon: Calendar },
   { name: 'Goals', path: '/goals', icon: Target },
   { name: 'Insights', path: '/insights', icon: TrendingUp },
   { name: 'Settings', path: '/settings', icon: Settings },
@@ -65,8 +54,8 @@ function getSidebarNav(isAdmin: boolean) {
   return [...SIDEBAR_NAV_BASE, { name: 'Admin', path: '/admin', icon: ShieldCheck }];
 }
 
-/** Base44-style: first 6 items only (Dashboard, Money, Body, Energy, Schedule, Goals) */
-const BOTTOM_NAV_ITEMS = 6;
+/** Base44-style: first 4 items only (Dashboard, Body, Energy, Goals) */
+const BOTTOM_NAV_ITEMS = 4;
 
 function getPageTitle(pathname: string): string {
   if (pathname.startsWith('/groups/') && pathname.length > 8) return 'Groups';
@@ -85,35 +74,7 @@ export function Base44Layout() {
     logout();
     navigate('/login', { replace: true });
   };
-  const { settings } = useSettings();
-  const { transactions, transactionsLoading } = useTransactions();
   const sidebarNav = useMemo(() => getSidebarNav(user?.role === 'admin'), [user?.role]);
-  const displayCurrency = settings.currency;
-  const fromCurrencies = useMemo(
-    () => Array.from(new Set(transactions.map((t) => t.currency ?? 'USD'))),
-    [transactions]
-  );
-  const { convertToDisplay } = useExchangeRates(displayCurrency, fromCurrencies);
-
-  const { balance, income, expenses } = useMemo(() => {
-    const monthStart = startOfMonth(new Date());
-    const monthEnd = endOfMonth(new Date());
-    const monthly = transactions.filter((t) => {
-      const tDate = new Date(t.date);
-      return isAfter(tDate, monthStart) && isAfter(monthEnd, tDate);
-    });
-    const monthlyIncome = monthly
-      .filter((t) => t.type === 'income')
-      .reduce((sum, t) => sum + convertToDisplay(t.amount, t.currency ?? 'USD'), 0);
-    const monthlyExpenses = monthly
-      .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + convertToDisplay(t.amount, t.currency ?? 'USD'), 0);
-    return {
-      balance: monthlyIncome - monthlyExpenses,
-      income: monthlyIncome,
-      expenses: monthlyExpenses,
-    };
-  }, [transactions, convertToDisplay]);
 
   const pageTitle = getPageTitle(pathname);
 
@@ -259,14 +220,6 @@ export function Base44Layout() {
                   <Sun className="w-3.5 h-3.5" />
                   <span className="text-xs font-medium">{dateStr}</span>
                 </div>
-                <HeaderBalance
-                  balance={balance}
-                  income={income}
-                  expenses={expenses}
-                  currency={settings.currency}
-                  balanceDisplayLayout={settings.balanceDisplayLayout}
-                  loading={transactionsLoading}
-                />
               </div>
             </div>
           </div>

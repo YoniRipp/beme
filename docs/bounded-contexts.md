@@ -16,30 +16,6 @@ Bounded contexts define ownership of data and behavior. Each context will eventu
 
 ---
 
-## Money
-
-**Owns:** Transactions (income/expense), balances, categories.
-
-**Data:** `transactions` table (id, user_id, date, type, amount, currency, category, description, is_recurring, group_id, created_at).
-
-**API surface:** CRUD for transactions, balance by month, list with filters.
-
-**Events (future):** `money.TransactionCreated`, `money.TransactionUpdated`, `money.TransactionDeleted`.
-
----
-
-## Schedule
-
-**Owns:** Schedule items (title, start/end time, category, recurrence).
-
-**Data:** `schedule_items` table (or equivalent); recurrence and batch operations.
-
-**API surface:** CRUD for schedule items, batch add, list by date range.
-
-**Events (future):** `schedule.ScheduleItemAdded`, `schedule.ScheduleItemUpdated`, `schedule.ScheduleItemDeleted`, `schedule.ScheduleBatchAdded`.
-
----
-
 ## Body
 
 **Owns:** Workouts, exercises (sets, reps, weight).

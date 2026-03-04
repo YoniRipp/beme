@@ -1,13 +1,10 @@
 /**
- * Mount all API routers (auth, users, schedule, transactions, etc.).
- * When MONEY_SERVICE_URL is set, transaction routes are not mounted here (main app proxies to Money service).
+ * Mount all API routers (auth, users, workouts, food, voice, etc.).
  */
 import { Router } from 'express';
 import { config } from '../config/index.js';
 import authRouter from './auth.js';
 import usersRouter from './users.js';
-import scheduleRouter from './schedule.js';
-import transactionRouter from './transaction.js';
 import workoutRouter from './workout.js';
 import foodEntryRouter from './foodEntry.js';
 import dailyCheckInRouter from './dailyCheckIn.js';
@@ -28,8 +25,6 @@ router.use(authRouter);
 router.use(adminRouter);
 router.use(subscriptionRouter);
 router.use(usersRouter);
-if (!config.scheduleServiceUrl) router.use(scheduleRouter);
-if (!config.moneyServiceUrl) router.use(transactionRouter);
 if (!config.bodyServiceUrl) router.use(workoutRouter);
 if (!config.energyServiceUrl) {
   router.use(foodEntryRouter);

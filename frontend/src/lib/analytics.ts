@@ -1,7 +1,6 @@
-import { Transaction } from '@/types/transaction';
 import { Workout } from '@/types/workout';
 import { FoodEntry, DailyCheckIn } from '@/types/energy';
-import { isWithinInterval, format, startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { isWithinInterval, format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { getTrendPeriodBounds, WEEK_SUNDAY } from '@/lib/dateRanges';
 
 /** Shared palette for pie/bar charts (insights and elsewhere). */
@@ -12,14 +11,6 @@ export interface TrendData {
   previous: number;
   change: number;
   changePercent: number;
-}
-
-export interface SpendingInsight {
-  topCategories: Array<{ category: string; amount: number; count: number }>;
-  averageAmount: number;
-  mostCommonCategory: string;
-  totalSpent: number;
-  totalIncome: number;
 }
 
 export interface FitnessInsight {
@@ -84,50 +75,6 @@ function getItemDate(item: any): Date | null {
     return item.date instanceof Date ? item.date : new Date(item.date);
   }
   return null;
-}
-
-/**
- * Get spending insights from transactions
- */
-export function getSpendingInsights(transactions: Transaction[]): SpendingInsight {
-  const expenses = transactions.filter(t => t.type === 'expense');
-  const income = transactions.filter(t => t.type === 'income');
-
-  // Calculate category totals
-  const categoryMap = new Map<string, { amount: number; count: number }>();
-  
-  expenses.forEach(t => {
-    const existing = categoryMap.get(t.category) || { amount: 0, count: 0 };
-    categoryMap.set(t.category, {
-      amount: existing.amount + t.amount,
-      count: existing.count + 1,
-    });
-  });
-
-  const topCategories = Array.from(categoryMap.entries())
-    .map(([category, data]) => ({ category, ...data }))
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5);
-
-  const totalSpent = expenses.reduce((sum, t) => sum + t.amount, 0);
-  const totalIncome = income.reduce((sum, t) => sum + t.amount, 0);
-  const averageAmount = expenses.length > 0 ? totalSpent / expenses.length : 0;
-
-  // Most common category
-  const categoryCounts = new Map<string, number>();
-  expenses.forEach(t => {
-    categoryCounts.set(t.category, (categoryCounts.get(t.category) || 0) + 1);
-  });
-  const mostCommonCategory = Array.from(categoryCounts.entries())
-    .sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
-
-  return {
-    topCategories,
-    averageAmount: Math.round(averageAmount * 100) / 100,
-    mostCommonCategory,
-    totalSpent,
-    totalIncome,
-  };
 }
 
 /**
@@ -263,43 +210,6 @@ export function getHealthInsights(
     sleepConsistency: Math.round(sleepConsistency * 100) / 100,
     averageSleepHours: Math.round(averageSleepHours * 100) / 100,
   };
-}
-
-/**
- * Get spending trend data for chart
- */
-export function getSpendingTrendData(
-  transactions: Transaction[],
-  months: number = 12
-): Array<{ month: string; income: number; expenses: number }> {
-  const now = new Date();
-  const data: Array<{ month: string; income: number; expenses: number }> = [];
-
-  for (let i = months - 1; i >= 0; i--) {
-    const monthStart = startOfMonth(subMonths(now, i));
-    const monthEnd = endOfMonth(subMonths(now, i));
-
-    const monthTransactions = transactions.filter(t => {
-      const date = t.date instanceof Date ? t.date : new Date(t.date);
-      return isWithinInterval(date, { start: monthStart, end: monthEnd });
-    });
-
-    const income = monthTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const expenses = monthTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    data.push({
-      month: format(monthStart, 'MMM yyyy'),
-      income,
-      expenses,
-    });
-  }
-
-  return data;
 }
 
 /**

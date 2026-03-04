@@ -48,10 +48,8 @@ function ScoreRing({ score }: { score: number }) {
 // ─── Semantic Search Box ───────────────────────────────────────────────────────
 
 const RECORD_TYPE_LABEL: Record<string, string> = {
-  transaction: '💰 Transaction',
   workout: '💪 Workout',
   food_entry: '🥗 Food',
-  schedule: '📅 Schedule',
 };
 
 function SearchBox() {
@@ -144,7 +142,6 @@ function TodayRecommendations() {
 
   const recs = [
     { icon: '💪', label: 'Workout', text: data?.workout },
-    { icon: '💰', label: 'Budget', text: data?.budget },
     { icon: '🥗', label: 'Nutrition', text: data?.nutrition },
     { icon: '🧠', label: 'Focus', text: data?.focus },
   ].filter((r) => r.text);

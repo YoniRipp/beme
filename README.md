@@ -1,20 +1,13 @@
-# BeMe – Life Management Application
+# BeMe – Wellness Application
 
-**BeMe** (BMe) is a full-stack life-management app for tracking **money**, **body**, **energy**, **schedule**, **goals**, and **groups**, with an optional **voice agent** powered by Google Gemini. Built with **React**, **TypeScript**, **Vite**, and **Node/Express**; data is stored in **PostgreSQL**; optional **Redis** for rate limiting, caching, async voice processing, and event bus.
+**BeMe** (BMe) is a full-stack wellness app for tracking **body** (workouts), **energy** (food, calories, sleep), **goals**, and **groups**, with an optional **voice agent** powered by Google Gemini. Built with **React**, **TypeScript**, **Vite**, and **Node/Express**; data is stored in **PostgreSQL**; optional **Redis** for rate limiting, caching, async voice processing, and event bus.
 
 ## Features
 
 ### Dashboard (Home)
-- Financial summary (balance, income, expenses)
-- Daily schedule overview and quick edit
-- Quick stats (workouts, energy, savings)
+- Goals progress overview
+- Quick stats (workouts, energy, sleep)
 - Navigation to all areas
-
-### Money
-- Income and expense tracking with categories (Food, Housing, Transportation, etc.; income: Salary, Freelance, Investment, Gift)
-- Monthly balance and trend charts; balance by period (daily, weekly, monthly, yearly). Weekly period uses the current calendar week (Sunday–Saturday)
-- Transaction categories and recurring support; filter by income / expense / all
-- All transaction dates sent and stored as local calendar date (YYYY-MM-DD)
 
 ### Body
 - Workout logging with exercise details: name, sets, reps, weight (kg). Title (default "Workout" or program name like "SS"), list of exercises
@@ -24,20 +17,17 @@
 - Daily wellness check-ins and sleep hours tracking
 - Food entries with calories and macros; calorie and energy trend charts
 
-### Schedule
-- Daily schedule items with start/end time and category. Categories: Work, Exercise, Meal, Sleep, Personal, Social, Other. Optional recurrence
-
 ### Goals
-- Goals by type: calories, workouts, savings. Periods: weekly, monthly, yearly
+- Goals by type: calories, workouts. Periods: weekly, monthly, yearly
 
 ### Groups
 - Create and manage groups (household, event, project); member list and invitations
 
 ### Voice Agent
-- Speak in natural language to add or edit schedule, transactions, workouts, food, sleep, and goals. Powered by Google Gemini; requires `GEMINI_API_KEY`
+- Speak in natural language to add or edit workouts, food, sleep, and goals. Powered by Google Gemini; requires `GEMINI_API_KEY`
 - **Text/transcript (sync)**: Send typed or transcribed text; backend returns parsed actions immediately
 - **Audio (async, requires Redis)**: Send base64 audio; backend enqueues job, returns jobId; client polls until complete
-- **Intents**: add/edit/delete for schedule, transaction, workout, food, sleep, goals. Food-only phrases (e.g. "Diet Coke") → add_food only; explicit amounts (e.g. "bought coffee for 5") → add_transaction
+- **Intents**: add/edit/delete for workout, food, sleep, goals. Food-only phrases (e.g. "Diet Coke") → add_food
 - **Fallback**: If Gemini blocks, backend returns add_food with transcript as name and zero nutrition so the user is never blocked
 
 ### Authentication
@@ -47,7 +37,7 @@
 
 ## Technology Flow
 
-Client → **Backend API or Gateway** → (optional proxy to Money/Schedule/Body/Energy/Goals services when `*_SERVICE_URL` set) → PostgreSQL. The API publishes domain events to an **event bus** (Redis BullMQ or SQS). An optional **event-consumer** process runs handlers (e.g. transaction analytics) in a separate deployable. The voice pipeline uses BullMQ for async job processing and Gemini for natural-language intent.
+Client → **Backend API or Gateway** → (optional proxy to Body/Energy/Goals services when `*_SERVICE_URL` set) → PostgreSQL. The API publishes domain events to an **event bus** (Redis BullMQ or SQS). An optional **event-consumer** process runs handlers in a separate deployable. The voice pipeline uses BullMQ for async job processing and Gemini for natural-language intent.
 
 ## Architecture
 
@@ -63,8 +53,7 @@ flowchart TB
   Gemini[Gemini API]
   EventBus[Event Bus Redis or SQS]
   EventConsumer[Event Consumer Process]
-  MoneySvc[Money Service optional]
-  OtherSvcs[Schedule Body Energy Goals optional]
+  ExtractedSvcs[Body Energy Goals optional]
 
   User --> Frontend
   Frontend <-->|"REST JWT"| Gateway
@@ -78,14 +67,13 @@ flowchart TB
   Worker --> Gemini
   Worker --> Redis
   Worker --> DB
-  Gateway -.->|"if MONEY_SERVICE_URL"| MoneySvc
-  Gateway -.->|"if *_SERVICE_URL"| OtherSvcs
-  MoneySvc --> DB
+  Gateway -.->|"if *_SERVICE_URL"| ExtractedSvcs
+  ExtractedSvcs --> DB
 ```
 
 - **Frontend**: React SPA; talks to backend when `VITE_API_URL` is set; stores JWT in localStorage; uses local date and week (Sun–Sat) conventions
-- **Backend / Gateway**: Express API; auth, domain APIs (schedule, transactions, workouts, food entries, daily check-ins, goals), food search, voice `/api/voice/understand`, job polling `/api/jobs/:jobId`. When `MONEY_SERVICE_URL` (or other `*_SERVICE_URL`) is set, those paths are proxied to the given URL
-- **Event bus**: Redis (BullMQ) or SQS; API publishes domain events; optional **event-consumer** process consumes and runs handlers (e.g. transaction analytics)
+- **Backend / Gateway**: Express API; auth, domain APIs (workouts, food entries, daily check-ins, goals), food search, voice `/api/voice/understand`, job polling `/api/jobs/:jobId`. When `*_SERVICE_URL` env vars are set, those paths are proxied to the given URL
+- **Event bus**: Redis (BullMQ) or SQS; API publishes domain events; optional **event-consumer** process consumes and runs handlers
 - **Redis** (optional): Rate limiting, food search cache, BullMQ voice queue, job result storage, event bus
 - **Voice worker**: Processes audio jobs via BullMQ; calls Gemini, writes result to Redis
 
@@ -113,8 +101,8 @@ Voice Live WebSocket is legacy and disabled; voice uses Browser Web Speech API f
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, Shadcn UI (Radix), Recharts, React Router v6, TanStack Query, React Context, Zod, React Hook Form, @hookform/resolvers |
 | Backend | Node.js (ES modules), Express, PostgreSQL (pg), JWT, bcrypt, CORS, express-rate-limit, Zod, Pino, Helmet |
 | Event bus | BullMQ (Redis), optional SQS ([backend/src/events/bus.js](backend/src/events/bus.js)); Zod event envelope ([backend/src/events/schema.js](backend/src/events/schema.js)) |
-| Gateway | http-proxy-middleware when `MONEY_SERVICE_URL` (or other `*_SERVICE_URL`) is set |
-| Per-context DB | Optional `MONEY_DATABASE_URL`, `SCHEDULE_DATABASE_URL`, etc. ([backend/src/db/pool.js](backend/src/db/pool.js)) |
+| Gateway | http-proxy-middleware when `*_SERVICE_URL` env vars are set |
+| Per-context DB | Optional `BODY_DATABASE_URL`, `ENERGY_DATABASE_URL`, `GOALS_DATABASE_URL` ([backend/src/db/pool.js](backend/src/db/pool.js)) |
 | Redis | redis, rate-limit-redis, BullMQ (optional) |
 | Voice | Google Gemini, function calling, relaxed safety, fallback on block |
 | Auth | jsonwebtoken, google-auth-library; optional social (Google, Facebook, Twitter) |
@@ -126,7 +114,7 @@ Voice Live WebSocket is legacy and disabled; voice uses Browser Web Speech API f
 - **Food search cache**: 1-hour TTL
 - **BullMQ queue**: Async voice job processing
 - **Job results**: Stored in Redis for polling
-- **Event bus**: BullMQ queue `events` for domain events; API publishes; optional **event-consumer** process (`node workers/event-consumer.js`) consumes and runs handlers (e.g. transaction analytics). See Backend README.
+- **Event bus**: BullMQ queue `events` for domain events; API publishes; optional **event-consumer** process (`node workers/event-consumer.js`) consumes and runs handlers. See Backend README.
 
 ## Conventions
 
@@ -141,8 +129,6 @@ BMe/
 ├── backend/
 │   ├── app.js              # Express app, CORS, rate limit, gateway proxy (when *_SERVICE_URL), routes
 │   ├── index.js            # Entry: config, DB, server, voice worker
-│   ├── money-service.js    # Optional standalone Money (transactions) API
-│   ├── schedule-service.js # Optional Schedule API
 │   ├── body-service.js     # Optional Body (workouts) API
 │   ├── energy-service.js   # Optional Energy (food entries, daily check-ins) API
 │   ├── goals-service.js    # Optional Goals API
@@ -151,7 +137,7 @@ BMe/
 │   ├── src/
 │   │   ├── config/         # Env, Zod validation
 │   │   ├── db/             # Pool (getPool per context), schema, init
-│   │   ├── events/         # bus.js, schema.js, publish.js, transports/sqs.js, consumers/transactionAnalytics.js
+│   │   ├── events/         # bus.js, schema.js, publish.js, transports/sqs.js
 │   │   ├── redis/          # Redis client (optional)
 │   │   ├── queue/          # BullMQ voice queue
 │   │   ├── workers/        # Voice job worker
@@ -170,11 +156,11 @@ BMe/
 │   │   ├── components/     # Layout, shared, ui, feature-specific
 │   │   ├── context/        # Auth, app, notifications, features
 │   │   ├── core/api/       # API client, auth, feature APIs
-│   │   ├── features/       # money, body, energy, goals, schedule, groups
-│   │   ├── hooks/          # useTransactions, useWorkouts, etc.
+│   │   ├── features/       # body, energy, goals, groups
+│   │   ├── hooks/          # useWorkouts, useFoodEntries, etc.
 │   │   ├── lib/            # voiceApi, dateRanges, queryClient, storage
-│   │   ├── pages/          # Home, Money, Body, Energy, etc.
-│   │   ├── schemas/        # Zod (transaction, workout, foodEntry, voice)
+│   │   ├── pages/          # Home, Body, Energy, Goals, etc.
+│   │   ├── schemas/        # Zod (workout, foodEntry, voice)
 │   │   └── routes.tsx      # React Router, protected routes
 │   └── vite.config.ts
 ├── docker-compose.yml
@@ -186,8 +172,8 @@ BMe/
 ## Deployment Modes
 
 - **Mode A — Single process (default):** One backend process (`node index.js`). All routes local; events in-memory or Redis (no separate consumer if Redis not set).
-- **Mode B — API + event consumer:** Two processes: `node index.js` (API, publishes to Redis) and `node workers/event-consumer.js` (consumes from Redis, e.g. transaction analytics). Requires `REDIS_URL`.
-- **Mode C — Gateway + extracted services:** Set `MONEY_SERVICE_URL`, etc.; run money-service.js (and others) as separate services; main app proxies `/api/transactions`, `/api/money/*`, etc. to those URLs. Client still uses a single `VITE_API_URL` (the gateway).
+- **Mode B — API + event consumer:** Two processes: `node index.js` (API, publishes to Redis) and `node workers/event-consumer.js` (consumes from Redis). Requires `REDIS_URL`.
+- **Mode C — Gateway + extracted services:** Set `*_SERVICE_URL` env vars; run body-service.js (and others) as separate services; main app proxies those paths to the given URLs. Client still uses a single `VITE_API_URL` (the gateway).
 
 ## Branches and tags
 
@@ -259,8 +245,8 @@ Set `VITE_API_URL=http://localhost:3000` in `frontend/.env.development` so the f
 | `EVENT_TRANSPORT` | No | `redis` \| `sqs`; default `redis` |
 | `EVENT_QUEUE_URL` | When `EVENT_TRANSPORT=sqs` | SQS queue URL |
 | `AWS_REGION` | When using SQS | AWS region |
-| `MONEY_DATABASE_URL`, `SCHEDULE_DATABASE_URL`, `BODY_DATABASE_URL`, `ENERGY_DATABASE_URL`, `GOALS_DATABASE_URL` | No | Per-context DB; fallback `DATABASE_URL` |
-| `MONEY_SERVICE_URL`, `SCHEDULE_SERVICE_URL`, `BODY_SERVICE_URL`, `ENERGY_SERVICE_URL`, `GOALS_SERVICE_URL` | No | When set, main app proxies those paths to the given URL |
+| `BODY_DATABASE_URL`, `ENERGY_DATABASE_URL`, `GOALS_DATABASE_URL` | No | Per-context DB; fallback `DATABASE_URL` |
+| `BODY_SERVICE_URL`, `ENERGY_SERVICE_URL`, `GOALS_SERVICE_URL` | No | When set, main app proxies those paths to the given URL |
 | `GOOGLE_CLIENT_ID` | For Google login | OAuth client ID |
 | `FACEBOOK_APP_ID` | For Facebook login | Facebook app ID |
 | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`, `TWITTER_REDIRECT_URI` | For Twitter login | Twitter OAuth |
@@ -324,7 +310,7 @@ Optional: `npm run remove:non-foundation-foods` to prune foods not in JSON
 
 ## MCP Server
 
-Optional stdio server exposing schedule, transactions, goals as tools. See [backend/mcp-server/README.md](backend/mcp-server/README.md). Configure `BEME_MCP_SECRET` and `BEME_MCP_USER_ID` for authenticated access.
+Optional stdio server exposing goals, workouts, and other domain tools. See [backend/mcp-server/README.md](backend/mcp-server/README.md). Configure `BEME_MCP_SECRET` and `BEME_MCP_USER_ID` for authenticated access.
 
 ## Root Scripts
 
@@ -341,7 +327,7 @@ Optional stdio server exposing schedule, transactions, goals as tools. See [back
 | `npm run start:backend` | Start backend |
 | `npm run dev:backend` | Backend with watch mode |
 
-From `backend/`: `npm run start:consumer`, `npm run start:money`, `npm run start:schedule`, `npm run start:body`, `npm run start:energy`, `npm run start:goals` (optional entrypoints for event consumer and extracted services).
+From `backend/`: `npm run start:consumer`, `npm run start:body`, `npm run start:energy`, `npm run start:goals` (optional entrypoints for event consumer and extracted services).
 
 ## Building for Production
 
@@ -362,7 +348,7 @@ From `backend/`: `npm run start:consumer`, `npm run start:money`, `npm run start
 
 ## Changelog
 
-**Update 17.0** — AI Insights DB persistence, food UX (liquid/solid, Look up with AI), Money heading deduplication, thinking animations. See [CHANGELOG.md](CHANGELOG.md) for full release history.
+**Update 18.0** — Removed Money and Schedule features; BeMe is now a wellness-focused app. See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
 ## License
 

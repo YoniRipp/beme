@@ -1,9 +1,9 @@
 import { getToken } from './api';
 import { handleUnauthorized } from '@/core/api/client';
 import { toLocalDateString } from './dateRanges';
-import { parseVoiceAction, type VoiceAction, type VoiceScheduleItem } from '@/schemas/voice';
+import { parseVoiceAction, type VoiceAction } from '@/schemas/voice';
 
-export type { VoiceAction, VoiceScheduleItem };
+export type { VoiceAction };
 
 const API_BASE = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL
   || (typeof window !== 'undefined' ? `http://${window.location.hostname}:3000` : '');
@@ -59,11 +59,7 @@ export function parseVoiceResult(data: { actions?: unknown[]; results?: unknown[
   for (const raw of rawActions) {
     if (raw && typeof raw === 'object') {
       const action = parseVoiceAction(raw);
-      if (action.intent === 'add_schedule' && action.items.length === 0) {
-        actions.push({ intent: 'unknown' });
-      } else {
-        actions.push(action);
-      }
+      actions.push(action);
     }
   }
   if (actions.length === 0) {

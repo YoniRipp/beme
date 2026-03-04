@@ -39,16 +39,7 @@ export function Privacy() {
           including energy and mood ratings.
         </li>
         <li>
-          <strong>Financial data:</strong> Transaction records including income and expenses, amounts,
-          categories, dates, and optional notes. We do not collect bank account numbers, credit card
-          numbers, or other payment instrument details through the tracking feature.
-        </li>
-        <li>
-          <strong>Schedule data:</strong> Calendar items with start and end times, categories, and
-          recurrence settings.
-        </li>
-        <li>
-          <strong>Goals:</strong> Personal goals related to calories, workouts, and savings, including
+          <strong>Goals:</strong> Personal goals related to calories, workouts, and sleep, including
           target values and time periods.
         </li>
         <li>
@@ -74,17 +65,17 @@ export function Privacy() {
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
         <li>
           <strong>Provide and maintain the Service:</strong> To operate your account, store your
-          data, and deliver the core functionality of BeMe including tracking, scheduling, and
+          data, and deliver the core functionality of BeMe including tracking and
           goal management.
         </li>
         <li>
           <strong>Personalize AI insights:</strong> To generate personalized analytics, trends,
-          and recommendations based on your health, fitness, financial, and scheduling data.
+          and recommendations based on your health and fitness data.
         </li>
         <li>
           <strong>Process voice commands:</strong> To interpret your natural language input and
-          convert it into structured actions such as adding transactions, logging workouts,
-          or creating schedule items.
+          convert it into structured actions such as logging workouts,
+          adding food entries, or tracking sleep.
         </li>
         <li>
           <strong>Generate analytics:</strong> To compute summaries, charts, streaks, and trend
@@ -120,34 +111,8 @@ export function Privacy() {
         your benefit and are not used to build profiles for any third party.
       </p>
 
-      {/* 4. Financial Data */}
-      <h2 className="text-xl font-semibold mt-8 mb-3">4. Financial Data</h2>
-      <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        Your financial transaction data, including income and expense records, is stored
-        exclusively within your personal account. We treat this data as confidential and take
-        the following measures to protect it:
-      </p>
-      <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
-        <li>
-          Transaction data is never shared with third parties for marketing, advertising, or
-          data brokering purposes.
-        </li>
-        <li>
-          Your financial data is not used for credit scoring, lending decisions, or any form
-          of financial profiling outside the Service.
-        </li>
-        <li>
-          We do not connect to your bank accounts or payment cards. All transaction data is
-          manually entered by you or added via voice input.
-        </li>
-        <li>
-          Financial summaries and analytics are computed solely for your personal use within
-          the application.
-        </li>
-      </ul>
-
-      {/* 5. Voice & AI Processing */}
-      <h2 className="text-xl font-semibold mt-8 mb-3">5. Voice & AI Processing</h2>
+      {/* 4. Voice & AI Processing */}
+      <h2 className="text-xl font-semibold mt-8 mb-3">4. Voice & AI Processing</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         BeMe offers a voice assistant feature powered by Google Gemini AI. When you use this
         feature, your input is processed as follows:
@@ -156,7 +121,7 @@ export function Privacy() {
         <li>
           <strong>Text input:</strong> When you type or use browser-based speech recognition,
           the resulting text transcript is sent to Google Gemini for intent parsing. Google
-          processes this text to determine the appropriate action (e.g., adding a transaction
+          processes this text to determine the appropriate action (e.g., logging a workout
           or logging a workout) and returns the structured result.
         </li>
         <li>
@@ -171,7 +136,7 @@ export function Privacy() {
         </li>
         <li>
           <strong>Parsed results:</strong> The structured output from voice processing (such
-          as transaction amounts, food names, or schedule times) is stored in your account as
+          as food names, workout details, or sleep data) is stored in your account as
           part of your regular data.
         </li>
       </ul>
@@ -180,8 +145,8 @@ export function Privacy() {
         can also be performed manually through the application interface.
       </p>
 
-      {/* 6. Data Sharing */}
-      <h2 className="text-xl font-semibold mt-8 mb-3">6. Data Sharing</h2>
+      {/* 5. Data Sharing */}
+      <h2 className="text-xl font-semibold mt-8 mb-3">5. Data Sharing</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         We do not sell, rent, or trade your personal data to third parties. We share your
         information only in the following limited circumstances:
@@ -212,8 +177,8 @@ export function Privacy() {
         in the Service. Your data is never used for targeted advertising.
       </p>
 
-      {/* 7. Data Security */}
-      <h2 className="text-xl font-semibold mt-8 mb-3">7. Data Security</h2>
+      {/* 6. Data Security */}
+      <h2 className="text-xl font-semibold mt-8 mb-3">6. Data Security</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         We implement industry-standard security measures to protect your data:
       </p>
@@ -250,21 +215,21 @@ export function Privacy() {
         by applicable law.
       </p>
 
-      {/* 8. Data Retention */}
-      <h2 className="text-xl font-semibold mt-8 mb-3">8. Data Retention</h2>
+      {/* 7. Data Retention */}
+      <h2 className="text-xl font-semibold mt-8 mb-3">7. Data Retention</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         We retain your data according to the following policies:
       </p>
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
         <li>
           <strong>Active accounts:</strong> Your account data and all associated records
-          (transactions, workouts, food entries, schedules, goals, and check-ins) are retained
+          (workouts, food entries, goals, and check-ins) are retained
           for as long as your account remains active.
         </li>
         <li>
           <strong>Account deletion:</strong> When you request account deletion, all your
           personal data is permanently removed from our production systems within 30 days.
-          This includes all health, financial, schedule, and goal data associated with your
+          This includes all health and goal data associated with your
           account.
         </li>
         <li>
@@ -283,8 +248,8 @@ export function Privacy() {
         </li>
       </ul>
 
-      {/* 9. Your Rights */}
-      <h2 className="text-xl font-semibold mt-8 mb-3">9. Your Rights</h2>
+      {/* 8. Your Rights */}
+      <h2 className="text-xl font-semibold mt-8 mb-3">8. Your Rights</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         Depending on your location, you may have the following rights regarding your personal
         data:
@@ -329,8 +294,8 @@ export function Privacy() {
         Us section below.
       </p>
 
-      {/* 10. Cookies */}
-      <h2 className="text-xl font-semibold mt-8 mb-3">10. Cookies</h2>
+      {/* 9. Cookies */}
+      <h2 className="text-xl font-semibold mt-8 mb-3">9. Cookies</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         BeMe uses a minimal set of cookies and local storage necessary for the Service to
         function:
@@ -352,8 +317,8 @@ export function Privacy() {
         analytics or advertising platforms through cookies.
       </p>
 
-      {/* 11. Children's Privacy */}
-      <h2 className="text-xl font-semibold mt-8 mb-3">11. Children's Privacy</h2>
+      {/* 10. Children's Privacy */}
+      <h2 className="text-xl font-semibold mt-8 mb-3">10. Children's Privacy</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         BeMe is not directed at children under the age of 13 (or the applicable minimum age
         in your jurisdiction). We do not knowingly collect personal information from children
@@ -363,8 +328,8 @@ export function Privacy() {
         please contact us immediately using the information in the Contact Us section below.
       </p>
 
-      {/* 12. Changes to This Policy */}
-      <h2 className="text-xl font-semibold mt-8 mb-3">12. Changes to This Policy</h2>
+      {/* 11. Changes to This Policy */}
+      <h2 className="text-xl font-semibold mt-8 mb-3">11. Changes to This Policy</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         We may update this Privacy Policy from time to time to reflect changes in our practices,
         technology, legal requirements, or other factors. When we make material changes to this
@@ -375,8 +340,8 @@ export function Privacy() {
         constitutes your acceptance of the updated policy.
       </p>
 
-      {/* 13. Contact Us */}
-      <h2 className="text-xl font-semibold mt-8 mb-3">13. Contact Us</h2>
+      {/* 12. Contact Us */}
+      <h2 className="text-xl font-semibold mt-8 mb-3">12. Contact Us</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         If you have any questions, concerns, or requests regarding this Privacy Policy or our
         data practices, please contact us at:

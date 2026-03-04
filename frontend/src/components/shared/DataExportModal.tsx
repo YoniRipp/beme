@@ -25,20 +25,16 @@ export function DataExportModal({ open, onOpenChange }: DataExportModalProps) {
 
   const handleExportJSON = () => {
     try {
-      const transactions = (queryClient.getQueryData(queryKeys.transactions) as import('@/types/transaction').Transaction[]) ?? [];
       const workouts = (queryClient.getQueryData(queryKeys.workouts) as import('@/types/workout').Workout[]) ?? [];
       const foodEntries = (queryClient.getQueryData(queryKeys.foodEntries) as import('@/types/energy').FoodEntry[]) ?? [];
       const checkIns = (queryClient.getQueryData(queryKeys.checkIns) as import('@/types/energy').DailyCheckIn[]) ?? [];
-      const scheduleItems = (queryClient.getQueryData(queryKeys.schedule) as import('@/types/schedule').ScheduleItem[]) ?? [];
       const groups = (queryClient.getQueryData(queryKeys.groups) as import('@/types/group').Group[]) ?? [];
       const data = exportAllData({
         version: '1.0.0',
         exportDate: new Date().toISOString(),
-        transactions,
         workouts,
         foodEntries,
         checkIns,
-        scheduleItems,
         groups,
       });
       downloadFile(data, `beme-export-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
@@ -49,10 +45,9 @@ export function DataExportModal({ open, onOpenChange }: DataExportModalProps) {
     }
   };
 
-  const handleExportCSV = (type: 'transactions' | 'workouts' | 'food') => {
+  const handleExportCSV = (type: 'workouts' | 'food') => {
     try {
       const csvData = {
-        transactions: (queryClient.getQueryData(queryKeys.transactions) as import('@/types/transaction').Transaction[]) ?? [],
         workouts: (queryClient.getQueryData(queryKeys.workouts) as import('@/types/workout').Workout[]) ?? [],
         foodEntries: (queryClient.getQueryData(queryKeys.foodEntries) as import('@/types/energy').FoodEntry[]) ?? [],
       };
@@ -132,21 +127,7 @@ export function DataExportModal({ open, onOpenChange }: DataExportModalProps) {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div className="flex flex-col items-center p-4 border rounded-lg">
-                  <FileSpreadsheet className="w-5 h-5 text-primary mb-2" />
-                  <p className="text-sm font-medium mb-1">Transactions</p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleExportCSV('transactions')}
-                    className="w-full"
-                  >
-                    <Download className="w-3 h-3 mr-1" />
-                    CSV
-                  </Button>
-                </div>
-
+              <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col items-center p-4 border rounded-lg">
                   <FileSpreadsheet className="w-5 h-5 text-primary mb-2" />
                   <p className="text-sm font-medium mb-1">Workouts</p>

@@ -16,8 +16,6 @@ const { Pool } = pg;
 const dnsPromises = dns.promises;
 
 const CONTEXT_CONFIG_KEYS: Record<string, string> = {
-  money: 'moneyDbUrl',
-  schedule: 'scheduleDbUrl',
   body: 'bodyDbUrl',
   energy: 'energyDbUrl',
   goals: 'goalsDbUrl',

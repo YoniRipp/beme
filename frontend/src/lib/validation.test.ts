@@ -20,7 +20,7 @@ import {
   isNonNegativeNumber,
   isDateInRange,
 } from './validation';
-import { TRANSACTION_CATEGORIES } from '@/types/transaction';
+const SAMPLE_CATEGORIES = ['Food', 'Housing', 'Transportation', 'Entertainment', 'Other'] as const;
 
 describe('isPositiveNumber', () => {
   it('returns true for positive numbers', () => {
@@ -111,17 +111,17 @@ describe('validateTransactionDate', () => {
 
 describe('validateCategory', () => {
   it('validates existing categories', () => {
-    const result = validateCategory('Food', TRANSACTION_CATEGORIES.expense);
+    const result = validateCategory('Food', SAMPLE_CATEGORIES);
     expect(result.isValid).toBe(true);
   });
 
   it('rejects empty category', () => {
-    const result = validateCategory('', TRANSACTION_CATEGORIES.expense);
+    const result = validateCategory('', SAMPLE_CATEGORIES);
     expect(result.isValid).toBe(false);
   });
 
   it('rejects invalid category', () => {
-    const result = validateCategory('InvalidCategory', TRANSACTION_CATEGORIES.expense);
+    const result = validateCategory('InvalidCategory', SAMPLE_CATEGORIES);
     expect(result.isValid).toBe(false);
   });
 });

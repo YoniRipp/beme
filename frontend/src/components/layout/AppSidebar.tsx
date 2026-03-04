@@ -10,20 +10,18 @@ import {
 } from '@/components/ui/sidebar';
 import {
   Home,
-  Calendar,
-  DollarSign,
   Dumbbell,
   Zap,
+  Target,
   Settings,
   TrendingUp,
 } from 'lucide-react';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
-  { path: '/schedule', icon: Calendar, label: 'Schedule' },
-  { path: '/money', icon: DollarSign, label: 'Money' },
   { path: '/body', icon: Dumbbell, label: 'Body' },
   { path: '/energy', icon: Zap, label: 'Energy' },
+  { path: '/goals', icon: Target, label: 'Goals' },
   { path: '/insights', icon: TrendingUp, label: 'Insights' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];

@@ -1,13 +1,12 @@
-import { Home, Calendar, DollarSign, Dumbbell, Zap } from 'lucide-react';
+import { Home, Dumbbell, Zap, Target } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
-  { path: '/schedule', icon: Calendar, label: 'Schedule' },
-  { path: '/money', icon: DollarSign, label: 'Money' },
   { path: '/body', icon: Dumbbell, label: 'Body' },
   { path: '/energy', icon: Zap, label: 'Energy' },
+  { path: '/goals', icon: Target, label: 'Goals' },
 ];
 
 export function BottomNav() {

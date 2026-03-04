@@ -18,20 +18,6 @@ function eventToSummary(eventType: string, payload: Record<string, unknown>): st
       return `Logged in via ${p.method ?? 'unknown'}`;
     case 'auth.UserRegistered':
       return 'Registered an account';
-    case 'money.TransactionCreated':
-      return `Created a ${p.type ?? 'transaction'} of ${p.amount ?? '?'}`;
-    case 'money.TransactionUpdated':
-      return `Updated transaction ${p.id ?? '?'}`;
-    case 'money.TransactionDeleted':
-      return `Deleted transaction ${p.id ?? '?'}`;
-    case 'schedule.ScheduleItemAdded':
-      return `Added schedule item: ${p.title ?? p.id ?? ''}`;
-    case 'schedule.ScheduleItemUpdated':
-      return `Updated schedule item: ${p.title ?? p.id ?? ''}`;
-    case 'schedule.ScheduleItemDeleted':
-      return 'Deleted schedule item';
-    case 'schedule.ScheduleBatchAdded':
-      return `Added ${Array.isArray(p.items) ? p.items.length : 0} schedule items`;
     case 'body.WorkoutCreated':
       return `Logged workout: ${p.title ?? p.name ?? p.id ?? ''}`;
     case 'body.WorkoutUpdated':

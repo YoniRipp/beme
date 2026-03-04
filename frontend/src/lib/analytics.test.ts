@@ -2,11 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { subDays } from 'date-fns';
 import {
   calculateTrends,
-  getSpendingInsights,
   getFitnessInsights,
   getHealthInsights,
 } from './analytics';
-import { Transaction } from '@/types/transaction';
 import { Workout } from '@/types/workout';
 import { FoodEntry, DailyCheckIn } from '@/types/energy';
 
@@ -17,9 +15,9 @@ describe('analytics', () => {
         { date: new Date(), amount: 100 },
         { date: new Date(), amount: 200 },
       ];
-      
+
       const result = calculateTrends(data, (item) => item.amount, 'week');
-      
+
       expect(result).toBeDefined();
       expect(result.current).toBe(300);
     });
@@ -29,9 +27,9 @@ describe('analytics', () => {
         { date: new Date(), amount: 100 },
         { date: new Date(), amount: 200 },
       ];
-      
+
       const result = calculateTrends(data, (item) => item.amount, 'month');
-      
+
       expect(result).toBeDefined();
       expect(result.current).toBe(300);
     });
@@ -41,56 +39,11 @@ describe('analytics', () => {
         { date: new Date(), amount: 100 },
         { date: new Date(), amount: 200 },
       ];
-      
+
       const result = calculateTrends(data, (item) => item.amount, 'year');
-      
+
       expect(result).toBeDefined();
       expect(result.current).toBe(300);
-    });
-  });
-
-  describe('getSpendingInsights', () => {
-    it('calculates spending insights from transactions', () => {
-      const transactions: Transaction[] = [
-        {
-          id: '1',
-          type: 'expense',
-          amount: 100,
-          category: 'Food',
-          date: new Date(),
-          isRecurring: false,
-        },
-        {
-          id: '2',
-          type: 'expense',
-          amount: 50,
-          category: 'Food',
-          date: new Date(),
-          isRecurring: false,
-        },
-        {
-          id: '3',
-          type: 'income',
-          amount: 500,
-          category: 'Salary',
-          date: new Date(),
-          isRecurring: false,
-        },
-      ];
-
-      const insights = getSpendingInsights(transactions);
-      
-      expect(insights).toBeDefined();
-      expect(insights.totalSpent).toBe(150);
-      expect(insights.totalIncome).toBe(500);
-      expect(insights.topCategories.length).toBeGreaterThan(0);
-    });
-
-    it('handles empty transactions', () => {
-      const insights = getSpendingInsights([]);
-      
-      expect(insights.totalSpent).toBe(0);
-      expect(insights.totalIncome).toBe(0);
     });
   });
 
@@ -116,7 +69,7 @@ describe('analytics', () => {
       ];
 
       const insights = getFitnessInsights(workouts);
-      
+
       expect(insights).toBeDefined();
       expect(insights.totalWorkouts).toBe(2);
       expect(insights.averageDuration).toBe(37.5);
@@ -124,7 +77,7 @@ describe('analytics', () => {
 
     it('handles empty workouts', () => {
       const insights = getFitnessInsights([]);
-      
+
       expect(insights.totalWorkouts).toBe(0);
       expect(insights.averageDuration).toBe(0);
     });
@@ -170,7 +123,7 @@ describe('analytics', () => {
       ];
 
       const insights = getHealthInsights(foodEntries, checkIns);
-      
+
       expect(insights).toBeDefined();
       expect(insights.averageDailyCalories).toBe(250);
       expect(insights.averageSleepHours).toBe(7.75);
@@ -178,7 +131,7 @@ describe('analytics', () => {
 
     it('handles empty data', () => {
       const insights = getHealthInsights([], []);
-      
+
       expect(insights.averageDailyCalories).toBe(0);
       expect(insights.averageSleepHours).toBe(0);
     });

@@ -9,8 +9,6 @@ import { LocalErrorBoundary } from './components/shared/LocalErrorBoundary';
 import { AppProviders } from './Providers';
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
-const Schedule = lazy(() => import('./pages/Schedule').then((m) => ({ default: m.Schedule })));
-const Money = lazy(() => import('./pages/Money').then((m) => ({ default: m.Money })));
 const Body = lazy(() => import('./pages/Body').then((m) => ({ default: m.Body })));
 const Energy = lazy(() => import('./pages/Energy').then((m) => ({ default: m.Energy })));
 const Groups = lazy(() => import('./pages/Groups').then((m) => ({ default: m.Groups })));
@@ -92,22 +90,6 @@ function ProtectedAppRoutes() {
           element={
             <Suspense fallback={<LoadingSpinner text="Loading dashboard..." />}>
               <Home />
-            </Suspense>
-          }
-        />
-        <Route
-          path="schedule"
-          element={
-            <Suspense fallback={<LoadingSpinner text="Loading schedule..." />}>
-              <Schedule />
-            </Suspense>
-          }
-        />
-        <Route
-          path="money"
-          element={
-            <Suspense fallback={<LoadingSpinner text="Loading money page..." />}>
-              <Money />
             </Suspense>
           }
         />

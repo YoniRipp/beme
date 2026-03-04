@@ -23,9 +23,6 @@ vi.mock('@/features/energy/api', () => ({
   dailyCheckInsApi: { list: vi.fn().mockResolvedValue([]), add: vi.fn(), update: vi.fn(), delete: vi.fn() },
   searchFoods: vi.fn().mockResolvedValue([]),
 }));
-vi.mock('@/features/money/api', () => ({
-  transactionsApi: { list: vi.fn().mockResolvedValue([]), add: vi.fn(), update: vi.fn(), delete: vi.fn() },
-}));
 vi.mock('@/features/goals/api', () => ({
   goalsApi: { list: vi.fn().mockResolvedValue([]), add: vi.fn(), update: vi.fn(), delete: vi.fn() },
 }));
@@ -57,12 +54,7 @@ describe('Home Page', () => {
     expect(screen.getByText(/workouts/i)).toBeInTheDocument();
   });
 
-  it('displays today\'s schedule section', () => {
-    render(<Home />, { wrapper });
-    expect(screen.getByText(/today's schedule/i)).toBeInTheDocument();
-  });
-
-  it('displays dashboard stats section', () => {
+it('displays dashboard stats section', () => {
     render(<Home />, { wrapper });
     expect(screen.getByText(/workouts/i)).toBeInTheDocument();
   });
@@ -78,22 +70,7 @@ describe('Home Page', () => {
     expect(screen.getByText(/^goals$/i)).toBeInTheDocument();
   });
 
-  it('opens schedule modal when add schedule button is clicked', async () => {
-    const user = userEvent.setup();
-    render(<Home />, { wrapper });
-
-    await waitFor(() => {
-      expect(screen.getByText(/add your first schedule item/i)).toBeInTheDocument();
-    });
-    const addButton = screen.getByText(/add your first schedule item/i);
-    await user.click(addButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/add schedule item/i)).toBeInTheDocument();
-    });
-  });
-
-  it('opens goal modal when a progress card without a goal is clicked', async () => {
+it('opens goal modal when a progress card without a goal is clicked', async () => {
     const user = userEvent.setup();
     render(<Home />, { wrapper });
 
@@ -111,14 +88,7 @@ describe('Home Page', () => {
     });
   });
 
-  it('shows empty state when no schedule items exist', async () => {
-    render(<Home />, { wrapper });
-    await waitFor(() => {
-      expect(screen.getByText(/add your first schedule item/i)).toBeInTheDocument();
-    });
-  });
-
-  it('shows tap to set goal when no goals exist', async () => {
+it('shows tap to set goal when no goals exist', async () => {
     render(<Home />, { wrapper });
     await waitFor(() => {
       expect(screen.getAllByText(/tap to set goal/i).length).toBeGreaterThanOrEqual(1);

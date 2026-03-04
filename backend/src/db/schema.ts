@@ -28,35 +28,6 @@ export async function initSchema() {
     `).catch(() => {});
     await client.query(`UPDATE users SET auth_provider = 'email' WHERE auth_provider IS NULL;`).catch(() => {});
     await client.query(`
-      CREATE TABLE IF NOT EXISTS schedule_items (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        title text NOT NULL,
-        start_time text NOT NULL,
-        end_time text NOT NULL,
-        category text NOT NULL,
-        emoji text,
-        "order" int NOT NULL DEFAULT 0,
-        is_active boolean NOT NULL DEFAULT true,
-        group_id text,
-        user_id uuid REFERENCES users(id),
-        created_at timestamptz DEFAULT now()
-      );
-    `);
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS transactions (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        date date NOT NULL,
-        type text NOT NULL CHECK (type IN ('income', 'expense')),
-        amount numeric NOT NULL,
-        category text NOT NULL,
-        description text,
-        is_recurring boolean NOT NULL DEFAULT false,
-        group_id text,
-        user_id uuid REFERENCES users(id),
-        created_at timestamptz DEFAULT now()
-      );
-    `);
-    await client.query(`
       CREATE TABLE IF NOT EXISTS goals (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         type text NOT NULL,
@@ -66,24 +37,6 @@ export async function initSchema() {
         created_at timestamptz DEFAULT now()
       );
     `);
-    await client.query(`
-      ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES users(id);
-    `).catch(() => {});
-    await client.query(`
-      ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS recurrence text;
-    `).catch(() => {});
-    await client.query(`
-      ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS color text;
-    `).catch(() => {});
-    await client.query(`
-      ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS date date NOT NULL DEFAULT CURRENT_DATE;
-    `).catch(() => {});
-    await client.query(`
-      ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES users(id);
-    `).catch(() => {});
-    await client.query(`
-      ALTER TABLE transactions ADD COLUMN IF NOT EXISTS currency text NOT NULL DEFAULT 'USD';
-    `).catch(() => {});
     await client.query(`
       ALTER TABLE goals ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES users(id);
     `).catch(() => {});
@@ -197,8 +150,6 @@ export async function initSchema() {
       ON app_logs (level, created_at DESC);
     `).catch(() => {});
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_schedule_items_user_date ON schedule_items(user_id, date);`).catch(() => {});
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, date DESC);`).catch(() => {});
     await client.query(`CREATE INDEX IF NOT EXISTS idx_goals_user ON goals(user_id);`).catch(() => {});
     await client.query(`CREATE INDEX IF NOT EXISTS idx_workouts_user_date ON workouts(user_id, date DESC);`).catch(() => {});
     await client.query(`CREATE INDEX IF NOT EXISTS idx_food_entries_user_date ON food_entries(user_id, date DESC);`).catch(() => {});
@@ -219,8 +170,6 @@ export async function initSchema() {
     await client.query(`DROP INDEX IF EXISTS idx_users_stripe_customer_id;`).catch(() => {});
 
     // updated_at columns for key tables
-    await client.query(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();`).catch(() => {});
-    await client.query(`ALTER TABLE schedule_items ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();`).catch(() => {});
     await client.query(`ALTER TABLE workouts ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();`).catch(() => {});
     await client.query(`ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();`).catch(() => {});
     await client.query(`ALTER TABLE goals ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();`).catch(() => {});
@@ -256,8 +205,6 @@ export async function initSchema() {
         user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         date date NOT NULL,
         total_calories numeric DEFAULT 0,
-        total_income numeric DEFAULT 0,
-        total_expenses numeric DEFAULT 0,
         workout_count int DEFAULT 0,
         sleep_hours numeric,
         updated_at timestamptz DEFAULT now(),

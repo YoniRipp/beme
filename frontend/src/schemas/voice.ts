@@ -1,58 +1,5 @@
 import { z } from 'zod';
 
-const voiceScheduleItemSchema = z.object({
-  title: z.string(),
-  date: z.string().optional(),
-  startTime: z.string().default('09:00'),
-  endTime: z.string().default('10:00'),
-  category: z.string().default('Other'),
-  recurrence: z.string().optional(),
-});
-
-const addScheduleSchema = z.object({
-  intent: z.literal('add_schedule'),
-  items: z.array(voiceScheduleItemSchema).default([]),
-});
-const editScheduleSchema = z.object({
-  intent: z.literal('edit_schedule'),
-  itemTitle: z.string().optional(),
-  itemId: z.string().optional(),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
-  title: z.string().optional(),
-  category: z.string().optional(),
-});
-const deleteScheduleSchema = z.object({
-  intent: z.literal('delete_schedule'),
-  itemTitle: z.string().optional(),
-  itemId: z.string().optional(),
-});
-
-const addTransactionSchema = z.object({
-  intent: z.literal('add_transaction'),
-  type: z.enum(['income', 'expense']).default('expense'),
-  amount: z.number().min(0).default(0),
-  category: z.string().default('Other'),
-  description: z.string().optional(),
-  date: z.string().optional(),
-  isRecurring: z.boolean().default(false),
-});
-const editTransactionSchema = z.object({
-  intent: z.literal('edit_transaction'),
-  description: z.string().optional(),
-  transactionId: z.string().optional(),
-  date: z.string().optional(),
-  type: z.string().optional(),
-  amount: z.number().optional(),
-  category: z.string().optional(),
-});
-const deleteTransactionSchema = z.object({
-  intent: z.literal('delete_transaction'),
-  description: z.string().optional(),
-  transactionId: z.string().optional(),
-  date: z.string().optional(),
-});
-
 const voiceExerciseSchema = z.object({
   name: z.string(),
   sets: z.number(),
@@ -159,12 +106,6 @@ const deleteGoalSchema = z.object({
 const unknownSchema = z.object({ intent: z.literal('unknown'), message: z.string().optional() });
 
 export const voiceActionSchema = z.discriminatedUnion('intent', [
-  addScheduleSchema,
-  editScheduleSchema,
-  deleteScheduleSchema,
-  addTransactionSchema,
-  editTransactionSchema,
-  deleteTransactionSchema,
   addWorkoutSchema,
   editWorkoutSchema,
   deleteWorkoutSchema,
@@ -181,7 +122,6 @@ export const voiceActionSchema = z.discriminatedUnion('intent', [
 ]);
 
 export type VoiceAction = z.infer<typeof voiceActionSchema>;
-export type VoiceScheduleItem = z.infer<typeof voiceScheduleItemSchema>;
 
 export const voiceUnderstandResultSchema = z.object({
   actions: z.array(voiceActionSchema),

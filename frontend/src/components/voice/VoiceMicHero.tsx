@@ -3,8 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Mic, Lock, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { queryKeys } from '@/lib/queryClient';
-import { useSchedule } from '@/hooks/useSchedule';
-import { useTransactions } from '@/hooks/useTransactions';
 import { useEnergy } from '@/hooks/useEnergy';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useGoals } from '@/hooks/useGoals';
@@ -19,8 +17,6 @@ export function VoiceMicHero() {
   const queryClient = useQueryClient();
   const [statusText, setStatusText] = useState('');
 
-  const { scheduleItems, addScheduleItems, updateScheduleItem, deleteScheduleItem, getScheduleItemById } = useSchedule();
-  const { transactions, addTransaction, updateTransaction, deleteTransaction } = useTransactions();
   const { foodEntries, addFoodEntry, updateFoodEntry, deleteFoodEntry, updateCheckIn, addCheckIn, deleteCheckIn, getCheckInByDate } = useEnergy();
   const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts();
   const { goals, addGoal, updateGoal, deleteGoal } = useGoals();
@@ -36,8 +32,6 @@ export function VoiceMicHero() {
   } = useSpeechRecognition();
 
   const voiceContext = {
-    scheduleItems, addScheduleItems, updateScheduleItem, deleteScheduleItem, getScheduleItemById,
-    transactions, addTransaction, updateTransaction, deleteTransaction,
     foodEntries, addFoodEntry, updateFoodEntry, deleteFoodEntry,
     addCheckIn, updateCheckIn, deleteCheckIn, getCheckInByDate,
     workouts, addWorkout, updateWorkout, deleteWorkout,
@@ -70,8 +64,6 @@ export function VoiceMicHero() {
             if (r.success) succeeded.push(r.message ?? r.intent);
             else failed.push({ action: r.intent, reason: r.message ?? 'Failed' });
           }
-          await queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.schedule });
           await queryClient.invalidateQueries({ queryKey: queryKeys.workouts });
           await queryClient.invalidateQueries({ queryKey: queryKeys.foodEntries });
           await queryClient.invalidateQueries({ queryKey: queryKeys.checkIns });

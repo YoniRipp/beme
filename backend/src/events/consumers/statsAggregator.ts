@@ -1,8 +1,7 @@
 /**
  * Stats aggregator consumer.
  *
- * Listens to domain events (TransactionCreated/Updated/Deleted,
- * WorkoutCreated/Deleted, FoodEntryCreated/Deleted, CheckIn logged)
+ * Listens to domain events (WorkoutCreated/Deleted, FoodEntryCreated/Deleted, CheckIn logged)
  * and maintains a running daily stats row per user in user_daily_stats.
  *
  * This implements the CQRS read-model pattern:
@@ -23,20 +22,16 @@ async function recomputeDayStats(userId: string, date: string) {
   const pool = getPool();
   try {
     await pool.query(
-      `INSERT INTO user_daily_stats (user_id, date, total_calories, total_income, total_expenses, workout_count, sleep_hours)
+      `INSERT INTO user_daily_stats (user_id, date, total_calories, workout_count, sleep_hours)
        SELECT
          $1::uuid,
          $2::date,
          COALESCE((SELECT SUM(calories) FROM food_entries WHERE user_id = $1 AND date = $2::date), 0),
-         COALESCE((SELECT SUM(amount) FROM transactions WHERE user_id = $1 AND date = $2::date AND type = 'income'), 0),
-         COALESCE((SELECT SUM(amount) FROM transactions WHERE user_id = $1 AND date = $2::date AND type = 'expense'), 0),
          COALESCE((SELECT COUNT(*)::int FROM workouts WHERE user_id = $1 AND date = $2::date), 0),
          (SELECT sleep_hours FROM daily_check_ins WHERE user_id = $1 AND date = $2::date ORDER BY created_at DESC LIMIT 1)
        ON CONFLICT (user_id, date)
        DO UPDATE SET
          total_calories   = EXCLUDED.total_calories,
-         total_income     = EXCLUDED.total_income,
-         total_expenses   = EXCLUDED.total_expenses,
          workout_count    = EXCLUDED.workout_count,
          sleep_hours      = EXCLUDED.sleep_hours,
          updated_at       = now()`,
@@ -67,11 +62,6 @@ export function registerStatsAggregatorConsumer(subscribe: SubscribeFn) {
     await recomputeDayStats(userId, date);
     logger.debug({ eventType: event.type, userId, date }, 'statsAggregator: day stats updated');
   };
-
-  // Finance events
-  subscribe('money.TransactionCreated', handler);
-  subscribe('money.TransactionUpdated', handler);
-  subscribe('money.TransactionDeleted', handler);
 
   // Fitness events
   subscribe('body.WorkoutCreated', handler);

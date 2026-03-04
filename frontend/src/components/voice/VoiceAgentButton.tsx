@@ -3,8 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Mic, Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '@/lib/queryClient';
-import { useSchedule } from '@/hooks/useSchedule';
-import { useTransactions } from '@/hooks/useTransactions';
 import { useEnergy } from '@/hooks/useEnergy';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useGoals } from '@/hooks/useGoals';
@@ -23,8 +21,6 @@ interface VoiceAgentButtonProps {
 export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonProps = {}) {
   const { isPro } = useSubscription();
   const queryClient = useQueryClient();
-  const { scheduleItems, addScheduleItems, updateScheduleItem, deleteScheduleItem, getScheduleItemById } = useSchedule();
-  const { transactions, addTransaction, updateTransaction, deleteTransaction } = useTransactions();
   const { foodEntries, addFoodEntry, updateFoodEntry, deleteFoodEntry, updateCheckIn, addCheckIn, deleteCheckIn, getCheckInByDate } = useEnergy();
   const { workouts, addWorkout, updateWorkout, deleteWorkout } = useWorkouts();
   const { goals, addGoal, updateGoal, deleteGoal } = useGoals();
@@ -39,15 +35,6 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
   } = useSpeechRecognition();
 
   const voiceContext = {
-    scheduleItems,
-    addScheduleItems,
-    updateScheduleItem,
-    deleteScheduleItem,
-    getScheduleItemById,
-    transactions,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
     foodEntries,
     addFoodEntry,
     updateFoodEntry,
@@ -95,8 +82,6 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
             if (r.success) succeeded.push(r.message ?? r.intent);
             else failed.push({ action: r.intent, reason: r.message ?? 'Could not complete action. Please try again.' });
           }
-          await queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.schedule });
           await queryClient.invalidateQueries({ queryKey: queryKeys.workouts });
           await queryClient.invalidateQueries({ queryKey: queryKeys.foodEntries });
           await queryClient.invalidateQueries({ queryKey: queryKeys.checkIns });

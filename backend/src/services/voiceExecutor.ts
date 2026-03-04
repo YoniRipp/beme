@@ -2,8 +2,6 @@
  * Voice action executor — runs parsed voice actions against backend services.
  * Used when VOICE_EXECUTE_ON_SERVER is true (default). Server executes, returns results.
  */
-import * as transactionService from './transaction.js';
-import * as scheduleService from './schedule.js';
 import * as workoutService from './workout.js';
 import * as foodEntryService from './foodEntry.js';
 import * as dailyCheckInService from './dailyCheckIn.js';
@@ -25,31 +23,6 @@ function parseDate(v: unknown): string {
   if (v == null || v === '') return new Date().toISOString().slice(0, 10);
   const d = new Date(v as string);
   return isNaN(d.getTime()) ? new Date().toISOString().slice(0, 10) : d.toISOString().slice(0, 10);
-}
-
-async function resolveTransaction(userId: string, action: VoiceAction) {
-  if (action.transactionId) {
-    const { items } = await transactionService.list(userId, { limit: 1, offset: 0 });
-    return items.find((t: Record<string, unknown>) => t.id === action.transactionId) ?? null;
-  }
-  if (action.description) {
-    const { items } = await transactionService.list(userId, { limit: 100 });
-    const lower = String(action.description).toLowerCase();
-    return items.find((t: Record<string, unknown>) => (typeof t.description === 'string' && t.description.toLowerCase().includes(lower))) ?? null;
-  }
-  return null;
-}
-
-async function resolveScheduleItem(userId: string, action: VoiceAction) {
-  const items = await scheduleService.list(userId);
-  if (action.itemId) {
-    return items.find((s: Record<string, unknown>) => s.id === action.itemId) ?? null;
-  }
-  if (action.itemTitle) {
-    const lower = String(action.itemTitle).toLowerCase();
-    return items.find((s: Record<string, unknown>) => (typeof s.title === 'string' && s.title.toLowerCase().includes(lower))) ?? null;
-  }
-  return null;
 }
 
 async function resolveWorkout(userId: string, action: VoiceAction) {
@@ -111,93 +84,6 @@ export async function executeActions(actions: VoiceAction[], userId: string): Pr
 
     try {
       switch (action.intent) {
-        case 'add_transaction':
-          await transactionService.create(userId, {
-            type: action.type as 'income' | 'expense',
-            amount: Number(action.amount) ?? 0,
-            currency: (action.currency as string) ?? 'USD',
-            category: (action.category as string) ?? 'Other',
-            description: action.description as string,
-            date: parseDate(action.date),
-            isRecurring: !!action.isRecurring,
-          });
-          results.push({ intent: 'add_transaction', success: true });
-          break;
-
-        case 'edit_transaction': {
-          const tx = await resolveTransaction(userId, action);
-          if (!tx) {
-            results.push({ intent: 'edit_transaction', success: false, message: 'Transaction not found' });
-            break;
-          }
-          await transactionService.update(userId, tx.id as string, {
-            type: action.type as string,
-            amount: action.amount != null ? Number(action.amount) : undefined,
-            category: action.category as string,
-            description: action.description as string,
-            date: action.date ? parseDate(action.date) : undefined,
-          });
-          results.push({ intent: 'edit_transaction', success: true });
-          break;
-        }
-
-        case 'delete_transaction': {
-          const tx = await resolveTransaction(userId, action);
-          if (!tx) {
-            results.push({ intent: 'delete_transaction', success: false, message: 'Transaction not found' });
-            break;
-          }
-          await transactionService.remove(userId, tx.id as string);
-          results.push({ intent: 'delete_transaction', success: true });
-          break;
-        }
-
-        case 'add_schedule': {
-          const items = Array.isArray(action.items) ? action.items : [];
-          if (items.length === 0) {
-            results.push({ intent: 'add_schedule', success: false, message: 'No schedule items' });
-            break;
-          }
-          const normalized = items.map((it: Record<string, unknown>) => ({
-            title: String(it.title ?? ''),
-            startTime: (it.startTime as string) ?? '09:00',
-            endTime: (it.endTime as string) ?? '10:00',
-            category: (it.category as string) ?? 'Other',
-            recurrence: it.recurrence as string,
-            date: parseDate(it.date),
-          }));
-          await scheduleService.createBatch(userId, normalized);
-          results.push({ intent: 'add_schedule', success: true, message: `Added ${normalized.length} item(s)` });
-          break;
-        }
-
-        case 'edit_schedule': {
-          const item = await resolveScheduleItem(userId, action);
-          if (!item) {
-            results.push({ intent: 'edit_schedule', success: false, message: 'Schedule item not found' });
-            break;
-          }
-          await scheduleService.update(userId, item.id as string, {
-            startTime: action.startTime as string,
-            endTime: action.endTime as string,
-            title: action.title as string,
-            category: action.category as string,
-          });
-          results.push({ intent: 'edit_schedule', success: true });
-          break;
-        }
-
-        case 'delete_schedule': {
-          const item = await resolveScheduleItem(userId, action);
-          if (!item) {
-            results.push({ intent: 'delete_schedule', success: false, message: 'Schedule item not found' });
-            break;
-          }
-          await scheduleService.remove(userId, item.id as string);
-          results.push({ intent: 'delete_schedule', success: true });
-          break;
-        }
-
         case 'add_workout':
           await workoutService.create(userId, {
             date: parseDate(action.date),

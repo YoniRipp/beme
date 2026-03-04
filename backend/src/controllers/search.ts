@@ -8,7 +8,7 @@ import { sendJson, sendError } from '../utils/response.js';
 import { semanticSearch } from '../services/embeddings.js';
 import { config } from '../config/index.js';
 
-const ALLOWED_TYPES = ['transaction', 'workout', 'food_entry', 'schedule'];
+const ALLOWED_TYPES = ['workout', 'food_entry'];
 
 export const search = asyncHandler(async (req: Request, res: Response) => {
   if (!config.geminiApiKey) {

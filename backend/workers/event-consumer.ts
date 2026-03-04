@@ -6,12 +6,10 @@
  */
 import { config } from '../src/config/index.js';
 import { subscribe, startEventsWorker, closeEventsBus } from '../src/events/bus.js';
-import { registerTransactionAnalyticsConsumer } from '../src/events/consumers/transactionAnalytics.js';
 import { registerUserActivityLogConsumer } from '../src/events/consumers/userActivityLog.js';
 import { getRedisClient, closeRedis } from '../src/redis/client.js';
 import { logger } from '../src/lib/logger.js';
 
-registerTransactionAnalyticsConsumer(subscribe);
 registerUserActivityLogConsumer(subscribe);
 
 const worker = startEventsWorker();

@@ -2,12 +2,11 @@
  * Voice service — Gemini parsing and action mapping.
  */
 import { z } from 'zod';
-import { fromZonedTime } from 'date-fns-tz';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { config } from '../config/index.js';
 import { isDbConfigured, getPool } from '../db/index.js';
-import { SCHEDULE_CATEGORIES, VALID_RECURRENCE, TRANSACTION_CATEGORIES, WORKOUT_TYPES, GOAL_TYPES, GOAL_PERIODS } from '../config/constants.js';
-import { normTime, normCat } from '../utils/validation.js';
+import { WORKOUT_TYPES, GOAL_TYPES, GOAL_PERIODS } from '../config/constants.js';
+import { normTime } from '../utils/validation.js';
 import { VOICE_TOOLS } from '../../voice/tools.js';
 import { getNutritionForFoodName, unitToGrams } from '../models/foodSearch.js';
 import { lookupAndCreateFood } from './foodLookupGemini.js';
@@ -15,60 +14,21 @@ import { logError } from './appLog.js';
 import { logger } from '../lib/logger.js';
 import { executeActions } from './voiceExecutor.js';
 
-/**
- * Convert a local date + time in a given IANA timezone to UTC date and time strings (YYYY-MM-DD, HH:mm).
- * Used so we store only UTC in the DB.
- */
-function localToUtcDateAndTime(dateStr: string, timeStr: string, timezone: string) {
-  if (!dateStr || !timeStr || !timezone) return null;
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const [hh, mm] = (timeStr + ':00').split(':').map(Number);
-  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
-  const localInTz = new Date(y, m - 1, d, hh || 0, mm || 0, 0);
-  try {
-    const utcDate = fromZonedTime(localInTz, timezone);
-    const utcDateStr = utcDate.toISOString().slice(0, 10);
-    const utcTimeStr = utcDate.toISOString().slice(11, 16);
-    return { date: utcDateStr, time: utcTimeStr };
-  } catch {
-    return null;
-  }
-}
-
 /** Lenient Zod schemas for Gemini function args; invalid args are rejected and that call is skipped. */
-const voiceAddTransactionArgsSchema = z.object({
-  type: z.enum(['income', 'expense']),
-  amount: z.union([z.number(), z.string()]).transform((v: string | number) => (v != null ? Number(v) : NaN)).pipe(z.number().min(0).finite()),
-  category: z.string().optional(),
-  description: z.string().optional(),
-  date: z.string().optional(),
-  isRecurring: z.boolean().optional(),
-});
-const voiceAddScheduleArgsSchema = z.object({
-  date: z.string().optional(),
-  items: z.array(z.object({
-    title: z.string().min(1),
-    startTime: z.string().optional(),
-    endTime: z.string().optional(),
-    category: z.string().optional(),
-    recurrence: z.string().optional(),
-  })).min(1),
-});
 const VOICE_ARG_SCHEMAS: Record<string, z.ZodType> = {
-  add_transaction: voiceAddTransactionArgsSchema,
-  add_schedule: voiceAddScheduleArgsSchema,
 };
 
 export const VOICE_PROMPT = `You are a voice assistant for a life management app. The user speaks in Hebrew or English.
 Parse their message and call the appropriate function(s) for each action they want to take.
 
 Food and drink rules:
-- Only when the user EXPLICITLY says they paid or spent a specific amount (e.g. "bought X for 9", "paid 5 for coffee", "cost 10") do you call BOTH add_transaction (with that amount, category "Food", description = item name) AND add_food (food = item name in English).
-- When the user says ONLY a food or drink name (e.g. "Diet Coke", "coffee") or "ate X" / "had X" WITHOUT any amount or purchase wording, call ONLY add_food. Do NOT call add_transaction. Do not invent or guess an amount.
-- When the user says they ate or had a meal WITH a time range (e.g. "ate from 6 to 8", "had dinner 18:00-20:00", "I ate at 6-7" and describes what they ate), call BOTH add_schedule (one item: title "Meal" or the meal description, category "Meal", startTime/endTime in HH:MM 24h) AND add_food with the same startTime and endTime and the food name. When they say they ate something without a time range (e.g. "I ate today XYZ"), call ONLY add_food—no add_schedule.
-Examples: "Diet Coke" or "had a Diet Coke" → add_food only. "Bought Diet Coke for 5" → add_transaction (expense, 5, Food, Diet Coke) + add_food (Diet Coke). "work 8-18, eat 18-22" → add_schedule twice. "I ate from 6 to 8, had pasta" → add_schedule (Meal 18:00-20:00) + add_food (pasta, startTime 18:00, endTime 20:00). "bought coke for 10, slept 8 hours" → add_transaction (expense, 10, Food, Coke) + add_food (Coke) + log_sleep.
-Sleep: When the user talks about sleep or waking up, use log_sleep (hours) or add_schedule with category Sleep. E.g. "slept 7 hours" → log_sleep(sleepHours: 7). "woke up from 6 to 8" or "slept from 6 to 8" → log_sleep(sleepHours: 2) or add_schedule with Sleep 06:00-08:00. Do NOT use add_food for sleep-related phrases.
+- When the user says a food or drink name (e.g. "Diet Coke", "coffee") or "ate X" / "had X", call add_food with the food name in English.
+- When the user says they ate or had a meal WITH a time range (e.g. "ate from 6 to 8", "had dinner 18:00-20:00"), call add_food with the food name and startTime/endTime in HH:MM 24h.
+- When they say they ate something without a time range (e.g. "I ate today XYZ"), call ONLY add_food.
+Examples: "Diet Coke" or "had a Diet Coke" → add_food only. "I ate from 6 to 8, had pasta" → add_food (pasta, startTime 18:00, endTime 20:00).
+Sleep: When the user talks about sleep or waking up, use log_sleep (hours). E.g. "slept 7 hours" → log_sleep(sleepHours: 7). "slept from 6 to 8" → log_sleep(sleepHours: 2). Do NOT use add_food for sleep-related phrases.
 Workouts: When the user says they worked out and gives exercises with sets/reps/weight, call add_workout with type "strength". Use title "Workout" when they do not give a workout name; when they say a program name (e.g. SS, Starting Strength) use that as title. When the user says they did a SAVED or NAMED workout without listing exercises (e.g. "I did Yoni's workout", "did my Monday routine") call add_workout with title = that workout name and exercises = [] (empty array) so the app can copy from the user's saved workout. If they add overrides (e.g. "I did Yoni's workout with 150kg squat") pass title and only the override in exercises (e.g. one exercise: Squat, weight 150). Do not use an exercise name as the workout title. Each exercise in the exercises array must use the exact exercise name the user said (e.g. Squat, Deadlift). Sets and reps: use sets × reps (e.g. 3 reps 5 sets = 5 sets of 3 reps; 3x3 = 3 sets, 3 reps). durationMinutes is optional (default 30).
+Goals: Types are calories, workouts, or sleep. Periods are weekly, monthly, or yearly.
 Call all relevant functions; the user may combine multiple actions in one message.`;
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -115,31 +75,6 @@ function withRawOrCooked(name: unknown) {
   return `${s}, cooked`;
 }
 
-const EDIT_SCHEDULE_SPEC: Record<string, (v: unknown) => unknown> = {
-  itemTitle: trimOrUndefined,
-  itemId: trimOrUndefined,
-  startTime: (v) => normTime(v as string | undefined | null),
-  endTime: (v) => normTime(v as string | undefined | null),
-  title: trimOrUndefined,
-  category: (v: unknown) => normCat(v, SCHEDULE_CATEGORIES),
-};
-const DELETE_SCHEDULE_SPEC = {
-  itemTitle: trimOrUndefined,
-  itemId: trimOrUndefined,
-};
-const EDIT_TRANSACTION_SPEC = {
-  description: trimOrUndefined,
-  transactionId: trimOrUndefined,
-  date: passThrough,
-  type: passThrough,
-  amount: num,
-  category: passThrough,
-};
-const DELETE_TRANSACTION_SPEC = {
-  description: trimOrUndefined,
-  transactionId: trimOrUndefined,
-  date: passThrough,
-};
 const EDIT_WORKOUT_SPEC = {
   workoutTitle: trimOrUndefined,
   workoutId: trimOrUndefined,
@@ -186,42 +121,6 @@ const DELETE_GOAL_SPEC = {
   goalId: passThrough,
 };
 
-function buildEditSchedule(args: Record<string, unknown>) {
-  return mapArgs(args, EDIT_SCHEDULE_SPEC);
-}
-function buildDeleteSchedule(args: Record<string, unknown>) {
-  return mapArgs(args, DELETE_SCHEDULE_SPEC);
-}
-
-function buildAddTransaction(args: Record<string, unknown>, ctx: { todayStr: string; timezone?: string }) {
-  const type = args.type === 'income' || args.type === 'expense' ? args.type : 'expense';
-  const amount = Number(args.amount);
-  const numAmount = Number.isFinite(amount) && amount >= 0 ? amount : 0;
-  const allowed = type === 'income' ? TRANSACTION_CATEGORIES.income : TRANSACTION_CATEGORIES.expense;
-  let category = normCat(args.category, allowed);
-  const description = args.description ? trim(args.description) : undefined;
-  // Fallback: if expense ended up Other but description is a short item name (e.g. "Coke"), treat as food purchase
-  if (type === 'expense' && category === 'Other' && description && description.length <= 30 && !description.includes(' ')) {
-    category = 'Food';
-  }
-  return {
-    type,
-    amount: numAmount,
-    currency: 'USD',
-    category,
-    description,
-    date: parseDate(args.date, ctx.todayStr),
-    isRecurring: !!args.isRecurring,
-  };
-}
-
-function buildEditTransaction(args: Record<string, unknown>) {
-  return mapArgs(args, EDIT_TRANSACTION_SPEC);
-}
-function buildDeleteTransaction(args: Record<string, unknown>) {
-  return mapArgs(args, DELETE_TRANSACTION_SPEC);
-}
-
 function buildAddWorkout(args: Record<string, unknown>, ctx: { todayStr: string; timezone?: string }) {
   const exercises = Array.isArray(args.exercises)
     ? args.exercises
@@ -249,43 +148,6 @@ function buildEditWorkout(args: Record<string, unknown>) {
 }
 function buildDeleteWorkout(args: Record<string, unknown>) {
   return mapArgs(args, DELETE_WORKOUT_SPEC);
-}
-
-function buildAddSchedule(args: Record<string, unknown>, ctx: { todayStr: string; timezone?: string }) {
-  const todayStr = ctx?.todayStr ?? new Date().toISOString().slice(0, 10);
-  const dateStr = parseDate(args.date, todayStr);
-  const tz = ctx?.timezone;
-  let items = Array.isArray(args.items) ? args.items : [];
-  items = items
-    .filter((it: Record<string, unknown>) => it && typeof it.title === 'string' && (it.title as string).trim())
-    .map((it: Record<string, unknown>) => {
-      const startTime = normTime(it.startTime as string | undefined | null) ?? '09:00';
-      const endTime = normTime(it.endTime as string | undefined | null) ?? '10:00';
-      const itemDate = dateStr;
-      if (tz) {
-        const startUtc = localToUtcDateAndTime(itemDate, startTime, tz);
-        const endUtc = localToUtcDateAndTime(itemDate, endTime, tz);
-        if (startUtc && endUtc) {
-          return {
-            title: String(it.title).trim(),
-            startTime: startUtc.time,
-            endTime: endUtc.time,
-            category: normCat(it.category, SCHEDULE_CATEGORIES),
-            recurrence: (typeof it.recurrence === 'string' && VALID_RECURRENCE.includes(it.recurrence)) ? it.recurrence : undefined,
-            date: startUtc.date,
-          };
-        }
-      }
-      return {
-        title: String(it.title).trim(),
-        startTime,
-        endTime,
-        category: normCat(it.category, SCHEDULE_CATEGORIES),
-        recurrence: (typeof it.recurrence === 'string' && VALID_RECURRENCE.includes(it.recurrence)) ? it.recurrence : undefined,
-        date: itemDate,
-      };
-    });
-  return { items };
 }
 
 async function buildAddFood(args: Record<string, unknown>, ctx: { todayStr: string; timezone?: string }) {
@@ -388,12 +250,6 @@ function buildDeleteGoal(args: Record<string, unknown>) {
 
 /** Handlers return { merge } or { items }. All invoked via Promise.resolve for uniform async/sync. Exported for Live API tool execution. */
 export const HANDLERS: Record<string, (args: Record<string, unknown>, ctx: { todayStr: string; timezone?: string }) => Promise<{ merge?: Record<string, unknown>; items?: unknown[] }>> = {
-  add_schedule: (args, ctx) => Promise.resolve(buildAddSchedule(args, ctx)),
-  edit_schedule: (args, _ctx) => Promise.resolve({ merge: buildEditSchedule(args) }),
-  delete_schedule: (args, _ctx) => Promise.resolve({ merge: buildDeleteSchedule(args) }),
-  add_transaction: (args, ctx) => Promise.resolve({ merge: buildAddTransaction(args, ctx) }),
-  edit_transaction: (args, _ctx) => Promise.resolve({ merge: buildEditTransaction(args) }),
-  delete_transaction: (args, _ctx) => Promise.resolve({ merge: buildDeleteTransaction(args) }),
   add_workout: (args, ctx) => Promise.resolve({ merge: buildAddWorkout(args, ctx) }),
   edit_workout: (args, _ctx) => Promise.resolve({ merge: buildEditWorkout(args) }),
   delete_workout: (args, _ctx) => Promise.resolve({ merge: buildDeleteWorkout(args) }),
@@ -413,7 +269,7 @@ function transcriptLooksLikeFood(text: string) {
   const t = (text || '').trim();
   if (t.length > 80) return false;
   const lower = t.toLowerCase();
-  const hasTimePattern = /\d{1,2}:\d{2}|\d+\s*hours?|woke|slept|sleep|schedule|עד|מ-|שעות|השכמתי|ישנתי|שינה/i.test(t) || /\d+\s*to\s*\d|\d+\s*-\s*\d/.test(lower);
+  const hasTimePattern = /\d{1,2}:\d{2}|\d+\s*hours?|woke|slept|sleep|עד|מ-|שעות|השכמתי|ישנתי|שינה/i.test(t) || /\d+\s*to\s*\d|\d+\s*-\s*\d/.test(lower);
   if (hasTimePattern) return false;
   return true;
 }

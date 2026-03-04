@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file. Releases and notable changes, latest first.
 
+## [18.0] - 2026-03-04
+
+### Removed
+- Money (transactions) feature — income/expense tracking, balance, monthly charts
+- Schedule feature — daily schedule items, calendar views, recurrence
+- Savings goal type (depended on transaction data)
+- Money and Schedule voice intents
+- Gateway proxy for money-service and schedule-service
+
+### Changed
+- Dashboard now shows wellness-only content (goals progress, sleep)
+- Navigation simplified to Home, Body, Energy, Goals
+- Voice agent focused on workouts, food, sleep, and goals
+
+---
+
 ## Update 17.0 — AI Insights, Food UX, Money, Animations
 
 ### AI Insights

@@ -18,20 +18,16 @@ export function DataManagementSection({ onResetClick, onClearClick }: DataManage
 
   const handleExportData = () => {
     try {
-      const transactions = (queryClient.getQueryData(queryKeys.transactions) as import('@/types/transaction').Transaction[]) ?? [];
       const workouts = (queryClient.getQueryData(queryKeys.workouts) as import('@/types/workout').Workout[]) ?? [];
       const foodEntries = (queryClient.getQueryData(queryKeys.foodEntries) as import('@/types/energy').FoodEntry[]) ?? [];
       const checkIns = (queryClient.getQueryData(queryKeys.checkIns) as import('@/types/energy').DailyCheckIn[]) ?? [];
-      const scheduleItems = (queryClient.getQueryData(queryKeys.schedule) as import('@/types/schedule').ScheduleItem[]) ?? [];
       const groups = (queryClient.getQueryData(queryKeys.groups) as import('@/types/group').Group[]) ?? [];
       const dataStr = exportAllData({
         version: '1.0.0',
         exportDate: new Date().toISOString(),
-        transactions,
         workouts,
         foodEntries,
         checkIns,
-        scheduleItems,
         groups,
         settings: storage.get(STORAGE_KEYS.SETTINGS) || DEFAULT_SETTINGS,
       });

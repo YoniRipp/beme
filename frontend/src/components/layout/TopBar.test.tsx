@@ -35,19 +35,6 @@ vi.mock('@/hooks/useSettings', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useTransactions', () => ({
-  useTransactions: () => ({
-    transactions: [],
-    transactionsLoading: false,
-  }),
-}));
-
-vi.mock('@/features/money/useExchangeRates', () => ({
-  useExchangeRates: () => ({
-    convertToDisplay: (n: number) => n,
-  }),
-}));
-
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>{children}</BrowserRouter>
 );

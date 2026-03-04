@@ -2,17 +2,10 @@
  * Shared voice action executor. Used by VoiceAgentPanel and VoiceAgentButton.
  */
 import type { VoiceAction } from '@/lib/voiceApi';
-import { SCHEDULE_CATEGORIES, type ScheduleItem } from '@/types/schedule';
-import { TRANSACTION_CATEGORIES, type Transaction } from '@/types/transaction';
-import { CATEGORY_EMOJIS } from '@/types/schedule';
 import type { Workout, WorkoutType } from '@/types/workout';
 import type { Goal } from '@/types/goals';
 import type { DailyCheckIn, FoodEntry } from '@/types/energy';
 
-const VALID_SCHEDULE_CATEGORIES = new Set(SCHEDULE_CATEGORIES);
-const VALID_INCOME = new Set(TRANSACTION_CATEGORIES.income);
-const VALID_EXPENSE = new Set(TRANSACTION_CATEGORIES.expense);
-const VALID_RECURRENCE = ['daily', 'weekdays', 'weekends'] as const;
 const VALID_WORKOUT_TYPES = ['strength', 'cardio', 'flexibility', 'sports'] as const;
 
 function parseDateOrToday(dateStr?: string): Date {
@@ -25,17 +18,6 @@ function parseDateOrToday(dateStr?: string): Date {
 }
 
 export interface VoiceExecutorContext {
-  scheduleItems: ScheduleItem[];
-  addScheduleItems: (items: Omit<ScheduleItem, 'id'>[]) => Promise<void>;
-  updateScheduleItem: (id: string, updates: Partial<ScheduleItem>) => Promise<void>;
-  deleteScheduleItem: (id: string) => Promise<void>;
-  getScheduleItemById: (id: string) => ScheduleItem | undefined;
-
-  transactions: Transaction[];
-  addTransaction: (t: Omit<Transaction, 'id'>) => Promise<void>;
-  updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
-  deleteTransaction: (id: string) => Promise<void>;
-
   foodEntries: FoodEntry[];
   addFoodEntry: (entry: Omit<FoodEntry, 'id'>) => Promise<void>;
   updateFoodEntry: (id: string, updates: Partial<FoodEntry>) => Promise<void>;
@@ -60,85 +42,6 @@ export interface VoiceExecutorContext {
 export type VoiceExecuteResult = { success: boolean; message?: string };
 
 type Handler = (action: VoiceAction, ctx: VoiceExecutorContext) => Promise<VoiceExecuteResult>;
-
-const dateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/;
-function toDateStringOrToday(d: string | undefined): string {
-  return d && dateOnlyRegex.test(d) ? d : new Date().toISOString().slice(0, 10);
-}
-
-const handleAddSchedule: Handler = async (action, ctx) => {
-  if (action.intent !== 'add_schedule' || !action.items?.length) return { success: false, message: 'No schedule items' };
-  let order = ctx.scheduleItems.length;
-  const itemsToAdd = action.items.map((item) => {
-    const category = VALID_SCHEDULE_CATEGORIES.has(item.category as (typeof SCHEDULE_CATEGORIES)[number]) ? item.category : 'Other';
-    const recurrence = item.recurrence && VALID_RECURRENCE.includes(item.recurrence as (typeof VALID_RECURRENCE)[number]) ? (item.recurrence as 'daily' | 'weekdays' | 'weekends') : undefined;
-    return {
-      title: item.title,
-      date: toDateStringOrToday(item.date),
-      startTime: item.startTime ?? '09:00',
-      endTime: item.endTime ?? '10:00',
-      category,
-      emoji: CATEGORY_EMOJIS[category],
-      order: order++,
-      isActive: true,
-      recurrence,
-    };
-  });
-  await ctx.addScheduleItems(itemsToAdd);
-  return { success: true, message: `Added ${itemsToAdd.length} to schedule` };
-};
-
-const handleEditSchedule: Handler = async (action, ctx) => {
-  if (action.intent !== 'edit_schedule') return { success: false };
-  let targetId = action.itemId ? ctx.getScheduleItemById(action.itemId)?.id : undefined;
-  if (!targetId && action.itemTitle) targetId = ctx.scheduleItems.find((s) => s.title.toLowerCase().includes(action.itemTitle!.toLowerCase()))?.id;
-  if (!targetId) return { success: false, message: 'Schedule item not found' };
-  const updates: Record<string, unknown> = {};
-  if (action.startTime) updates.startTime = action.startTime;
-  if (action.endTime) updates.endTime = action.endTime;
-  if (action.title) updates.title = action.title;
-  if (action.category) updates.category = action.category;
-  if (Object.keys(updates).length > 0) await ctx.updateScheduleItem(targetId, updates);
-  return { success: true };
-};
-
-const handleDeleteSchedule: Handler = async (action, ctx) => {
-  if (action.intent !== 'delete_schedule') return { success: false };
-  let targetId = action.itemId ? ctx.getScheduleItemById(action.itemId)?.id : undefined;
-  if (!targetId && action.itemTitle) targetId = ctx.scheduleItems.find((s) => s.title.toLowerCase().includes(action.itemTitle!.toLowerCase()))?.id;
-  if (!targetId) return { success: false, message: 'Schedule item not found' };
-  await ctx.deleteScheduleItem(targetId);
-  return { success: true };
-};
-
-const handleAddTransaction: Handler = async (action, ctx) => {
-  if (action.intent !== 'add_transaction') return { success: false };
-  const category: string = action.type === 'income' ? (VALID_INCOME.has(action.category as (typeof TRANSACTION_CATEGORIES.income)[number]) ? action.category : 'Other') : (VALID_EXPENSE.has(action.category as (typeof TRANSACTION_CATEGORIES.expense)[number]) ? action.category : 'Other');
-  await ctx.addTransaction({ type: action.type, amount: action.amount >= 0 ? action.amount : 0, currency: 'USD', category, description: action.description, date: parseDateOrToday(action.date), isRecurring: action.isRecurring ?? false });
-  return { success: true };
-};
-
-const handleEditTransaction: Handler = async (action, ctx) => {
-  if (action.intent !== 'edit_transaction') return { success: false };
-  const target = action.transactionId ? ctx.transactions.find((t) => t.id === action.transactionId) : ctx.transactions.find((t) => t.description?.toLowerCase().includes((action.description ?? '').toLowerCase()));
-  if (!target) return { success: false, message: 'Transaction not found' };
-  const updates: Record<string, unknown> = {};
-  if (action.type) updates.type = action.type;
-  if (action.amount != null) updates.amount = action.amount;
-  if (action.category) updates.category = action.category;
-  if (action.description !== undefined) updates.description = action.description;
-  if (action.date) updates.date = parseDateOrToday(action.date);
-  if (Object.keys(updates).length > 0) await ctx.updateTransaction(target.id, updates);
-  return { success: true };
-};
-
-const handleDeleteTransaction: Handler = async (action, ctx) => {
-  if (action.intent !== 'delete_transaction') return { success: false };
-  const target = action.transactionId ? ctx.transactions.find((t) => t.id === action.transactionId) : ctx.transactions.find((t) => t.description?.toLowerCase().includes((action.description ?? '').toLowerCase()));
-  if (!target) return { success: false, message: 'Transaction not found' };
-  await ctx.deleteTransaction(target.id);
-  return { success: true };
-};
 
 function findWorkoutByTitle(workouts: Workout[], title: string): Workout | undefined {
   const lower = title.toLowerCase().trim();
@@ -316,7 +219,7 @@ const handleDeleteCheckIn: Handler = async (action, ctx) => {
 
 const handleAddGoal: Handler = async (action, ctx) => {
   if (action.intent !== 'add_goal') return { success: false };
-  await ctx.addGoal({ type: action.type as 'calories' | 'workouts' | 'savings', target: action.target, period: action.period as 'daily' | 'weekly' | 'monthly' | 'yearly' });
+  await ctx.addGoal({ type: action.type as 'calories' | 'workouts' | 'sleep', target: action.target, period: action.period as 'daily' | 'weekly' | 'monthly' | 'yearly' });
   return { success: true };
 };
 
@@ -340,12 +243,6 @@ const handleDeleteGoal: Handler = async (action, ctx) => {
 };
 
 const HANDLERS: Partial<Record<VoiceAction['intent'], Handler>> = {
-  add_schedule: handleAddSchedule,
-  edit_schedule: handleEditSchedule,
-  delete_schedule: handleDeleteSchedule,
-  add_transaction: handleAddTransaction,
-  edit_transaction: handleEditTransaction,
-  delete_transaction: handleDeleteTransaction,
   add_workout: handleAddWorkout,
   edit_workout: handleEditWorkout,
   delete_workout: handleDeleteWorkout,

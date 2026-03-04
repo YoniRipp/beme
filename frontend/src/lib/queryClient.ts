@@ -11,8 +11,6 @@ export const queryClient = new QueryClient({
 
 export const queryKeys = {
   goals: ['goals'] as const,
-  transactions: ['transactions'] as const,
-  schedule: ['schedule'] as const,
   workouts: ['workouts'] as const,
   checkIns: ['checkIns'] as const,
   foodEntries: ['foodEntries'] as const,

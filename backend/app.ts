@@ -130,14 +130,6 @@ export async function createApp() {
   app.use('/api', apiLimiter);
 
   // API gateway: route context paths to extracted services when SERVICE_URL is set
-  if (config.moneyServiceUrl) {
-    app.use('/api/money', createProxyMiddleware({ target: config.moneyServiceUrl, changeOrigin: true, pathRewrite: { '^/api/money': '/api' } }));
-    app.use('/api/transactions', createProxyMiddleware({ target: config.moneyServiceUrl, changeOrigin: true }));
-    app.use('/api/balance', createProxyMiddleware({ target: config.moneyServiceUrl, changeOrigin: true }));
-  }
-  if (config.scheduleServiceUrl) {
-    app.use('/api/schedule', createProxyMiddleware({ target: config.scheduleServiceUrl, changeOrigin: true }));
-  }
   if (config.bodyServiceUrl) {
     app.use('/api/workouts', createProxyMiddleware({ target: config.bodyServiceUrl, changeOrigin: true }));
   }

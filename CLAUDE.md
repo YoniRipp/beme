@@ -1,6 +1,6 @@
 # BMe
 
-Full-stack life management app: money, body, energy, schedule, goals, groups, voice.
+Full-stack wellness app: body, energy, goals, groups, voice.
 
 ## Stack
 - Backend: Node/Express, TypeScript, PostgreSQL, optional Redis
@@ -35,9 +35,9 @@ Full-stack life management app: money, body, energy, schedule, goals, groups, vo
 
 ## Architecture goals
 This project follows a modular monolith pattern designed for incremental extraction:
-- Each domain (money, schedule, body, energy, goals) can run as a standalone service
+- Each domain (body, energy, goals) can run as a standalone service
 - The main app acts as an API gateway when *_SERVICE_URL env vars are set
-- getPool(context) supports per-domain database URLs (MONEY_DATABASE_URL, etc.)
+- getPool(context) supports per-domain database URLs (BODY_DATABASE_URL, etc.)
 - Event bus supports memory, Redis/BullMQ, and SQS transports (config-driven)
 - Voice worker can run in-process or separately (SEPARATE_WORKERS=true)
 - When adding new features, keep domain boundaries clean: own model, service, controller, events

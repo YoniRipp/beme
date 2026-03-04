@@ -44,19 +44,6 @@ describe('parseVoiceResult', () => {
     expect(result.actions[0].intent).toBe('add_workout');
   });
 
-  it('parses add_schedule with non-empty items', () => {
-    const result = parseVoiceResult({
-      actions: [
-        {
-          intent: 'add_schedule',
-          items: [{ title: 'Meeting', startTime: '10:00', endTime: '11:00' }],
-        },
-      ],
-    });
-    expect(result.actions).toHaveLength(1);
-    expect(result.actions[0].intent).toBe('add_schedule');
-    expect((result.actions[0] as { items: unknown[] }).items).toHaveLength(1);
-  });
 });
 
 describe('submitVoiceAudio', () => {

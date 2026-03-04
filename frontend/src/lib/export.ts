@@ -1,18 +1,14 @@
 import { storage, STORAGE_KEYS } from './storage';
-import { Transaction } from '@/types/transaction';
 import { Workout } from '@/types/workout';
 import { FoodEntry } from '@/types/energy';
-import { ScheduleItem } from '@/types/schedule';
 import { Group } from '@/types/group';
 
 export interface ExportData {
   version: string;
   exportDate: string;
-  transactions: Transaction[];
   workouts: Workout[];
   foodEntries: FoodEntry[];
   checkIns: any[];
-  scheduleItems: ScheduleItem[];
   groups: Group[];
   settings?: any;
 }
@@ -26,11 +22,9 @@ export function exportAllData(data: ExportData): string {
   const payload: ExportData = {
     version: data.version ?? '1.0.0',
     exportDate: data.exportDate ?? new Date().toISOString(),
-    transactions: data.transactions ?? [],
     workouts: data.workouts ?? [],
     foodEntries: data.foodEntries ?? [],
     checkIns: data.checkIns ?? [],
-    scheduleItems: data.scheduleItems ?? [],
     groups: data.groups ?? [],
     settings: data.settings,
   };
@@ -49,11 +43,6 @@ export function importAllData(jsonString: string): { success: boolean; error?: s
       return { success: false, error: 'Invalid data format: missing version or export date' };
     }
 
-    // Validate and import each data type
-    if (data.transactions && Array.isArray(data.transactions)) {
-      storage.set(STORAGE_KEYS.TRANSACTIONS, data.transactions);
-    }
-
     if (data.workouts && Array.isArray(data.workouts)) {
       storage.set(STORAGE_KEYS.WORKOUTS, data.workouts);
     }
@@ -64,10 +53,6 @@ export function importAllData(jsonString: string): { success: boolean; error?: s
 
     if (data.checkIns && Array.isArray(data.checkIns)) {
       storage.set(STORAGE_KEYS.ENERGY, data.checkIns);
-    }
-
-    if (data.scheduleItems && Array.isArray(data.scheduleItems)) {
-      storage.set(STORAGE_KEYS.SCHEDULE, data.scheduleItems);
     }
 
     if (data.groups && Array.isArray(data.groups)) {
@@ -81,10 +66,9 @@ export function importAllData(jsonString: string): { success: boolean; error?: s
   }
 }
 
-export type ExportCSVType = 'transactions' | 'workouts' | 'food';
+export type ExportCSVType = 'workouts' | 'food';
 
 export interface ExportCSVData {
-  transactions: Transaction[];
   workouts: Workout[];
   foodEntries: FoodEntry[];
 }
@@ -94,15 +78,6 @@ function getCSVRows(
   data: ExportCSVData
 ): (string | number)[][] {
   switch (type) {
-    case 'transactions':
-      return (data.transactions ?? []).map(t => [
-        new Date(t.date).toLocaleDateString(),
-        t.type,
-        t.amount.toString(),
-        t.category,
-        t.description || '',
-        t.isRecurring ? 'Yes' : 'No',
-      ]);
     case 'workouts':
       return (data.workouts ?? []).map(w => [
         new Date(w.date).toLocaleDateString(),
@@ -130,7 +105,6 @@ function getCSVRows(
 }
 
 const EXPORT_CSV_HEADERS: Record<ExportCSVType, string[]> = {
-  transactions: ['Date', 'Type', 'Amount', 'Category', 'Description', 'Recurring'],
   workouts: ['Date', 'Title', 'Type', 'Duration (min)', 'Exercises'],
   food: ['Date', 'Name', 'Calories', 'Protein (g)', 'Carbs (g)', 'Fats (g)'],
 };

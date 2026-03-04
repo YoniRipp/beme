@@ -10,16 +10,10 @@ import { closeQueue } from './src/queue/index.js';
 import { Worker } from 'bullmq';
 import { startVoiceWorker } from './src/workers/voice.js';
 import { subscribe, startEventsWorker, closeEventsBus } from './src/events/bus.js';
-import { registerTransactionAnalyticsConsumer } from './src/events/consumers/transactionAnalytics.js';
 import { registerStatsAggregatorConsumer } from './src/events/consumers/statsAggregator.js';
 import { logger } from './src/lib/logger.js';
 
-subscribe('money.TransactionCreated', (event) => {
-  logger.info({ eventType: event.type, eventId: event.eventId, userId: event.metadata?.userId }, 'Event received');
-});
-
 // Register event-driven data pipeline consumers
-registerTransactionAnalyticsConsumer(subscribe);
 registerStatsAggregatorConsumer(subscribe);
 
 async function start() {

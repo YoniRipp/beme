@@ -13,7 +13,6 @@ import {
   BALANCE_DISPLAY_COLORS,
   BALANCE_DISPLAY_LAYOUTS,
 } from '@/types/settings';
-import { SCHEDULE_CATEGORIES, SCHEDULE_COLOR_PRESET_IDS, CATEGORY_EMOJIS } from '@/types/schedule';
 import { toast } from 'sonner';
 import { SettingsSection } from './SettingsSection';
 
@@ -33,18 +32,6 @@ export function AppearanceSection() {
   const handleBalanceLayoutChange = (value: string) => {
     updateSettings({ balanceDisplayLayout: value as (typeof settings)['balanceDisplayLayout'] });
     toast.success('Balance layout updated');
-  };
-
-  const categoryColors = settings.scheduleCategoryColors ?? {};
-  const handleScheduleCategoryColorChange = (category: string, value: string) => {
-    const next = { ...categoryColors };
-    if (value === '') {
-      delete next[category];
-    } else {
-      next[category] = value;
-    }
-    updateSettings({ scheduleCategoryColors: Object.keys(next).length > 0 ? next : undefined });
-    toast.success('Schedule color updated');
   };
 
   return (
@@ -103,35 +90,6 @@ export function AppearanceSection() {
           <p className="text-sm text-muted-foreground">
             Show only balance or balance with income and expenses
           </p>
-        </div>
-        <div className="space-y-3 pt-4 border-t">
-          <Label>Schedule category colors</Label>
-          <p className="text-sm text-muted-foreground">
-            Default color for each schedule category. Items can override in edit.
-          </p>
-          <div className="space-y-2">
-            {SCHEDULE_CATEGORIES.map((cat) => (
-              <div key={cat} className="flex items-center gap-3">
-                <span className="w-24 text-sm shrink-0">{CATEGORY_EMOJIS[cat]} {cat}</span>
-                <Select
-                  value={categoryColors[cat] ?? 'default'}
-                  onValueChange={(v) => handleScheduleCategoryColorChange(cat, v === 'default' ? '' : v)}
-                >
-                  <SelectTrigger className="max-w-[180px]">
-                    <SelectValue placeholder="Default" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">Default</SelectItem>
-                    {SCHEDULE_COLOR_PRESET_IDS.map((presetId) => (
-                      <SelectItem key={presetId} value={presetId}>
-                        {presetId.charAt(0).toUpperCase() + presetId.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </SettingsSection>
