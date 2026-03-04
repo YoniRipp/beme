@@ -17,6 +17,7 @@ router.post('/api/subscription/checkout', requireAuth, async (req: any, res: any
       return res.status(503).json({ error: 'Lemon Squeezy is not configured' });
     }
     const plan = req.body?.plan === 'yearly' ? 'yearly' : 'monthly';
+    const trial = req.body?.trial === true;
     const frontendOrigin = config.frontendOrigin || 'http://localhost:5173';
     const successUrl = `${frontendOrigin}/settings?subscription=success`;
     const cancelUrl = `${frontendOrigin}/pricing?subscription=canceled`;
@@ -26,6 +27,7 @@ router.post('/api/subscription/checkout', requireAuth, async (req: any, res: any
       successUrl,
       cancelUrl,
       plan,
+      trial,
     );
     res.json({ url });
   } catch (e) {

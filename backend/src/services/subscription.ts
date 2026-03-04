@@ -52,6 +52,7 @@ export async function createCheckoutSession(
   successUrl: string,
   cancelUrl: string,
   plan: 'monthly' | 'yearly' = 'monthly',
+  trial: boolean = false,
 ): Promise<string> {
   const variantId = plan === 'yearly'
     ? config.lemonSqueezyVariantIdYearly
@@ -61,14 +62,19 @@ export async function createCheckoutSession(
     throw new Error('Lemon Squeezy checkout is not configured');
   }
 
+  const checkoutData: Record<string, unknown> = {
+    email,
+    custom: { user_id: userId },
+  };
+  if (trial) {
+    checkoutData.trial_ends_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  }
+
   const response = await lsApi('POST', '/v1/checkouts', {
     data: {
       type: 'checkouts',
       attributes: {
-        checkout_data: {
-          email,
-          custom: { user_id: userId },
-        },
+        checkout_data: checkoutData,
         product_options: {
           redirect_url: successUrl,
         },

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { subscriptionApi } from '@/core/api/subscription';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,8 @@ import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
 export function Signup() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const plan = searchParams.get('plan');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -30,6 +33,13 @@ export function Signup() {
     setLoading(true);
     try {
       await register(email.trim(), password, name.trim());
+      if (plan === 'monthly' || plan === 'yearly') {
+        const { url } = await subscriptionApi.createCheckout(plan, true);
+        if (url) {
+          window.location.href = url;
+          return;
+        }
+      }
       navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
@@ -43,8 +53,8 @@ export function Signup() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <img src="/logo.png" alt="BeMê" className="mx-auto max-w-[160px] w-auto h-16 rounded-full object-contain" />
-          <CardTitle>Create an account</CardTitle>
-          <CardDescription>Enter your details to get started.</CardDescription>
+          <CardTitle>{plan ? 'Create an account to start your trial' : 'Create an account'}</CardTitle>
+          <CardDescription>{plan ? 'Sign up and start your 7-day free Pro trial.' : 'Enter your details to get started.'}</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -93,7 +103,7 @@ export function Signup() {
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating account...' : 'Sign up'}
+              {loading ? (plan ? 'Setting up your trial...' : 'Creating account...') : (plan ? 'Sign up & Start Trial' : 'Sign up')}
             </Button>
             <div className="relative my-2">
               <div className="absolute inset-0 flex items-center">

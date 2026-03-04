@@ -209,6 +209,9 @@
 .animate-reveal-delay {
   animation: fadeUpReveal 0.5s ease-out 0.15s both;
 }
+.animate-reveal-delay-2 {
+  animation: fadeUpReveal 0.5s ease-out 0.3s both;
+}
 
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {

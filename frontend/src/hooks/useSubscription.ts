@@ -31,6 +31,18 @@ export function useSubscription() {
     }
   }, []);
 
+  const startTrial = useCallback(async (plan: 'monthly' | 'yearly' = 'monthly') => {
+    try {
+      const { url } = await subscriptionApi.createCheckout(plan, true);
+      if (!url) throw new Error('No checkout URL returned');
+      window.location.href = url;
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : 'Could not start trial. Please try again.'
+      );
+    }
+  }, []);
+
   const manage = useCallback(async () => {
     try {
       const { url } = await subscriptionApi.createPortal();
@@ -48,6 +60,7 @@ export function useSubscription() {
     subscriptionStatus: user?.subscriptionStatus || 'free',
     subscribe,
     subscribeYearly,
+    startTrial,
     manage,
   };
 }
