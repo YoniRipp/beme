@@ -23,7 +23,7 @@ export type Currency =
 
 export type DateFormat = 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
 export type Units = 'metric' | 'imperial';
-export type Theme = 'light' | 'dark' | 'system';
+export type Theme = 'light';
 export type BalanceDisplayColor = 'green' | 'blue' | 'neutral' | 'primary';
 export type BalanceDisplayLayout = 'compact' | 'with_income_expenses';
 
@@ -34,8 +34,6 @@ export interface AppSettings {
   theme: Theme;
   balanceDisplayColor: BalanceDisplayColor;
   balanceDisplayLayout: BalanceDisplayLayout;
-  /** Category name → schedule color preset id (e.g. Work → 'blue'). Optional; defaults use built-in category colors. */
-  scheduleCategoryColors?: Record<string, string>;
 }
 
 export const CURRENCIES: Currency[] = [
@@ -91,11 +89,6 @@ export const DATE_FORMATS: { value: DateFormat; label: string }[] = [
   { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY (EU)' },
   { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD (ISO)' },
 ];
-export const THEMES: { value: Theme; label: string }[] = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'System' },
-];
 
 export const BALANCE_DISPLAY_COLORS: { value: BalanceDisplayColor; label: string }[] = [
   { value: 'green', label: 'Green' },
@@ -113,7 +106,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   currency: 'USD',
   dateFormat: 'DD/MM/YYYY',
   units: 'metric',
-  theme: 'system',
+  theme: 'light',
   balanceDisplayColor: 'green',
   balanceDisplayLayout: 'with_income_expenses',
 };
