@@ -69,7 +69,7 @@ export async function getNutritionForFoodName(pool: Pool, foodName: string, amou
      WHERE lower(name) LIKE $1
      ORDER BY (COALESCE(preparation, 'cooked') = $2) DESC, length(name) ASC
      LIMIT 1`,
-    ['%' + name.toLowerCase() + '%', wantPrep]
+    ['%' + escapeLike(name.toLowerCase()) + '%', wantPrep]
   );
   if (result.rows.length === 0) return null;
   const row = result.rows[0];

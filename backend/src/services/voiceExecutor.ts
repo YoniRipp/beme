@@ -129,10 +129,10 @@ export async function executeActions(actions: VoiceAction[], userId: string): Pr
           await foodEntryService.create(userId, {
             date: parseDate(action.date),
             name: (action.name as string) ?? 'Unknown',
-            calories: Number(action.calories) ?? 0,
-            protein: Number(action.protein) ?? 0,
-            carbs: Number(action.carbs) ?? 0,
-            fats: Number(action.fats) ?? 0,
+            calories: Number(action.calories) || 0,
+            protein: Number(action.protein) || 0,
+            carbs: Number(action.carbs) || 0,
+            fats: Number(action.fats) || 0,
             portionAmount: action.portionAmount != null ? Number(action.portionAmount) : undefined,
             portionUnit: action.portionUnit as string,
             startTime: action.startTime as string,
@@ -173,7 +173,7 @@ export async function executeActions(actions: VoiceAction[], userId: string): Pr
         case 'log_sleep': {
           const dateStr = parseDate(action.date);
           const existing = await resolveCheckIn(userId, dateStr);
-          const hours = Number(action.sleepHours) ?? 0;
+          const hours = Number(action.sleepHours) || 0;
           if (existing) {
             await dailyCheckInService.update(userId, existing.id as string, { sleepHours: hours });
           } else {
@@ -193,7 +193,7 @@ export async function executeActions(actions: VoiceAction[], userId: string): Pr
             results.push({ intent: 'edit_check_in', success: false, message: 'Check-in not found' });
             break;
           }
-          await dailyCheckInService.update(userId, existing.id as string, { sleepHours: Number(action.sleepHours) ?? 0 });
+          await dailyCheckInService.update(userId, existing.id as string, { sleepHours: Number(action.sleepHours) || 0 });
           results.push({ intent: 'edit_check_in', success: true });
           break;
         }
@@ -216,7 +216,7 @@ export async function executeActions(actions: VoiceAction[], userId: string): Pr
         case 'add_goal':
           await goalService.create(userId, {
             type: (action.type as string) ?? 'workouts',
-            target: Number(action.target) ?? 0,
+            target: Number(action.target) || 0,
             period: (action.period as string) ?? 'weekly',
           });
           results.push({ intent: 'add_goal', success: true });

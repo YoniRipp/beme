@@ -7,10 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 
 const FREE_FEATURES = [
   'Manual data entry for all domains',
-  'Money tracking (income & expenses)',
   'Workout logging',
   'Food & nutrition tracking',
-  'Daily schedule management',
   'Goal setting & tracking',
 ];
 

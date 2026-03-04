@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
 import { useGoals } from '@/hooks/useGoals';
 import { DashboardProgressCards } from '@/components/home/DashboardProgressCards';
 import { SleepEditModal } from '@/components/energy/SleepEditModal';
 import { GoalModal } from '@/components/goals/GoalModal';
+import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { VoiceMicHero } from '@/components/voice/VoiceMicHero';
@@ -15,8 +17,9 @@ import { toast } from 'sonner';
 
 export function Home() {
   const navigate = useNavigate();
-  const { checkIns, addCheckIn, updateCheckIn, getCheckInByDate } = useEnergy();
-  const { addGoal, updateGoal } = useGoals();
+  const { workoutsLoading } = useWorkouts();
+  const { checkIns, addCheckIn, updateCheckIn, getCheckInByDate, energyLoading } = useEnergy();
+  const { addGoal, updateGoal, goalsLoading } = useGoals();
 
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>(undefined);
@@ -65,6 +68,7 @@ export function Home() {
       {/* Voice hero — primary input */}
       <VoiceMicHero />
 
+      <ContentWithLoading loading={workoutsLoading || energyLoading || goalsLoading} loadingText="Loading dashboard...">
       <div className="space-y-6 sm:space-y-8">
         {/* Progress cards (goals) */}
         <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card to-muted/30">
@@ -82,6 +86,7 @@ export function Home() {
           </CardContent>
         </Card>
       </div>
+      </ContentWithLoading>
 
       <GoalModal
         open={goalModalOpen}

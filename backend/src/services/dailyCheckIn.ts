@@ -42,4 +42,5 @@ export async function remove(userId: string, id: string) {
   requireId(id);
   const deleted = await dailyCheckInModel.deleteById(id, userId);
   requireFound(deleted, 'Daily check-in');
+  await publishEvent('energy.CheckInDeleted', { id }, userId);
 }

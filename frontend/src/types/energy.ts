@@ -20,5 +20,3 @@ export interface FoodEntry {
   startTime?: string;
   endTime?: string;
 }
-
-export const MOOD_OPTIONS = ['Great', 'Good', 'Okay', 'Bad', 'Terrible'] as const;

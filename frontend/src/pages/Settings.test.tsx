@@ -61,12 +61,7 @@ describe('Settings Page', () => {
 
   it('renders settings page with title', () => {
     render(<Settings />, { wrapper });
-    expect(screen.getByRole('heading', { name: /currency/i })).toBeInTheDocument();
-  });
-
-  it('displays currency section', () => {
-    render(<Settings />, { wrapper });
-    expect(screen.getByRole('heading', { name: /currency/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /date format/i })).toBeInTheDocument();
   });
 
   it('displays date format section', () => {

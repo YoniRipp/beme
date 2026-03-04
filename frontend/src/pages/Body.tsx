@@ -99,7 +99,7 @@ export function Body() {
       <div>
         <div className="flex items-center gap-3 mb-4">
           <h2 className="text-xl font-semibold flex-1">Workouts</h2>
-          <div className="w-64">
+          <div className="w-full max-w-64">
             <SearchBar
               value={searchQuery}
               onChange={setSearchQuery}

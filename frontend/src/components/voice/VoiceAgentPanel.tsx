@@ -41,7 +41,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
     stopListening,
     getVoiceResult,
   } = useSpeechRecognition({
-    language: 'he-IL',
+    language: navigator.language || 'en-US',
     onPartialResult: setTranscript,
   });
 
@@ -146,7 +146,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>מרח / Voice Agent</DialogTitle>
+          <DialogTitle>Voice Agent</DialogTitle>
         </DialogHeader>
         <LocalErrorBoundary label="Voice">
           {!isAvailable ? (
@@ -165,12 +165,12 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
                 {!isListening && !isProcessing ? (
                   <Button type="button" onClick={handleStartRecording} className="flex-1">
                     <Mic className="mr-2 h-4 w-4" />
-                    Start recording / התחל הקלטה
+                    Start recording
                   </Button>
                 ) : isListening ? (
                   <Button type="button" variant="destructive" onClick={handleStopRecording} className="flex-1">
                     <Square className="mr-2 h-4 w-4" />
-                    Stop / עצור
+                    Stop
                   </Button>
                 ) : (
                   <Button type="button" disabled className="flex-1">

@@ -8,7 +8,7 @@ import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Moon, Plus, Trash2, Pencil, UtensilsCrossed } from 'lucide-react';
-import { isSameDay, startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
+import { isSameDay, isWithinInterval, format } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
 
 function formatMealTime(entry: FoodEntry): string | null {
@@ -35,46 +35,14 @@ export function Energy() {
   const [caloriePeriod, setCaloriePeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [sleepPeriod, setSleepPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [searchQuery, _setSearchQuery] = useState('');
-  const [_filtersOpen, _setFiltersOpen] = useState(false);
-  const [dateRange, _setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
-  const [calorieRange, _setCalorieRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
 
   const now = new Date();
 
   const periodFoodEntries = useMemo(() => {
     const range = getPeriodRange(caloriePeriod, now);
-    let filtered = foodEntries.filter(f => 
+    const filtered = foodEntries.filter(f =>
       isWithinInterval(new Date(f.date), range)
     );
-    
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(f =>
-        f.name.toLowerCase().includes(query)
-      );
-    }
-    
-    // Date range filter
-    if (dateRange.start) {
-      const startDate = startOfDay(new Date(dateRange.start));
-      filtered = filtered.filter(f => new Date(f.date) >= startDate);
-    }
-    if (dateRange.end) {
-      const endDate = endOfDay(new Date(dateRange.end));
-      filtered = filtered.filter(f => new Date(f.date) <= endDate);
-    }
-    
-    // Calorie range filter
-    if (calorieRange.min) {
-      const min = parseInt(calorieRange.min);
-      filtered = filtered.filter(f => f.calories >= min);
-    }
-    if (calorieRange.max) {
-      const max = parseInt(calorieRange.max);
-      filtered = filtered.filter(f => f.calories <= max);
-    }
 
     // Sort: date desc, then entries with time first, then by startTime asc
     filtered.sort((a, b) => {
@@ -94,7 +62,7 @@ export function Energy() {
     });
 
     return filtered;
-  }, [foodEntries, caloriePeriod, searchQuery, dateRange, calorieRange]);
+  }, [foodEntries, caloriePeriod]);
 
   // Calculate totals for selected period
   const periodTotals = useMemo(() => {
@@ -426,7 +394,7 @@ export function Energy() {
 
       {/* Floating Add Food button — visible on mobile */}
       <button
-        className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-95 transition-all sm:hidden"
+        className="fixed bottom-20 right-20 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-95 transition-all sm:hidden"
         onClick={handleAddFood}
         aria-label="Add food entry"
       >

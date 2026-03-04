@@ -15,16 +15,47 @@ vi.mock('@/context/AuthContext', () => ({
   }),
 }));
 
-vi.mock('@/features/body/api', () => ({
-  workoutsApi: { list: vi.fn().mockResolvedValue([]), add: vi.fn(), update: vi.fn(), delete: vi.fn() },
+vi.mock('@/hooks/useWorkouts', () => ({
+  useWorkouts: () => ({
+    workouts: [],
+    workoutsLoading: false,
+    workoutsError: null,
+    refetchWorkouts: vi.fn(),
+    addWorkout: vi.fn(),
+    updateWorkout: vi.fn(),
+    deleteWorkout: vi.fn(),
+    getWorkoutById: vi.fn(),
+  }),
 }));
-vi.mock('@/features/energy/api', () => ({
-  foodEntriesApi: { list: vi.fn().mockResolvedValue([]), add: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  dailyCheckInsApi: { list: vi.fn().mockResolvedValue([]), add: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  searchFoods: vi.fn().mockResolvedValue([]),
+
+vi.mock('@/hooks/useEnergy', () => ({
+  useEnergy: () => ({
+    foodEntries: [],
+    checkIns: [],
+    energyLoading: false,
+    foodError: null,
+    checkInsError: null,
+    addFoodEntry: vi.fn(),
+    updateFoodEntry: vi.fn(),
+    deleteFoodEntry: vi.fn(),
+    addCheckIn: vi.fn(),
+    updateCheckIn: vi.fn(),
+    deleteCheckIn: vi.fn(),
+    getCheckInByDate: vi.fn(() => undefined),
+    refetchEnergy: vi.fn(),
+  }),
 }));
-vi.mock('@/features/goals/api', () => ({
-  goalsApi: { list: vi.fn().mockResolvedValue([]), add: vi.fn(), update: vi.fn(), delete: vi.fn() },
+
+vi.mock('@/hooks/useGoals', () => ({
+  useGoals: () => ({
+    goals: [],
+    goalsLoading: false,
+    goalsError: null,
+    addGoal: vi.fn(),
+    updateGoal: vi.fn(),
+    deleteGoal: vi.fn(),
+    refetchGoals: vi.fn(),
+  }),
 }));
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

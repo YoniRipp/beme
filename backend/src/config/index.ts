@@ -25,7 +25,7 @@ const configSchema = z.object({
   dbUrl: z.string().optional(),
   isDbConfigured: z.boolean(),
   geminiApiKey: z.string().optional(),
-  geminiModel: z.string(),
+  geminiModel: z.string().default('gemini-2.5-flash'),
   jwtSecret: z.string().nullable().refine((v) => !isProduction || (v != null && v.length > 0), {
     message: 'JWT_SECRET must be set in production',
   }),

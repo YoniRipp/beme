@@ -13,17 +13,12 @@ vi.mock('@/context/AuthContext', () => ({
   }),
 }));
 
-const { mockWorkoutsApi } = vi.hoisted(() => ({
-  mockWorkoutsApi: {
-    list: vi.fn().mockResolvedValue([]),
-    add: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
+const { mockUseWorkouts } = vi.hoisted(() => ({
+  mockUseWorkouts: vi.fn(),
 }));
 
-vi.mock('@/features/body/api', () => ({
-  workoutsApi: mockWorkoutsApi,
+vi.mock('@/hooks/useWorkouts', () => ({
+  useWorkouts: mockUseWorkouts,
 }));
 
 const queryClient = new QueryClient({
@@ -41,8 +36,20 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('Body Page', () => {
+  const defaultHookReturn = {
+    workouts: [],
+    workoutsLoading: false,
+    workoutsError: null,
+    refetchWorkouts: vi.fn(),
+    addWorkout: vi.fn(),
+    updateWorkout: vi.fn(),
+    deleteWorkout: vi.fn(),
+    getWorkoutById: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseWorkouts.mockReturnValue(defaultHookReturn);
   });
 
   it('renders body page', () => {
@@ -58,24 +65,27 @@ describe('Body Page', () => {
   it('shows This week and Older sections when workouts span both', async () => {
     const today = format(new Date(), 'yyyy-MM-dd');
     const twoWeeksAgo = format(subWeeks(new Date(), 2), 'yyyy-MM-dd');
-    mockWorkoutsApi.list.mockResolvedValueOnce([
-      {
-        id: '1',
-        date: today,
-        title: 'This Week Workout',
-        type: 'strength',
-        durationMinutes: 45,
-        exercises: [{ name: 'Squat', sets: 3, reps: 10, weight: 100 }],
-      },
-      {
-        id: '2',
-        date: twoWeeksAgo,
-        title: 'Older Workout',
-        type: 'strength',
-        durationMinutes: 30,
-        exercises: [{ name: 'Bench', sets: 3, reps: 8 }],
-      },
-    ]);
+    mockUseWorkouts.mockReturnValue({
+      ...defaultHookReturn,
+      workouts: [
+        {
+          id: '1',
+          date: new Date(today),
+          title: 'This Week Workout',
+          type: 'strength',
+          durationMinutes: 45,
+          exercises: [{ name: 'Squat', sets: 3, reps: 10, weight: 100 }],
+        },
+        {
+          id: '2',
+          date: new Date(twoWeeksAgo),
+          title: 'Older Workout',
+          type: 'strength',
+          durationMinutes: 30,
+          exercises: [{ name: 'Bench', sets: 3, reps: 8 }],
+        },
+      ],
+    });
 
     render(<Body />, { wrapper });
 

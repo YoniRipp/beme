@@ -1,20 +1,8 @@
-import { getToken } from './api';
-import { handleUnauthorized } from '@/core/api/client';
+import { request } from '@/core/api/client';
 import { toLocalDateString } from './dateRanges';
 import { parseVoiceAction, type VoiceAction } from '@/schemas/voice';
 
 export type { VoiceAction };
-
-const API_BASE = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL
-  || (typeof window !== 'undefined' ? `http://${window.location.hostname}:3000` : '');
-
-const DEFAULT_TIMEOUT_MS = 30000;
-
-function getAuthHeaders(): Record<string, string> {
-  const token = getToken();
-  if (token) return { Authorization: `Bearer ${token}` };
-  return {};
-}
 
 function getUserTimezone(): string {
   try {
@@ -33,23 +21,6 @@ export interface VoiceExecuteResult {
 export interface VoiceUnderstandResult {
   actions: VoiceAction[];
   results?: VoiceExecuteResult[];
-}
-
-async function getErrorMessage(res: Response, context = 'Voice'): Promise<string> {
-  const body = await res.json().catch(() => ({}));
-  return (body as { error?: string })?.error ?? res.statusText ?? `${context} request failed (${res.status})`;
-}
-
-async function handleResponse<T>(res: Response): Promise<T> {
-  if (res.status === 401) {
-    handleUnauthorized();
-    const err = await getErrorMessage(res);
-    throw new Error(err || 'Session expired');
-  }
-  if (!res.ok) {
-    throw new Error(await getErrorMessage(res));
-  }
-  return res.json() as Promise<T>;
 }
 
 export function parseVoiceResult(data: { actions?: unknown[]; results?: unknown[] } | null): VoiceUnderstandResult {
@@ -91,38 +62,20 @@ export async function submitVoiceAudio(
 ): Promise<{ jobId: string; status: string }> {
   const today = toLocalDateString(new Date());
   const timezone = getUserTimezone();
-  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  // Link external signal to our controller
-  if (options?.signal) {
-    options.signal.addEventListener('abort', () => controller.abort());
-  }
-
-  let res: Response;
   try {
-    res = await fetch(`${API_BASE}/api/voice/understand`, {
+    return await request<{ jobId: string; status: string }>('/api/voice/understand', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ audio, mimeType, today, timezone }),
-      signal: controller.signal,
+      body: { audio, mimeType, today, timezone },
+      timeoutMs: options?.timeoutMs,
     });
   } catch (e) {
-    clearTimeout(timeoutId);
-    if (e instanceof Error && e.name === 'AbortError') {
-      throw new Error('Request timed out or cancelled');
-    }
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes('Failed to fetch') || msg.includes('ERR_CONNECTION_REFUSED') || msg.includes('NetworkError')) {
       throw new Error('Backend not reachable. Start the backend (e.g. npm run dev in backend/) and try again.');
     }
     throw e;
   }
-  clearTimeout(timeoutId);
-
-  return handleResponse<{ jobId: string; status: string }>(res);
 }
 
 /** Poll for voice job completion. */
@@ -136,29 +89,13 @@ export async function pollForVoiceResult(
   const signal = options?.signal;
 
   while (Date.now() - start < timeout) {
-    // Check for cancellation before each poll
     if (signal?.aborted) {
       throw new DOMException('Polling cancelled', 'AbortError');
     }
 
-    const res = await fetch(`${API_BASE}/api/jobs/${jobId}`, {
-      headers: getAuthHeaders(),
-      signal,
-    });
-
-    if (res.status === 401) {
-      handleUnauthorized();
-      throw new Error('Session expired');
-    }
-
-    if (!res.ok) {
-      if (res.status === 404) {
-        throw new Error('Job not found or expired');
-      }
-      throw new Error(await getErrorMessage(res));
-    }
-
-    const data = (await res.json()) as { status: string; result?: { actions?: unknown[]; results?: unknown[] }; error?: string };
+    const data = await request<{ status: string; result?: { actions?: unknown[]; results?: unknown[] }; error?: string }>(
+      `/api/jobs/${jobId}`,
+    );
 
     if (data.status === 'completed') {
       return parseVoiceResult(data.result ?? null);
@@ -197,34 +134,13 @@ export async function understandTranscript(
 ): Promise<VoiceUnderstandResult> {
   const today = toLocalDateString(new Date());
   const timezone = getUserTimezone();
-  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const data = await request<{ actions?: unknown[]; results?: unknown[]; jobId?: string }>('/api/voice/understand', {
+    method: 'POST',
+    body: { transcript: transcript.trim(), today, timezone },
+    timeoutMs: options?.timeoutMs,
+  });
 
-  // Link external signal to our controller
-  if (options?.signal) {
-    options.signal.addEventListener('abort', () => controller.abort());
-  }
-
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}/api/voice/understand`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ transcript: transcript.trim(), today, timezone }),
-      signal: controller.signal,
-    });
-  } catch (e) {
-    clearTimeout(timeoutId);
-    if (e instanceof Error && e.name === 'AbortError') {
-      throw new Error('Request timed out or cancelled');
-    }
-    throw e;
-  }
-  clearTimeout(timeoutId);
-
-  const data = await handleResponse<{ actions?: unknown[]; results?: unknown[]; jobId?: string }>(res);
   if (data.jobId) {
     return pollForVoiceResult(data.jobId, { signal: options?.signal });
   }

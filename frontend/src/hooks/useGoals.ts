@@ -15,7 +15,7 @@ export function useGoals() {
     refetch: refetchGoalsQuery,
   } = useQuery({
     queryKey: queryKeys.goals,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const list = await goalsApi.list();
       return list.map(apiGoalToGoal);

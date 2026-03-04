@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { DEFAULT_SETTINGS } from '@/types/settings';
 import { AccountSection } from '@/components/settings/AccountSection';
-import { CurrencySection } from '@/components/settings/CurrencySection';
 import { DateFormatSection } from '@/components/settings/DateFormatSection';
 import { UnitsSection } from '@/components/settings/UnitsSection';
 import { AppearanceSection } from '@/components/settings/AppearanceSection';
@@ -41,7 +40,6 @@ export function Settings() {
     <div className="max-w-6xl mx-auto space-y-6">
       <SubscriptionSection />
       <AccountSection />
-      <CurrencySection />
       <DateFormatSection />
       <UnitsSection />
       <AppearanceSection />
@@ -55,7 +53,7 @@ export function Settings() {
         open={showClearConfirm}
         onOpenChange={setShowClearConfirm}
         title="Clear All Data"
-        message="Are you sure you want to delete all your data? This action cannot be undone. All transactions, workouts, food entries, and other data will be permanently deleted."
+        message="Are you sure you want to delete all your data? This action cannot be undone. All workouts, food entries, and other data will be permanently deleted."
         onConfirm={handleClearData}
         confirmLabel="Clear All Data"
         cancelLabel="Cancel"

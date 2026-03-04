@@ -117,7 +117,8 @@ describe('pollForVoiceResult', () => {
     (fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: false,
       status: 404,
-      json: () => Promise.resolve({}),
+      statusText: 'Not Found',
+      json: () => Promise.resolve({ error: 'Job not found or expired' }),
     });
 
     await expect(pollForVoiceResult('job-123', { timeout: 1000, interval: 10 })).rejects.toThrow(

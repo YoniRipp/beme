@@ -8,7 +8,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { sendJson, sendError } from '../utils/response.js';
 import { getOrGenerateInsights, refreshInsights } from '../services/insights.js';
-import { getPool } from '../db/pool.js';
+import { getStatsSince } from '../models/userDailyStats.js';
 import { config } from '../config/index.js';
 
 export const getInsights = asyncHandler(async (req: Request, res: Response) => {
@@ -32,15 +32,8 @@ export const getStats = asyncHandler(async (req: Request, res: Response) => {
   const days = Math.min(Math.max(1, parseInt(req.query.days as string, 10) || 30), 365);
   const since = new Date();
   since.setDate(since.getDate() - days);
-  const pool = getPool();
-  const result = await pool.query(
-    `SELECT date, total_calories, workout_count, sleep_hours
-     FROM user_daily_stats
-     WHERE user_id = $1 AND date >= $2
-     ORDER BY date ASC`,
-    [req.user!.id, since.toISOString().slice(0, 10)]
-  );
-  return sendJson(res, { days, stats: result.rows });
+  const stats = await getStatsSince(req.user!.id, since.toISOString().slice(0, 10));
+  return sendJson(res, { days, stats });
 });
 
 export const getTodayRecommendations = asyncHandler(async (req: Request, res: Response) => {

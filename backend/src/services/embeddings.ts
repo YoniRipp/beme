@@ -24,21 +24,11 @@ export async function embed(text: string) {
 
 /**
  * Build a plain-text description of a data record for embedding.
- * @param {'transaction'|'workout'|'food_entry'|'schedule'} type
+ * @param {'workout'|'food_entry'} type
  * @param {object} record
  */
 export function buildEmbeddingText(type: string, record: Record<string, unknown>) {
   switch (type) {
-    case 'transaction':
-      return [
-        `${record.type === 'income' ? 'Income' : 'Expense'}`,
-        record.category,
-        record.description ?? '',
-        `${record.amount} ${record.currency ?? 'USD'}`,
-        `on ${record.date}`,
-        record.isRecurring ? 'recurring' : '',
-      ].filter(Boolean).join(' ');
-
     case 'workout':
       return [
         `Workout: ${record.title}`,
@@ -61,15 +51,6 @@ export function buildEmbeddingText(type: string, record: Record<string, unknown>
         `on ${record.date}`,
       ].filter(Boolean).join(', ');
 
-    case 'schedule':
-      return [
-        `Schedule: ${record.title}`,
-        `category: ${record.category}`,
-        `from ${record.startTime} to ${record.endTime}`,
-        `on ${record.date}`,
-        record.recurrence ? `repeats ${record.recurrence}` : '',
-      ].filter(Boolean).join(', ');
-
     default:
       return JSON.stringify(record);
   }
@@ -78,7 +59,7 @@ export function buildEmbeddingText(type: string, record: Record<string, unknown>
 /**
  * Upsert an embedding for a data record.
  * @param {string} userId
- * @param {'transaction'|'workout'|'food_entry'|'schedule'} recordType
+ * @param {'workout'|'food_entry'} recordType
  * @param {string} recordId
  * @param {string} text - Plain-text representation for embedding
  */
@@ -104,7 +85,7 @@ export async function upsertEmbedding(userId: string, recordType: string, record
 /**
  * Delete embedding for a record (call when record is deleted).
  * @param {string} recordId
- * @param {'transaction'|'workout'|'food_entry'|'schedule'} recordType
+ * @param {'workout'|'food_entry'} recordType
  */
 export async function deleteEmbedding(recordId: string, recordType: string) {
   const pool = getPool();

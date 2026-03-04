@@ -44,7 +44,7 @@ export function UpgradePrompt({ feature, description, compact }: UpgradePromptPr
       </CardHeader>
       <CardContent className="text-center">
         <Button onClick={subscribe} className="px-8">
-          Upgrade to Pro — $4.99/mo
+          Upgrade to Pro — $7.99/mo
         </Button>
       </CardContent>
     </Card>
