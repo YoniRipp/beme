@@ -16,10 +16,16 @@ vi.mock('../db/index.js', () => ({
 vi.mock('../models/foodSearch.js', () => ({
   getNutritionForFoodName: vi.fn().mockResolvedValue(null),
   unitToGrams: vi.fn((amount: number) => amount),
+  cacheFood: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('./foodLookupGemini.js', () => ({
   lookupAndCreateFood: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('./openFoodFacts.js', () => ({
+  searchByName: vi.fn().mockResolvedValue([]),
+  getByBarcode: vi.fn().mockResolvedValue(null),
 }));
 
 describe('voice service HANDLERS', () => {

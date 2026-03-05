@@ -8,8 +8,9 @@ import { isDbConfigured, getPool } from '../db/index.js';
 import { WORKOUT_TYPES, GOAL_TYPES, GOAL_PERIODS } from '../config/constants.js';
 import { normTime } from '../utils/validation.js';
 import { VOICE_TOOLS } from '../../voice/tools.js';
-import { getNutritionForFoodName, unitToGrams } from '../models/foodSearch.js';
+import { getNutritionForFoodName, unitToGrams, cacheFood } from '../models/foodSearch.js';
 import { lookupAndCreateFood } from './foodLookupGemini.js';
+import * as openFoodFacts from './openFoodFacts.js';
 import { logError } from './appLog.js';
 import { logger } from '../lib/logger.js';
 import { executeActions } from './voiceExecutor.js';
@@ -171,6 +172,30 @@ async function buildAddFood(args: Record<string, unknown>, ctx: { todayStr: stri
       const preferUncooked = /\b(uncooked|raw)\b/i.test(food || '');
       let nutrition = await getNutritionForFoodName(pool, food || 'unknown', numAmount, unit, preferUncooked);
       let source = nutrition ? 'db' : null;
+      // Tier 2: Open Food Facts API
+      if (!nutrition) {
+        try {
+          const offResults = await openFoodFacts.searchByName(food || 'unknown', 1);
+          if (offResults.length > 0) {
+            const offFood = offResults[0];
+            await cacheFood(pool, offFood);
+            const grams = unitToGrams(numAmount, unit);
+            const scale = grams / 100;
+            nutrition = {
+              name: offFood.name,
+              calories: Math.round(offFood.calories * scale),
+              protein: Math.round(offFood.protein * scale * 10) / 10,
+              carbs: Math.round(offFood.carbs * scale * 10) / 10,
+              fat: Math.round(offFood.fat * scale * 10) / 10,
+              isLiquid: offFood.is_liquid,
+            };
+            source = 'off';
+          }
+        } catch (e) {
+          logger.warn({ err: e, food }, 'add_food OFF lookup failed');
+        }
+      }
+      // Tier 3: Gemini AI
       if (!nutrition && config.geminiApiKey) {
         const geminiRow = await lookupAndCreateFood(pool, food || 'unknown');
         if (geminiRow) {

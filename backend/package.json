@@ -19,6 +19,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "import:foods": "node scripts/importFoundationFoods.js",
+    "import:off-foods": "node scripts/importOpenFoodFacts.js",
     "remove:non-foundation-foods": "node scripts/removeNonFoundationFoods.js",
     "seed:popular-foods": "node scripts/seedPopularFoods.js",
     "migrate:up": "node-pg-migrate up",

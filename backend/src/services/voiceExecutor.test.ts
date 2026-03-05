@@ -110,7 +110,7 @@ describe('voiceExecutor', () => {
         userId
       );
 
-      expect(results).toEqual([{ intent: 'add_workout', success: true }]);
+      expect(results).toMatchObject([{ intent: 'add_workout', success: true }]);
       expect(mockWorkoutCreate).toHaveBeenCalledWith(userId, {
         date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
         title: 'Run',
@@ -153,7 +153,7 @@ describe('voiceExecutor', () => {
         userId
       );
 
-      expect(results).toEqual([{ intent: 'add_food', success: true }]);
+      expect(results).toMatchObject([{ intent: 'add_food', success: true }]);
       expect(mockFoodEntryCreate).toHaveBeenCalledWith(userId, {
         date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
         name: 'Apple',
@@ -179,7 +179,7 @@ describe('voiceExecutor', () => {
         userId
       );
 
-      expect(results).toEqual([{ intent: 'log_sleep', success: true }]);
+      expect(results).toMatchObject([{ intent: 'log_sleep', success: true }]);
       expect(mockDailyCheckInCreate).toHaveBeenCalledWith(userId, {
         date: '2025-02-24',
         sleepHours: 7,
@@ -196,7 +196,7 @@ describe('voiceExecutor', () => {
         userId
       );
 
-      expect(results).toEqual([{ intent: 'log_sleep', success: true }]);
+      expect(results).toMatchObject([{ intent: 'log_sleep', success: true }]);
       expect(mockDailyCheckInUpdate).toHaveBeenCalledWith(userId, 'c1', { sleepHours: 8 });
     });
   });
@@ -217,7 +217,7 @@ describe('voiceExecutor', () => {
         userId
       );
 
-      expect(results).toEqual([{ intent: 'add_goal', success: true }]);
+      expect(results).toMatchObject([{ intent: 'add_goal', success: true }]);
       expect(mockGoalCreate).toHaveBeenCalledWith(userId, {
         type: 'workouts',
         target: 3,

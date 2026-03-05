@@ -91,3 +91,62 @@ export async function search(q: string, limit = 10) {
   );
   return result.rows.map(rowToResult);
 }
+
+/** Look up a food by barcode (indexed). */
+export async function getByBarcode(pool: Pool, barcode: string) {
+  const result = await pool.query(
+    `SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, barcode, image_url
+     FROM foods
+     WHERE barcode = $1
+     LIMIT 1`,
+    [barcode]
+  );
+  if (result.rows.length === 0) return null;
+  return { ...rowToResult(result.rows[0]), barcode: result.rows[0].barcode as string | null, imageUrl: result.rows[0].image_url as string | null };
+}
+
+/** Insert a food from OFF or Gemini into the local DB (auto-cache). Returns the inserted row. */
+export async function cacheFood(pool: Pool, food: {
+  name: string;
+  name_he?: string | null;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  is_liquid: boolean;
+  barcode?: string | null;
+  source: string;
+  off_id?: string | null;
+  image_url?: string | null;
+  preparation?: string;
+}) {
+  const result = await pool.query(
+    `INSERT INTO foods (name, name_he, calories, protein, carbs, fat, is_liquid, barcode, source, off_id, image_url, preparation)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+     ON CONFLICT (off_id) WHERE off_id IS NOT NULL DO UPDATE SET
+       name = EXCLUDED.name,
+       calories = EXCLUDED.calories,
+       protein = EXCLUDED.protein,
+       carbs = EXCLUDED.carbs,
+       fat = EXCLUDED.fat,
+       is_liquid = EXCLUDED.is_liquid,
+       image_url = EXCLUDED.image_url
+     RETURNING id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, barcode, image_url`,
+    [
+      food.name,
+      food.name_he ?? null,
+      food.calories,
+      food.protein,
+      food.carbs,
+      food.fat,
+      food.is_liquid,
+      food.barcode ?? null,
+      food.source,
+      food.off_id ?? null,
+      food.image_url ?? null,
+      food.preparation ?? 'cooked',
+    ]
+  );
+  const row = result.rows[0];
+  return { ...rowToResult(row), barcode: row.barcode as string | null, imageUrl: row.image_url as string | null };
+}

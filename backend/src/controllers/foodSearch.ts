@@ -7,9 +7,11 @@ import { config } from '../config/index.js';
 import { getPool } from '../db/index.js';
 import { getRedisClient } from '../redis/client.js';
 import * as foodSearchModel from '../models/foodSearch.js';
+import * as openFoodFacts from '../services/openFoodFacts.js';
 import { lookupAndCreateFood } from '../services/foodLookupGemini.js';
 import { sendJson } from '../utils/response.js';
 import { sendError } from '../utils/response.js';
+import { logger } from '../lib/logger.js';
 
 const FOOD_SEARCH_CACHE_TTL_SEC = 3600;
 
@@ -34,7 +36,25 @@ export const search = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const results = await foodSearchModel.search(q, limit);
+  let results = await foodSearchModel.search(q, limit);
+
+  // Supplement with OFF API results when local DB has fewer than requested
+  if (results.length < limit) {
+    try {
+      const offResults = await openFoodFacts.searchByName(q, limit - results.length);
+      const pool = getPool();
+      for (const offFood of offResults) {
+        // Skip if we already have a result with the same name
+        if (results.some((r) => r.name.toLowerCase() === offFood.name.toLowerCase())) continue;
+        // Auto-cache to local DB
+        const cached = await foodSearchModel.cacheFood(pool, offFood);
+        results.push(cached);
+        if (results.length >= limit) break;
+      }
+    } catch (e) {
+      logger.warn({ err: e, q }, 'OFF search supplement failed');
+    }
+  }
 
   if (config.isRedisConfigured) {
     const redis = await getRedisClient();

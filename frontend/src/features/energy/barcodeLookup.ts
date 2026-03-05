@@ -1,7 +1,10 @@
 /**
- * Looks up food nutrition data by barcode using the Open Food Facts API.
- * Free, no API key required. Returns null if the product is not found.
+ * Looks up food nutrition data by barcode.
+ * Primary: backend endpoint (auto-caches to local DB for instant future lookups).
+ * Fallback: direct Open Food Facts API call.
  */
+import { getApiBase } from '@/core/api/client';
+
 export interface BarcodeProduct {
   name: string;
   calories: number; // kcal per 100g/ml
@@ -11,7 +14,32 @@ export interface BarcodeProduct {
   isLiquid: boolean;
 }
 
-export async function lookupBarcode(barcode: string): Promise<BarcodeProduct | null> {
+/** Lookup via backend (auto-caches result in local DB). */
+async function lookupViaBackend(barcode: string): Promise<BarcodeProduct | null> {
+  const base = getApiBase();
+  if (!base) return null;
+  try {
+    const res = await fetch(`${base}/api/food/barcode/${encodeURIComponent(barcode)}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.name) return null;
+    return {
+      name: data.name,
+      calories: Number(data.calories ?? 0),
+      protein: Number(data.protein ?? 0),
+      carbs: Number(data.carbs ?? 0),
+      fat: Number(data.fat ?? 0),
+      isLiquid: Boolean(data.isLiquid),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Direct OFF API fallback (when backend is unavailable). */
+async function lookupViaOFF(barcode: string): Promise<BarcodeProduct | null> {
   const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=product_name,nutriments,categories_tags`;
 
   let data: any;
@@ -42,4 +70,13 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeProduct | n
   );
 
   return { name, calories, protein, carbs, fat, isLiquid };
+}
+
+export async function lookupBarcode(barcode: string): Promise<BarcodeProduct | null> {
+  // Try backend first (auto-caches for instant future lookups)
+  const backendResult = await lookupViaBackend(barcode);
+  if (backendResult) return backendResult;
+
+  // Fallback to direct OFF API
+  return lookupViaOFF(barcode);
 }

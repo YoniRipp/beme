@@ -99,6 +99,13 @@ export async function initSchema() {
     await client.query(`ALTER TABLE foods ADD COLUMN IF NOT EXISTS is_liquid boolean DEFAULT false;`).catch(() => {});
     await client.query(`ALTER TABLE foods ADD COLUMN IF NOT EXISTS serving_sizes_ml jsonb;`).catch(() => {});
     await client.query(`ALTER TABLE foods ADD COLUMN IF NOT EXISTS preparation text DEFAULT 'cooked';`).catch(() => {});
+    await client.query(`ALTER TABLE foods ADD COLUMN IF NOT EXISTS barcode text;`).catch(() => {});
+    await client.query(`ALTER TABLE foods ADD COLUMN IF NOT EXISTS source text DEFAULT 'usda';`).catch(() => {});
+    await client.query(`ALTER TABLE foods ADD COLUMN IF NOT EXISTS off_id text;`).catch(() => {});
+    await client.query(`ALTER TABLE foods ADD COLUMN IF NOT EXISTS name_he text;`).catch(() => {});
+    await client.query(`ALTER TABLE foods ADD COLUMN IF NOT EXISTS image_url text;`).catch(() => {});
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_foods_barcode ON foods (barcode) WHERE barcode IS NOT NULL;`).catch(() => {});
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_foods_off_id ON foods (off_id) WHERE off_id IS NOT NULL;`).catch(() => {});
     await client.query(`
       CREATE TABLE IF NOT EXISTS app_logs (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
