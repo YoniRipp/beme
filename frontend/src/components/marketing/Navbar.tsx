@@ -12,10 +12,6 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
-  const isWelcome = location.pathname === '/welcome';
-
-  // On non-landing pages, always show the opaque/scrolled style
-  const showOpaque = !isWelcome || scrolled;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -30,10 +26,8 @@ export function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        showOpaque
-          ? 'border-b border-border bg-background/95 backdrop-blur-[12px]'
-          : 'border-b border-transparent bg-transparent'
+      className={`fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/95 backdrop-blur-[12px] transition-shadow duration-300 ${
+        scrolled ? 'shadow-sm' : ''
       }`}
     >
       <div className="mx-auto max-w-6xl px-6 lg:px-8">
@@ -44,16 +38,12 @@ export function Navbar() {
             </div>
             <div>
               <span
-                className={`text-base font-bold tracking-tight transition-colors ${
-                  showOpaque ? 'text-foreground' : 'text-primary-foreground'
-                }`}
+                className="text-base font-bold tracking-tight text-foreground"
               >
                 BeMe
               </span>
               <p
-                className={`text-[9px] font-medium uppercase leading-none tracking-widest transition-colors ${
-                  showOpaque ? 'text-muted-foreground' : 'text-primary-foreground/70'
-                }`}
+                className="text-[9px] font-medium uppercase leading-none tracking-widest text-muted-foreground"
               >
                 Life Balance
               </p>
@@ -65,11 +55,7 @@ export function Navbar() {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`text-sm font-medium transition-colors ${
-                  showOpaque
-                    ? 'text-muted-foreground hover:text-primary'
-                    : 'text-primary-foreground/80 hover:text-primary-foreground'
-                }`}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
               >
                 {link.label}
               </Link>
@@ -79,24 +65,20 @@ export function Navbar() {
           <div className="hidden items-center gap-3 md:flex">
             <Link
               to="/login"
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                showOpaque
-                  ? 'text-muted-foreground hover:text-primary'
-                  : 'text-primary-foreground/80 hover:text-primary-foreground'
-              }`}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
               Log in
             </Link>
             <Link
               to="/signup"
-              className="rounded-lg bg-white px-5 py-2 text-sm font-semibold text-primary transition-all hover:bg-white/90"
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90"
             >
               Get started free
             </Link>
           </div>
 
           <button
-            className={`p-2 md:hidden ${showOpaque ? 'text-primary' : 'text-primary-foreground'}`}
+            className="p-2 text-primary md:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
