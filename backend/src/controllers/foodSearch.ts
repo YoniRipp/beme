@@ -38,8 +38,8 @@ export const search = asyncHandler(async (req: Request, res: Response) => {
 
   let results = await foodSearchModel.search(q, limit);
 
-  // Supplement with OFF API results when local DB has fewer than requested
-  if (results.length < limit) {
+  // Fall back to OFF API only when local DB has zero results
+  if (results.length === 0) {
     try {
       const offResults = await openFoodFacts.searchByName(q, limit - results.length);
       const pool = getPool();
