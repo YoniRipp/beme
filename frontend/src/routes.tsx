@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { useSettings } from './hooks/useSettings';
 import { useThemeEffect } from './hooks/useThemeEffect';
 import { Base44Layout } from './components/layout/Base44Layout';
+import { PublicLayout } from './components/layout/PublicLayout';
 import { LoadingSpinner } from './components/shared/LoadingSpinner';
 import { LocalErrorBoundary } from './components/shared/LocalErrorBoundary';
 import { AppProviders } from './Providers';
@@ -33,14 +34,17 @@ const Pricing = lazy(() =>
 const Landing = lazy(() =>
   import('./pages/Landing').then((m) => ({ default: m.Landing }))
 );
-const Privacy = lazy(() =>
-  import('./pages/Privacy').then((m) => ({ default: m.Privacy }))
-);
-const Terms = lazy(() =>
-  import('./pages/Terms').then((m) => ({ default: m.Terms }))
-);
 const About = lazy(() =>
   import('./pages/About').then((m) => ({ default: m.About }))
+);
+const PrivacyPolicy = lazy(() =>
+  import('./pages/PrivacyPolicy').then((m) => ({ default: m.PrivacyPolicy }))
+);
+const TermsOfService = lazy(() =>
+  import('./pages/TermsOfService').then((m) => ({ default: m.TermsOfService }))
+);
+const Contact = lazy(() =>
+  import('./pages/Contact').then((m) => ({ default: m.Contact }))
 );
 const NotFound = lazy(() =>
   import('./pages/NotFound').then((m) => ({ default: m.NotFound }))
@@ -226,46 +230,56 @@ export function AppRoutes() {
             </Suspense>
           }
         />
-        <Route
-          path="/pricing"
-          element={
-            <Suspense fallback={<LoadingSpinner text="Loading..." />}>
-              <Pricing />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/welcome"
-          element={
-            <Suspense fallback={<LoadingSpinner text="Loading..." />}>
-              <Landing />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/privacy"
-          element={
-            <Suspense fallback={<LoadingSpinner text="Loading..." />}>
-              <Privacy />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/terms"
-          element={
-            <Suspense fallback={<LoadingSpinner text="Loading..." />}>
-              <Terms />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/about"
-          element={
-            <Suspense fallback={<LoadingSpinner text="Loading..." />}>
-              <About />
-            </Suspense>
-          }
-        />
+        <Route element={<PublicLayout />}>
+          <Route
+            path="/welcome"
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading..." />}>
+                <Landing />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/pricing"
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading..." />}>
+                <Pricing />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/about"
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading..." />}>
+                <About />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/privacy"
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading..." />}>
+                <PrivacyPolicy />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/terms"
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading..." />}>
+                <TermsOfService />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/contact"
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading..." />}>
+                <Contact />
+              </Suspense>
+            }
+          />
+        </Route>
         <Route path="/*" element={<ProtectedRoutes />} />
       </Routes>
     </BrowserRouter>

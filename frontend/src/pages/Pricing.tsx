@@ -1,9 +1,9 @@
-import { Check, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Check, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/context/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const FREE_FEATURES = [
   'Manual data entry for all domains',
@@ -27,7 +27,7 @@ export function Pricing() {
   const isLoggedIn = !!user;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 p-6">
+    <div className="mx-auto max-w-5xl space-y-8 px-6 pt-24 pb-16">
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Simple pricing</h1>
         <p className="mt-2 text-muted-foreground">
@@ -75,14 +75,14 @@ export function Pricing() {
                 </li>
               ))}
             </ul>
-            {isPro ? (
-              <Button className="w-full" disabled>Current Plan</Button>
-            ) : isLoggedIn ? (
-              <Button className="w-full" onClick={() => startTrial('monthly')}>Start Free Trial</Button>
-            ) : (
-              <Link to="/signup?plan=monthly" className="block">
+            {!isLoggedIn ? (
+              <Link to="/signup" className="block">
                 <Button className="w-full">Start Free Trial</Button>
               </Link>
+            ) : isPro ? (
+              <Button className="w-full" disabled>Current Plan</Button>
+            ) : (
+              <Button className="w-full" onClick={() => startTrial('monthly')}>Start Free Trial</Button>
             )}
             <p className="text-center text-xs text-muted-foreground">7-day free trial, cancel anytime</p>
           </CardContent>
@@ -116,14 +116,14 @@ export function Pricing() {
                 </li>
               ))}
             </ul>
-            {isPro ? (
-              <Button className="w-full" disabled>Current Plan</Button>
-            ) : isLoggedIn ? (
-              <Button className="w-full" onClick={() => startTrial('yearly')}>Start Free Trial</Button>
-            ) : (
+            {!isLoggedIn ? (
               <Link to="/signup?plan=yearly" className="block">
                 <Button className="w-full">Start Free Trial</Button>
               </Link>
+            ) : isPro ? (
+              <Button className="w-full" disabled>Current Plan</Button>
+            ) : (
+              <Button className="w-full" onClick={() => startTrial('yearly')}>Start Free Trial</Button>
             )}
             <p className="text-center text-xs text-muted-foreground">7-day free trial, cancel anytime</p>
           </CardContent>

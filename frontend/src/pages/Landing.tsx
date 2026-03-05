@@ -21,7 +21,7 @@ import {
   Clock,
 } from 'lucide-react';
 
-/* ─── Data ─── */
+/* --- Data --- */
 
 const FEATURES = [
   {
@@ -140,7 +140,7 @@ const FAQ = [
   },
 ];
 
-/* ─── Helpers ─── */
+/* --- Helpers --- */
 
 function RevealSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -191,18 +191,11 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-/* ─── Landing Page ─── */
+/* --- Landing Page --- */
 
 export function Landing() {
   const pricingRef = useRef<HTMLDivElement>(null);
   const [pricingVisible, setPricingVisible] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   useEffect(() => {
     const el = pricingRef.current;
@@ -221,7 +214,7 @@ export function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background scroll-smooth">
+    <>
       {/* Skip to content (a11y) */}
       <a
         href="#main-content"
@@ -230,41 +223,8 @@ export function Landing() {
         Skip to content
       </a>
 
-      {/* Navigation */}
-      <nav
-        role="navigation"
-        aria-label="Main"
-        className={`sticky top-0 z-40 transition-all duration-300 ${
-          scrolled
-            ? 'bg-background/95 backdrop-blur-md shadow-sm border-b border-border/50'
-            : 'bg-transparent'
-        }`}
-      >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
-          <a href="#main-content" className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="" className="h-9 w-9 rounded-full object-contain" />
-            <span className="text-lg font-bold tracking-tight text-foreground">BeMe</span>
-          </a>
-          <div className="hidden items-center gap-8 text-sm font-medium text-muted-foreground sm:flex">
-            <a href="#features" className="transition-colors hover:text-primary">Features</a>
-            <a href="#pricing" className="transition-colors hover:text-primary">Pricing</a>
-            <a href="#faq" className="transition-colors hover:text-primary">FAQ</a>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link to="/login">
-              <Button variant="ghost" size="sm" className="rounded-full text-xs sm:text-sm">Sign in</Button>
-            </Link>
-            <Link to="/signup">
-              <Button size="sm" className="gap-1.5 rounded-full px-4">
-                Start Free <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
-
       {/* Hero */}
-      <section id="main-content" aria-label="Hero" className="mx-auto max-w-4xl px-6 py-20 text-center">
+      <section id="main-content" aria-label="Hero" className="mx-auto max-w-4xl px-6 pt-28 pb-20 text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
           One app for your{' '}
           <span className="text-primary">whole life</span>
@@ -395,7 +355,7 @@ export function Landing() {
         </RevealSection>
       </section>
 
-      {/* Pricing Section — 3 Cards */}
+      {/* Pricing Section -- 3 Cards */}
       <section id="pricing" aria-label="Pricing" className="mx-auto max-w-5xl px-6 py-16">
         <div className="text-center">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Simple pricing</h2>
@@ -573,24 +533,6 @@ export function Landing() {
           </div>
         </RevealSection>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
-          <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} BeMe. All rights reserved.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-            <Link to="/login" className="hover:text-foreground transition-colors">Sign in</Link>
-            <Link to="/signup" className="hover:text-foreground transition-colors">Sign up</Link>
-            <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
-            <Link to="/about" className="hover:text-foreground transition-colors">About</Link>
-            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-            <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-            <a href="#contact" className="hover:text-foreground transition-colors">Contact</a>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }

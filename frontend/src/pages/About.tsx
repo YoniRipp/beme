@@ -23,26 +23,9 @@ const VALUES = [
 
 export function About() {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link to="/welcome">
-            <img src="/logo.png" alt="BeMe" className="h-10 w-auto rounded-full object-contain" />
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">Sign in</Button>
-            </Link>
-            <Link to="/signup">
-              <Button size="sm">Get Started</Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
-
+    <>
       {/* Hero */}
-      <section className="mx-auto max-w-3xl px-6 py-20 text-center">
+      <section className="mx-auto max-w-3xl px-6 pt-24 pb-20 text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">About BeMe</h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
           We believe managing your life shouldn't require five different apps.
@@ -134,20 +117,6 @@ export function About() {
           </Link>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
-          <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} BeMe. All rights reserved.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-            <Link to="/welcome" className="hover:text-foreground transition-colors">Home</Link>
-            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-            <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }
