@@ -60,23 +60,25 @@ describe('AiInsightsSection', () => {
     expect(screen.getByText(/Analyzing your data/i)).toBeInTheDocument();
   });
 
-  it('displays the actual API error message when insights fetch fails', async () => {
-    const apiError = 'AI insights not configured (missing GEMINI_API_KEY)';
-    mockGetInsights.mockRejectedValue(new Error(apiError));
+  it('displays a friendly error message when insights fetch fails', async () => {
+    mockGetInsights.mockRejectedValue(new Error('AI insights not configured (missing GEMINI_API_KEY)'));
     render(<AiInsightsSection />, { wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText(apiError)).toBeInTheDocument();
+      expect(
+        screen.getByText('AI insights are temporarily unavailable. Please try refreshing.'),
+      ).toBeInTheDocument();
     });
   });
 
-  it('displays other error messages when API returns different errors', async () => {
-    const sessionError = 'Session expired';
-    mockGetInsights.mockRejectedValue(new Error(sessionError));
+  it('displays the same friendly message regardless of error type', async () => {
+    mockGetInsights.mockRejectedValue(new Error('Session expired'));
     render(<AiInsightsSection />, { wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText(sessionError)).toBeInTheDocument();
+      expect(
+        screen.getByText('AI insights are temporarily unavailable. Please try refreshing.'),
+      ).toBeInTheDocument();
     });
   });
 
