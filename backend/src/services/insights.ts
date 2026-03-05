@@ -101,7 +101,12 @@ export function isCacheFresh(row: Record<string, unknown> | null) {
  * @returns {Promise<{ main: object, today: object, cached: boolean }>}
  */
 export async function getOrGenerateInsights(userId: string) {
-  const cached = await getLastInsight(userId);
+  let cached: Record<string, unknown> | null = null;
+  try {
+    cached = await getLastInsight(userId);
+  } catch (err) {
+    logger.warn({ err }, 'Failed to fetch cached insights, will regenerate');
+  }
   if (cached && isCacheFresh(cached)) {
     return {
       main: {
@@ -154,12 +159,13 @@ export async function refreshInsights(userId: string) {
  * @returns {Promise<{ summary: string, highlights: string[], suggestions: string[], score: number, today?: object }>}
  */
 export async function generateInsights(userId: string) {
-  const ctx = await fetchUserContext(userId, 30);
-  const model = getGemini();
+  try {
+    const ctx = await fetchUserContext(userId, 30);
+    const model = getGemini();
 
-  const totalWorkouts = ctx.workouts.reduce((s: number, w: Record<string, unknown>) => s + Number(w.count), 0);
+    const totalWorkouts = ctx.workouts.reduce((s: number, w: Record<string, unknown>) => s + Number(w.count), 0);
 
-  const prompt = `You are a personal wellness coach assistant. Analyze this user's last 30 days of data and return a JSON object.
+    const prompt = `You are a personal wellness coach assistant. Analyze this user's last 30 days of data and return a JSON object.
 
 Data summary:
 - Workouts: ${totalWorkouts} workouts across ${ctx.workouts.map((w: Record<string, unknown>) => `${w.count} ${w.type}`).join(', ') || 'no data'}
@@ -174,7 +180,6 @@ Return exactly this JSON structure (no markdown, raw JSON only):
   "score": <integer 0-100 representing overall wellness score>
 }`;
 
-  try {
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
     const parsed = JSON.parse(text);
@@ -210,14 +215,15 @@ Return exactly this JSON structure (no markdown, raw JSON only):
  * @returns {Promise<{ workout: string, sleep: string, nutrition: string, focus: string }>}
  */
 export async function generateTodayRecommendations(userId: string) {
-  const ctx = await fetchUserContext(userId, 14);
-  const model = getGemini();
+  try {
+    const ctx = await fetchUserContext(userId, 14);
+    const model = getGemini();
 
-  const recentWorkouts = ctx.workouts.reduce((s: number, w: Record<string, unknown>) => s + Number(w.count), 0);
-  const avgSleep = Number(ctx.sleep.avg_sleep || 0).toFixed(1);
-  const avgCal = Math.round(Number(ctx.food.avg_daily_cal) || 0);
+    const recentWorkouts = ctx.workouts.reduce((s: number, w: Record<string, unknown>) => s + Number(w.count), 0);
+    const avgSleep = Number(ctx.sleep.avg_sleep || 0).toFixed(1);
+    const avgCal = Math.round(Number(ctx.food.avg_daily_cal) || 0);
 
-  const prompt = `You are a friendly wellness assistant. Based on this user's last 14 days, give them personalized recommendations for today.
+    const prompt = `You are a friendly wellness assistant. Based on this user's last 14 days, give them personalized recommendations for today.
 
 Recent data:
 - ${recentWorkouts} workouts in last 14 days (${ctx.workouts.map((w: Record<string, unknown>) => `${w.count} ${w.type}`).join(', ') || 'none'})
@@ -232,7 +238,6 @@ Return exactly this JSON (no markdown, raw JSON):
   "focus": "One overall focus/mindset tip for today (1-2 sentences)"
 }`;
 
-  try {
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
     const parsed = JSON.parse(text);

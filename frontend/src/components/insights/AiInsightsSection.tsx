@@ -256,10 +256,12 @@ export function AiInsightsSection() {
               </div>
             </div>
           ) : error ? (
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-destructive" />
-              {(error as Error)?.message ?? 'AI insights are temporarily unavailable.'}
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-destructive" />
+                AI insights are temporarily unavailable. Please try refreshing.
+              </p>
+            </div>
           ) : data ? (
             <div className="flex gap-6 items-start flex-wrap">
               <ScoreRing score={data.score} />
