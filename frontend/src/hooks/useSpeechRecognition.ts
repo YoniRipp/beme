@@ -40,6 +40,8 @@ export function useSpeechRecognition(
   const [isProcessing, setIsProcessing] = useState(false);
   const lastResultRef = useRef<VoiceUnderstandResult | null>(null);
   const streamingFailedRef = useRef(false);
+  // Track which impl was actually started, so stopListening uses the right one
+  const activeImplRef = useRef<'native' | 'stream' | 'web'>('web');
 
   const isNative = Capacitor.isNativePlatform();
 
@@ -62,20 +64,34 @@ export function useSpeechRecognition(
     if (useStreamImpl) {
       try {
         await stream.startListening();
+        activeImplRef.current = 'stream';
         return;
       } catch {
-        // Streaming failed to connect — fall back to batch for this session
+        // Streaming failed — fall back to batch for this session.
+        // Must call web.startListening() explicitly because impl still
+        // points to stream (ref change doesn't trigger re-render).
         streamingFailedRef.current = true;
+        await web.startListening();
+        activeImplRef.current = 'web';
+        return;
       }
     }
 
-    await impl.startListening();
-  }, [impl, useStreamImpl, stream]);
+    if (useNativeImpl) {
+      await native.startListening();
+      activeImplRef.current = 'native';
+    } else {
+      await web.startListening();
+      activeImplRef.current = 'web';
+    }
+  }, [useNativeImpl, useStreamImpl, stream, web, native]);
 
   const stopListening = useCallback(async (): Promise<void> => {
-    const transcript = await impl.stopListening();
+    const active = activeImplRef.current;
+    const activeHook = active === 'native' ? native : active === 'stream' ? stream : web;
+    const transcript = await activeHook.stopListening();
 
-    if (useNativeImpl) {
+    if (active === 'native') {
       // Native: we have a transcript, send to backend for Gemini understanding
       if (transcript.trim()) {
         setIsProcessing(true);
@@ -95,7 +111,7 @@ export function useSpeechRecognition(
         const emptyResult: VoiceUnderstandResult = { actions: [{ intent: 'unknown' }] };
         lastResultRef.current = emptyResult;
       }
-    } else if (useStreamImpl) {
+    } else if (active === 'stream') {
       // Streaming: result was set in the stream hook via done message
       const streamResult = await stream.getVoiceResult();
       lastResultRef.current = streamResult;
@@ -104,7 +120,7 @@ export function useSpeechRecognition(
       const webResult = await web.getVoiceResult();
       lastResultRef.current = webResult;
     }
-  }, [impl, useNativeImpl, useStreamImpl, web, stream, language]);
+  }, [native, stream, web, language]);
 
   const getVoiceResult = useCallback(async (): Promise<VoiceUnderstandResult> => {
     return lastResultRef.current ?? { actions: [{ intent: 'unknown' }] };
@@ -113,9 +129,9 @@ export function useSpeechRecognition(
   return {
     isNative: useNativeImpl,
     isAvailable: impl.isAvailable,
-    isListening: impl.isListening,
-    isProcessing: isProcessing || impl.isProcessing,
-    currentTranscript: impl.currentTranscript,
+    isListening: native.isListening || stream.isListening || web.isListening,
+    isProcessing: isProcessing || native.isProcessing || stream.isProcessing || web.isProcessing,
+    currentTranscript: stream.currentTranscript || native.currentTranscript || web.currentTranscript,
     startListening,
     stopListening,
     getVoiceResult,
