@@ -12,10 +12,12 @@
 import dotenv from 'dotenv';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
-import { getPool } from '../src/db/index.js';
+import pg from 'pg';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 dotenv.config({ path: join(__dirname, '../.env') });
+
+const { Pool } = pg;
 
 // Per 100g/100ml: calories, protein, carbs, fat.
 // Optional: is_liquid (default false), preparation (default 'cooked')
@@ -502,7 +504,11 @@ const ALL_FOODS = [
 ];
 
 async function run() {
-  const pool = getPool();
+  if (!process.env.DATABASE_URL) {
+    console.error('DATABASE_URL is required. Set it in backend/.env');
+    process.exit(1);
+  }
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
   try {
     await client.query('TRUNCATE TABLE foods');

@@ -12,7 +12,8 @@ import dotenv from 'dotenv';
 import { readFile } from 'fs/promises';
 import { join, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { getPool } from '../src/db/index.js';
+import pg from 'pg';
+const { Pool: PgPool } = pg;
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 dotenv.config({ path: join(__dirname, '../.env') });
@@ -158,7 +159,11 @@ async function run() {
   const foods = Array.isArray(data.FoundationFoods) ? data.FoundationFoods : [];
   console.log('Found', foods.length, 'foods in JSON');
 
-  const pool = getPool();
+  if (!process.env.DATABASE_URL) {
+    console.error('DATABASE_URL is required. Set it in backend/.env');
+    process.exit(1);
+  }
+  const pool = new PgPool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
   try {
     await client.query('TRUNCATE TABLE foods');
