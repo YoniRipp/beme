@@ -50,20 +50,44 @@ export function unitToGrams(amount: number | string, unit: string | null | undef
 
 /**
  * Look up one food by name and return scaled nutrition.
+ * Uses trigram similarity to find the best match (e.g. "pasta" → "Pasta, cooked" not "Antipasto").
  * preferUncooked: when true, prefer rows with preparation = 'uncooked' (e.g. "uncooked rice").
  */
 export async function getNutritionForFoodName(pool: Pool, foodName: string, amount: number | string, unit: string | null | undefined, preferUncooked = false) {
   const name = typeof foodName === 'string' ? foodName.trim() : '';
   if (!name) return null;
+  const query = name.toLowerCase();
   const wantPrep = preferUncooked ? 'uncooked' : 'cooked';
-  const result = await pool.query(
-    `SELECT id, name, calories, protein, carbs, fat, is_liquid, preparation
-     FROM foods
-     WHERE lower(name) LIKE $1
-     ORDER BY (COALESCE(preparation, 'cooked') = $2) DESC, length(name) ASC
-     LIMIT 1`,
-    ['%' + escapeLike(name.toLowerCase()) + '%', wantPrep]
-  );
+
+  // Try similarity-ranked lookup first
+  let result;
+  try {
+    result = await pool.query(
+      `SELECT id, name, calories, protein, carbs, fat, is_liquid, preparation
+       FROM foods
+       WHERE similarity(lower(name), $1) > 0.1
+          OR lower(name) LIKE $2
+       ORDER BY
+         (lower(name) = $1) DESC,
+         (lower(name) LIKE $3) DESC,
+         similarity(lower(name), $1) DESC,
+         (COALESCE(preparation, 'cooked') = $4) DESC,
+         length(name) ASC
+       LIMIT 1`,
+      [query, '%' + escapeLike(query) + '%', escapeLike(query) + '%', wantPrep]
+    );
+  } catch {
+    // Fallback without pg_trgm
+    result = await pool.query(
+      `SELECT id, name, calories, protein, carbs, fat, is_liquid, preparation
+       FROM foods
+       WHERE lower(name) LIKE $1
+       ORDER BY (COALESCE(preparation, 'cooked') = $2) DESC, length(name) ASC
+       LIMIT 1`,
+      ['%' + escapeLike(query) + '%', wantPrep]
+    );
+  }
+
   if (result.rows.length === 0) return null;
   const row = result.rows[0];
   const grams = unitToGrams(amount, unit);
@@ -79,17 +103,71 @@ export async function getNutritionForFoodName(pool: Pool, foodName: string, amou
   };
 }
 
+/**
+ * Search foods with combined relevance ranking:
+ * 1. Trigram similarity — fuzzy matching, handles typos ("psta" → "pasta")
+ * 2. Full-text search — word-based matching with stemming
+ * 3. Prefix bonus — words starting with query rank higher
+ * 4. Exact-name bonus — exact match ranks highest
+ *
+ * Falls back to LIKE substring if pg_trgm is not available.
+ */
 export async function search(q: string, limit = 10) {
   const pool = getPool();
-  const result = await pool.query(
-    `SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation
-     FROM foods
-     WHERE lower(name) LIKE $1
-     ORDER BY name
-     LIMIT $2`,
-    ['%' + escapeLike(q.toLowerCase()) + '%', limit]
-  );
-  return result.rows.map(rowToResult);
+  const query = q.trim().toLowerCase();
+  if (!query) return [];
+
+  // Try ranked search with pg_trgm + full-text
+  try {
+    const result = await pool.query(
+      `SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation,
+              similarity(lower(name), $1) AS trgm_score,
+              CASE WHEN name_tsv @@ plainto_tsquery('english', $1) THEN 1 ELSE 0 END AS fts_match
+       FROM foods
+       WHERE similarity(lower(name), $1) > 0.1
+          OR lower(name) LIKE $2
+          OR name_tsv @@ plainto_tsquery('english', $1)
+       ORDER BY
+         -- Exact name match first
+         (lower(name) = $1) DESC,
+         -- Word starts with query (e.g. "pasta" matches "Pasta, cooked" but not "Antipasto")
+         (lower(name) LIKE $3) DESC,
+         -- Full-text match bonus
+         CASE WHEN name_tsv @@ plainto_tsquery('english', $1) THEN 1 ELSE 0 END DESC,
+         -- Trigram similarity (fuzzy closeness)
+         similarity(lower(name), $1) DESC,
+         -- Shorter names preferred (more specific)
+         length(name) ASC
+       LIMIT $4`,
+      [
+        query,
+        '%' + escapeLike(query) + '%',   // contains
+        escapeLike(query) + '%',          // prefix
+        limit,
+      ]
+    );
+    return result.rows.map(rowToResult);
+  } catch {
+    // Fallback: pg_trgm not available, use plain LIKE with basic ranking
+    const result = await pool.query(
+      `SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation
+       FROM foods
+       WHERE lower(name) LIKE $1
+       ORDER BY
+         (lower(name) = $2) DESC,
+         (lower(name) LIKE $3) DESC,
+         length(name) ASC,
+         name
+       LIMIT $4`,
+      [
+        '%' + escapeLike(query) + '%',
+        query,
+        escapeLike(query) + '%',
+        limit,
+      ]
+    );
+    return result.rows.map(rowToResult);
+  }
 }
 
 /** Look up a food by barcode (indexed). */

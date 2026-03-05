@@ -113,6 +113,7 @@ export async function initSchema() {
         off_id text,
         name_he text,
         image_url text,
+        name_tsv tsvector,
         created_at timestamptz DEFAULT now()
       );
     `);
@@ -161,6 +162,10 @@ export async function initSchema() {
     await client.query('CREATE INDEX IF NOT EXISTS idx_daily_check_ins_user_date ON daily_check_ins(user_id, date DESC)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_foods_name_lower ON foods (lower(name))');
     await client.query('CREATE INDEX IF NOT EXISTS idx_foods_barcode ON foods (barcode) WHERE barcode IS NOT NULL');
+    // pg_trgm and full-text search indexes (created by migration 1772900000000, safe to repeat)
+    await client.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_foods_name_trgm ON foods USING GIN (lower(name) gin_trgm_ops)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_foods_name_tsv ON foods USING GIN (name_tsv)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_app_logs_level_created_at ON app_logs (level, created_at DESC)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_user_daily_stats_user_date ON user_daily_stats (user_id, date DESC)');
 
