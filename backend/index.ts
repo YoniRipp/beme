@@ -8,9 +8,11 @@ import { createApp } from './app.js';
 import { closeRedis } from './src/redis/client.js';
 import { closeQueue } from './src/queue/index.js';
 import { Worker } from 'bullmq';
+import { WebSocketServer } from 'ws';
 import { startVoiceWorker } from './src/workers/voice.js';
 import { subscribe, startEventsWorker, closeEventsBus } from './src/events/bus.js';
 import { registerStatsAggregatorConsumer } from './src/events/consumers/statsAggregator.js';
+import { setupVoiceStreamingWs } from './src/ws/voiceStreaming.js';
 import { logger } from './src/lib/logger.js';
 
 // Register event-driven data pipeline consumers
@@ -35,6 +37,12 @@ async function start() {
   const server = app.listen(config.port, config.host || '0.0.0.0', () => {
     logger.info({ port: config.port, host: config.host || '0.0.0.0' }, 'BMe backend listening');
   });
+
+  // Attach voice streaming WebSocket server
+  if (config.voiceStreaming && config.geminiApiKey) {
+    const wss = new WebSocketServer({ server, path: '/ws/voice-stream' });
+    setupVoiceStreamingWs(wss);
+  }
 
   let voiceWorker: Worker | null = null;
   if (config.isRedisConfigured && !config.separateWorkers) {

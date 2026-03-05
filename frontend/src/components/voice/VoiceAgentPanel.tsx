@@ -40,6 +40,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
     startListening,
     stopListening,
     getVoiceResult,
+    isStreaming,
   } = useSpeechRecognition({
     language: navigator.language || 'en-US',
     onPartialResult: setTranscript,
@@ -155,9 +156,9 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
             </div>
           ) : (
             <div className="space-y-4 py-2">
-              {isNative && (
+              {(isNative || isStreaming) && (
                 <p className="text-xs text-muted-foreground">
-                  Using native speech recognition
+                  {isNative ? 'Using native speech recognition' : 'Real-time streaming'}
                 </p>
               )}
 

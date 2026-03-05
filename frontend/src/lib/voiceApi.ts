@@ -1,4 +1,4 @@
-import { request } from '@/core/api/client';
+import { request, getApiBase } from '@/core/api/client';
 import { toLocalDateString } from './dateRanges';
 import { parseVoiceAction, type VoiceAction } from '@/schemas/voice';
 
@@ -145,4 +145,12 @@ export async function understandTranscript(
     return pollForVoiceResult(data.jobId, { signal: options?.signal });
   }
   return parseVoiceResult(data);
+}
+
+/** Build WebSocket URL for voice streaming. Returns null if API base is not set. */
+export function getVoiceStreamUrl(token: string): string | null {
+  const base = getApiBase();
+  if (!base) return null;
+  const wsBase = base.replace(/^http/, 'ws');
+  return `${wsBase}/ws/voice-stream?token=${encodeURIComponent(token)}`;
 }

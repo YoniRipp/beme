@@ -2,6 +2,7 @@ import { useCallback, useRef, useState, useMemo } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useNativeSpeech } from './useNativeSpeech';
 import { useWebSpeech } from './useWebSpeech';
+import { useVoiceStream } from './useVoiceStream';
 import { understandTranscript, type VoiceUnderstandResult } from '@/lib/voiceApi';
 
 interface UseSpeechRecognitionOptions {
@@ -18,15 +19,18 @@ interface UseSpeechRecognitionReturn {
   startListening: () => Promise<void>;
   stopListening: () => Promise<void>;
   getVoiceResult: () => Promise<VoiceUnderstandResult>;
+  /** True when using real-time WebSocket streaming instead of batch. */
+  isStreaming: boolean;
 }
 
 /**
  * Unified speech recognition hook that automatically selects the best
  * implementation based on the platform:
- * 
+ *
  * - Native iOS/Android: Uses Apple/Android Speech framework (real-time, ~200ms)
- * - Web browsers: Uses MediaRecorder + backend Gemini processing (~2-3s)
- * 
+ * - Web (streaming): Uses MediaRecorder + WebSocket → Gemini Live API (~200-800ms)
+ * - Web (batch fallback): Uses MediaRecorder + backend batch Gemini (~2-3s)
+ *
  * Provides a consistent API regardless of the underlying implementation.
  */
 export function useSpeechRecognition(
@@ -35,23 +39,38 @@ export function useSpeechRecognition(
   const { language = '', onPartialResult } = options;
   const [isProcessing, setIsProcessing] = useState(false);
   const lastResultRef = useRef<VoiceUnderstandResult | null>(null);
+  const streamingFailedRef = useRef(false);
 
   const isNative = Capacitor.isNativePlatform();
 
   const native = useNativeSpeech({ language, onPartialResult });
+  const stream = useVoiceStream();
   const web = useWebSpeech({ language, onPartialResult });
 
-  // Memoize implementation selection to prevent callback recreation every render
+  // Priority: native > streaming > batch
   const useNativeImpl = isNative && native.isAvailable;
+  const useStreamImpl = !useNativeImpl && stream.isAvailable && !streamingFailedRef.current;
+
   const impl = useMemo(
-    () => (useNativeImpl ? native : web),
-    [useNativeImpl, native, web]
+    () => (useNativeImpl ? native : useStreamImpl ? stream : web),
+    [useNativeImpl, useStreamImpl, native, stream, web]
   );
 
   const startListening = useCallback(async (): Promise<void> => {
     lastResultRef.current = null;
+
+    if (useStreamImpl) {
+      try {
+        await stream.startListening();
+        return;
+      } catch {
+        // Streaming failed to connect — fall back to batch for this session
+        streamingFailedRef.current = true;
+      }
+    }
+
     await impl.startListening();
-  }, [impl]);
+  }, [impl, useStreamImpl, stream]);
 
   const stopListening = useCallback(async (): Promise<void> => {
     const transcript = await impl.stopListening();
@@ -76,12 +95,16 @@ export function useSpeechRecognition(
         const emptyResult: VoiceUnderstandResult = { actions: [{ intent: 'unknown' }] };
         lastResultRef.current = emptyResult;
       }
+    } else if (useStreamImpl) {
+      // Streaming: result was set in the stream hook via done message
+      const streamResult = await stream.getVoiceResult();
+      lastResultRef.current = streamResult;
     } else {
-      // Web: the result was already processed in useWebSpeech
+      // Web batch: the result was already processed in useWebSpeech
       const webResult = await web.getVoiceResult();
       lastResultRef.current = webResult;
     }
-  }, [impl, useNativeImpl, web, language]);
+  }, [impl, useNativeImpl, useStreamImpl, web, stream, language]);
 
   const getVoiceResult = useCallback(async (): Promise<VoiceUnderstandResult> => {
     return lastResultRef.current ?? { actions: [{ intent: 'unknown' }] };
@@ -96,5 +119,6 @@ export function useSpeechRecognition(
     startListening,
     stopListening,
     getVoiceResult,
+    isStreaming: useStreamImpl && !streamingFailedRef.current,
   };
 }
