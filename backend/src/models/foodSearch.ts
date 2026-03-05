@@ -1,11 +1,180 @@
 /**
  * Food search model — foods table lookup (name, calories, protein, carbs, fat).
+ * Supports common_name for user-friendly display of USDA foods.
  */
 import { Pool } from 'pg';
 import { getPool } from '../db/pool.js';
 import { escapeLike } from '../utils/escapeLike.js';
 
 const REFERENCE_GRAMS = 100;
+
+// ---------------------------------------------------------------------------
+// Common-name extraction from USDA descriptive names
+// ---------------------------------------------------------------------------
+
+/** Words that are key qualifiers — kept in the common name. */
+const KEEP_QUALIFIERS = new Set([
+  'white', 'brown', 'whole', 'skim', 'nonfat', 'lowfat', 'low-fat',
+  'breast', 'thigh', 'leg', 'wing', 'drumstick', 'ground', 'lean',
+  'dark', 'light', 'sweet', 'wild', 'basmati', 'jasmine',
+  'long-grain', 'long grain', 'medium-grain', 'medium grain',
+  'short-grain', 'short grain', 'whole wheat', 'whole-wheat',
+  'yellow', 'red', 'green', 'black', 'pinto', 'navy', 'kidney',
+  'cheddar', 'mozzarella', 'parmesan', 'swiss', 'provolone', 'gouda',
+  'atlantic', 'pacific', 'chinook', 'sockeye', 'pink',
+  'extra lean', 'extra-lean',
+  'fresh', 'frozen', 'canned', 'dried',
+]);
+
+/** Cooking methods — kept at the end of common name. */
+const COOKING_METHODS = new Set([
+  'cooked', 'raw', 'uncooked', 'grilled', 'baked', 'fried',
+  'boiled', 'steamed', 'roasted', 'scrambled', 'poached',
+  'braised', 'sauteed', 'sautéed', 'broiled', 'smoked',
+  'stewed', 'microwaved', 'pan-fried',
+]);
+
+/** Noise segments to skip entirely. */
+const NOISE_PATTERNS = [
+  /^broilers?\s+or\s+fryers?$/i,
+  /^meat\s+only$/i,
+  /^skinless$/i,
+  /^boneless$/i,
+  /^without\s+skin$/i,
+  /^with\s+skin$/i,
+  /^skin\s+not\s+eaten$/i,
+  /^separable\s+lean/i,
+  /^enriched$/i,
+  /^unenriched$/i,
+  /^not\s+fortified$/i,
+  /^fortified$/i,
+  /^plain$/i,
+  /^regular$/i,
+  /^mature\s+seeds$/i,
+  /^dry$/i,
+  /^dry\s+form$/i,
+  /^all\s+purpose$/i,
+  /^all-purpose$/i,
+  /^from\s+concentrate$/i,
+  /^shelf\s+stable$/i,
+  /^solids\s+and\s+liquids?$/i,
+  /^drained\s+solids$/i,
+  /^drained$/i,
+  /^packed\s+in\s+/i,
+  /^no\s+salt\s+added$/i,
+  /^with\s+added\s+/i,
+  /^without\s+added\s+/i,
+  /^NFS$/i,
+  /^NS\s+as\s+to\s+/i,
+  /^\d+%\s+fat$/i,
+  /^fat\s+free$/i,
+  /^reduced\s+fat$/i,
+  /^commercially\s+prepared$/i,
+  /^made\s+with\s+/i,
+  /^prepared\s+from\s+/i,
+  /^pre-?cooked$/i,
+  /^trimmed\s+to\s+/i,
+  /^refuse\s*:/i,
+  /^bone[- ]?in$/i,
+  /^bone[- ]?less$/i,
+];
+
+function isNoise(segment: string): boolean {
+  const s = segment.trim();
+  if (!s) return true;
+  return NOISE_PATTERNS.some((p) => p.test(s));
+}
+
+function isCookingMethod(segment: string): boolean {
+  return COOKING_METHODS.has(segment.trim().toLowerCase());
+}
+
+/**
+ * Extract a clean, user-friendly common name from a USDA description.
+ *
+ * "Chicken, broilers or fryers, breast, skinless, boneless, meat only, cooked, grilled"
+ *  → "Chicken breast, grilled"
+ *
+ * "Rice, white, medium-grain, cooked"
+ *  → "White rice"
+ *
+ * "Egg, whole, cooked, scrambled"
+ *  → "Egg, scrambled"
+ *
+ * "Pasta, dry, enriched"
+ *  → "Pasta"
+ */
+export function extractCommonName(usdaDescription: string): string {
+  if (!usdaDescription || typeof usdaDescription !== 'string') return usdaDescription;
+
+  const segments = usdaDescription.split(',').map((s) => s.trim()).filter(Boolean);
+  if (segments.length === 0) return usdaDescription;
+
+  const mainIngredient = segments[0];
+  const qualifiers: string[] = [];
+  const methods: string[] = [];
+
+  for (let i = 1; i < segments.length; i++) {
+    const seg = segments[i];
+    if (isNoise(seg)) continue;
+    if (isCookingMethod(seg)) {
+      methods.push(seg.toLowerCase());
+      continue;
+    }
+    const segLower = seg.toLowerCase();
+    if (KEEP_QUALIFIERS.has(segLower)) {
+      qualifiers.push(segLower);
+      continue;
+    }
+    // Check multi-word: "whole wheat", "long grain", etc.
+    const words = segLower.split(/\s+/);
+    if (words.length <= 2 && words.some((w) => KEEP_QUALIFIERS.has(w))) {
+      qualifiers.push(segLower);
+    }
+  }
+
+  // Separate adjectives from noun-parts (breast, thigh, etc.)
+  const NOUN_PARTS = new Set(['breast', 'thigh', 'leg', 'wing', 'drumstick', 'ground']);
+  const adjectives: string[] = [];
+  const nounParts: string[] = [];
+
+  for (const q of qualifiers) {
+    if (NOUN_PARTS.has(q)) {
+      nounParts.push(q);
+    } else {
+      adjectives.push(q);
+    }
+  }
+
+  // Build: "[Adjectives] MainIngredient [noun parts]"
+  let commonName = '';
+  if (adjectives.length > 0) {
+    commonName = capitalize(adjectives.join(' ')) + ' ' + mainIngredient.toLowerCase();
+  } else {
+    commonName = capitalize(mainIngredient.toLowerCase());
+  }
+  if (nounParts.length > 0) {
+    commonName += ' ' + nounParts.join(' ');
+  }
+
+  // Append specific cooking method (skip generic "cooked")
+  if (methods.length > 0) {
+    const specific = methods.filter((m) => m !== 'cooked' && m !== 'raw' && m !== 'uncooked');
+    if (specific.length > 0) {
+      commonName += ', ' + specific[specific.length - 1];
+    }
+  }
+
+  return commonName.trim();
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 /** Use "uncooked" consistently (not "raw") for display. */
 function normalizePreparationName(name: string, preparation: string | null | undefined): string {
@@ -16,7 +185,9 @@ function normalizePreparationName(name: string, preparation: string | null | und
 }
 
 function rowToResult(row: Record<string, unknown>) {
-  const name = normalizePreparationName(row.name as string, row.preparation as string | null);
+  // Prefer common_name for display; fall back to full USDA name
+  const rawName = (row.common_name as string) || (row.name as string);
+  const name = normalizePreparationName(rawName, row.preparation as string | null);
   return {
     name,
     calories: Number(row.calories),
@@ -48,43 +219,140 @@ export function unitToGrams(amount: number | string, unit: string | null | undef
   return num;
 }
 
+// ---------------------------------------------------------------------------
+// Word-split helpers
+// ---------------------------------------------------------------------------
+
+/** Split query into words for LIKE matching. */
+function splitQueryWords(q: string): string[] {
+  return q.toLowerCase().split(/\s+/).filter((w) => w.length > 0);
+}
+
+/**
+ * Build a parameterized WHERE clause requiring ALL query words in a column.
+ * "chicken breast" on column "lower(name)" with startIdx 3:
+ *   sql: "(lower(name) LIKE $3 AND lower(name) LIKE $4)"
+ *   values: ['%chicken%', '%breast%']
+ */
+function wordSplitLike(col: string, words: string[], startIdx: number): { sql: string; values: string[] } {
+  if (words.length === 0) return { sql: 'FALSE', values: [] };
+  const conditions = words.map((_, i) => `${col} LIKE $${startIdx + i}`);
+  const values = words.map((w) => '%' + escapeLike(w) + '%');
+  return { sql: conditions.length === 1 ? conditions[0] : `(${conditions.join(' AND ')})`, values };
+}
+
+// ---------------------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------------------
+
+/**
+ * Search foods with relevance ranking:
+ * - Word-split matching: "chicken breast" finds entries where both words appear
+ * - common_name priority: clean names ranked above raw USDA descriptions
+ * - Trigram similarity: fuzzy matching for typos
+ * - Full-text search: stemmed word matching
+ */
+export async function search(q: string, limit = 10) {
+  const pool = getPool();
+  const query = q.trim().toLowerCase();
+  if (!query) return [];
+
+  const words = splitQueryWords(query);
+
+  // Parameter layout: $1=query, $2=prefix, $3=limit, $4+=word LIKE params
+  const cnLike = wordSplitLike('lower(COALESCE(common_name, name))', words, 4);
+  const nmLike = wordSplitLike('lower(name)', words, 4 + cnLike.values.length);
+  const allValues = [query, escapeLike(query) + '%', limit, ...cnLike.values, ...nmLike.values];
+
+  try {
+    const sql = `
+      SELECT id, name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation
+      FROM foods
+      WHERE ${cnLike.sql}
+         OR ${nmLike.sql}
+         OR similarity(lower(COALESCE(common_name, name)), $1) > 0.15
+         OR name_tsv @@ plainto_tsquery('english', $1)
+      ORDER BY
+        (lower(COALESCE(common_name, name)) = $1) DESC,
+        (lower(COALESCE(common_name, name)) LIKE $2) DESC,
+        CASE WHEN name_tsv @@ plainto_tsquery('english', $1) THEN 1 ELSE 0 END DESC,
+        similarity(lower(COALESCE(common_name, name)), $1) DESC,
+        (COALESCE(preparation, 'cooked') = 'cooked') DESC,
+        length(COALESCE(common_name, name)) ASC
+      LIMIT $3`;
+    const result = await pool.query(sql, allValues);
+    return result.rows.map(rowToResult);
+  } catch {
+    // Fallback: no pg_trgm / name_tsv, word-split LIKE only
+    const fbCn = wordSplitLike('lower(COALESCE(common_name, name))', words, 4);
+    const fbNm = wordSplitLike('lower(name)', words, 4 + fbCn.values.length);
+    const fbValues = [query, escapeLike(query) + '%', limit, ...fbCn.values, ...fbNm.values];
+
+    const sql = `
+      SELECT id, name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation
+      FROM foods
+      WHERE ${fbCn.sql} OR ${fbNm.sql}
+      ORDER BY
+        (lower(COALESCE(common_name, name)) = $1) DESC,
+        (lower(COALESCE(common_name, name)) LIKE $2) DESC,
+        (COALESCE(preparation, 'cooked') = 'cooked') DESC,
+        length(COALESCE(common_name, name)) ASC,
+        name
+      LIMIT $3`;
+    const result = await pool.query(sql, fbValues);
+    return result.rows.map(rowToResult);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Voice / single-food lookup
+// ---------------------------------------------------------------------------
+
 /**
  * Look up one food by name and return scaled nutrition.
- * Uses trigram similarity to find the best match (e.g. "pasta" → "Pasta, cooked" not "Antipasto").
- * preferUncooked: when true, prefer rows with preparation = 'uncooked' (e.g. "uncooked rice").
+ * Uses word-split matching so "chicken breast" finds USDA entries where the
+ * words aren't adjacent. Prefers common_name matches.
  */
 export async function getNutritionForFoodName(pool: Pool, foodName: string, amount: number | string, unit: string | null | undefined, preferUncooked = false) {
   const name = typeof foodName === 'string' ? foodName.trim() : '';
   if (!name) return null;
   const query = name.toLowerCase();
   const wantPrep = preferUncooked ? 'uncooked' : 'cooked';
+  const words = splitQueryWords(query);
 
-  // Try similarity-ranked lookup first
+  // $1=query, $2=prefix, $3=wantPrep, $4+=word LIKE params
+  const cnLike = wordSplitLike('lower(COALESCE(common_name, name))', words, 4);
+  const nmLike = wordSplitLike('lower(name)', words, 4 + cnLike.values.length);
+  const allValues = [query, escapeLike(query) + '%', wantPrep, ...cnLike.values, ...nmLike.values];
+
   let result;
   try {
     result = await pool.query(
-      `SELECT id, name, calories, protein, carbs, fat, is_liquid, preparation
+      `SELECT id, name, common_name, calories, protein, carbs, fat, is_liquid, preparation
        FROM foods
-       WHERE similarity(lower(name), $1) > 0.1
-          OR lower(name) LIKE $2
+       WHERE ${cnLike.sql} OR ${nmLike.sql}
+          OR similarity(lower(COALESCE(common_name, name)), $1) > 0.15
        ORDER BY
-         (lower(name) = $1) DESC,
-         (lower(name) LIKE $3) DESC,
-         similarity(lower(name), $1) DESC,
-         (COALESCE(preparation, 'cooked') = $4) DESC,
-         length(name) ASC
+         (lower(COALESCE(common_name, name)) = $1) DESC,
+         (lower(COALESCE(common_name, name)) LIKE $2) DESC,
+         similarity(lower(COALESCE(common_name, name)), $1) DESC,
+         (COALESCE(preparation, 'cooked') = $3) DESC,
+         length(COALESCE(common_name, name)) ASC
        LIMIT 1`,
-      [query, '%' + escapeLike(query) + '%', escapeLike(query) + '%', wantPrep]
+      allValues
     );
   } catch {
     // Fallback without pg_trgm
+    const fbCn = wordSplitLike('lower(COALESCE(common_name, name))', words, 3);
+    const fbNm = wordSplitLike('lower(name)', words, 3 + fbCn.values.length);
+
     result = await pool.query(
-      `SELECT id, name, calories, protein, carbs, fat, is_liquid, preparation
+      `SELECT id, name, common_name, calories, protein, carbs, fat, is_liquid, preparation
        FROM foods
-       WHERE lower(name) LIKE $1
-       ORDER BY (COALESCE(preparation, 'cooked') = $2) DESC, length(name) ASC
+       WHERE ${fbCn.sql} OR ${fbNm.sql}
+       ORDER BY (COALESCE(preparation, 'cooked') = $1) DESC, length(COALESCE(common_name, name)) ASC
        LIMIT 1`,
-      ['%' + escapeLike(query) + '%', wantPrep]
+      [wantPrep, ...fbCn.values, ...fbNm.values]
     );
   }
 
@@ -92,7 +360,8 @@ export async function getNutritionForFoodName(pool: Pool, foodName: string, amou
   const row = result.rows[0];
   const grams = unitToGrams(amount, unit);
   const scale = grams / REFERENCE_GRAMS;
-  const displayName = normalizePreparationName(row.name, row.preparation);
+  const rawDisplayName = (row.common_name as string) || (row.name as string);
+  const displayName = normalizePreparationName(rawDisplayName, row.preparation);
   return {
     name: displayName,
     calories: Math.round(Number(row.calories) * scale),
@@ -103,77 +372,14 @@ export async function getNutritionForFoodName(pool: Pool, foodName: string, amou
   };
 }
 
-/**
- * Search foods with combined relevance ranking:
- * 1. Trigram similarity — fuzzy matching, handles typos ("psta" → "pasta")
- * 2. Full-text search — word-based matching with stemming
- * 3. Prefix bonus — words starting with query rank higher
- * 4. Exact-name bonus — exact match ranks highest
- *
- * Falls back to LIKE substring if pg_trgm is not available.
- */
-export async function search(q: string, limit = 10) {
-  const pool = getPool();
-  const query = q.trim().toLowerCase();
-  if (!query) return [];
-
-  // Try ranked search with pg_trgm + full-text
-  try {
-    const result = await pool.query(
-      `SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation,
-              similarity(lower(name), $1) AS trgm_score,
-              CASE WHEN name_tsv @@ plainto_tsquery('english', $1) THEN 1 ELSE 0 END AS fts_match
-       FROM foods
-       WHERE similarity(lower(name), $1) > 0.1
-          OR lower(name) LIKE $2
-          OR name_tsv @@ plainto_tsquery('english', $1)
-       ORDER BY
-         -- Exact name match first
-         (lower(name) = $1) DESC,
-         -- Word starts with query (e.g. "pasta" matches "Pasta, cooked" but not "Antipasto")
-         (lower(name) LIKE $3) DESC,
-         -- Full-text match bonus
-         CASE WHEN name_tsv @@ plainto_tsquery('english', $1) THEN 1 ELSE 0 END DESC,
-         -- Trigram similarity (fuzzy closeness)
-         similarity(lower(name), $1) DESC,
-         -- Shorter names preferred (more specific)
-         length(name) ASC
-       LIMIT $4`,
-      [
-        query,
-        '%' + escapeLike(query) + '%',   // contains
-        escapeLike(query) + '%',          // prefix
-        limit,
-      ]
-    );
-    return result.rows.map(rowToResult);
-  } catch {
-    // Fallback: pg_trgm not available, use plain LIKE with basic ranking
-    const result = await pool.query(
-      `SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation
-       FROM foods
-       WHERE lower(name) LIKE $1
-       ORDER BY
-         (lower(name) = $2) DESC,
-         (lower(name) LIKE $3) DESC,
-         length(name) ASC,
-         name
-       LIMIT $4`,
-      [
-        '%' + escapeLike(query) + '%',
-        query,
-        escapeLike(query) + '%',
-        limit,
-      ]
-    );
-    return result.rows.map(rowToResult);
-  }
-}
+// ---------------------------------------------------------------------------
+// Barcode + cache
+// ---------------------------------------------------------------------------
 
 /** Look up a food by barcode (indexed). */
 export async function getByBarcode(pool: Pool, barcode: string) {
   const result = await pool.query(
-    `SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, barcode, image_url
+    `SELECT id, name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, barcode, image_url
      FROM foods
      WHERE barcode = $1
      LIMIT 1`,
@@ -198,20 +404,23 @@ export async function cacheFood(pool: Pool, food: {
   image_url?: string | null;
   preparation?: string;
 }) {
+  // For OFF/Gemini foods, the name is already clean — use it as common_name too
   const result = await pool.query(
-    `INSERT INTO foods (name, name_he, calories, protein, carbs, fat, is_liquid, barcode, source, off_id, image_url, preparation)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `INSERT INTO foods (name, common_name, name_he, calories, protein, carbs, fat, is_liquid, barcode, source, off_id, image_url, preparation)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      ON CONFLICT (off_id) WHERE off_id IS NOT NULL DO UPDATE SET
        name = EXCLUDED.name,
+       common_name = EXCLUDED.common_name,
        calories = EXCLUDED.calories,
        protein = EXCLUDED.protein,
        carbs = EXCLUDED.carbs,
        fat = EXCLUDED.fat,
        is_liquid = EXCLUDED.is_liquid,
        image_url = EXCLUDED.image_url
-     RETURNING id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, barcode, image_url`,
+     RETURNING id, name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, barcode, image_url`,
     [
       food.name,
+      food.name,  // common_name = name for OFF/Gemini (already clean)
       food.name_he ?? null,
       food.calories,
       food.protein,

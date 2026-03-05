@@ -237,24 +237,26 @@ async function run() {
 }
 
 async function insertBatch(client, batch) {
-  const COLS = 12;
+  const COLS = 13;
   const values = batch.flatMap((r) => [
-    r.name, r.name_he, r.calories, r.protein, r.carbs, r.fat,
+    r.name, r.name, /* common_name = name for OFF (already clean) */
+    r.name_he, r.calories, r.protein, r.carbs, r.fat,
     r.is_liquid, r.barcode, r.off_id, r.image_url,
     'open_food_facts', 'cooked',
   ]);
   const placeholders = batch
     .map((_, i) => {
       const o = i * COLS;
-      return `($${o+1}, $${o+2}, $${o+3}, $${o+4}, $${o+5}, $${o+6}, $${o+7}, $${o+8}, $${o+9}, $${o+10}, $${o+11}, $${o+12})`;
+      return `($${o+1}, $${o+2}, $${o+3}, $${o+4}, $${o+5}, $${o+6}, $${o+7}, $${o+8}, $${o+9}, $${o+10}, $${o+11}, $${o+12}, $${o+13})`;
     })
     .join(', ');
 
   await client.query(
-    `INSERT INTO foods (name, name_he, calories, protein, carbs, fat, is_liquid, barcode, off_id, image_url, source, preparation)
+    `INSERT INTO foods (name, common_name, name_he, calories, protein, carbs, fat, is_liquid, barcode, off_id, image_url, source, preparation)
      VALUES ${placeholders}
      ON CONFLICT (off_id) WHERE off_id IS NOT NULL DO UPDATE SET
        name = EXCLUDED.name,
+       common_name = EXCLUDED.common_name,
        name_he = EXCLUDED.name_he,
        calories = EXCLUDED.calories,
        protein = EXCLUDED.protein,

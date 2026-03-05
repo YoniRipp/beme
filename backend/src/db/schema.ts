@@ -101,6 +101,7 @@ export async function initSchema() {
       CREATE TABLE IF NOT EXISTS foods (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         name text NOT NULL,
+        common_name text,
         calories numeric NOT NULL,
         protein numeric NOT NULL,
         carbs numeric NOT NULL,
@@ -166,6 +167,7 @@ export async function initSchema() {
     await client.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
     await client.query('CREATE INDEX IF NOT EXISTS idx_foods_name_trgm ON foods USING GIN (lower(name) gin_trgm_ops)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_foods_name_tsv ON foods USING GIN (name_tsv)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_foods_common_name_lower ON foods (lower(common_name))');
     await client.query('CREATE INDEX IF NOT EXISTS idx_app_logs_level_created_at ON app_logs (level, created_at DESC)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_user_daily_stats_user_date ON user_daily_stats (user_id, date DESC)');
 

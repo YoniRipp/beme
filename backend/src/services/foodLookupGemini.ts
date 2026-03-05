@@ -141,11 +141,12 @@ export async function lookupAndCreateFood(pool: { query: (sql: string, params: u
     : null;
 
   const insertResult = await pool.query(
-    `INSERT INTO foods (name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation)
-     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)
-     RETURNING id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml`,
+    `INSERT INTO foods (name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)
+     RETURNING id, name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml`,
     [
       nameForDb,
+      nameForDb,  // common_name = name for Gemini foods (already clean)
       data.calories,
       data.protein,
       data.carbs,
