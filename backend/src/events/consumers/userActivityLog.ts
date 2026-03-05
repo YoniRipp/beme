@@ -13,33 +13,38 @@ import { EventEnvelope } from '../dispatcher.js';
  */
 function eventToSummary(eventType: string, payload: Record<string, unknown>): string {
   const p = payload ?? {};
+  const via = p.source === 'voice' ? ' (via voice)' : '';
   switch (eventType) {
     case 'auth.UserLoggedIn':
       return `Logged in via ${p.method ?? 'unknown'}`;
     case 'auth.UserRegistered':
       return 'Registered an account';
     case 'body.WorkoutCreated':
-      return `Logged workout: ${p.title ?? p.name ?? p.id ?? ''}`;
+      return `Logged workout: ${p.title ?? p.name ?? p.id ?? ''}${via}`;
     case 'body.WorkoutUpdated':
-      return `Updated workout: ${p.title ?? p.name ?? p.id ?? ''}`;
+      return `Updated workout: ${p.title ?? p.name ?? p.id ?? ''}${via}`;
     case 'body.WorkoutDeleted':
-      return 'Deleted workout';
+      return `Deleted workout${via}`;
     case 'energy.FoodEntryCreated':
-      return `Logged food entry: ${p.name ?? p.foodName ?? p.id ?? ''}`;
+      return `Logged food entry: ${p.name ?? p.foodName ?? p.id ?? ''}${via}`;
     case 'energy.FoodEntryUpdated':
-      return 'Updated food entry';
+      return `Updated food entry${via}`;
     case 'energy.FoodEntryDeleted':
-      return 'Deleted food entry';
+      return `Deleted food entry${via}`;
     case 'energy.CheckInCreated':
-      return 'Completed daily check-in';
+      return `Completed daily check-in${via}`;
     case 'energy.CheckInUpdated':
-      return 'Updated daily check-in';
+      return `Updated daily check-in${via}`;
+    case 'energy.CheckInDeleted':
+      return `Deleted daily check-in${via}`;
     case 'goals.GoalCreated':
-      return `Created goal: ${p.title ?? p.name ?? p.id ?? ''}`;
+      return `Created goal: ${p.title ?? p.name ?? p.id ?? ''}${via}`;
     case 'goals.GoalUpdated':
-      return 'Updated goal';
+      return `Updated goal${via}`;
     case 'goals.GoalDeleted':
-      return 'Deleted goal';
+      return `Deleted goal${via}`;
+    case 'voice.VoiceUnderstand':
+      return `Voice command: ${Array.isArray(p.intents) ? (p.intents as string[]).join(', ') : 'unknown'} (${p.actionCount ?? 0} actions)`;
     case 'voice.VoiceJobRequested':
       return 'Voice job requested';
     case 'voice.VoiceJobCompleted':

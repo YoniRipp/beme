@@ -4,6 +4,7 @@
 import crypto from 'crypto';
 import { getRequestId } from '../lib/requestContext.js';
 import { publish as busPublish } from './bus.js';
+import { voiceContext } from '../lib/voiceContext.js';
 
 /**
  * Publish a domain event with standard envelope.
@@ -15,10 +16,12 @@ import { publish as busPublish } from './bus.js';
 type PublishMeta = { correlationId?: string; causationId?: string };
 export async function publishEvent(type: string, payload: Record<string, unknown>, userId: string, meta: PublishMeta = {}) {
   const correlationId = meta.correlationId ?? getRequestId();
+  const store = voiceContext.getStore();
+  const enrichedPayload = store ? { ...payload, source: store.source } : payload;
   await busPublish({
     eventId: crypto.randomUUID(),
     type,
-    payload,
+    payload: enrichedPayload,
     metadata: {
       userId,
       timestamp: new Date().toISOString(),

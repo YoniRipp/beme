@@ -14,6 +14,7 @@ import * as openFoodFacts from './openFoodFacts.js';
 import { logError } from './appLog.js';
 import { logger } from '../lib/logger.js';
 import { executeActions } from './voiceExecutor.js';
+import { publishEvent } from '../events/publish.js';
 
 /** Lenient Zod schemas for Gemini function args; invalid args are rejected and that call is skipped. */
 const VOICE_ARG_SCHEMAS: Record<string, z.ZodType> = {
@@ -420,7 +421,21 @@ export async function parseTranscript(text: string, lang = 'auto', userId: strin
 
   if (config.voiceExecuteOnServer && userId) {
     const results = await executeActions(actions as { intent: string; [key: string]: unknown }[], userId);
+    await publishEvent('voice.VoiceUnderstand', {
+      transcript: text,
+      actionCount: actions.length,
+      intents: actions.map((a) => a.intent as string),
+      executed: true,
+    }, userId);
     return { results, actions };
+  }
+  if (userId) {
+    await publishEvent('voice.VoiceUnderstand', {
+      transcript: text,
+      actionCount: actions.length,
+      intents: actions.map((a) => a.intent as string),
+      executed: false,
+    }, userId);
   }
   return { actions };
 }
@@ -469,7 +484,21 @@ export async function parseAudio(audioBase64: string, mimeType: string, userId: 
 
   if (config.voiceExecuteOnServer && userId) {
     const results = await executeActions(actions as { intent: string; [key: string]: unknown }[], userId);
+    await publishEvent('voice.VoiceUnderstand', {
+      transcript: '[audio]',
+      actionCount: actions.length,
+      intents: actions.map((a) => a.intent as string),
+      executed: true,
+    }, userId);
     return { results, actions };
+  }
+  if (userId) {
+    await publishEvent('voice.VoiceUnderstand', {
+      transcript: '[audio]',
+      actionCount: actions.length,
+      intents: actions.map((a) => a.intent as string),
+      executed: false,
+    }, userId);
   }
   return { actions };
 }

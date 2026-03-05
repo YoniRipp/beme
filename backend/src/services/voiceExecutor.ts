@@ -7,6 +7,7 @@ import * as foodEntryService from './foodEntry.js';
 import * as dailyCheckInService from './dailyCheckIn.js';
 import * as goalService from './goal.js';
 import { isDbConfigured } from '../db/index.js';
+import { voiceContext } from '../lib/voiceContext.js';
 
 export interface ExecuteResult {
   intent: string;
@@ -74,6 +75,7 @@ export async function executeActions(actions: VoiceAction[], userId: string): Pr
     return actions.map((a) => ({ intent: a.intent, success: false, message: 'Database not configured' }));
   }
 
+  return voiceContext.run(async () => {
   const results: ExecuteResult[] = [];
 
   for (const action of actions) {
@@ -260,4 +262,5 @@ export async function executeActions(actions: VoiceAction[], userId: string): Pr
   }
 
   return results;
+  }); // end voiceContext.run
 }
