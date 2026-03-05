@@ -1,12 +1,11 @@
 /**
- * Food lookup pipeline -- 3-tier lookup: DB -> Open Food Facts -> Gemini.
+ * Food lookup pipeline -- 2-tier lookup: DB -> Gemini.
  * Used by voice service to resolve food names to nutrition data.
  */
 import { config } from '../../config/index.js';
 import { isDbConfigured, getPool } from '../../db/index.js';
-import { getNutritionForFoodName, unitToGrams, cacheFood } from '../../models/foodSearch.js';
+import { getNutritionForFoodName, unitToGrams } from '../../models/foodSearch.js';
 import { lookupAndCreateFood } from '../foodLookupGemini.js';
-import * as openFoodFacts from '../openFoodFacts.js';
 import { logger } from '../../lib/logger.js';
 
 export interface NutritionResult {
@@ -15,7 +14,7 @@ export interface NutritionResult {
   protein: number;
   carbs: number;
   fats: number;
-  source: 'db' | 'off' | 'gemini' | 'fallback';
+  source: 'db' | 'gemini' | 'fallback';
 }
 
 /** Default for foods that return "uncooked" or "raw" */
@@ -28,8 +27,9 @@ function normalizeRawCooked(name: string): string {
 }
 
 /**
- * Resolve food name to nutrition data using 3-tier lookup.
- * Returns nutrition data with source indicator.
+ * Resolve food name to nutrition data using 2-tier lookup:
+ * 1. Local curated database
+ * 2. Gemini AI (creates and caches the food)
  */
 export async function lookupNutrition(foodName: string, amount: number, unit: string): Promise<NutritionResult> {
   const name = foodName?.trim() || 'Unknown';
@@ -55,28 +55,7 @@ export async function lookupNutrition(foodName: string, amount: number, unit: st
       };
     }
 
-    // Tier 2: Open Food Facts API
-    try {
-      const offResults = await openFoodFacts.searchByName(name, 1);
-      if (offResults.length > 0) {
-        const offFood = offResults[0];
-        await cacheFood(pool, offFood);
-        const grams = unitToGrams(amount, unit);
-        const scale = grams / 100;
-        return {
-          name: offFood.name,
-          calories: Math.round(offFood.calories * scale),
-          protein: Math.round(offFood.protein * scale * 10) / 10,
-          carbs: Math.round(offFood.carbs * scale * 10) / 10,
-          fats: Math.round(offFood.fat * scale * 10) / 10,
-          source: 'off',
-        };
-      }
-    } catch (e) {
-      logger.warn({ err: e, food: name }, 'Food lookup: OFF tier failed');
-    }
-
-    // Tier 3: Gemini AI
+    // Tier 2: Gemini AI
     if (config.geminiApiKey) {
       const geminiRow = await lookupAndCreateFood(pool, name);
       if (geminiRow) {

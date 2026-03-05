@@ -23,11 +23,6 @@ vi.mock('./foodLookupGemini.js', () => ({
   lookupAndCreateFood: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('./openFoodFacts.js', () => ({
-  searchByName: vi.fn().mockResolvedValue([]),
-  getByBarcode: vi.fn().mockResolvedValue(null),
-}));
-
 describe('voice service HANDLERS', () => {
   const todayStr = '2025-02-24';
 
