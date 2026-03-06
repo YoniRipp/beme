@@ -13,20 +13,8 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     target: '[data-onboarding="home"]',
     title: 'Welcome to BeMe!',
-    content: 'This is your dashboard. Track your daily schedule, workouts, energy levels, and finances all in one place.',
+    content: 'This is your dashboard. Track your workouts, energy levels, and goals all in one place.',
     position: 'bottom',
-  },
-  {
-    target: '[data-onboarding="add-schedule"]',
-    title: 'Daily Schedule',
-    content: 'Click here to add items to your daily schedule. Keep track of your tasks and appointments.',
-    position: 'bottom',
-  },
-  {
-    target: '[data-onboarding="money"]',
-    title: 'Money Tracking',
-    content: 'Track your income and expenses. View your balance across different time periods.',
-    position: 'top',
   },
   {
     target: '[data-onboarding="body"]',
@@ -43,7 +31,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     target: '[data-onboarding="insights"]',
     title: 'Insights & Analytics',
-    content: 'View detailed analytics and trends for your finances, fitness, and health data.',
+    content: 'View detailed analytics and trends for your fitness and health data.',
     position: 'top',
   },
 ];
