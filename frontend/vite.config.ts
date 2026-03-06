@@ -8,18 +8,22 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
-        name: 'BMe - Personal Life Manager',
+        name: 'BMe - Wellness Tracker',
         short_name: 'BMe',
-        description: 'Track your finances, health, schedule, and goals in one place',
+        description: 'Track your body, energy, and goals in one place',
         theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        categories: ['health', 'fitness', 'lifestyle'],
         icons: [
           {
             src: '/icons/icon-72x72.png',
@@ -69,54 +73,11 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/api\./i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              networkTimeoutSeconds: 3,
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24, // 24 hours
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /\/api\//i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              networkTimeoutSeconds: 3,
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /\.(woff|woff2|ttf|eot)$/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'font-cache',
-              expiration: {
-                maxEntries: 20,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-              },
-            },
-          },
-        ],
       },
       devOptions: {
-        enabled: false, // Disable in dev to avoid caching issues
+        enabled: false,
       },
     }),
   ],

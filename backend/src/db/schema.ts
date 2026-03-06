@@ -120,6 +120,17 @@ export async function initSchema() {
     `);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        endpoint text NOT NULL UNIQUE,
+        keys_p256dh text NOT NULL,
+        keys_auth text NOT NULL,
+        created_at timestamptz DEFAULT now()
+      );
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS app_logs (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         level text NOT NULL CHECK (level IN ('action', 'error')),

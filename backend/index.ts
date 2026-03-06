@@ -13,12 +13,14 @@ import { startVoiceWorker } from './src/workers/voice.js';
 import { subscribe, startEventsWorker, closeEventsBus } from './src/events/bus.js';
 import { registerStatsAggregatorConsumer } from './src/events/consumers/statsAggregator.js';
 import { registerUserActivityLogConsumer } from './src/events/consumers/userActivityLog.js';
+import { registerPushNotifierConsumer } from './src/events/consumers/pushNotifier.js';
 import { setupVoiceStreamingWs } from './src/ws/voiceStreaming.js';
 import { logger } from './src/lib/logger.js';
 
 // Register event-driven data pipeline consumers
 registerUserActivityLogConsumer(subscribe);
 registerStatsAggregatorConsumer(subscribe);
+registerPushNotifierConsumer(subscribe);
 
 async function start() {
   // Initialize database if configured - exit on failure since API requires it

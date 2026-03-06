@@ -3,6 +3,7 @@ import { ThemeProvider } from 'next-themes';
 import { Providers } from './Providers';
 import { AppRoutes } from './routes';
 import { InstallPrompt } from './components/pwa/InstallPrompt';
+import { UpdateBanner } from './components/pwa/UpdateBanner';
 
 const googleClientId = (import.meta as { env?: { VITE_GOOGLE_CLIENT_ID?: string } }).env
   ?.VITE_GOOGLE_CLIENT_ID;
@@ -14,6 +15,7 @@ function App() {
         <Providers>
           <AppRoutes />
           <InstallPrompt />
+          <UpdateBanner />
         </Providers>
       </ThemeProvider>
     </GoogleOAuthProvider>
