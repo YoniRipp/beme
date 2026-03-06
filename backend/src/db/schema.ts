@@ -114,6 +114,9 @@ export async function initSchema() {
         off_id text,
         name_he text,
         image_url text,
+        default_unit text,
+        unit_weight_grams numeric,
+        search_aliases text[],
         name_tsv tsvector,
         created_at timestamptz DEFAULT now()
       );
