@@ -38,7 +38,7 @@ export function Home() {
     setEditingGoal(undefined);
   };
 
-  const now = useMemo(() => new Date(), []);
+  const now = new Date();
   const todayCheckIn = useMemo(
     () => getCheckInByDate(now),
     [getCheckInByDate, checkIns, now]

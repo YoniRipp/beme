@@ -14,6 +14,15 @@ interface MemoryEntry {
 
 const memoryStore = new Map<string, MemoryEntry>();
 
+// Periodic cleanup to prevent memory leaks from expired but unaccessed entries
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, e] of memoryStore.entries()) {
+    if (e.expiresAt <= now) memoryStore.delete(k);
+  }
+}, CLEANUP_INTERVAL_MS).unref();
+
 function memoryPrune() {
   const now = Date.now();
   for (const [k, e] of memoryStore.entries()) {
@@ -86,4 +95,28 @@ export async function kvDelete(key: string): Promise<void> {
     }
   }
   memoryStore.delete(key);
+}
+
+/**
+ * Atomically get and delete a key. Prevents race conditions where two concurrent
+ * requests could both read the same value before either deletes it.
+ */
+export async function kvGetAndDelete(key: string): Promise<string | null> {
+  if (config.isRedisConfigured) {
+    try {
+      const redis = await getRedisClient();
+      if (redis) {
+        return await redis.getDel(key);
+      }
+    } catch (e) {
+      logger.warn({ err: e }, 'Redis getDel failed, falling back to memory');
+    }
+  }
+  memoryPrune();
+  const entry = memoryStore.get(key);
+  memoryStore.delete(key);
+  if (!entry || entry.expiresAt <= Date.now()) {
+    return null;
+  }
+  return entry.value;
 }

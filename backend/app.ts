@@ -19,13 +19,13 @@ import { logger } from './src/lib/logger.js';
 
 const apiLimiterBase = {
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: parseInt(process.env.API_RATE_LIMIT_MAX || '200', 10),
   message: { error: 'Too many requests, please try again later.' },
 };
 
 const authLimiterBase = {
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: parseInt(process.env.AUTH_RATE_LIMIT_MAX || '10', 10),
   message: { error: 'Too many login attempts, please try again later.' },
 };
 
@@ -110,6 +110,7 @@ export async function createApp() {
   app.use('/api/auth/google', authLimiter);
   app.use('/api/auth/facebook', authLimiter);
   app.use('/api/auth/twitter', authLimiter);
+  app.use('/api/auth/forgot-password', authLimiter);
 
   // Request logging (skip health checks to reduce noise; include requestId for tracing)
   app.use((req: import('express').Request & { id?: string }, res, next) => {

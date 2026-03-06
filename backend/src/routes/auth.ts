@@ -11,7 +11,7 @@ import { getPool } from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { publishEvent } from '../events/publish.js';
 import { logger } from '../lib/logger.js';
-import { kvGet, kvSet, kvDelete } from '../lib/keyValueStore.js';
+import { kvGet, kvSet, kvDelete, kvGetAndDelete } from '../lib/keyValueStore.js';
 
 const SALT_ROUNDS = 10;
 const TOKEN_EXPIRY = '7d';
@@ -43,8 +43,7 @@ async function generateAuthCode(token: string): Promise<string> {
 }
 
 async function exchangeAuthCode(code: string): Promise<string | null> {
-  const raw = await kvGet(AUTH_CODE_PREFIX + code);
-  await kvDelete(AUTH_CODE_PREFIX + code);
+  const raw = await kvGetAndDelete(AUTH_CODE_PREFIX + code);
   if (!raw) return null;
   try {
     const entry = JSON.parse(raw);
@@ -95,7 +94,7 @@ async function register(req: Request, res: Response) {
       config.jwtSecret!,
       { expiresIn: TOKEN_EXPIRY }
     );
-    publishEvent('auth.UserRegistered', { userId: user.id, email: user.email, name: user.name }, user.id).catch(() => {});
+    publishEvent('auth.UserRegistered', { userId: user.id, email: user.email, name: user.name }, user.id).catch(err => logger.error({ err }, 'Failed to publish event'));
     setTokenCookie(res, token);
     res.status(201).json({ user, token });
   } catch (e: unknown) {
@@ -149,7 +148,7 @@ async function login(req: Request, res: Response) {
       config.jwtSecret!,
       { expiresIn: TOKEN_EXPIRY }
     );
-    publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'email' }, user.id).catch(() => {});
+    publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'email' }, user.id).catch(err => logger.error({ err }, 'Failed to publish event'));
     setTokenCookie(res, token);
     res.json({ user, token });
   } catch (e: unknown) {
@@ -275,7 +274,7 @@ async function loginGoogle(req: Request, res: Response) {
       email,
       name,
     });
-    publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'google' }, user.id).catch(() => {});
+    publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'google' }, user.id).catch(err => logger.error({ err }, 'Failed to publish event'));
     setTokenCookie(res, jwtToken);
     res.json({ user, token: jwtToken });
   } catch (e: unknown) {
@@ -316,7 +315,7 @@ async function loginFacebook(req: Request, res: Response) {
       email,
       name,
     });
-    publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'facebook' }, user.id).catch(() => {});
+    publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'facebook' }, user.id).catch(err => logger.error({ err }, 'Failed to publish event'));
     setTokenCookie(res, jwtToken);
     res.json({ user, token: jwtToken });
   } catch (e: unknown) {
@@ -357,7 +356,7 @@ async function loginTwitter(req: Request, res: Response) {
       email,
       name,
     });
-    publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'twitter' }, user.id).catch(() => {});
+    publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'twitter' }, user.id).catch(err => logger.error({ err }, 'Failed to publish event'));
     setTokenCookie(res, jwtToken);
     res.json({ user, token: jwtToken });
   } catch (e: unknown) {
@@ -453,7 +452,7 @@ async function twitterCallback(req: Request, res: Response) {
       email,
       name,
     });
-    publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'twitter' }, user.id).catch(() => {});
+    publishEvent('auth.UserLoggedIn', { userId: user.id, method: 'twitter' }, user.id).catch(err => logger.error({ err }, 'Failed to publish event'));
     const authCode = await generateAuthCode(jwtToken);
     const redirectUrl = `${config.frontendOrigin}/auth/callback?code=${encodeURIComponent(authCode)}`;
     res.redirect(redirectUrl);

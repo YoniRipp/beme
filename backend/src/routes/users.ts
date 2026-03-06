@@ -22,9 +22,12 @@ function rowToUser(row: Record<string, any>) {
 
 async function listUsers(req: Request, res: Response) {
   try {
+    const limit = Math.min(parseInt(String(req.query.limit ?? '50'), 10) || 50, 200);
+    const offset = Math.max(parseInt(String(req.query.offset ?? '0'), 10) || 0, 0);
     const pool = getPool();
     const result = await pool.query(
-      'SELECT id, email, name, role, created_at FROM users ORDER BY created_at ASC'
+      'SELECT id, email, name, role, created_at FROM users ORDER BY created_at ASC LIMIT $1 OFFSET $2',
+      [limit, offset]
     );
     res.json(result.rows.map(rowToUser));
   } catch (e: unknown) {

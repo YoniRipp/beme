@@ -20,9 +20,9 @@ function isMediaRecorderSupported(): boolean {
 
 function getUserTimezone(): string {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   } catch {
-    return '';
+    return 'UTC';
   }
 }
 

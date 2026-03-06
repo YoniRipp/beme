@@ -27,5 +27,9 @@ export const getJobStatus = asyncHandler(async (req: Request, res: Response) => 
     return sendError(res, 404, 'Job not found or expired');
   }
 
-  sendJson(res, JSON.parse(data));
+  try {
+    sendJson(res, JSON.parse(data));
+  } catch {
+    return sendError(res, 500, 'Malformed job data');
+  }
 });

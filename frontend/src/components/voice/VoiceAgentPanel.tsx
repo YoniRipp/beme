@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -46,7 +46,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
     onPartialResult: setTranscript,
   });
 
-  const voiceContext = {
+  const voiceContext = useMemo(() => ({
     foodEntries,
     addFoodEntry,
     updateFoodEntry,
@@ -63,7 +63,12 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
     addGoal,
     updateGoal,
     deleteGoal,
-  } as VoiceExecutorContext;
+  } as VoiceExecutorContext), [
+    foodEntries, addFoodEntry, updateFoodEntry, deleteFoodEntry,
+    addCheckIn, updateCheckIn, deleteCheckIn, getCheckInByDate,
+    workouts, addWorkout, updateWorkout, deleteWorkout,
+    goals, addGoal, updateGoal, deleteGoal,
+  ]);
 
   const handleStartRecording = useCallback(async () => {
     setError(null);

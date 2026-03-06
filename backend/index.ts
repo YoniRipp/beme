@@ -39,6 +39,7 @@ async function start() {
   const server = app.listen(config.port, config.host || '0.0.0.0', () => {
     logger.info({ port: config.port, host: config.host || '0.0.0.0' }, 'BMe backend listening');
   });
+  server.setTimeout(300000); // 5 min timeout for voice processing
 
   // Attach voice streaming WebSocket server
   if (config.voiceStreaming && config.geminiApiKey) {
@@ -109,6 +110,16 @@ async function start() {
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 }
+
+process.on('uncaughtException', (err) => {
+  logger.error({ err }, 'Uncaught exception');
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error({ err: reason }, 'Unhandled rejection');
+  process.exit(1);
+});
 
 start().catch((e) => {
   logger.error({ err: e }, 'Start failed');

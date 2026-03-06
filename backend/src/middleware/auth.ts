@@ -63,6 +63,11 @@ export async function resolveEffectiveUserId(req: Request, res: Response, next: 
     req.effectiveUserId = req.user!.id;
     return next();
   }
+  // Validate UUID format to prevent invalid DB queries
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (typeof adminUserId !== 'string' || !uuidRegex.test(adminUserId)) {
+    return res.status(400).json({ error: 'Invalid userId format' });
+  }
   try {
     const pool = getPool();
     const result = await pool.query('SELECT id FROM users WHERE id = $1', [adminUserId]);

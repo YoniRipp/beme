@@ -16,6 +16,10 @@ export function validateBody(schema: ZodSchema): RequestHandler {
     const err = result.error;
     const first = err.errors[0];
     const message = first ? `${first.path.length ? first.path.join('.') + ': ' : ''}${first.message}` : 'Validation failed';
-    return res.status(400).json({ error: message, details: err.flatten() });
+    const response: Record<string, unknown> = { error: message };
+    if (process.env.NODE_ENV !== 'production') {
+      response.details = err.flatten();
+    }
+    return res.status(400).json(response);
   };
 }

@@ -79,8 +79,8 @@ export default defineConfig({
               cacheName: 'api-cache',
               networkTimeoutSeconds: 3,
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24, // 24 hours
+                maxEntries: 50,
+                maxAgeSeconds: 5 * 60, // 5 minutes for user data
               },
               cacheableResponse: {
                 statuses: [0, 200],
@@ -94,8 +94,8 @@ export default defineConfig({
               cacheName: 'api-cache',
               networkTimeoutSeconds: 3,
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24,
+                maxEntries: 50,
+                maxAgeSeconds: 5 * 60, // 5 minutes for user data
               },
               cacheableResponse: {
                 statuses: [0, 200],
