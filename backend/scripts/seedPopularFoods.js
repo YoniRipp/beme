@@ -16,6 +16,7 @@ import pg from 'pg';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 dotenv.config({ path: join(__dirname, '../.env') });
+dotenv.config({ path: join(__dirname, '../.env.development') });
 
 const { Pool } = pg;
 
@@ -742,9 +743,61 @@ async function run() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
   try {
-    await client.query("DELETE FROM foods WHERE source = 'curated'");
-    console.log('Cleared curated foods from table.');
+    // Drop and recreate the foods table from scratch
+    await client.query('DROP TABLE IF EXISTS foods CASCADE');
+    console.log('Dropped foods table.');
 
+    await client.query(`
+      CREATE TABLE foods (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        name text NOT NULL,
+        common_name text,
+        calories numeric NOT NULL,
+        protein numeric NOT NULL,
+        carbs numeric NOT NULL,
+        fat numeric NOT NULL,
+        is_liquid boolean DEFAULT false,
+        serving_sizes_ml jsonb,
+        preparation text DEFAULT 'cooked',
+        barcode text,
+        source text DEFAULT 'usda',
+        off_id text,
+        name_he text,
+        image_url text,
+        name_tsv tsvector,
+        created_at timestamptz DEFAULT now()
+      )
+    `);
+    console.log('Created foods table.');
+
+    // Create indexes
+    await client.query(`CREATE INDEX idx_foods_name_lower ON foods (lower(name))`);
+    await client.query(`CREATE INDEX idx_foods_common_name_lower ON foods (lower(common_name))`);
+    await client.query(`CREATE INDEX idx_foods_barcode ON foods (barcode) WHERE barcode IS NOT NULL`);
+    await client.query(`CREATE UNIQUE INDEX idx_foods_off_id ON foods (off_id) WHERE off_id IS NOT NULL`);
+    await client.query(`CREATE INDEX idx_foods_name_tsv ON foods USING gin (name_tsv)`);
+
+    // Trigram index (requires pg_trgm extension)
+    await client.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+    await client.query(`CREATE INDEX idx_foods_name_trgm ON foods USING gin (lower(name) gin_trgm_ops)`);
+
+    // Auto-update tsvector trigger
+    await client.query(`
+      CREATE OR REPLACE FUNCTION foods_name_tsv_trigger() RETURNS trigger AS $$
+      BEGIN
+        NEW.name_tsv := to_tsvector('english', NEW.name);
+        RETURN NEW;
+      END
+      $$ LANGUAGE plpgsql
+    `);
+    await client.query(`
+      CREATE TRIGGER trg_foods_name_tsv
+        BEFORE INSERT OR UPDATE ON foods
+        FOR EACH ROW EXECUTE FUNCTION foods_name_tsv_trigger()
+    `);
+    console.log('Created indexes and triggers.');
+
+    // Insert foods
     const batchSize = 25;
     const COLS = 9;
     for (let i = 0; i < ALL_FOODS.length; i += batchSize) {
@@ -775,10 +828,6 @@ async function run() {
       );
       console.log('Inserted', Math.min(i + batchSize, ALL_FOODS.length), 'of', ALL_FOODS.length);
     }
-
-    // Populate full-text search vector
-    await client.query(`UPDATE foods SET name_tsv = to_tsvector('english', name) WHERE name_tsv IS NULL`);
-    console.log('Updated name_tsv for full-text search.');
 
     console.log('Done. Total foods:', ALL_FOODS.length);
   } finally {
