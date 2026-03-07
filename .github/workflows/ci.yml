@@ -25,6 +25,18 @@ jobs:
       - name: Test backend
         run: npm run test
         working-directory: backend
+      - name: Build backend
+        run: npm run build
+        working-directory: backend
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend Docker image
+        run: docker build ./backend
+      - name: Build frontend Docker image
+        run: docker build --build-arg VITE_API_URL=http://localhost:3000 ./frontend
 
   frontend:
     runs-on: ubuntu-latest

@@ -72,6 +72,9 @@ const configSchema = z.object({
 const PORT = process.env.PORT;
 const DATABASE_URL = process.env.DATABASE_URL;
 const JWT_SECRET = process.env.JWT_SECRET || (isProduction ? null : 'dev-secret-change-in-production');
+if (JWT_SECRET === 'dev-secret-change-in-production') {
+  logger.warn('JWT_SECRET is using development default; set a real secret for production');
+}
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || process.env.CORS_ORIGIN;
 const CORS_ORIGIN = process.env.CORS_ORIGIN != null && process.env.CORS_ORIGIN !== ''
   ? process.env.CORS_ORIGIN
