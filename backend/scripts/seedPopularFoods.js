@@ -1,5 +1,5 @@
 /**
- * Seed the foods table with ~500 curated foods (per 100g/100ml nutrition).
+ * Seed the foods table with ~700+ curated foods (per 100g/100ml nutrition).
  * This is the primary food data source — no USDA or Open Food Facts needed.
  *
  * Run from repo root: node backend/scripts/seedPopularFoods.js
@@ -55,8 +55,8 @@ const MEATS = [
   { name: 'Pork ribs, cooked', calories: 277, protein: 23, carbs: 0, fat: 20 },
   { name: 'Bacon, cooked', calories: 541, protein: 37, carbs: 1.4, fat: 42 },
   { name: 'Ham, cooked', calories: 145, protein: 21, carbs: 1.5, fat: 5.5 },
-  { name: 'Sausage, pork', calories: 301, protein: 18, carbs: 0, fat: 25 },
-  { name: 'Sausage, Italian', calories: 304, protein: 14, carbs: 4, fat: 25 },
+  { name: 'Sausage, pork', calories: 301, protein: 18, carbs: 0, fat: 25, default_unit: 'sausage', unit_weight_grams: 75 },
+  { name: 'Sausage, Italian', calories: 304, protein: 14, carbs: 4, fat: 25, default_unit: 'sausage', unit_weight_grams: 75 },
   { name: 'Pepperoni', calories: 494, protein: 22, carbs: 2, fat: 44 },
   { name: 'Salami', calories: 425, protein: 22, carbs: 2, fat: 37 },
   { name: 'Deli turkey', calories: 104, protein: 18, carbs: 4, fat: 1.6 },
@@ -69,7 +69,7 @@ const MEATS = [
   { name: 'Prosciutto', calories: 195, protein: 26, carbs: 0.5, fat: 9 },
   { name: 'Chorizo', calories: 455, protein: 24, carbs: 2, fat: 38 },
   { name: 'Pulled pork', calories: 210, protein: 26, carbs: 1, fat: 11 },
-  { name: 'Meatball, beef', calories: 221, protein: 15, carbs: 8, fat: 14 },
+  { name: 'Meatball, beef', calories: 221, protein: 15, carbs: 8, fat: 14, default_unit: 'meatball', unit_weight_grams: 30 },
   { name: 'Liver pâté', calories: 319, protein: 12, carbs: 3, fat: 29 },
 ];
 
@@ -79,7 +79,7 @@ const MEATS = [
 const FISH_SEAFOOD = [
   { name: 'Salmon, cooked', calories: 208, protein: 20, carbs: 0, fat: 13 },
   { name: 'Salmon, raw', calories: 142, protein: 19.8, carbs: 0, fat: 6.3, preparation: 'uncooked' },
-  { name: 'Tuna, canned in water', calories: 116, protein: 26, carbs: 0, fat: 0.8 },
+  { name: 'Tuna, canned in water', calories: 116, protein: 26, carbs: 0, fat: 0.8, default_unit: 'can', unit_weight_grams: 140 },
   { name: 'Tuna, fresh, cooked', calories: 184, protein: 30, carbs: 0, fat: 6.3 },
   { name: 'Tilapia, cooked', calories: 128, protein: 26, carbs: 0, fat: 2.7 },
   { name: 'Cod, cooked', calories: 105, protein: 23, carbs: 0, fat: 0.9 },
@@ -91,7 +91,7 @@ const FISH_SEAFOOD = [
   { name: 'Mahi-mahi, cooked', calories: 109, protein: 24, carbs: 0, fat: 0.9 },
   { name: 'Mackerel, cooked', calories: 262, protein: 24, carbs: 0, fat: 18 },
   { name: 'Herring, cooked', calories: 203, protein: 23, carbs: 0, fat: 12 },
-  { name: 'Sardines, canned', calories: 208, protein: 25, carbs: 0, fat: 11 },
+  { name: 'Sardines, canned', calories: 208, protein: 25, carbs: 0, fat: 11, default_unit: 'can', unit_weight_grams: 125 },
   { name: 'Anchovies', calories: 210, protein: 29, carbs: 0, fat: 10 },
   { name: 'Pollock, cooked', calories: 111, protein: 23, carbs: 0, fat: 1.2 },
   { name: 'Shrimp, cooked', calories: 99, protein: 24, carbs: 0.2, fat: 0.3 },
@@ -117,9 +117,9 @@ const FISH_SEAFOOD = [
 // EGGS & DAIRY
 // ─────────────────────────────────────────────────────────────────────────────
 const DAIRY_EGGS = [
-  { name: 'Eggs, whole cooked', calories: 155, protein: 13, carbs: 1.1, fat: 11 },
-  { name: 'Egg whites', calories: 52, protein: 11, carbs: 0.7, fat: 0.2 },
-  { name: 'Egg yolk', calories: 322, protein: 16, carbs: 3.6, fat: 27 },
+  { name: 'Eggs, whole cooked', calories: 155, protein: 13, carbs: 1.1, fat: 11, default_unit: 'egg', unit_weight_grams: 50 },
+  { name: 'Egg whites', calories: 52, protein: 11, carbs: 0.7, fat: 0.2, default_unit: 'egg white', unit_weight_grams: 33 },
+  { name: 'Egg yolk', calories: 322, protein: 16, carbs: 3.6, fat: 27, default_unit: 'yolk', unit_weight_grams: 17 },
   { name: 'Milk, whole', calories: 61, protein: 3.2, carbs: 4.8, fat: 3.3, is_liquid: true },
   { name: 'Milk, 2%', calories: 50, protein: 3.3, carbs: 4.7, fat: 2, is_liquid: true },
   { name: 'Milk, skim', calories: 34, protein: 3.4, carbs: 5, fat: 0.1, is_liquid: true },
@@ -132,7 +132,7 @@ const DAIRY_EGGS = [
   { name: 'Whipped cream', calories: 257, protein: 3.2, carbs: 12, fat: 22 },
   { name: 'Sour cream', calories: 198, protein: 2.4, carbs: 4.6, fat: 19 },
   { name: 'Yogurt, plain whole milk', calories: 61, protein: 3.5, carbs: 4.7, fat: 3.3 },
-  { name: 'Yogurt, Greek plain', calories: 97, protein: 9, carbs: 3.5, fat: 5 },
+  { name: 'Yogurt, Greek plain', calories: 97, protein: 9, carbs: 3.5, fat: 5, search_aliases: ['greek yogurt'] },
   { name: 'Yogurt, Greek nonfat', calories: 59, protein: 10, carbs: 3.6, fat: 0.4 },
   { name: 'Cheddar cheese', calories: 403, protein: 25, carbs: 1.3, fat: 33 },
   { name: 'Mozzarella cheese', calories: 280, protein: 28, carbs: 3.1, fat: 17 },
@@ -142,7 +142,7 @@ const DAIRY_EGGS = [
   { name: 'Brie cheese', calories: 334, protein: 21, carbs: 0.5, fat: 28 },
   { name: 'Feta cheese', calories: 264, protein: 14, carbs: 4.1, fat: 21 },
   { name: 'Ricotta cheese', calories: 174, protein: 11, carbs: 3, fat: 13 },
-  { name: 'Cottage cheese', calories: 98, protein: 11, carbs: 3.4, fat: 4.3 },
+  { name: 'Cottage cheese', calories: 98, protein: 11, carbs: 3.4, fat: 4.3, search_aliases: ['cottage'] },
   { name: 'Cream cheese', calories: 342, protein: 5.9, carbs: 4.1, fat: 34 },
   { name: 'Goat cheese', calories: 364, protein: 22, carbs: 0.1, fat: 30 },
   { name: 'American cheese', calories: 307, protein: 18, carbs: 3.5, fat: 25 },
@@ -180,17 +180,17 @@ const GRAINS = [
   { name: 'Farro, cooked', calories: 120, protein: 4, carbs: 26, fat: 0.7 },
   { name: 'Polenta, cooked', calories: 85, protein: 2, carbs: 18, fat: 0.5 },
   { name: 'Cornmeal', calories: 362, protein: 8.1, carbs: 77, fat: 3.6, preparation: 'uncooked' },
-  { name: 'Bread, white', calories: 265, protein: 9, carbs: 49, fat: 3.2 },
-  { name: 'Bread, whole wheat', calories: 247, protein: 10.7, carbs: 41, fat: 3.4 },
-  { name: 'Sourdough bread', calories: 274, protein: 10, carbs: 51, fat: 3.5 },
-  { name: 'Rye bread', calories: 258, protein: 8.5, carbs: 48, fat: 3.3 },
-  { name: 'Pita bread', calories: 275, protein: 9.1, carbs: 55, fat: 1.2 },
-  { name: 'Naan bread', calories: 290, protein: 9, carbs: 48, fat: 6 },
-  { name: 'Bagel, plain', calories: 257, protein: 10, carbs: 50, fat: 1.5 },
-  { name: 'English muffin', calories: 227, protein: 8, carbs: 44, fat: 1.8 },
-  { name: 'Croissant', calories: 406, protein: 8.2, carbs: 45, fat: 21 },
-  { name: 'Tortilla, flour', calories: 304, protein: 8.5, carbs: 49.7, fat: 7.4 },
-  { name: 'Tortilla, corn', calories: 218, protein: 5.7, carbs: 44, fat: 2.9 },
+  { name: 'Bread, white', calories: 265, protein: 9, carbs: 49, fat: 3.2, default_unit: 'slice', unit_weight_grams: 30 },
+  { name: 'Bread, whole wheat', calories: 247, protein: 10.7, carbs: 41, fat: 3.4, default_unit: 'slice', unit_weight_grams: 30 },
+  { name: 'Sourdough bread', calories: 274, protein: 10, carbs: 51, fat: 3.5, default_unit: 'slice', unit_weight_grams: 30 },
+  { name: 'Rye bread', calories: 258, protein: 8.5, carbs: 48, fat: 3.3, default_unit: 'slice', unit_weight_grams: 30 },
+  { name: 'Pita bread', calories: 275, protein: 9.1, carbs: 55, fat: 1.2, default_unit: 'pita', unit_weight_grams: 60 },
+  { name: 'Naan bread', calories: 290, protein: 9, carbs: 48, fat: 6, default_unit: 'naan', unit_weight_grams: 90 },
+  { name: 'Bagel, plain', calories: 257, protein: 10, carbs: 50, fat: 1.5, default_unit: 'bagel', unit_weight_grams: 105 },
+  { name: 'English muffin', calories: 227, protein: 8, carbs: 44, fat: 1.8, default_unit: 'muffin', unit_weight_grams: 57 },
+  { name: 'Croissant', calories: 406, protein: 8.2, carbs: 45, fat: 21, default_unit: 'croissant', unit_weight_grams: 67 },
+  { name: 'Tortilla, flour', calories: 304, protein: 8.5, carbs: 49.7, fat: 7.4, default_unit: 'tortilla', unit_weight_grams: 45 },
+  { name: 'Tortilla, corn', calories: 218, protein: 5.7, carbs: 44, fat: 2.9, default_unit: 'tortilla', unit_weight_grams: 26 },
   { name: 'Cornbread', calories: 296, protein: 6, carbs: 42, fat: 11 },
   { name: 'Crackers, saltine', calories: 421, protein: 9, carbs: 74, fat: 9 },
   { name: 'Crackers, whole wheat', calories: 443, protein: 10, carbs: 65, fat: 16 },
@@ -199,12 +199,12 @@ const GRAINS = [
   { name: 'French fries', calories: 312, protein: 3.4, carbs: 41, fat: 15 },
   { name: 'Mashed potatoes', calories: 113, protein: 2, carbs: 16, fat: 4.4 },
   { name: 'Hash browns', calories: 326, protein: 3.2, carbs: 35, fat: 20 },
-  { name: 'Pancake', calories: 227, protein: 6.4, carbs: 28, fat: 10 },
-  { name: 'Waffle', calories: 291, protein: 7.9, carbs: 33, fat: 14 },
+  { name: 'Pancake', calories: 227, protein: 6.4, carbs: 28, fat: 10, default_unit: 'pancake', unit_weight_grams: 38 },
+  { name: 'Waffle', calories: 291, protein: 7.9, carbs: 33, fat: 14, default_unit: 'waffle', unit_weight_grams: 75 },
   { name: 'French toast', calories: 229, protein: 8, carbs: 24, fat: 11 },
-  { name: 'Roti', calories: 297, protein: 9.8, carbs: 50, fat: 7 },
-  { name: 'Chapati', calories: 297, protein: 9.8, carbs: 50, fat: 7 },
-  { name: 'Dosa', calories: 168, protein: 3.9, carbs: 25, fat: 5.8 },
+  { name: 'Roti', calories: 297, protein: 9.8, carbs: 50, fat: 7, default_unit: 'roti', unit_weight_grams: 40 },
+  { name: 'Chapati', calories: 297, protein: 9.8, carbs: 50, fat: 7, default_unit: 'chapati', unit_weight_grams: 40 },
+  { name: 'Dosa', calories: 168, protein: 3.9, carbs: 25, fat: 5.8, default_unit: 'dosa', unit_weight_grams: 85 },
   { name: 'Soba noodles, cooked', calories: 99, protein: 5.1, carbs: 21, fat: 0.1 },
   { name: 'Udon noodles, cooked', calories: 118, protein: 3, carbs: 26, fat: 0.2 },
   { name: 'Glass noodles, cooked', calories: 82, protein: 0.1, carbs: 20, fat: 0 },
@@ -226,9 +226,9 @@ const GRAINS = [
 // FRUITS
 // ─────────────────────────────────────────────────────────────────────────────
 const FRUITS = [
-  { name: 'Apple', calories: 52, protein: 0.3, carbs: 14, fat: 0.2 },
-  { name: 'Banana', calories: 89, protein: 1.1, carbs: 23, fat: 0.3 },
-  { name: 'Orange', calories: 47, protein: 0.9, carbs: 12, fat: 0.1 },
+  { name: 'Apple', calories: 52, protein: 0.3, carbs: 14, fat: 0.2, default_unit: 'apple', unit_weight_grams: 180 },
+  { name: 'Banana', calories: 89, protein: 1.1, carbs: 23, fat: 0.3, default_unit: 'banana', unit_weight_grams: 120 },
+  { name: 'Orange', calories: 47, protein: 0.9, carbs: 12, fat: 0.1, default_unit: 'orange', unit_weight_grams: 130 },
   { name: 'Strawberries', calories: 32, protein: 0.7, carbs: 7.7, fat: 0.3 },
   { name: 'Blueberries', calories: 57, protein: 0.7, carbs: 14, fat: 0.3 },
   { name: 'Raspberries', calories: 52, protein: 1.2, carbs: 12, fat: 0.7 },
@@ -240,11 +240,11 @@ const FRUITS = [
   { name: 'Honeydew', calories: 36, protein: 0.5, carbs: 9.1, fat: 0.1 },
   { name: 'Mango', calories: 60, protein: 0.8, carbs: 15, fat: 0.4 },
   { name: 'Pineapple', calories: 50, protein: 0.5, carbs: 13, fat: 0.1 },
-  { name: 'Peach', calories: 39, protein: 0.9, carbs: 10, fat: 0.3 },
-  { name: 'Pear', calories: 57, protein: 0.4, carbs: 15, fat: 0.1 },
+  { name: 'Peach', calories: 39, protein: 0.9, carbs: 10, fat: 0.3, default_unit: 'peach', unit_weight_grams: 150 },
+  { name: 'Pear', calories: 57, protein: 0.4, carbs: 15, fat: 0.1, default_unit: 'pear', unit_weight_grams: 180 },
   { name: 'Plum', calories: 46, protein: 0.7, carbs: 11, fat: 0.3 },
   { name: 'Cherries', calories: 50, protein: 1, carbs: 12, fat: 0.3 },
-  { name: 'Kiwi', calories: 61, protein: 1.1, carbs: 15, fat: 0.5 },
+  { name: 'Kiwi', calories: 61, protein: 1.1, carbs: 15, fat: 0.5, default_unit: 'kiwi', unit_weight_grams: 75 },
   { name: 'Papaya', calories: 43, protein: 0.5, carbs: 11, fat: 0.3 },
   { name: 'Grapefruit', calories: 42, protein: 0.8, carbs: 11, fat: 0.1 },
   { name: 'Tangerine', calories: 53, protein: 0.8, carbs: 13, fat: 0.3 },
@@ -316,7 +316,7 @@ const VEGETABLES = [
   { name: 'Bok choy, cooked', calories: 12, protein: 1.6, carbs: 1.8, fat: 0.2 },
   { name: 'Edamame', calories: 121, protein: 12, carbs: 9, fat: 5.2 },
   { name: 'Leeks, cooked', calories: 31, protein: 0.8, carbs: 7.6, fat: 0.2 },
-  { name: 'Avocado', calories: 160, protein: 2, carbs: 9, fat: 15, preparation: 'uncooked' },
+  { name: 'Avocado', calories: 160, protein: 2, carbs: 9, fat: 15, preparation: 'uncooked', default_unit: 'avocado', unit_weight_grams: 150 },
   { name: 'Olives, green', calories: 145, protein: 1, carbs: 3.8, fat: 15 },
   { name: 'Olives, black', calories: 115, protein: 0.8, carbs: 6, fat: 11 },
   { name: 'Corn on the cob', calories: 96, protein: 3.4, carbs: 21, fat: 1.5 },
@@ -376,7 +376,7 @@ const NUTS_SEEDS = [
   { name: 'Brazil nuts', calories: 659, protein: 14, carbs: 12, fat: 67 },
   { name: 'Pine nuts', calories: 673, protein: 14, carbs: 13, fat: 68 },
   { name: 'Peanuts', calories: 567, protein: 26, carbs: 16, fat: 49 },
-  { name: 'Peanut butter', calories: 588, protein: 25, carbs: 20, fat: 50 },
+  { name: 'Peanut butter', calories: 588, protein: 25, carbs: 20, fat: 50, search_aliases: ['pb'] },
   { name: 'Almond butter', calories: 614, protein: 21, carbs: 19, fat: 56 },
   { name: 'Tahini', calories: 595, protein: 17, carbs: 21, fat: 54 },
   { name: 'Sunflower seeds', calories: 584, protein: 21, carbs: 20, fat: 51 },
@@ -417,7 +417,7 @@ const CONDIMENTS = [
   { name: 'Soy sauce', calories: 53, protein: 5.6, carbs: 6, fat: 0, is_liquid: true },
   { name: 'BBQ sauce', calories: 172, protein: 0.8, carbs: 40, fat: 0.6 },
   { name: 'Hot sauce', calories: 11, protein: 0.6, carbs: 1.8, fat: 0.4, is_liquid: true },
-  { name: 'Sriracha', calories: 93, protein: 2, carbs: 19, fat: 1 },
+  { name: 'Sriracha', calories: 93, protein: 2, carbs: 19, fat: 1, search_aliases: ['rooster sauce'] },
   { name: 'Teriyaki sauce', calories: 89, protein: 5.9, carbs: 16, fat: 0, is_liquid: true },
   { name: 'Ranch dressing', calories: 459, protein: 1.7, carbs: 6, fat: 48 },
   { name: 'Italian dressing', calories: 193, protein: 0.3, carbs: 8, fat: 18 },
@@ -432,7 +432,7 @@ const CONDIMENTS = [
   { name: 'Tartar sauce', calories: 298, protein: 0.6, carbs: 10, fat: 29 },
   { name: 'Relish, sweet pickle', calories: 130, protein: 0.3, carbs: 32, fat: 0.7 },
   { name: 'Salsa', calories: 36, protein: 1.5, carbs: 7, fat: 0.2 },
-  { name: 'Hummus', calories: 166, protein: 7.9, carbs: 14.3, fat: 9.6 },
+  { name: 'Hummus', calories: 166, protein: 7.9, carbs: 14.3, fat: 9.6, search_aliases: ['houmous', 'humus'] },
   { name: 'Guacamole', calories: 157, protein: 1.9, carbs: 8.5, fat: 14 },
   { name: 'Tzatziki', calories: 55, protein: 3.4, carbs: 4, fat: 2.8 },
   { name: 'Honey', calories: 304, protein: 0, carbs: 82, fat: 0, is_liquid: true },
@@ -440,7 +440,7 @@ const CONDIMENTS = [
   { name: 'Sugar, white', calories: 387, protein: 0, carbs: 100, fat: 0 },
   { name: 'Brown sugar', calories: 380, protein: 0, carbs: 98, fat: 0 },
   { name: 'Jam', calories: 250, protein: 0.4, carbs: 66, fat: 0.1 },
-  { name: 'Nutella', calories: 539, protein: 6.3, carbs: 58, fat: 31 },
+  { name: 'Nutella', calories: 539, protein: 6.3, carbs: 58, fat: 31, search_aliases: ['hazelnut spread', 'chocolate spread'] },
   { name: 'Gochujang', calories: 228, protein: 5, carbs: 45, fat: 2 },
   { name: 'Miso paste', calories: 199, protein: 12, carbs: 26, fat: 6 },
   { name: 'Harissa', calories: 75, protein: 2, carbs: 9, fat: 3.5 },
@@ -468,10 +468,10 @@ const CONDIMENTS = [
 // ─────────────────────────────────────────────────────────────────────────────
 const BEVERAGES = [
   { name: 'Water', calories: 0, protein: 0, carbs: 0, fat: 0, is_liquid: true },
-  { name: 'Coffee, black', calories: 2, protein: 0.1, carbs: 0, fat: 0, is_liquid: true },
+  { name: 'Coffee, black', calories: 2, protein: 0.1, carbs: 0, fat: 0, is_liquid: true, search_aliases: ['americano', 'drip coffee', 'filter coffee'] },
   { name: 'Espresso', calories: 9, protein: 0.1, carbs: 1.7, fat: 0.2, is_liquid: true },
   { name: 'Tea, brewed', calories: 1, protein: 0, carbs: 0.2, fat: 0, is_liquid: true },
-  { name: 'Green tea', calories: 1, protein: 0, carbs: 0.2, fat: 0, is_liquid: true },
+  { name: 'Green tea', calories: 1, protein: 0, carbs: 0.2, fat: 0, is_liquid: true, search_aliases: ['matcha'] },
   { name: 'Hot chocolate', calories: 77, protein: 3.6, carbs: 10, fat: 2.3, is_liquid: true },
   { name: 'Orange juice', calories: 45, protein: 0.7, carbs: 10, fat: 0.2, is_liquid: true },
   { name: 'Apple juice', calories: 46, protein: 0.1, carbs: 11, fat: 0.1, is_liquid: true },
@@ -479,10 +479,6 @@ const BEVERAGES = [
   { name: 'Grape juice', calories: 60, protein: 0.4, carbs: 15, fat: 0.1, is_liquid: true },
   { name: 'Lemonade', calories: 40, protein: 0, carbs: 10, fat: 0, is_liquid: true },
   { name: 'Iced tea, sweetened', calories: 33, protein: 0, carbs: 8.5, fat: 0, is_liquid: true },
-  { name: 'Cola', calories: 42, protein: 0, carbs: 10.6, fat: 0, is_liquid: true },
-  { name: 'Diet soda', calories: 0, protein: 0, carbs: 0, fat: 0, is_liquid: true },
-  { name: 'Sprite / lemon-lime soda', calories: 41, protein: 0, carbs: 10.2, fat: 0, is_liquid: true },
-  { name: 'Energy drink', calories: 45, protein: 0, carbs: 11, fat: 0, is_liquid: true },
   { name: 'Sports drink', calories: 26, protein: 0, carbs: 6.4, fat: 0, is_liquid: true },
   { name: 'Coconut water', calories: 19, protein: 0.7, carbs: 3.7, fat: 0.2, is_liquid: true },
   { name: 'Kombucha', calories: 17, protein: 0, carbs: 3, fat: 0, is_liquid: true },
@@ -493,7 +489,7 @@ const BEVERAGES = [
   { name: 'Whiskey', calories: 250, protein: 0, carbs: 0, fat: 0, is_liquid: true },
   { name: 'Vodka', calories: 231, protein: 0, carbs: 0, fat: 0, is_liquid: true },
   { name: 'Green smoothie', calories: 45, protein: 1.5, carbs: 9, fat: 0.5, is_liquid: true },
-  { name: 'Protein shake', calories: 120, protein: 24, carbs: 3, fat: 1, is_liquid: true },
+  { name: 'Protein shake', calories: 120, protein: 24, carbs: 3, fat: 1, is_liquid: true, search_aliases: ['protein smoothie', 'whey shake'] },
   { name: 'Matcha latte', calories: 60, protein: 3, carbs: 7, fat: 2.5, is_liquid: true },
   { name: 'Chai tea', calories: 3, protein: 0, carbs: 0.7, fat: 0, is_liquid: true },
   { name: 'Horchata', calories: 62, protein: 0.5, carbs: 14, fat: 0.7, is_liquid: true },
@@ -509,6 +505,25 @@ const BEVERAGES = [
   { name: 'Sake', calories: 134, protein: 0.5, carbs: 5, fat: 0, is_liquid: true },
   { name: 'Mezcal', calories: 256, protein: 0, carbs: 0, fat: 0, is_liquid: true },
   { name: 'Irish cream liqueur', calories: 327, protein: 2.8, carbs: 25, fat: 13, is_liquid: true },
+  { name: 'Coca-Cola', calories: 42, protein: 0, carbs: 10.6, fat: 0, is_liquid: true, search_aliases: ['coke', 'coca cola'] },
+  { name: 'Coca-Cola Zero Sugar', calories: 0, protein: 0, carbs: 0, fat: 0, is_liquid: true, search_aliases: ['coke zero', 'cola zero', 'zero', 'coca-cola zero', 'zero sugar', 'zero cola'] },
+  { name: 'Diet Coke', calories: 0, protein: 0, carbs: 0, fat: 0, is_liquid: true, search_aliases: ['diet cola', 'coke light', 'coca-cola light', 'coke diet'] },
+  { name: 'Pepsi', calories: 41, protein: 0, carbs: 10.8, fat: 0, is_liquid: true, search_aliases: ['pepsi cola'] },
+  { name: 'Pepsi Zero Sugar', calories: 0, protein: 0, carbs: 0, fat: 0, is_liquid: true, search_aliases: ['pepsi zero', 'pepsi max', 'diet pepsi'] },
+  { name: 'Red Bull', calories: 45, protein: 0, carbs: 11, fat: 0, is_liquid: true, search_aliases: ['redbull', 'red-bull'] },
+  { name: 'Red Bull Sugar Free', calories: 3, protein: 0, carbs: 0, fat: 0, is_liquid: true, search_aliases: ['redbull zero', 'red bull zero'] },
+  { name: 'Monster Energy', calories: 42, protein: 0, carbs: 11, fat: 0, is_liquid: true, search_aliases: ['monster'] },
+  { name: 'Fanta', calories: 42, protein: 0, carbs: 10.4, fat: 0, is_liquid: true, search_aliases: ['fanta orange'] },
+  { name: 'Dr Pepper', calories: 41, protein: 0, carbs: 10.2, fat: 0, is_liquid: true, search_aliases: ['dr. pepper'] },
+  { name: 'Mountain Dew', calories: 46, protein: 0, carbs: 12.3, fat: 0, is_liquid: true, search_aliases: ['mtn dew'] },
+  { name: 'Sprite', calories: 41, protein: 0, carbs: 10.2, fat: 0, is_liquid: true, search_aliases: ['sprite lemon lime'] },
+  { name: '7UP', calories: 41, protein: 0, carbs: 10.2, fat: 0, is_liquid: true, search_aliases: ['seven up', '7 up'] },
+  { name: 'Schweppes Tonic Water', calories: 34, protein: 0, carbs: 8.8, fat: 0, is_liquid: true, search_aliases: ['tonic'] },
+  { name: 'Cappuccino', calories: 38, protein: 2.5, carbs: 3.2, fat: 1.8, is_liquid: true, search_aliases: ['cap'] },
+  { name: 'Latte', calories: 50, protein: 3, carbs: 4.5, fat: 2, is_liquid: true, search_aliases: ['cafe latte', 'caffe latte'] },
+  { name: 'Mocha', calories: 75, protein: 3, carbs: 10, fat: 2.5, is_liquid: true, search_aliases: ['mocha latte', 'cafe mocha'] },
+  { name: 'Iced coffee', calories: 8, protein: 0.3, carbs: 1.5, fat: 0.1, is_liquid: true },
+  { name: 'Frappuccino', calories: 65, protein: 2, carbs: 12, fat: 1.5, is_liquid: true, search_aliases: ['frappe', 'frapp'] },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -523,7 +538,7 @@ const SNACKS = [
   { name: 'Trail mix', calories: 462, protein: 14, carbs: 45, fat: 29 },
   { name: 'Rice cake', calories: 387, protein: 8.2, carbs: 82, fat: 2.8 },
   { name: 'Granola', calories: 471, protein: 10, carbs: 64, fat: 20 },
-  { name: 'Granola bar', calories: 471, protein: 8, carbs: 64, fat: 20 },
+  { name: 'Granola bar', calories: 471, protein: 8, carbs: 64, fat: 20, default_unit: 'bar', unit_weight_grams: 35 },
   { name: 'Cereal, corn flakes', calories: 357, protein: 7.2, carbs: 84, fat: 0.7 },
   { name: 'Cereal, oatmeal', calories: 389, protein: 16.9, carbs: 66, fat: 6.9 },
   { name: 'Dark chocolate', calories: 546, protein: 4.9, carbs: 61, fat: 31 },
@@ -534,11 +549,11 @@ const SNACKS = [
   { name: 'Ice cream, vanilla', calories: 207, protein: 3.5, carbs: 24, fat: 11 },
   { name: 'Ice cream, chocolate', calories: 216, protein: 3.8, carbs: 28, fat: 11 },
   { name: 'Frozen yogurt', calories: 159, protein: 3.5, carbs: 29, fat: 3.5 },
-  { name: 'Cookie, chocolate chip', calories: 502, protein: 5.7, carbs: 64, fat: 24 },
+  { name: 'Cookie, chocolate chip', calories: 502, protein: 5.7, carbs: 64, fat: 24, default_unit: 'cookie', unit_weight_grams: 30 },
   { name: 'Brownie', calories: 466, protein: 5.6, carbs: 54, fat: 25 },
   { name: 'Cake, chocolate', calories: 389, protein: 5.3, carbs: 50, fat: 19 },
   { name: 'Cheesecake', calories: 321, protein: 5.5, carbs: 26, fat: 22 },
-  { name: 'Donut, glazed', calories: 421, protein: 5.2, carbs: 51, fat: 22 },
+  { name: 'Donut, glazed', calories: 421, protein: 5.2, carbs: 51, fat: 22, default_unit: 'donut', unit_weight_grams: 60 },
   { name: 'Muffin, blueberry', calories: 377, protein: 5, carbs: 52, fat: 16 },
   { name: 'Apple pie', calories: 237, protein: 1.9, carbs: 34, fat: 11 },
   { name: 'Pudding, chocolate', calories: 119, protein: 2.8, carbs: 21, fat: 3.1 },
@@ -563,7 +578,7 @@ const COMMON_FOODS = [
   { name: 'Pizza, pepperoni', calories: 274, protein: 12, carbs: 26, fat: 13 },
   { name: 'Hamburger', calories: 254, protein: 17, carbs: 24, fat: 10 },
   { name: 'Cheeseburger', calories: 303, protein: 17, carbs: 25, fat: 16 },
-  { name: 'Hot dog', calories: 290, protein: 10, carbs: 4.2, fat: 26 },
+  { name: 'Hot dog', calories: 290, protein: 10, carbs: 4.2, fat: 26, default_unit: 'piece', unit_weight_grams: 52 },
   { name: 'Chicken nuggets', calories: 296, protein: 15, carbs: 16, fat: 21 },
   { name: 'Fried chicken', calories: 307, protein: 22, carbs: 11, fat: 20 },
   { name: 'Grilled cheese sandwich', calories: 358, protein: 14, carbs: 28, fat: 22 },
@@ -574,20 +589,20 @@ const COMMON_FOODS = [
   { name: 'Quesadilla, cheese', calories: 295, protein: 12, carbs: 25, fat: 17 },
   { name: 'Sushi roll, salmon', calories: 143, protein: 6.1, carbs: 20, fat: 3.8 },
   { name: 'Sushi roll, tuna', calories: 136, protein: 6.5, carbs: 19, fat: 3.5 },
-  { name: 'Ramen noodle soup', calories: 54, protein: 2.6, carbs: 7.9, fat: 1.5, is_liquid: true },
+  { name: 'Ramen noodle soup', calories: 54, protein: 2.6, carbs: 7.9, fat: 1.5, is_liquid: true, search_aliases: ['ramen', 'instant noodles', 'cup noodles'] },
   { name: 'Chicken noodle soup', calories: 36, protein: 2.4, carbs: 3.5, fat: 1.7, is_liquid: true },
   { name: 'Tomato soup', calories: 40, protein: 1.1, carbs: 6.6, fat: 1.2, is_liquid: true },
-  { name: 'Mac and cheese', calories: 164, protein: 7, carbs: 18, fat: 7 },
-  { name: 'Fried rice', calories: 163, protein: 4.5, carbs: 22, fat: 6 },
+  { name: 'Mac and cheese', calories: 164, protein: 7, carbs: 18, fat: 7, search_aliases: ['macaroni and cheese', 'mac n cheese'] },
+  { name: 'Fried rice', calories: 163, protein: 4.5, carbs: 22, fat: 6, search_aliases: ['chinese fried rice'] },
   { name: 'Caesar salad', calories: 94, protein: 6, carbs: 5, fat: 6 },
   { name: 'Coleslaw', calories: 99, protein: 1, carbs: 11, fat: 6 },
-  { name: 'Falafel', calories: 333, protein: 13, carbs: 32, fat: 18 },
+  { name: 'Falafel', calories: 333, protein: 13, carbs: 32, fat: 18, default_unit: 'piece', unit_weight_grams: 25 },
   { name: 'Spring roll, fried', calories: 237, protein: 6, carbs: 24, fat: 13 },
   { name: 'Onion rings', calories: 332, protein: 4.4, carbs: 39, fat: 18 },
   { name: 'Mozzarella sticks', calories: 312, protein: 13, carbs: 25, fat: 18 },
   { name: 'Fish sticks', calories: 290, protein: 12, carbs: 24, fat: 17 },
   { name: 'Egg fried rice', calories: 174, protein: 5, carbs: 24, fat: 6.5 },
-  { name: 'Pad Thai', calories: 129, protein: 5, carbs: 17, fat: 4.5 },
+  { name: 'Pad Thai', calories: 129, protein: 5, carbs: 17, fat: 4.5, search_aliases: ['pad tai', 'phat thai'] },
   { name: 'Stir fry, chicken', calories: 120, protein: 14, carbs: 6, fat: 5 },
   // Indian
   { name: 'Dal (lentil curry)', calories: 104, protein: 5.5, carbs: 15, fat: 2.5 },
@@ -596,7 +611,7 @@ const COMMON_FOODS = [
   { name: 'Chicken tikka masala', calories: 128, protein: 13, carbs: 6, fat: 6 },
   { name: 'Chana masala', calories: 139, protein: 6, carbs: 20, fat: 4 },
   { name: 'Biryani, chicken', calories: 152, protein: 10, carbs: 18, fat: 5 },
-  { name: 'Samosa, vegetable', calories: 262, protein: 4, carbs: 30, fat: 14 },
+  { name: 'Samosa, vegetable', calories: 262, protein: 4, carbs: 30, fat: 14, default_unit: 'samosa', unit_weight_grams: 50 },
   { name: 'Idli', calories: 39, protein: 2, carbs: 8, fat: 0.1 },
   { name: 'Vindaloo, chicken', calories: 130, protein: 14, carbs: 4, fat: 6.5 },
   { name: 'Korma, chicken', calories: 137, protein: 12, carbs: 5, fat: 8 },
@@ -619,7 +634,7 @@ const COMMON_FOODS = [
   { name: 'Teriyaki chicken', calories: 156, protein: 18, carbs: 8, fat: 5.5 },
   { name: 'Miso soup', calories: 21, protein: 1.3, carbs: 2.6, fat: 0.6, is_liquid: true },
   { name: 'Tonkatsu (pork cutlet)', calories: 275, protein: 15, carbs: 18, fat: 16 },
-  { name: 'Gyoza (dumpling)', calories: 198, protein: 8, carbs: 23, fat: 8 },
+  { name: 'Gyoza (dumpling)', calories: 198, protein: 8, carbs: 23, fat: 8, default_unit: 'piece', unit_weight_grams: 25 },
   { name: 'Tempura shrimp', calories: 242, protein: 14, carbs: 20, fat: 12 },
   { name: 'Congee (rice porridge)', calories: 46, protein: 1, carbs: 10, fat: 0.3 },
   { name: 'Mapo tofu', calories: 98, protein: 6, carbs: 4, fat: 6.5 },
@@ -630,11 +645,11 @@ const COMMON_FOODS = [
   { name: 'Dan dan noodles', calories: 162, protein: 7, carbs: 18, fat: 7 },
   { name: 'Kung pao chicken', calories: 143, protein: 14, carbs: 8, fat: 6 },
   // Latin American
-  { name: 'Empanada, beef', calories: 290, protein: 9, carbs: 26, fat: 17 },
+  { name: 'Empanada, beef', calories: 290, protein: 9, carbs: 26, fat: 17, default_unit: 'empanada', unit_weight_grams: 120 },
   { name: 'Pupusa', calories: 210, protein: 6, carbs: 29, fat: 8 },
   { name: 'Arepa', calories: 195, protein: 4, carbs: 34, fat: 5 },
   { name: 'Ceviche', calories: 90, protein: 14, carbs: 4, fat: 2 },
-  { name: 'Tamale', calories: 200, protein: 7, carbs: 21, fat: 10 },
+  { name: 'Tamale', calories: 200, protein: 7, carbs: 21, fat: 10, default_unit: 'tamale', unit_weight_grams: 100 },
   { name: 'Elote (Mexican street corn)', calories: 134, protein: 4, carbs: 20, fat: 5 },
   { name: 'Gallo pinto', calories: 130, protein: 5, carbs: 22, fat: 2.5 },
   { name: 'Black bean soup', calories: 78, protein: 5, carbs: 13, fat: 0.5, is_liquid: true },
@@ -652,7 +667,7 @@ const COMMON_FOODS = [
   // Mediterranean
   { name: 'Moussaka', calories: 162, protein: 8, carbs: 10, fat: 10 },
   { name: 'Spanakopita', calories: 250, protein: 8, carbs: 18, fat: 16 },
-  { name: 'Dolma (stuffed grape leaves)', calories: 143, protein: 3, carbs: 14, fat: 8.5 },
+  { name: 'Dolma (stuffed grape leaves)', calories: 143, protein: 3, carbs: 14, fat: 8.5, default_unit: 'piece', unit_weight_grams: 35 },
   { name: 'Pastitsio', calories: 175, protein: 9, carbs: 16, fat: 8 },
   { name: 'Souvlaki (chicken)', calories: 145, protein: 20, carbs: 2, fat: 6.5 },
   { name: 'Caprese salad', calories: 148, protein: 9, carbs: 3, fat: 11 },
@@ -677,13 +692,19 @@ const COMMON_FOODS = [
   { name: 'Fish and chips', calories: 233, protein: 12, carbs: 22, fat: 11 },
   { name: 'Croque monsieur', calories: 295, protein: 16, carbs: 20, fat: 17 },
   { name: 'Beef stroganoff', calories: 162, protein: 12, carbs: 5, fat: 10 },
+  // More breakfast/brunch
+  { name: 'Omelette, cheese', calories: 154, protein: 11, carbs: 1.6, fat: 12 },
+  { name: 'Scrambled eggs', calories: 149, protein: 10, carbs: 2, fat: 11 },
+  { name: 'Boiled egg', calories: 155, protein: 13, carbs: 1.1, fat: 11, default_unit: 'egg', unit_weight_grams: 50 },
+  { name: 'Poached egg', calories: 143, protein: 12, carbs: 0.7, fat: 10, default_unit: 'egg', unit_weight_grams: 50 },
+  { name: 'Fried egg', calories: 196, protein: 14, carbs: 0.8, fat: 15, default_unit: 'egg', unit_weight_grams: 46 },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUPPLEMENTS & PROTEIN
 // ─────────────────────────────────────────────────────────────────────────────
 const SUPPLEMENTS = [
-  { name: 'Protein bar', calories: 400, protein: 30, carbs: 35, fat: 15 },
+  { name: 'Protein bar', calories: 400, protein: 30, carbs: 35, fat: 15, default_unit: 'bar', unit_weight_grams: 60 },
   { name: 'Whey protein powder', calories: 381, protein: 75, carbs: 10, fat: 5 },
   { name: 'Casein protein powder', calories: 375, protein: 70, carbs: 12, fat: 4 },
   { name: 'Plant protein powder', calories: 370, protein: 70, carbs: 15, fat: 5 },
@@ -706,11 +727,11 @@ const BREAKFAST = [
   { name: 'Crepes', calories: 216, protein: 6.4, carbs: 28, fat: 8.5 },
   { name: 'Frittata', calories: 158, protein: 11, carbs: 2, fat: 12 },
   { name: 'Shakshuka', calories: 98, protein: 5, carbs: 8, fat: 5.5 },
-  { name: 'Breakfast sausage patty', calories: 339, protein: 14, carbs: 1, fat: 31 },
+  { name: 'Breakfast sausage patty', calories: 339, protein: 14, carbs: 1, fat: 31, default_unit: 'patty', unit_weight_grams: 45 },
   { name: 'Hash (corned beef)', calories: 164, protein: 10, carbs: 9, fat: 10 },
-  { name: 'Scone', calories: 362, protein: 6, carbs: 48, fat: 16 },
-  { name: 'Danish pastry', calories: 374, protein: 6, carbs: 43, fat: 20 },
-  { name: 'Cinnamon roll', calories: 358, protein: 5, carbs: 51, fat: 15 },
+  { name: 'Scone', calories: 362, protein: 6, carbs: 48, fat: 16, default_unit: 'scone', unit_weight_grams: 70 },
+  { name: 'Danish pastry', calories: 374, protein: 6, carbs: 43, fat: 20, default_unit: 'pastry', unit_weight_grams: 70 },
+  { name: 'Cinnamon roll', calories: 358, protein: 5, carbs: 51, fat: 15, default_unit: 'roll', unit_weight_grams: 85 },
   { name: 'Breakfast sandwich', calories: 280, protein: 14, carbs: 26, fat: 13 },
 ];
 
@@ -764,6 +785,9 @@ async function run() {
         off_id text,
         name_he text,
         image_url text,
+        default_unit text,
+        unit_weight_grams numeric,
+        search_aliases text[],
         name_tsv tsvector,
         created_at timestamptz DEFAULT now()
       )
@@ -780,6 +804,7 @@ async function run() {
     // Trigram index (requires pg_trgm extension)
     await client.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
     await client.query(`CREATE INDEX idx_foods_name_trgm ON foods USING gin (lower(name) gin_trgm_ops)`);
+    await client.query(`CREATE INDEX idx_foods_search_aliases ON foods USING gin (search_aliases)`);
 
     // Auto-update tsvector trigger
     await client.query(`
@@ -799,7 +824,7 @@ async function run() {
 
     // Insert foods
     const batchSize = 25;
-    const COLS = 9;
+    const COLS = 12;
     for (let i = 0; i < ALL_FOODS.length; i += batchSize) {
       const batch = ALL_FOODS.slice(i, i + batchSize);
       const values = batch.flatMap((r) => [
@@ -812,17 +837,20 @@ async function run() {
         r.is_liquid ?? false,
         r.preparation ?? 'cooked',
         'curated',
+        r.default_unit ?? null,
+        r.unit_weight_grams ?? null,
+        r.search_aliases ?? null,
       ]);
       const placeholders = batch
         .map(
           (_, j) => {
             const o = j * COLS;
-            return `($${o+1}, $${o+2}, $${o+3}, $${o+4}, $${o+5}, $${o+6}, $${o+7}, $${o+8}, $${o+9})`;
+            return `($${o+1}, $${o+2}, $${o+3}, $${o+4}, $${o+5}, $${o+6}, $${o+7}, $${o+8}, $${o+9}, $${o+10}, $${o+11}, $${o+12})`;
           }
         )
         .join(', ');
       await client.query(
-        `INSERT INTO foods (name, common_name, calories, protein, carbs, fat, is_liquid, preparation, source)
+        `INSERT INTO foods (name, common_name, calories, protein, carbs, fat, is_liquid, preparation, source, default_unit, unit_weight_grams, search_aliases)
          VALUES ${placeholders}`,
         values
       );

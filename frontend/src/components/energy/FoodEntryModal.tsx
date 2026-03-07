@@ -40,8 +40,6 @@ const DEFAULT_REFERENCE_GRAMS = 100;
 const DEFAULT_SERVING_ML = { can: 330, bottle: 500, glass: 250 } as const;
 const LIQUID_SERVING_TYPES = ['can', 'bottle', 'bottle_1L', 'bottle_1_5L', 'bottle_2L', 'glass', 'other'] as const;
 type LiquidServingType = (typeof LIQUID_SERVING_TYPES)[number];
-const SOLID_PRESETS_G = [50, 100, 150, 200] as const;
-const PORTION_GRAMS = 100;
 
 type Per100g = { calories: number; protein: number; carbs: number; fats: number };
 type ServingSizesMl = { can?: number; bottle?: number; glass?: number } | null;
@@ -54,6 +52,14 @@ function scaleFromPer100g(per100g: Per100g, portionGrams: number): Per100g {
     carbs: Math.round(per100g.carbs * factor * 10) / 10,
     fats: Math.round(per100g.fats * factor * 10) / 10,
   };
+}
+
+function pluralizeUnit(unit: string, count: number): string {
+  if (count === 1) return unit;
+  // Handle common irregular plurals
+  if (unit.endsWith('y') && !['key'].includes(unit)) return unit.slice(0, -1) + 'ies';
+  if (unit.endsWith('s') || unit.endsWith('sh') || unit.endsWith('ch') || unit.endsWith('x')) return unit + 'es';
+  return unit + 's';
 }
 
 const defaultValues: FoodEntryFormValues = {
@@ -70,6 +76,10 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
   const [isLiquid, setIsLiquid] = useState(false);
   const [servingSizesMl, setServingSizesMl] = useState<ServingSizesMl>(null);
   const [servingType, setServingType] = useState<LiquidServingType | ''>('');
+  const [defaultUnit, setDefaultUnit] = useState<string | null>(null);
+  const [unitWeightGrams, setUnitWeightGrams] = useState<number | null>(null);
+  const [unitCount, setUnitCount] = useState(1);
+  const [isCustomPortion, setIsCustomPortion] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<FoodSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -113,6 +123,10 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
     setIsLiquid(false);
     setServingSizesMl(null);
     setServingType('');
+    setDefaultUnit(null);
+    setUnitWeightGrams(null);
+    setUnitCount(1);
+    setIsCustomPortion(false);
     setSearchQuery('');
     setSearchResults([]);
     setSearchError(null);
@@ -168,9 +182,20 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
       const sizes = item.servingSizesMl ?? null;
       setServingSizesMl(sizes);
       setServingType('');
-      const referenceAmount = DEFAULT_REFERENCE_GRAMS;
-      setPortionGrams(referenceAmount);
-      const scaled = scaleFromPer100g(base, referenceAmount);
+      const du = item.defaultUnit ?? null;
+      const uwg = item.unitWeightGrams ?? null;
+      setDefaultUnit(du);
+      setUnitWeightGrams(uwg);
+      setIsCustomPortion(false);
+      let initialGrams: number;
+      if (du && uwg) {
+        initialGrams = uwg; // 1 unit
+        setUnitCount(1);
+      } else {
+        initialGrams = DEFAULT_REFERENCE_GRAMS;
+      }
+      setPortionGrams(initialGrams);
+      const scaled = scaleFromPer100g(base, initialGrams);
       setValue('name', item.name);
       setValue('calories', scaled.calories.toString());
       setValue('protein', scaled.protein.toString());
@@ -204,34 +229,28 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
     [per100g, setValue]
   );
 
-  const getServingMl = useCallback(
-    (type: LiquidServingType): number => {
-      if (type === 'other') return portionGrams;
-      if (type === 'bottle_1L') return 1000;
-      if (type === 'bottle_1_5L') return 1500;
-      if (type === 'bottle_2L') return 2000;
-      const fromFood = servingSizesMl?.[type as keyof typeof servingSizesMl];
-      const fallback = DEFAULT_SERVING_ML[type as keyof typeof DEFAULT_SERVING_ML];
-      return fromFood ?? fallback ?? portionGrams;
-    },
-    [servingSizesMl, portionGrams]
-  );
-
-  const handleServingTypeChange = useCallback(
-    (type: LiquidServingType) => {
-      setServingType(type);
-      if (type === 'other') return;
-      const ml = getServingMl(type);
-      setPortionGrams(ml);
+  const handlePortionPresetChange = useCallback(
+    (value: string) => {
+      if (value === 'custom') {
+        setIsCustomPortion(true);
+        return;
+      }
+      setIsCustomPortion(false);
+      const g = parseInt(value, 10);
+      if (!Number.isFinite(g) || g < 1) return;
+      setPortionGrams(g);
+      if (defaultUnit && unitWeightGrams) {
+        setUnitCount(Math.round(g / unitWeightGrams * 10) / 10);
+      }
       if (per100g) {
-        const scaled = scaleFromPer100g(per100g, ml);
+        const scaled = scaleFromPer100g(per100g, g);
         setValue('calories', scaled.calories.toString());
         setValue('protein', scaled.protein.toString());
         setValue('carbs', scaled.carbs.toString());
         setValue('fats', scaled.fats.toString());
       }
     },
-    [getServingMl, per100g, setValue]
+    [defaultUnit, unitWeightGrams, per100g, setValue]
   );
 
   const handleSearchBlur = useCallback(() => {
@@ -272,6 +291,10 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
       setIsLiquid(product.isLiquid);
       setServingSizesMl(null);
       setServingType('');
+      setDefaultUnit(null);
+      setUnitWeightGrams(null);
+      setUnitCount(1);
+      setIsCustomPortion(false);
       setPortionGrams(DEFAULT_REFERENCE_GRAMS);
       const scaled = scaleFromPer100g(base, DEFAULT_REFERENCE_GRAMS);
       setValue('name', product.name);
@@ -297,9 +320,9 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
       carbs: parseFloat(data.carbs),
       fats: parseFloat(data.fats),
       ...(per100g != null && {
-        portionAmount: portionGrams,
-        portionUnit: isLiquid ? ('ml' as const) : ('g' as const),
-        ...(isLiquid && servingType && servingType !== 'other' && { servingType }),
+        portionAmount: defaultUnit ? unitCount : portionGrams,
+        portionUnit: defaultUnit ? defaultUnit : (isLiquid ? ('ml' as const) : ('g' as const)),
+        ...(isLiquid && !defaultUnit && servingType && servingType !== 'other' && { servingType }),
       }),
       ...(entry?.startTime != null && { startTime: entry.startTime }),
       ...(entry?.endTime != null && { endTime: entry.endTime }),
@@ -421,7 +444,10 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
                           >
                             <span className="font-medium">{item.name}</span>
                             <span className="ml-2 text-muted-foreground">
-                              {item.calories} cal per 100 {item.isLiquid ? 'ml' : 'g'}
+                              {item.defaultUnit && item.unitWeightGrams
+                                ? `${Math.round(item.calories * item.unitWeightGrams / 100)} cal/${item.defaultUnit}`
+                                : `${item.calories} cal per 100 ${item.isLiquid ? 'ml' : 'g'}`
+                              }
                             </span>
                           </button>
                         </li>
@@ -450,76 +476,95 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
 
             {per100g !== null && (
               <div>
-                <Label htmlFor="portion-amount">
-                  Portion ({isLiquid ? 'ml' : 'g'})
+                <Label htmlFor="portion-select">
+                  Portion{defaultUnit ? ` (${pluralizeUnit(defaultUnit, 2)})` : isLiquid ? ' (ml)' : ' (g)'}
                 </Label>
-                <div className={cn('flex gap-2', isLiquid && 'items-center')}>
-                  <Input
-                    id="portion-amount"
-                    type="number"
-                    min={1}
-                    value={portionGrams}
-                    onChange={(e) => handlePortionChange(e.target.value)}
-                    className={isLiquid ? 'flex-1' : undefined}
-                    aria-label={
-                      isLiquid
-                        ? 'Portion size in ml; values scale from per 100 ml'
-                        : 'Portion size in grams; values scale from per 100 g'
-                    }
-                  />
-                  {isLiquid && (
-                    <Select
-                      value={servingType || undefined}
-                      onValueChange={(v) => handleServingTypeChange(v as LiquidServingType)}
-                    >
-                      <SelectTrigger className="w-[130px]" aria-label="Serving type">
-                        <SelectValue placeholder="Serving" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="can">
-                          Can {servingSizesMl?.can ?? DEFAULT_SERVING_ML.can} ml
-                        </SelectItem>
-                        <SelectItem value="bottle">
-                          Bottle {servingSizesMl?.bottle ?? DEFAULT_SERVING_ML.bottle} ml
-                        </SelectItem>
-                        <SelectItem value="bottle_1L">Bottle 1L</SelectItem>
-                        <SelectItem value="bottle_1_5L">Bottle 1.5L</SelectItem>
-                        <SelectItem value="bottle_2L">Bottle 2L</SelectItem>
-                        <SelectItem value="glass">
-                          Glass {servingSizesMl?.glass ?? DEFAULT_SERVING_ML.glass} ml
-                        </SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
+                <div className="flex gap-2 items-center">
+                  <Select
+                    value={isCustomPortion ? 'custom' : String(portionGrams)}
+                    onValueChange={handlePortionPresetChange}
+                  >
+                    <SelectTrigger className="flex-1" aria-label="Portion size">
+                      <SelectValue placeholder="Select portion" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {defaultUnit && unitWeightGrams ? (
+                        <>
+                          {[1, 2, 3, 4].map((n) => (
+                            <SelectItem key={n} value={String(n * unitWeightGrams)}>
+                              {n} {pluralizeUnit(defaultUnit, n)} ({n * unitWeightGrams}{isLiquid ? 'ml' : 'g'})
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="custom">Custom</SelectItem>
+                        </>
+                      ) : isLiquid ? (
+                        <>
+                          <SelectItem value={String(servingSizesMl?.can ?? DEFAULT_SERVING_ML.can)}>
+                            Can ({servingSizesMl?.can ?? DEFAULT_SERVING_ML.can}ml)
+                          </SelectItem>
+                          <SelectItem value={String(servingSizesMl?.bottle ?? DEFAULT_SERVING_ML.bottle)}>
+                            Bottle ({servingSizesMl?.bottle ?? DEFAULT_SERVING_ML.bottle}ml)
+                          </SelectItem>
+                          <SelectItem value={String(servingSizesMl?.glass ?? DEFAULT_SERVING_ML.glass)}>
+                            Glass ({servingSizesMl?.glass ?? DEFAULT_SERVING_ML.glass}ml)
+                          </SelectItem>
+                          <SelectItem value="1000">1L</SelectItem>
+                          <SelectItem value="1500">1.5L</SelectItem>
+                          <SelectItem value="custom">Custom</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          {[50, 100, 150, 200, 250].map((g) => (
+                            <SelectItem key={g} value={String(g)}>
+                              {g}g{g === 100 ? ' (1 portion)' : ''}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="custom">Custom</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
-                {!isLiquid && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {SOLID_PRESETS_G.filter((g) => g !== PORTION_GRAMS).map((g) => (
-                      <Button
-                        key={g}
-                        type="button"
-                        variant={portionGrams === g ? 'default' : 'outline'}
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => handlePortionChange(String(g))}
-                      >
-                        {g}g
-                      </Button>
-                    ))}
-                    <Button
-                      type="button"
-                      variant={portionGrams === PORTION_GRAMS ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => handlePortionChange(String(PORTION_GRAMS))}
-                    >
-                      1 portion (100g)
-                    </Button>
+                {isCustomPortion && (
+                  <div className="mt-2">
+                    <Input
+                      id="portion-amount"
+                      type="number"
+                      min={1}
+                      value={defaultUnit ? unitCount : portionGrams}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!Number.isFinite(val) || val < 0) return;
+                        if (defaultUnit && unitWeightGrams) {
+                          setUnitCount(val);
+                          const g = Math.round(val * unitWeightGrams);
+                          setPortionGrams(g);
+                          if (per100g) {
+                            const scaled = scaleFromPer100g(per100g, g);
+                            setValue('calories', scaled.calories.toString());
+                            setValue('protein', scaled.protein.toString());
+                            setValue('carbs', scaled.carbs.toString());
+                            setValue('fats', scaled.fats.toString());
+                          }
+                        } else {
+                          handlePortionChange(String(Math.round(val)));
+                        }
+                      }}
+                      placeholder={defaultUnit ? `Number of ${pluralizeUnit(defaultUnit, 2)}` : isLiquid ? 'ml' : 'grams'}
+                      aria-label={defaultUnit ? `Custom number of ${pluralizeUnit(defaultUnit, 2)}` : isLiquid ? 'Custom ml' : 'Custom grams'}
+                    />
+                    {defaultUnit && unitWeightGrams && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        = {portionGrams}{isLiquid ? 'ml' : 'g'} ({unitWeightGrams}{isLiquid ? 'ml' : 'g'} per {defaultUnit})
+                      </p>
+                    )}
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Values below are scaled from {DEFAULT_REFERENCE_GRAMS} {isLiquid ? 'ml' : 'g'} (per 100 {isLiquid ? 'ml' : 'g'}).
+                  {defaultUnit && unitWeightGrams
+                    ? `1 ${defaultUnit} = ${unitWeightGrams}${isLiquid ? 'ml' : 'g'}. Nutrition per 100${isLiquid ? 'ml' : 'g'}.`
+                    : `Values scaled from ${DEFAULT_REFERENCE_GRAMS} ${isLiquid ? 'ml' : 'g'}.`
+                  }
                 </p>
               </div>
             )}
