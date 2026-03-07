@@ -11,7 +11,6 @@ import { SectionHeader } from '@/components/shared/SectionHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { VoiceMicHero } from '@/components/voice/VoiceMicHero';
 import { getGreeting } from '@/lib/utils';
-import { format } from 'date-fns';
 import { Goal } from '@/types/goals';
 import { toast } from 'sonner';
 
@@ -25,7 +24,6 @@ export function Home() {
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>(undefined);
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
 
-  const todayLabel = useMemo(() => format(new Date(), 'MMMM d'), []);
 
   const handleGoalSave = (goal: Omit<Goal, 'id' | 'createdAt'>) => {
     if (editingGoal) {
@@ -59,10 +57,9 @@ export function Home() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
-      {/* Hero: greeting + date */}
+      {/* Hero: greeting */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{greeting}</h1>
-        <p className="text-muted-foreground mt-0.5">{todayLabel}</p>
       </div>
 
       {/* Voice hero — primary input */}

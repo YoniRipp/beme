@@ -7,9 +7,12 @@ import { toast } from '@/components/shared/ToastProvider';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn } from '@/lib/utils';
 
+const VOICE_USED_KEY = 'beme_voice_used';
+
 export function VoiceMicHero() {
   const { isPro, subscribe } = useSubscription();
   const [statusText, setStatusText] = useState('');
+  const [hasUsedVoice, setHasUsedVoice] = useState(() => localStorage.getItem(VOICE_USED_KEY) === '1');
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const { processVoiceResult, showResultToasts } = useVoiceActions();
@@ -66,6 +69,10 @@ export function VoiceMicHero() {
 
     try {
       setStatusText('Listening...');
+      if (!hasUsedVoice) {
+        setHasUsedVoice(true);
+        localStorage.setItem(VOICE_USED_KEY, '1');
+      }
       await startListening();
     } catch (e) {
       setStatusText('');
@@ -112,7 +119,7 @@ export function VoiceMicHero() {
                   ? 'Processing your voice...'
                   : 'Tap to log by voice'}
           </p>
-          {isPro && state === 'idle' && !statusText && (
+          {isPro && state === 'idle' && !statusText && !hasUsedVoice && (
             <p className="mt-1 text-xs text-muted-foreground">
               Try: "I had oatmeal for breakfast" or "30 min run"
             </p>

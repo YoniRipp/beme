@@ -67,9 +67,9 @@ export function Energy() {
     return filtered;
   }, [foodEntries, caloriePeriod]);
 
-  // Calculate totals for selected period
+  // Calculate totals (daily) or daily averages (weekly/monthly/yearly)
   const periodTotals = useMemo(() => {
-    return periodFoodEntries.reduce(
+    const totals = periodFoodEntries.reduce(
       (acc, entry) => ({
         calories: acc.calories + entry.calories,
         protein: acc.protein + entry.protein,
@@ -78,7 +78,17 @@ export function Energy() {
       }),
       { calories: 0, protein: 0, carbs: 0, fats: 0 }
     );
-  }, [periodFoodEntries]);
+    if (caloriePeriod === 'daily' || periodFoodEntries.length === 0) return totals;
+    // Average per day (count unique dates with entries)
+    const uniqueDays = new Set(periodFoodEntries.map(e => e.date)).size;
+    if (uniqueDays <= 1) return totals;
+    return {
+      calories: Math.round(totals.calories / uniqueDays),
+      protein: totals.protein / uniqueDays,
+      carbs: totals.carbs / uniqueDays,
+      fats: totals.fats / uniqueDays,
+    };
+  }, [periodFoodEntries, caloriePeriod]);
 
   // Calculate sleep averages for periods
   const sleepData = useMemo(() => {
@@ -193,17 +203,21 @@ export function Energy() {
         <PeriodSelector
           options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
             const range = getPeriodRange(period, today);
-            const periodCal = foodEntries
-              .filter(f => isWithinInterval(new Date(f.date), range))
-              .reduce((sum, e) => sum + e.calories, 0);
-            return { value: period, label: period, summary: `${periodCal} cal` };
+            const entries = foodEntries.filter(f => isWithinInterval(new Date(f.date), range));
+            const totalCal = entries.reduce((sum, e) => sum + e.calories, 0);
+            if (period === 'daily') return { value: period, label: period, summary: `${totalCal} cal` };
+            const days = new Set(entries.map(e => e.date)).size;
+            const avg = days > 0 ? Math.round(totalCal / days) : 0;
+            return { value: period, label: period, summary: `${avg} avg` };
           })}
           selected={caloriePeriod}
           onChange={setCaloriePeriod}
         />
-        
+
         <div className="mb-4">
-          <p className="text-2xl sm:text-3xl font-bold mb-2">{periodTotals.calories} cal</p>
+          <p className="text-2xl sm:text-3xl font-bold mb-2">
+            {periodTotals.calories} cal{caloriePeriod !== 'daily' ? '/day' : ''}
+          </p>
           <div className="grid grid-cols-3 gap-4 mt-4">
             <div>
               <p className="text-sm text-muted-foreground">Protein</p>

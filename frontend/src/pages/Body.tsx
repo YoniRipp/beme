@@ -61,6 +61,7 @@ export function Body() {
     () => filteredWorkouts.filter((w) => new Date(w.date) < weekStart),
     [filteredWorkouts, weekStart]
   );
+  const groupedThisWeek = useMemo(() => groupWorkoutsByDate(workoutsThisWeek), [workoutsThisWeek]);
   const groupedOlder = useMemo(() => groupWorkoutsByDate(workoutsOlder), [workoutsOlder]);
 
   const weekSummary = useMemo(() => {
@@ -117,9 +118,9 @@ export function Body() {
               />
             ) : (
               <>
-                {workoutsThisWeek.length > 0 && (
+                {groupedThisWeek.length > 0 && (
                   <section>
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-3">
                       <h3 className="text-sm font-medium text-muted-foreground">This week</h3>
                       {weekSummary.length > 0 && (
                         <span className="text-xs text-muted-foreground">
@@ -127,14 +128,23 @@ export function Body() {
                         </span>
                       )}
                     </div>
-                    <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
-                      {workoutsThisWeek.map((workout) => (
-                        <WorkoutCard
-                          key={workout.id}
-                          workout={workout}
-                          onEdit={handleEdit}
-                          onDelete={setDeleteConfirmId}
-                        />
+                    <div className="space-y-4">
+                      {groupedThisWeek.map(({ date: dateStr, label, workouts: dayWorkouts }) => (
+                        <div key={dateStr} className="rounded-lg border bg-muted/20 p-3">
+                          <h4 className="text-xs font-medium text-muted-foreground mb-2 pl-0.5">
+                            {label}
+                          </h4>
+                          <div className="space-y-2">
+                            {dayWorkouts.map((workout) => (
+                              <WorkoutCard
+                                key={workout.id}
+                                workout={workout}
+                                onEdit={handleEdit}
+                                onDelete={setDeleteConfirmId}
+                              />
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </section>

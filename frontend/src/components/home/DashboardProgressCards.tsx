@@ -75,11 +75,16 @@ function ProgressCard({
   const hasGoal = data.target > 0;
   const percentage = hasGoal ? (data.current / data.target) * 100 : 0;
 
+  // When goal exists, tapping the card triggers the add/log action
+  // When no goal, tapping the card opens the goal creation modal
+  const cardAction = hasGoal ? onAdd : onAddGoal;
+  const isClickable = !!cardAction;
+
   return (
     <Card
-      className={`flex flex-col items-center p-4 relative ${!hasGoal && onAddGoal ? 'cursor-pointer hover:border-primary/50 transition-colors' : ''}`}
-      onClick={!hasGoal && onAddGoal ? onAddGoal : undefined}
-      role={!hasGoal && onAddGoal ? 'button' : undefined}
+      className={`flex flex-col items-center p-4 relative ${isClickable ? 'cursor-pointer hover:border-primary/50 transition-colors' : ''}`}
+      onClick={cardAction}
+      role={isClickable ? 'button' : undefined}
     >
       <CardContent className="flex flex-col items-center p-0 w-full">
         <div className="relative flex items-center justify-center mb-2">
@@ -104,19 +109,11 @@ function ProgressCard({
         {!hasGoal && onAddGoal && (
           <p className="text-[10px] text-muted-foreground mt-1">Tap to set goal</p>
         )}
-        {onAdd && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAdd();
-            }}
-            className="mt-2 flex items-center gap-1 text-xs text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded px-1 -mx-1"
-            aria-label={data.addLabel}
-          >
-            <Plus className="h-3 w-3" />
+        {hasGoal && onAdd && (
+          <p className="text-[10px] text-primary mt-1 flex items-center gap-0.5">
+            <Plus className="h-2.5 w-2.5" />
             {data.addLabel}
-          </button>
+          </p>
         )}
       </CardContent>
     </Card>
