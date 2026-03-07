@@ -8,14 +8,17 @@ export function SubscriptionSection() {
   const { isPro, subscriptionStatus, manage } = useSubscription();
   const navigate = useNavigate();
 
-  const statusLabel = {
+  const statusLabels: Record<string, string> = {
     free: 'Free',
     pro: 'Pro',
+    trainer: 'Trainer',
+    trainer_pro: 'Trainer Pro',
     past_due: 'Pro (payment issue)',
     canceled: 'Canceled',
     paused: 'Paused',
     expired: 'Expired',
-  }[subscriptionStatus] || 'Free';
+  };
+  const statusLabel = statusLabels[subscriptionStatus] || 'Free';
 
   return (
     <Card>

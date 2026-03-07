@@ -56,6 +56,39 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+export function requireTrainer(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (req.user.role !== 'trainer' && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Trainer access required' });
+  }
+  next();
+}
+
+export async function resolveTrainerClientUserId(req: Request, res: Response, next: NextFunction) {
+  const clientId = req.params.clientId;
+  if (!clientId) {
+    return res.status(400).json({ error: 'Client ID required' });
+  }
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(clientId)) {
+    return res.status(400).json({ error: 'Invalid client ID format' });
+  }
+  try {
+    // Dynamic import to avoid circular dependency
+    const { isClientOfTrainer } = await import('../models/trainerClient.js');
+    const isClient = await isClientOfTrainer(req.user!.id, clientId);
+    if (!isClient && req.user!.role !== 'admin') {
+      return res.status(403).json({ error: 'Not your client' });
+    }
+    req.effectiveUserId = clientId;
+    next();
+  } catch (e) {
+    next(e);
+  }
+}
+
 /**
  * Synchronous version for backwards compatibility. Prefer getEffectiveUserIdAsync in controllers
  * when admin userId override may be used, so the target user can be validated.

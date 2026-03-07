@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   LogOut,
   User,
+  Users,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
@@ -35,6 +36,7 @@ const ROUTE_TO_TITLE: Record<string, string> = {
   '/goals': 'Goals',
   '/insights': 'Insights',
   '/settings': 'Settings',
+  '/trainer': 'Trainer',
   '/admin': 'Admin',
 };
 
@@ -47,9 +49,11 @@ const SIDEBAR_NAV_BASE = [
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
-function getSidebarNav(isAdmin: boolean) {
-  if (!isAdmin) return SIDEBAR_NAV_BASE;
-  return [...SIDEBAR_NAV_BASE, { name: 'Admin', path: '/admin', icon: ShieldCheck }];
+function getSidebarNav(isAdmin: boolean, isTrainer: boolean) {
+  const nav = [...SIDEBAR_NAV_BASE];
+  if (isTrainer) nav.push({ name: 'Trainer', path: '/trainer', icon: Users });
+  if (isAdmin) nav.push({ name: 'Admin', path: '/admin', icon: ShieldCheck });
+  return nav;
 }
 
 /** Base44-style: first 4 items only (Dashboard, Body, Energy, Goals) */
@@ -71,7 +75,7 @@ export function Base44Layout() {
     logout();
     navigate('/login', { replace: true });
   };
-  const sidebarNav = useMemo(() => getSidebarNav(user?.role === 'admin'), [user?.role]);
+  const sidebarNav = useMemo(() => getSidebarNav(user?.role === 'admin', user?.role === 'trainer'), [user?.role]);
 
   const pageTitle = getPageTitle(pathname);
 

@@ -25,7 +25,7 @@ export async function initSchema() {
         email text NOT NULL UNIQUE,
         password_hash text,
         name text NOT NULL,
-        role text NOT NULL CHECK (role IN ('admin', 'user')) DEFAULT 'user',
+        role text NOT NULL CHECK (role IN ('admin', 'user', 'trainer')) DEFAULT 'user',
         auth_provider text NOT NULL DEFAULT 'email',
         provider_id text,
         reset_token_hash text,
@@ -170,6 +170,30 @@ export async function initSchema() {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS trainer_clients (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        trainer_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        client_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status text NOT NULL CHECK (status IN ('pending', 'active', 'removed')) DEFAULT 'pending',
+        created_at timestamptz DEFAULT now(),
+        updated_at timestamptz DEFAULT now(),
+        UNIQUE (trainer_id, client_id)
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS trainer_invitations (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        trainer_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        email text,
+        invite_code text UNIQUE,
+        status text NOT NULL CHECK (status IN ('pending', 'accepted', 'expired', 'revoked')) DEFAULT 'pending',
+        expires_at timestamptz NOT NULL,
+        created_at timestamptz DEFAULT now()
+      )
+    `);
+
     // Indexes
     await client.query('CREATE INDEX IF NOT EXISTS idx_goals_user ON goals(user_id)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_workouts_user_date ON workouts(user_id, date DESC)');
@@ -184,6 +208,10 @@ export async function initSchema() {
     await client.query('CREATE INDEX IF NOT EXISTS idx_foods_common_name_lower ON foods (lower(common_name))');
     await client.query('CREATE INDEX IF NOT EXISTS idx_app_logs_level_created_at ON app_logs (level, created_at DESC)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_user_daily_stats_user_date ON user_daily_stats (user_id, date DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_trainer_clients_trainer ON trainer_clients(trainer_id, status)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_trainer_clients_client ON trainer_clients(client_id, status)');
+    await client.query("CREATE INDEX IF NOT EXISTS idx_trainer_invitations_code ON trainer_invitations(invite_code) WHERE status = 'pending'");
+    await client.query("CREATE INDEX IF NOT EXISTS idx_trainer_invitations_email ON trainer_invitations(email, status)");
 
     // pgvector (optional, non-fatal)
     try {
