@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { VoiceAgentButton } from '../voice/VoiceAgentButton';
+import { QuickAddMenu } from '../shared/QuickAddMenu';
 
 const ROUTE_TO_TITLE: Record<string, string> = {
   '/': 'Dashboard',
@@ -252,6 +253,7 @@ export function Base44Layout() {
         </div>
       </nav>
 
+      <QuickAddMenu />
       <VoiceAgentButton />
     </div>
   );

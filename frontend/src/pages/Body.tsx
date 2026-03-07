@@ -64,16 +64,6 @@ export function Body() {
   const groupedThisWeek = useMemo(() => groupWorkoutsByDate(workoutsThisWeek), [workoutsThisWeek]);
   const groupedOlder = useMemo(() => groupWorkoutsByDate(workoutsOlder), [workoutsOlder]);
 
-  const weekSummary = useMemo(() => {
-    const byDay = new Map<number, number>();
-    workoutsThisWeek.forEach((w) => {
-      const day = new Date(w.date).getDay();
-      byDay.set(day, (byDay.get(day) ?? 0) + 1);
-    });
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return dayNames.map((name, i) => (byDay.get(i) ? `${name} ${byDay.get(i)}` : null)).filter(Boolean) as string[];
-  }, [workoutsThisWeek]);
-
   const handleSave = (workout: Omit<Workout, 'id'>) => {
     if (editingWorkout) {
       updateWorkout(editingWorkout.id, workout);
@@ -122,11 +112,6 @@ export function Body() {
                   <section>
                     <div className="flex items-center gap-2 mb-3">
                       <h3 className="text-sm font-medium text-muted-foreground">This week</h3>
-                      {weekSummary.length > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          {weekSummary.join(', ')}
-                        </span>
-                      )}
                     </div>
                     <div className="space-y-4">
                       {groupedThisWeek.map(({ date: dateStr, label, workouts: dayWorkouts }) => (

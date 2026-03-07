@@ -88,7 +88,7 @@ it('displays dashboard stats section', () => {
 
   it('displays calories and avg sleep in progress cards', () => {
     render(<Home />, { wrapper });
-    expect(screen.getByText(/calories/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/calories/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/avg sleep/i)).toBeInTheDocument();
   });
 

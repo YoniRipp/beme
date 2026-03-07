@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useEnergy } from '@/hooks/useEnergy';
 import { FoodEntry, type DailyCheckIn } from '@/types/energy';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
@@ -10,8 +10,8 @@ import { Card } from '@/components/ui/card';
 import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import { PeriodSelector } from '@/components/shared/PeriodSelector';
-import { Moon, Trash2, Pencil, UtensilsCrossed } from 'lucide-react';
-import { isSameDay, isWithinInterval, format } from 'date-fns';
+import { Moon, Trash2, Pencil, ChevronDown } from 'lucide-react';
+import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
 
 function formatMealTime(entry: FoodEntry): string | null {
@@ -26,6 +26,183 @@ function formatMealTime(entry: FoodEntry): string | null {
     return `${start}–${end} (${durStr})`;
   }
   return start ?? end ?? null;
+}
+
+interface FoodGroup {
+  key: string;
+  label: string;
+  entries: FoodEntry[];
+  totalCal: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFats: number;
+}
+
+function groupFoodEntries(
+  entries: FoodEntry[],
+  period: 'daily' | 'weekly' | 'monthly' | 'yearly',
+): FoodGroup[] {
+  if (period === 'daily') return [];
+
+  const bucketMap = new Map<string, { label: string; entries: FoodEntry[] }>();
+
+  for (const entry of entries) {
+    const d = new Date(entry.date);
+    let key: string;
+    let label: string;
+
+    if (period === 'weekly') {
+      // Group by day
+      key = format(d, 'yyyy-MM-dd');
+      label = format(d, 'EEEE, MMM d');
+    } else if (period === 'monthly') {
+      // Group by week
+      const ws = startOfWeek(d, { weekStartsOn: 0 });
+      const we = endOfWeek(d, { weekStartsOn: 0 });
+      key = format(ws, 'yyyy-MM-dd');
+      label = `${format(ws, 'MMM d')} – ${format(we, 'MMM d')}`;
+    } else {
+      // Yearly: group by month
+      key = format(d, 'yyyy-MM');
+      label = format(d, 'MMMM yyyy');
+    }
+
+    if (!bucketMap.has(key)) {
+      bucketMap.set(key, { label, entries: [] });
+    }
+    bucketMap.get(key)!.entries.push(entry);
+  }
+
+  // Sort buckets by key descending (most recent first)
+  const sortedKeys = Array.from(bucketMap.keys()).sort((a, b) => b.localeCompare(a));
+
+  return sortedKeys.map((key) => {
+    const bucket = bucketMap.get(key)!;
+    const totalCal = bucket.entries.reduce((s, e) => s + e.calories, 0);
+    const totalProtein = bucket.entries.reduce((s, e) => s + e.protein, 0);
+    const totalCarbs = bucket.entries.reduce((s, e) => s + e.carbs, 0);
+    const totalFats = bucket.entries.reduce((s, e) => s + e.fats, 0);
+    return {
+      key,
+      label: bucket.label,
+      entries: bucket.entries,
+      totalCal,
+      totalProtein,
+      totalCarbs,
+      totalFats,
+    };
+  });
+}
+
+function FoodEntryRow({
+  entry,
+  onEdit,
+  onDelete,
+}: {
+  entry: FoodEntry;
+  onEdit: (entry: FoodEntry) => void;
+  onDelete: (id: string) => void;
+}) {
+  const mealTime = formatMealTime(entry);
+  return (
+    <div
+      className="flex items-center justify-between p-3 bg-muted rounded-lg"
+      role="button"
+      tabIndex={0}
+      aria-label={`Food entry: ${entry.name}, ${entry.calories} calories`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onEdit(entry);
+        }
+      }}
+    >
+      <div
+        className="flex-1 cursor-pointer"
+        onClick={() => onEdit(entry)}
+      >
+        <p className="font-medium">
+          {entry.name}
+          {entry.portionAmount != null
+            ? ` • ${entry.portionAmount}${entry.portionUnit ? ` ${entry.portionUnit}` : ''}`
+            : ''}
+        </p>
+        {mealTime && (
+          <p className="text-sm text-muted-foreground">{mealTime}</p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          {entry.calories} cal • P: {entry.protein}g C: {entry.carbs}g F: {entry.fats}g
+        </p>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(entry.id);
+        }}
+        aria-label={`Delete food entry: ${entry.name}`}
+      >
+        <Trash2 className="w-4 h-4" aria-hidden="true" />
+      </Button>
+    </div>
+  );
+}
+
+function CollapsibleGroup({
+  group,
+  defaultOpen,
+  period,
+  onEdit,
+  onDelete,
+}: {
+  group: FoodGroup;
+  defaultOpen: boolean;
+  period: 'weekly' | 'monthly' | 'yearly';
+  onEdit: (entry: FoodEntry) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  // For monthly/yearly, show avg/day; for weekly show total
+  const isAvg = period !== 'weekly';
+  const uniqueDays = new Set(group.entries.map((e) => e.date)).size;
+  const displayCal = isAvg && uniqueDays > 1
+    ? Math.round(group.totalCal / uniqueDays)
+    : group.totalCal;
+  const calLabel = isAvg && uniqueDays > 1 ? `${displayCal} cal/day` : `${displayCal} cal`;
+
+  return (
+    <div className="rounded-lg border bg-muted/20 overflow-hidden">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between p-3 hover:bg-muted/40 transition-colors"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <div className="text-left">
+          <p className="text-sm font-medium">{group.label}</p>
+          <p className="text-xs text-muted-foreground">
+            {group.entries.length} {group.entries.length === 1 ? 'item' : 'items'}
+            {isAvg && uniqueDays > 1 && ` • ${uniqueDays} days`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold tabular-nums">{calLabel}</span>
+          <ChevronDown
+            className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          />
+        </div>
+      </button>
+      {open && (
+        <div className="px-3 pb-3 space-y-2">
+          {group.entries.map((entry) => (
+            <FoodEntryRow key={entry.id} entry={entry} onEdit={onEdit} onDelete={onDelete} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function Energy() {
@@ -67,6 +244,12 @@ export function Energy() {
     return filtered;
   }, [foodEntries, caloriePeriod]);
 
+  // Group entries by time buckets for non-daily views
+  const foodGroups = useMemo(
+    () => groupFoodEntries(periodFoodEntries, caloriePeriod),
+    [periodFoodEntries, caloriePeriod],
+  );
+
   // Calculate totals (daily) or daily averages (weekly/monthly/yearly)
   const periodTotals = useMemo(() => {
     const totals = periodFoodEntries.reduce(
@@ -100,7 +283,7 @@ export function Energy() {
     };
 
     const calculateSleep = (range: { start: Date; end: Date }) => {
-      const periodCheckIns = checkIns.filter(c => 
+      const periodCheckIns = checkIns.filter(c =>
         isWithinInterval(new Date(c.date), range)
       );
       const totalHours = periodCheckIns.reduce((sum, c) => sum + (c.sleepHours || 0), 0);
@@ -176,14 +359,14 @@ export function Energy() {
     setFoodModalOpen(true);
   };
 
-  const handleEditFood = (entry: FoodEntry) => {
+  const handleEditFood = useCallback((entry: FoodEntry) => {
     setEditingFoodEntry(entry);
     setFoodModalOpen(true);
-  };
+  }, []);
 
-  const handleDeleteFood = (id: string) => {
+  const handleDeleteFood = useCallback((id: string) => {
     setDeleteConfirmId(id);
-  };
+  }, []);
 
   const confirmDeleteFood = () => {
     if (deleteConfirmId) {
@@ -199,7 +382,7 @@ export function Energy() {
       <Card className="p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Calorie Balance</h3>
 
-        {/* Period selector — horizontally scrollable on mobile */}
+        {/* Period selector */}
         <PeriodSelector
           options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
             const range = getPeriodRange(period, today);
@@ -242,56 +425,33 @@ export function Energy() {
               title="Add your first food entry"
               description="Tap to log what you ate"
             />
-          ) : (
+          ) : caloriePeriod === 'daily' ? (
+            /* Daily: flat list */
             <>
-              {periodFoodEntries.map((entry) => {
-                const mealTime = formatMealTime(entry);
-                return (
-                <div 
-                  key={entry.id} 
-                  className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Food entry: ${entry.name}, ${entry.calories} calories`}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleEditFood(entry);
-                    }
-                  }}
-                >
-                  <div 
-                    className="flex-1 cursor-pointer"
-                    onClick={() => handleEditFood(entry)}
-                  >
-                    <p className="font-medium">
-                      {entry.name}
-                      {entry.portionAmount != null
-                        ? ` • ${entry.portionAmount}${entry.portionUnit ? ` ${entry.portionUnit}` : ''}`
-                        : ''}
-                    </p>
-                    {mealTime && (
-                      <p className="text-sm text-muted-foreground">{mealTime}</p>
-                    )}
-                    <p className="text-sm text-muted-foreground">
-                      {entry.calories} cal • P: {entry.protein}g C: {entry.carbs}g F: {entry.fats}g
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteFood(entry.id);
-                    }}
-                    aria-label={`Delete food entry: ${entry.name}`}
-                  >
-                    <Trash2 className="w-4 h-4" aria-hidden="true" />
-                  </Button>
-                </div>
-              );
-              })}
+              {periodFoodEntries.map((entry) => (
+                <FoodEntryRow
+                  key={entry.id}
+                  entry={entry}
+                  onEdit={handleEditFood}
+                  onDelete={handleDeleteFood}
+                />
+              ))}
               <AddAnotherCard onClick={handleAddFood} label="Add another food entry" />
+            </>
+          ) : (
+            /* Weekly/Monthly/Yearly: collapsible time-bucket groups */
+            <>
+              {foodGroups.map((group, i) => (
+                <CollapsibleGroup
+                  key={group.key}
+                  group={group}
+                  defaultOpen={i === 0}
+                  period={caloriePeriod as 'weekly' | 'monthly' | 'yearly'}
+                  onEdit={handleEditFood}
+                  onDelete={handleDeleteFood}
+                />
+              ))}
+              <AddAnotherCard onClick={handleAddFood} label="Add food entry" />
             </>
           )}
         </div>
@@ -301,7 +461,6 @@ export function Energy() {
       <Card className="p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Hours Slept</h3>
 
-        {/* Period selector — horizontally scrollable on mobile */}
         <PeriodSelector
           options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
             const sleep = sleepData[period];
@@ -310,13 +469,13 @@ export function Energy() {
           selected={sleepPeriod}
           onChange={setSleepPeriod}
         />
-        
+
         <div className="mb-4">
           <p className="text-2xl sm:text-3xl font-bold">
-            {sleepPeriod === 'daily' 
+            {sleepPeriod === 'daily'
               ? (selectedSleep.count > 0 ? `${selectedSleep.hours.toFixed(1)}h` : 'Not logged')
-              : selectedSleep.count > 0 
-                ? `${selectedSleep.hours.toFixed(1)}h avg` 
+              : selectedSleep.count > 0
+                ? `${selectedSleep.hours.toFixed(1)}h avg`
                 : 'No data'}
           </p>
           {sleepPeriod !== 'daily' && selectedSleep.count > 0 && (
@@ -367,16 +526,6 @@ export function Energy() {
         <AddAnotherCard onClick={openSleepModalForToday} icon={Moon} label="Log sleep" />
       </Card>
       </ContentWithLoading>
-
-      {/* Floating Add Food button — visible on mobile */}
-      <button
-        className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-95 transition-all sm:hidden"
-        onClick={handleAddFood}
-        aria-label="Add food entry"
-      >
-        <UtensilsCrossed className="w-4 h-4" />
-        Log Food
-      </button>
 
       <SleepEditModal
         open={sleepModalOpen}
