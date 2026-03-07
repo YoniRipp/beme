@@ -6,8 +6,11 @@ import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { config } from '../config/index.js';
 import { getPool } from '../db/pool.js';
+import { kvGet } from '../lib/keyValueStore.js';
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+const TOKEN_BLOCKLIST_PREFIX = 'blocked:';
+
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : req.cookies?.token;
   if (!token) {
@@ -23,7 +26,15 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 
   try {
-    const payload = jwt.verify(token, config.jwtSecret!) as { sub?: string; email?: string; role?: string };
+    const payload = jwt.verify(token, config.jwtSecret!, { algorithms: ['HS256'] }) as { sub?: string; email?: string; role?: string };
+
+    // Check token blocklist (SEC3: revoked tokens on logout/password-reset)
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const blocked = await kvGet(TOKEN_BLOCKLIST_PREFIX + tokenHash);
+    if (blocked) {
+      return res.status(401).json({ error: 'Token has been revoked' });
+    }
+
     req.user = {
       id: payload.sub!,
       email: payload.email!,

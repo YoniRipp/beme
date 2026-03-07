@@ -3,6 +3,7 @@
  * Exports async createApp() to support optional Redis-backed rate limiting.
  */
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -66,6 +67,7 @@ export async function createApp() {
   app.use(cors(corsOptions));
   logger.info({ corsOrigin: config.corsOrigin, nodeEnv: process.env.NODE_ENV }, 'CORS configured');
   app.use(helmet({ crossOriginOpenerPolicy: false }));
+  app.use(compression());
   app.use(cookieParser());
 
   // Lemon Squeezy webhook needs raw body for HMAC signature verification — mount BEFORE express.json()

@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useEffect, useState } from 'react';
 import { User } from '@/types/user';
-import { authApi, setToken, getToken } from '@/features/auth/api';
+import { authApi, setToken, hasSession } from '@/features/auth/api';
 
 type AuthProviderName = 'google' | 'facebook' | 'twitter';
 
@@ -33,8 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
 
   const loadUser = useCallback(async () => {
-    const token = getToken();
-    if (!token) {
+    if (!hasSession()) {
       setUser(null);
       setAuthLoading(false);
       return;
