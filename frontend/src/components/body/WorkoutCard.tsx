@@ -4,6 +4,7 @@ import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ImagePlaceholder } from '@/components/shared/ImagePlaceholder';
 
 interface WorkoutCardProps {
   workout: Workout;
@@ -13,8 +14,8 @@ interface WorkoutCardProps {
 
 export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete }: WorkoutCardProps) {
   return (
-    <div 
-      className="flex items-center justify-between p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80 transition-colors"
+    <div
+      className="flex items-start gap-3 p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80 transition-colors"
       onClick={() => onEdit && onEdit(workout)}
       role="button"
       tabIndex={0}
@@ -26,12 +27,14 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
         }
       }}
     >
-      <div className="flex-1">
+      <ImagePlaceholder type="exercise" size="md" />
+
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <p className="font-medium">{workout.title}</p>
+          <p className="font-medium truncate">{workout.title}</p>
           <Badge variant="secondary">{workout.type}</Badge>
         </div>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-1">
           <span>{formatDate(workout.date)}</span>
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
@@ -39,15 +42,28 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
           </span>
         </div>
         {workout.exercises.length > 0 && (
-          <p className="text-sm text-muted-foreground">
-            {workout.exercises.length} {workout.exercises.length === 1 ? 'exercise' : 'exercises'}
-          </p>
+          <div className="mt-1.5 space-y-0.5">
+            {workout.exercises.slice(0, 3).map((ex, i) => (
+              <p key={i} className="text-xs text-muted-foreground truncate">
+                {ex.name}{' '}
+                <span className="text-muted-foreground/70">
+                  {ex.sets} × {ex.reps}{ex.weight ? ` @ ${ex.weight}lbs` : ''}
+                </span>
+              </p>
+            ))}
+            {workout.exercises.length > 3 && (
+              <p className="text-xs text-muted-foreground/50">
+                +{workout.exercises.length - 3} more
+              </p>
+            )}
+          </div>
         )}
       </div>
       {onDelete && (
         <Button
           variant="ghost"
           size="icon"
+          className="shrink-0"
           onClick={(e) => {
             e.stopPropagation();
             onDelete(workout.id);

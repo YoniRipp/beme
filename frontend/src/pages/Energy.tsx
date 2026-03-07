@@ -4,6 +4,7 @@ import { FoodEntry, type DailyCheckIn } from '@/types/energy';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { SleepEditModal } from '@/components/energy/SleepEditModal';
 import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
+import { FoodCard } from '@/components/energy/FoodCard';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -13,20 +14,6 @@ import { PeriodSelector } from '@/components/shared/PeriodSelector';
 import { Moon, Trash2, Pencil, ChevronDown } from 'lucide-react';
 import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
-
-function formatMealTime(entry: FoodEntry): string | null {
-  const start = entry.startTime;
-  const end = entry.endTime;
-  if (!start && !end) return null;
-  if (start && end) {
-    const [sh, sm] = start.split(':').map(Number);
-    const [eh, em] = end.split(':').map(Number);
-    const durMin = (eh * 60 + em) - (sh * 60 + sm);
-    const durStr = durMin >= 60 ? `${Math.floor(durMin / 60)}h` : `${durMin} min`;
-    return `${start}–${end} (${durStr})`;
-  }
-  return start ?? end ?? null;
-}
 
 interface FoodGroup {
   key: string;
@@ -94,61 +81,6 @@ function groupFoodEntries(
   });
 }
 
-function FoodEntryRow({
-  entry,
-  onEdit,
-  onDelete,
-}: {
-  entry: FoodEntry;
-  onEdit: (entry: FoodEntry) => void;
-  onDelete: (id: string) => void;
-}) {
-  const mealTime = formatMealTime(entry);
-  return (
-    <div
-      className="flex items-center justify-between p-3 bg-muted rounded-lg"
-      role="button"
-      tabIndex={0}
-      aria-label={`Food entry: ${entry.name}, ${entry.calories} calories`}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onEdit(entry);
-        }
-      }}
-    >
-      <div
-        className="flex-1 cursor-pointer"
-        onClick={() => onEdit(entry)}
-      >
-        <p className="font-medium">
-          {entry.name}
-          {entry.portionAmount != null
-            ? ` • ${entry.portionAmount}${entry.portionUnit ? ` ${entry.portionUnit}` : ''}`
-            : ''}
-        </p>
-        {mealTime && (
-          <p className="text-sm text-muted-foreground">{mealTime}</p>
-        )}
-        <p className="text-sm text-muted-foreground">
-          {entry.calories} cal • P: {entry.protein}g C: {entry.carbs}g F: {entry.fats}g
-        </p>
-      </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(entry.id);
-        }}
-        aria-label={`Delete food entry: ${entry.name}`}
-      >
-        <Trash2 className="w-4 h-4" aria-hidden="true" />
-      </Button>
-    </div>
-  );
-}
-
 function CollapsibleGroup({
   group,
   defaultOpen,
@@ -197,7 +129,7 @@ function CollapsibleGroup({
       {open && (
         <div className="px-3 pb-3 space-y-2">
           {group.entries.map((entry) => (
-            <FoodEntryRow key={entry.id} entry={entry} onEdit={onEdit} onDelete={onDelete} />
+            <FoodCard key={entry.id} entry={entry} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </div>
       )}
@@ -429,7 +361,7 @@ export function Energy() {
             /* Daily: flat list */
             <>
               {periodFoodEntries.map((entry) => (
-                <FoodEntryRow
+                <FoodCard
                   key={entry.id}
                   entry={entry}
                   onEdit={handleEditFood}

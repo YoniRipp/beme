@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
+  Home,
   Dumbbell,
-  Zap,
+  UtensilsCrossed,
   Target,
   Menu,
   X,
@@ -28,11 +28,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { VoiceAgentButton } from '../voice/VoiceAgentButton';
 import { QuickAddMenu } from '../shared/QuickAddMenu';
+import { BottomNavigation } from './BottomNavigation';
 
 const ROUTE_TO_TITLE: Record<string, string> = {
-  '/': 'Dashboard',
-  '/body': 'Body',
-  '/energy': 'Energy',
+  '/': 'Home',
+  '/body': 'Workouts',
+  '/energy': 'Food',
   '/goals': 'Goals',
   '/insights': 'Insights',
   '/settings': 'Settings',
@@ -41,9 +42,9 @@ const ROUTE_TO_TITLE: Record<string, string> = {
 };
 
 const SIDEBAR_NAV_BASE = [
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { name: 'Body', path: '/body', icon: Dumbbell },
-  { name: 'Energy', path: '/energy', icon: Zap },
+  { name: 'Home', path: '/', icon: Home },
+  { name: 'Workouts', path: '/body', icon: Dumbbell },
+  { name: 'Food', path: '/energy', icon: UtensilsCrossed },
   { name: 'Goals', path: '/goals', icon: Target },
   { name: 'Insights', path: '/insights', icon: TrendingUp },
   { name: 'Settings', path: '/settings', icon: Settings },
@@ -232,30 +233,10 @@ export function Base44Layout() {
       </div>
 
       {/* Mobile bottom nav */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-xl border-t border-border z-30 lg:hidden"
-        aria-label="Main navigation"
-      >
-        <div className="flex items-center justify-around px-2 py-1">
-          {sidebarNav.slice(0, BOTTOM_NAV_ITEMS).map((item) => {
-            const isActive = pathname === item.path;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all
-                  ${isActive ? 'text-primary' : 'text-stone'}`}
-              >
-                <div className={`p-1 rounded-lg ${isActive ? 'bg-primary/15' : ''}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] font-medium">{item.name}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+      <BottomNavigation
+        items={sidebarNav.slice(0, BOTTOM_NAV_ITEMS)}
+        currentPath={pathname}
+      />
 
       <QuickAddMenu />
       <VoiceAgentButton />
