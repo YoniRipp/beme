@@ -9,12 +9,15 @@ import { createSqsTransport } from './transports/sqs.js';
 import { createDispatcher, EventEnvelope } from './dispatcher.js';
 
 const QUEUE_NAME = 'events';
+const DLQ_NAME = 'events-dlq';
 
 const dispatcher = createDispatcher();
 
 let eventsQueue: Queue | null = null;
+let eventsDlq: Queue | null = null;
 let eventsWorker: Worker | null = null;
 let sqsConsumer: { close(): Promise<void> } | null = null;
+let cachedSqsTransport: ReturnType<typeof createSqsTransport> | null = null;
 
 /** @returns {'memory' | 'redis' | 'sqs'} */
 function getTransport(): 'memory' | 'redis' | 'sqs' {
@@ -39,13 +42,20 @@ export async function publish(event: EventEnvelope) {
   const transport = getTransport();
   if (transport === 'sqs') {
     if (!config.awsRegion || !config.eventQueueUrl) throw new Error('SQS requires AWS_REGION and EVENT_QUEUE_URL');
-    const sqs = createSqsTransport({ region: config.awsRegion, queueUrl: config.eventQueueUrl });
-    await sqs.publish(event);
+    if (!cachedSqsTransport) {
+      cachedSqsTransport = createSqsTransport({ region: config.awsRegion, queueUrl: config.eventQueueUrl });
+    }
+    await cachedSqsTransport.publish(event);
     return;
   }
   if (transport === 'redis') {
     const queue = await getEventsQueue();
-    if (queue) await queue.add(event.type, event, { removeOnComplete: true, removeOnFail: 100 });
+    if (queue) await queue.add(event.type, event, {
+      removeOnComplete: true,
+      removeOnFail: 100,
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 1000 },
+    });
     return;
   }
   try {
@@ -61,6 +71,14 @@ export async function getEventsQueue(): Promise<Queue | null> {
     eventsQueue = new Queue(QUEUE_NAME, { connection: { url: config.redisUrl } });
   }
   return eventsQueue;
+}
+
+export async function getEventsDlq(): Promise<Queue | null> {
+  if (getTransport() !== 'redis') return null;
+  if (!eventsDlq) {
+    eventsDlq = new Queue(DLQ_NAME, { connection: { url: config.redisUrl } });
+  }
+  return eventsDlq;
 }
 
 async function invokeHandlers(event: EventEnvelope) {
@@ -85,13 +103,31 @@ export function startEventsWorker() {
       { connection: { url: config.redisUrl }, concurrency: 5 }
     );
     eventsWorker.on('error', (err) => logger.error({ err }, 'Events worker error'));
+    eventsWorker.on('failed', async (job, err) => {
+      if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+        try {
+          const dlq = await getEventsDlq();
+          if (dlq) {
+            await dlq.add(job.name, job.data, {
+              removeOnComplete: true,
+              removeOnFail: false,
+            });
+            logger.warn({ eventType: job.name, eventId: job.data?.eventId, err }, 'Event moved to DLQ after exhausting retries');
+          }
+        } catch (dlqErr) {
+          logger.error({ dlqErr, eventType: job.name, eventId: job.data?.eventId }, 'Failed to move event to DLQ');
+        }
+      }
+    });
     return eventsWorker;
   }
   if (transport === 'sqs') {
     if (sqsConsumer) return sqsConsumer;
     if (!config.awsRegion || !config.eventQueueUrl) throw new Error('SQS requires AWS_REGION and EVENT_QUEUE_URL');
-    const sqs = createSqsTransport({ region: config.awsRegion, queueUrl: config.eventQueueUrl });
-    sqsConsumer = sqs.startConsumer((event: unknown) => invokeHandlers(event as EventEnvelope));
+    if (!cachedSqsTransport) {
+      cachedSqsTransport = createSqsTransport({ region: config.awsRegion, queueUrl: config.eventQueueUrl });
+    }
+    sqsConsumer = cachedSqsTransport.startConsumer((event: unknown) => invokeHandlers(event as EventEnvelope));
     return sqsConsumer;
   }
   return null;
@@ -110,4 +146,9 @@ export async function closeEventsBus() {
     await eventsQueue.close();
     eventsQueue = null;
   }
+  if (eventsDlq) {
+    await eventsDlq.close();
+    eventsDlq = null;
+  }
+  cachedSqsTransport = null;
 }

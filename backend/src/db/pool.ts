@@ -77,12 +77,23 @@ function createPool(connectionString: string): pg.Pool {
   url.searchParams.delete('sslkey');
   url.searchParams.delete('uselibpqcompat');
   const cleanConn = url.toString();
-  return new Pool({
+  const pool = new Pool({
     connectionString: cleanConn,
     ssl: { rejectUnauthorized: sslRejectUnauthorized },
     max: poolMax,
     idleTimeoutMillis: 30000,
+    statement_timeout: 30000,
   });
+
+  pool.on('error', (err) => {
+    logger.error({ err }, 'Unexpected idle client error in pool');
+  });
+
+  pool.on('connect', () => {
+    logger.debug('New client connected to pool');
+  });
+
+  return pool;
 }
 
 /** Call before initSchema when using DATABASE_URL. Resolves to IPv4 if DB_FORCE_IPV4 is set. */
