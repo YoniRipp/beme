@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
 import { useGoals } from '@/hooks/useGoals';
+import { useMacroGoals } from '@/hooks/useMacroGoals';
 import { DashboardProgressCards } from '@/components/home/DashboardProgressCards';
 import { MacroCircles } from '@/components/home/MacroCircles';
+import { MacroGoalModal } from '@/components/home/MacroGoalModal';
 import { SleepEditModal } from '@/components/energy/SleepEditModal';
 import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
 import { WorkoutModal } from '@/components/body/WorkoutModal';
@@ -15,7 +17,7 @@ import { VoiceMicHero } from '@/components/voice/VoiceMicHero';
 import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
-import { Dumbbell, UtensilsCrossed, Flame } from 'lucide-react';
+import { Dumbbell, UtensilsCrossed } from 'lucide-react';
 import { isSameDay, format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -23,12 +25,14 @@ export function Home() {
   const { workouts, workoutsLoading, addWorkout } = useWorkouts();
   const { checkIns, foodEntries, addCheckIn, updateCheckIn, addFoodEntry, getCheckInByDate, energyLoading } = useEnergy();
   const { goals, addGoal, updateGoal, goalsLoading } = useGoals();
+  const { macroGoals, setMacroGoals } = useMacroGoals();
 
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>(undefined);
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
   const [workoutModalOpen, setWorkoutModalOpen] = useState(false);
   const [foodModalOpen, setFoodModalOpen] = useState(false);
+  const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
 
   const handleGoalSave = (goal: Omit<Goal, 'id' | 'createdAt'>) => {
     if (editingGoal) {
@@ -76,11 +80,8 @@ export function Home() {
     const totalCarbs = todayFoods.reduce((s, f) => s + f.carbs, 0);
     const totalFats = todayFoods.reduce((s, f) => s + f.fats, 0);
     const mealsCount = todayFoods.length;
-    const todayWorkouts = workouts.filter((w) => isSameDay(new Date(w.date), now));
-    const totalExercises = todayWorkouts.reduce((s, w) => s + w.exercises.length, 0);
-    const sleepHours = todayCheckIn?.sleepHours;
-    return { totalCal, totalProtein, totalCarbs, totalFats, mealsCount, todayWorkouts, totalExercises, sleepHours };
-  }, [foodEntries, workouts, todayCheckIn]);
+    return { totalCal, totalProtein, totalCarbs, totalFats, mealsCount };
+  }, [foodEntries]);
 
   const calorieGoal = useMemo(
     () => goals.find((g) => g.type === 'calories' && g.period === 'daily'),
@@ -89,10 +90,10 @@ export function Home() {
   const calGoalTarget = calorieGoal?.target ?? 2000;
 
   const progressMessage = useMemo(() => {
-    if (todaySummary.mealsCount === 0) return "Start logging to track your progress!";
-    if (todaySummary.mealsCount >= 3) return "Crushing it!";
-    if (todaySummary.mealsCount >= 2) return "Great progress!";
-    return "Keep going!";
+    if (todaySummary.mealsCount === 0) return 'Start tracking your progress';
+    if (todaySummary.mealsCount >= 3) return 'Crushing it!';
+    if (todaySummary.mealsCount >= 2) return 'Great progress!';
+    return 'Keep going!';
   }, [todaySummary.mealsCount]);
 
   const recentActivity = useMemo(() => {
@@ -120,39 +121,31 @@ export function Home() {
 
   return (
     <div className="max-w-lg mx-auto space-y-5">
-      {/* Today header */}
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Today</h1>
-        <span className="text-sm text-muted-foreground">{format(new Date(), 'EEEE, MMM d')}</span>
-      </div>
+      <h1 className="text-2xl font-bold tracking-tight">Today</h1>
 
       <ContentWithLoading loading={workoutsLoading || energyLoading || goalsLoading} loadingText="Loading dashboard...">
       <div className="space-y-5">
 
-        {/* Logging Progress Card */}
+        {/* Calorie Progress Card */}
         <Card className="rounded-2xl overflow-hidden">
           <CardContent className="p-5">
-            <div className="text-center mb-4">
-              <p className="text-sm text-muted-foreground">Logging Progress</p>
-              <p className="text-lg font-bold mt-0.5">{progressMessage}</p>
-            </div>
+            <p className="text-base font-semibold text-center mb-4">{progressMessage}</p>
 
-            {/* Calorie progress arc */}
-            <div className="flex justify-center mb-4">
-              <div className="relative w-36 h-36">
-                <svg viewBox="0 0 100 100" className="w-36 h-36 -rotate-90">
+            <div className="flex justify-center mb-3">
+              <div className="relative w-44 h-44">
+                <svg viewBox="0 0 100 100" className="w-44 h-44 -rotate-90">
                   <circle
                     cx="50" cy="50" r="42"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="7"
                     className="text-muted"
                   />
                   <circle
                     cx="50" cy="50" r="42"
                     fill="none"
                     stroke="hsl(138, 15%, 54%)"
-                    strokeWidth="8"
+                    strokeWidth="7"
                     strokeLinecap="round"
                     strokeDasharray={2 * Math.PI * 42}
                     strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)}
@@ -160,29 +153,17 @@ export function Home() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold tabular-nums leading-none">{Math.round(todaySummary.totalCal)}</span>
+                  <span className="text-3xl font-bold tabular-nums leading-none">{Math.round(todaySummary.totalCal)}</span>
                   <span className="text-xs text-muted-foreground mt-1">eaten</span>
+                  <div className="w-8 h-px bg-border my-1.5" />
+                  <span className="text-sm font-semibold tabular-nums text-primary leading-none">{Math.round(calRemaining)}</span>
+                  <span className="text-[10px] text-muted-foreground mt-0.5">remaining of {calGoalTarget}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-center gap-8 text-center">
-              <div>
-                <p className="text-lg font-bold tabular-nums">{calGoalTarget}</p>
-                <p className="text-xs text-muted-foreground">Goal</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold tabular-nums">{Math.round(todaySummary.totalCal)}</p>
-                <p className="text-xs text-muted-foreground">Food</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold tabular-nums text-primary">{Math.round(calRemaining)}</p>
-                <p className="text-xs text-muted-foreground">Remaining</p>
-              </div>
-            </div>
-
             {todaySummary.mealsCount > 0 && (
-              <p className="text-sm text-center text-muted-foreground mt-3">
+              <p className="text-sm text-center text-muted-foreground">
                 You've logged <span className="font-semibold text-foreground">{todaySummary.mealsCount} meal{todaySummary.mealsCount !== 1 ? 's' : ''}</span> and{' '}
                 <span className="font-semibold text-foreground">{Math.round(todaySummary.totalProtein)}g of protein</span>.
               </p>
@@ -193,43 +174,17 @@ export function Home() {
         {/* Macro Circles */}
         <Card className="rounded-2xl overflow-hidden">
           <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Macros</p>
             <MacroCircles
-              carbs={{ current: todaySummary.totalCarbs, goal: 300 }}
-              fat={{ current: todaySummary.totalFats, goal: 80 }}
-              protein={{ current: todaySummary.totalProtein, goal: 120 }}
+              carbs={{ current: todaySummary.totalCarbs, goal: macroGoals.carbs }}
+              fat={{ current: todaySummary.totalFats, goal: macroGoals.fat }}
+              protein={{ current: todaySummary.totalProtein, goal: macroGoals.protein }}
+              onEditGoals={() => setMacroGoalModalOpen(true)}
             />
           </CardContent>
         </Card>
 
-        {/* Voice Hero — below macros */}
+        {/* Voice Hero */}
         <VoiceMicHero />
-
-        {/* Exercise Summary */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="rounded-2xl">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center">
-                <Flame className="w-5 h-5 text-orange-500" />
-              </div>
-              <div>
-                <p className="text-lg font-bold tabular-nums leading-none">{todaySummary.totalExercises}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">exercises</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="rounded-2xl">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                <Dumbbell className="w-5 h-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-lg font-bold tabular-nums leading-none">{todaySummary.todayWorkouts.length}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">workout{todaySummary.todayWorkouts.length !== 1 ? 's' : ''}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Goals Progress */}
         <Card className="rounded-2xl overflow-hidden">
@@ -250,13 +205,13 @@ export function Home() {
         {/* Recent Activity */}
         {recentActivity.length > 0 && (
           <Card className="rounded-2xl overflow-hidden">
-            <CardContent className="p-4">
+            <CardContent className="p-5">
               <h3 className="text-sm font-medium text-muted-foreground mb-3">Recent Activity</h3>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {recentActivity.map((item) => (
                   <div
                     key={`${item.type}-${item.id}`}
-                    className="flex items-center gap-3 py-2"
+                    className="flex items-center gap-3 py-2.5"
                   >
                     <div className={`p-1.5 rounded-lg ${item.type === 'food' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
                       {item.type === 'food'
@@ -303,6 +258,13 @@ export function Home() {
         onOpenChange={setSleepModalOpen}
         onSave={handleSleepSave}
         currentHours={todayCheckIn?.sleepHours}
+      />
+
+      <MacroGoalModal
+        open={macroGoalModalOpen}
+        onOpenChange={setMacroGoalModalOpen}
+        goals={macroGoals}
+        onSave={setMacroGoals}
       />
     </div>
   );

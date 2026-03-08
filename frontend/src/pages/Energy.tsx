@@ -1,13 +1,17 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useEnergy } from '@/hooks/useEnergy';
+import { useGoals } from '@/hooks/useGoals';
+import { useMacroGoals } from '@/hooks/useMacroGoals';
 import { FoodEntry, type DailyCheckIn } from '@/types/energy';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { SleepEditModal } from '@/components/energy/SleepEditModal';
 import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
 import { FoodCard } from '@/components/energy/FoodCard';
+import { MacroCircles } from '@/components/home/MacroCircles';
+import { MacroGoalModal } from '@/components/home/MacroGoalModal';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import { PeriodSelector } from '@/components/shared/PeriodSelector';
@@ -139,7 +143,7 @@ function CollapsibleGroup({
   const calLabel = isAvg && uniqueDays > 1 ? `${displayCal} cal/day` : `${displayCal} cal`;
 
   return (
-    <div className="rounded-xl border bg-white overflow-hidden">
+    <div className="rounded-2xl border bg-white overflow-hidden">
       <button
         type="button"
         className="w-full flex items-center justify-between p-3 hover:bg-muted/40 transition-colors"
@@ -211,6 +215,8 @@ function MealSection({
 
 export function Energy() {
   const { checkIns, foodEntries, energyLoading, addCheckIn, updateCheckIn, deleteCheckIn, addFoodEntry, updateFoodEntry, deleteFoodEntry } = useEnergy();
+  const { goals } = useGoals();
+  const { macroGoals, setMacroGoals } = useMacroGoals();
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<DailyCheckIn | undefined>(undefined);
   const [deleteConfirmCheckInId, setDeleteConfirmCheckInId] = useState<string | null>(null);
@@ -219,6 +225,7 @@ export function Energy() {
   const [caloriePeriod, setCaloriePeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [sleepPeriod, setSleepPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
 
   const today = useMemo(() => new Date(), []);
 
@@ -381,43 +388,74 @@ export function Energy() {
   return (
     <div className="max-w-lg mx-auto space-y-5 pb-24">
       <ContentWithLoading loading={energyLoading} loadingText="Loading energy...">
-      {/* Calorie Summary Card */}
-      <Card className="p-4 sm:p-5 rounded-2xl">
-        <h3 className="text-lg font-semibold mb-3">Calorie Balance</h3>
+      {/* Calorie Progress Ring */}
+      {(() => {
+        const calorieGoal = goals.find((g) => g.type === 'calories' && g.period === 'daily');
+        const calGoalTarget = calorieGoal?.target ?? 2000;
+        const calPct = calGoalTarget > 0 ? Math.min(periodTotals.calories / calGoalTarget, 1) : 0;
+        const calRemaining = Math.max(calGoalTarget - periodTotals.calories, 0);
+        return (
+          <Card className="rounded-2xl overflow-hidden">
+            <CardContent className="p-5">
+              <PeriodSelector
+                options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
+                  const range = getPeriodRange(period, today);
+                  const entries = foodEntries.filter(f => isWithinInterval(new Date(f.date), range));
+                  const totalCal = entries.reduce((sum, e) => sum + e.calories, 0);
+                  if (period === 'daily') return { value: period, label: period, summary: `${totalCal} cal` };
+                  const days = new Set(entries.map(e => e.date)).size;
+                  const avg = days > 0 ? Math.round(totalCal / days) : 0;
+                  return { value: period, label: period, summary: `${avg} avg` };
+                })}
+                selected={caloriePeriod}
+                onChange={setCaloriePeriod}
+              />
 
-        <PeriodSelector
-          options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
-            const range = getPeriodRange(period, today);
-            const entries = foodEntries.filter(f => isWithinInterval(new Date(f.date), range));
-            const totalCal = entries.reduce((sum, e) => sum + e.calories, 0);
-            if (period === 'daily') return { value: period, label: period, summary: `${totalCal} cal` };
-            const days = new Set(entries.map(e => e.date)).size;
-            const avg = days > 0 ? Math.round(totalCal / days) : 0;
-            return { value: period, label: period, summary: `${avg} avg` };
-          })}
-          selected={caloriePeriod}
-          onChange={setCaloriePeriod}
-        />
+              <div className="flex justify-center my-4">
+                <div className="relative w-44 h-44">
+                  <svg viewBox="0 0 100 100" className="w-44 h-44 -rotate-90">
+                    <circle
+                      cx="50" cy="50" r="42"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="7"
+                      className="text-muted"
+                    />
+                    <circle
+                      cx="50" cy="50" r="42"
+                      fill="none"
+                      stroke="hsl(138, 15%, 54%)"
+                      strokeWidth="7"
+                      strokeLinecap="round"
+                      strokeDasharray={2 * Math.PI * 42}
+                      strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)}
+                      className="transition-all duration-700 ease-out"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-bold tabular-nums leading-none">{Math.round(periodTotals.calories)}</span>
+                    <span className="text-xs text-muted-foreground mt-1">{caloriePeriod !== 'daily' ? 'cal/day' : 'eaten'}</span>
+                    <div className="w-8 h-px bg-border my-1.5" />
+                    <span className="text-sm font-semibold tabular-nums text-primary leading-none">{Math.round(calRemaining)}</span>
+                    <span className="text-[10px] text-muted-foreground mt-0.5">remaining of {calGoalTarget}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
-        <div className="mb-3">
-          <p className="text-2xl font-bold mb-2 tabular-nums">
-            {periodTotals.calories} cal{caloriePeriod !== 'daily' ? '/day' : ''}
-          </p>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-blue-50 rounded-xl px-3 py-2 text-center">
-              <p className="text-sm font-bold text-blue-600 tabular-nums">{periodTotals.protein.toFixed(0)}g</p>
-              <p className="text-[10px] text-muted-foreground">Protein</p>
-            </div>
-            <div className="bg-amber-50 rounded-xl px-3 py-2 text-center">
-              <p className="text-sm font-bold text-amber-600 tabular-nums">{periodTotals.carbs.toFixed(0)}g</p>
-              <p className="text-[10px] text-muted-foreground">Carbs</p>
-            </div>
-            <div className="bg-rose-50 rounded-xl px-3 py-2 text-center">
-              <p className="text-sm font-bold text-rose-600 tabular-nums">{periodTotals.fats.toFixed(0)}g</p>
-              <p className="text-[10px] text-muted-foreground">Fats</p>
-            </div>
-          </div>
-        </div>
+      {/* Macro Circles */}
+      <Card className="rounded-2xl overflow-hidden">
+        <CardContent className="p-5">
+          <MacroCircles
+            carbs={{ current: Math.round(periodTotals.carbs), goal: macroGoals.carbs }}
+            fat={{ current: Math.round(periodTotals.fats), goal: macroGoals.fat }}
+            protein={{ current: Math.round(periodTotals.protein), goal: macroGoals.protein }}
+            onEditGoals={() => setMacroGoalModalOpen(true)}
+          />
+        </CardContent>
       </Card>
 
       {/* Food entries */}
@@ -572,6 +610,13 @@ export function Energy() {
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="destructive"
+      />
+
+      <MacroGoalModal
+        open={macroGoalModalOpen}
+        onOpenChange={setMacroGoalModalOpen}
+        goals={macroGoals}
+        onSave={setMacroGoals}
       />
     </div>
   );

@@ -1,3 +1,5 @@
+import { Pencil } from 'lucide-react';
+
 interface MacroData {
   current: number;
   goal: number;
@@ -7,6 +9,7 @@ interface MacroCirclesProps {
   carbs: MacroData;
   fat: MacroData;
   protein: MacroData;
+  onEditGoals?: () => void;
 }
 
 const R = 32;
@@ -60,11 +63,25 @@ function MacroRing({
   );
 }
 
-export function MacroCircles({ carbs, fat, protein }: MacroCirclesProps) {
+export function MacroCircles({ carbs, fat, protein, onEditGoals }: MacroCirclesProps) {
   return (
-    <div className="flex items-start justify-center gap-2">
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Macros</p>
+        {onEditGoals && (
+          <button
+            type="button"
+            onClick={onEditGoals}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            aria-label="Edit macro goals"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+      <div className="flex items-start justify-center gap-2">
       <MacroRing
-        label="Net Carbs"
+        label="Carbs"
         current={carbs.current}
         goal={carbs.goal}
         color="hsl(138, 15%, 54%)"
@@ -81,6 +98,7 @@ export function MacroCircles({ carbs, fat, protein }: MacroCirclesProps) {
         goal={protein.goal}
         color="hsl(210, 60%, 50%)"
       />
+      </div>
     </div>
   );
 }
