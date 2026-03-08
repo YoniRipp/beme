@@ -118,59 +118,103 @@ export function Home() {
       <ContentWithLoading loading={workoutsLoading || energyLoading || goalsLoading} loadingText="Loading dashboard...">
       <div className="space-y-5">
         {/* Today's Summary */}
-        <Card className="rounded-2xl overflow-hidden">
-          <CardContent className="p-4 sm:p-5">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Today</h3>
-            <div className="flex items-center gap-4 mb-3">
-              <div>
-                <p className="text-3xl font-bold tabular-nums">{todaySummary.totalCal}</p>
-                <p className="text-xs text-muted-foreground">calories</p>
-              </div>
-              {todaySummary.sleepHours != null && (
-                <div className="border-l pl-4">
-                  <p className="text-lg font-semibold tabular-nums">{todaySummary.sleepHours}h</p>
-                  <p className="text-xs text-muted-foreground">sleep</p>
-                </div>
-              )}
-              {todaySummary.todayWorkouts.length > 0 && (
-                <div className="border-l pl-4">
-                  <p className="text-lg font-semibold tabular-nums">{todaySummary.todayWorkouts.length}</p>
-                  <p className="text-xs text-muted-foreground">workout{todaySummary.todayWorkouts.length !== 1 ? 's' : ''}</p>
-                </div>
-              )}
+        <Card className="rounded-2xl overflow-hidden bg-gradient-to-br from-card to-muted/20">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-foreground tracking-wide uppercase">Today</h3>
+              <span className="text-xs text-muted-foreground">{format(new Date(), 'EEE, MMM d')}</span>
             </div>
-            <div className="flex gap-4 text-xs text-muted-foreground">
-              <span>P: {todaySummary.totalProtein.toFixed(0)}g</span>
-              <span>C: {todaySummary.totalCarbs.toFixed(0)}g</span>
-              <span>F: {todaySummary.totalFats.toFixed(0)}g</span>
-              <span>{todaySummary.mealsCount} meal{todaySummary.mealsCount !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-5">
+              {/* Calorie ring */}
+              <div className="relative w-20 h-20 shrink-0">
+                <svg viewBox="0 0 36 36" className="w-20 h-20 -rotate-90">
+                  <circle
+                    cx="18" cy="18" r="15.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    className="text-muted/30"
+                  />
+                  <circle
+                    cx="18" cy="18" r="15.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeDasharray={`${Math.min((todaySummary.totalCal / 2000) * 97.4, 97.4)} 97.4`}
+                    strokeLinecap="round"
+                    className="text-orange-500"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg font-bold tabular-nums leading-none">{todaySummary.totalCal}</span>
+                  <span className="text-[10px] text-muted-foreground leading-none mt-0.5">kcal</span>
+                </div>
+              </div>
+              {/* Stats */}
+              <div className="flex-1 space-y-2">
+                {todaySummary.sleepHours != null && (
+                  <div className="flex items-center gap-2">
+                    <Moon className="w-3.5 h-3.5 text-indigo-500" />
+                    <span className="text-sm font-medium tabular-nums">{todaySummary.sleepHours}h</span>
+                    <span className="text-xs text-muted-foreground">sleep</span>
+                  </div>
+                )}
+                {todaySummary.todayWorkouts.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Dumbbell className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="text-sm font-medium tabular-nums">{todaySummary.todayWorkouts.length}</span>
+                    <span className="text-xs text-muted-foreground">workout{todaySummary.todayWorkouts.length !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <UtensilsCrossed className="w-3.5 h-3.5 text-orange-500" />
+                  <span className="text-sm font-medium tabular-nums">{todaySummary.mealsCount}</span>
+                  <span className="text-xs text-muted-foreground">meal{todaySummary.mealsCount !== 1 ? 's' : ''}</span>
+                </div>
+              </div>
+            </div>
+            {/* Macro pills */}
+            <div className="flex gap-2 mt-4 pt-3 border-t border-border/50">
+              <div className="flex-1 rounded-lg bg-blue-50 px-3 py-1.5 text-center">
+                <p className="text-xs text-blue-600 font-medium">{todaySummary.totalProtein.toFixed(0)}g</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Protein</p>
+              </div>
+              <div className="flex-1 rounded-lg bg-amber-50 px-3 py-1.5 text-center">
+                <p className="text-xs text-amber-600 font-medium">{todaySummary.totalCarbs.toFixed(0)}g</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Carbs</p>
+              </div>
+              <div className="flex-1 rounded-lg bg-rose-50 px-3 py-1.5 text-center">
+                <p className="text-xs text-rose-600 font-medium">{todaySummary.totalFats.toFixed(0)}g</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Fats</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Quick Actions — 2x2 grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Workout', icon: Dumbbell, color: 'text-blue-600 bg-blue-50', action: () => setWorkoutModalOpen(true) },
-            { label: 'Food', icon: UtensilsCrossed, color: 'text-orange-600 bg-orange-50', action: () => setFoodModalOpen(true) },
-            { label: 'Sleep', icon: Moon, color: 'text-indigo-600 bg-indigo-50', action: () => setSleepModalOpen(true) },
-            { label: 'Goal', icon: Target, color: 'text-green-600 bg-green-50', action: () => { setEditingGoal(undefined); setGoalModalOpen(true); } },
-          ].map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.label}
-                type="button"
-                className="flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-muted/50 active:scale-[0.98] transition-all text-left"
-                onClick={item.action}
-              >
-                <div className={`p-2 rounded-lg ${item.color}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium">+ {item.label}</span>
-              </button>
-            );
-          })}
+        {/* Quick Actions */}
+        <div>
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Quick Add</h3>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: 'Workout', icon: Dumbbell, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', action: () => setWorkoutModalOpen(true) },
+              { label: 'Food', icon: UtensilsCrossed, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', action: () => setFoodModalOpen(true) },
+              { label: 'Sleep', icon: Moon, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200', action: () => setSleepModalOpen(true) },
+              { label: 'Goal', icon: Target, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', action: () => { setEditingGoal(undefined); setGoalModalOpen(true); } },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  className={`flex flex-col items-center gap-2 py-4 px-2 rounded-xl border ${item.border} ${item.bg} hover:opacity-80 active:scale-[0.97] transition-all`}
+                  onClick={item.action}
+                >
+                  <Icon className={`w-5 h-5 ${item.color}`} />
+                  <span className="text-xs font-medium text-foreground">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Goals Progress */}
