@@ -2,6 +2,7 @@ import { Component, ErrorInfo, ReactNode } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
+import { clientLogger } from '@/lib/logger';
 
 interface Props {
   children: ReactNode;
@@ -39,9 +40,12 @@ export class ErrorBoundary extends Component<Props, State> {
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
 
-    // In production, you might want to log to an error reporting service
-    // e.g., Sentry, LogRocket, etc.
-    
+    clientLogger.error('React ErrorBoundary caught error', {
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+    });
+
     this.setState({
       error,
       errorInfo,

@@ -7,6 +7,7 @@ import { config } from '../config/index.js';
 import { logger } from '../lib/logger.js';
 import { createSqsTransport } from './transports/sqs.js';
 import { createDispatcher, EventEnvelope } from './dispatcher.js';
+import { recordEventPublished, recordEventProcessed, recordEventFailed } from '../lib/metrics.js';
 
 const QUEUE_NAME = 'events';
 const DLQ_NAME = 'events-dlq';
@@ -39,6 +40,7 @@ export function subscribe(eventType: string, handler: (event: EventEnvelope) => 
  * @returns {Promise<void>}
  */
 export async function publish(event: EventEnvelope) {
+  recordEventPublished();
   const transport = getTransport();
   if (transport === 'sqs') {
     if (!config.awsRegion || !config.eventQueueUrl) throw new Error('SQS requires AWS_REGION and EVENT_QUEUE_URL');
@@ -84,7 +86,9 @@ export async function getEventsDlq(): Promise<Queue | null> {
 async function invokeHandlers(event: EventEnvelope) {
   try {
     await dispatcher.dispatch(event);
+    recordEventProcessed();
   } catch (err) {
+    recordEventFailed();
     logger.error({ err, eventType: event?.type, eventId: event?.eventId }, 'Event worker handler error');
     throw err;
   }

@@ -6,6 +6,7 @@ import pg from 'pg';
 import dns from 'dns';
 import { config } from '../config/index.js';
 import { logger } from '../lib/logger.js';
+import { instrumentPool } from './monitoredPool.js';
 
 // Prefer IPv4 when hostname resolves to both (fixes ETIMEDOUT on IPv6-only networks)
 if (process.env.DB_FORCE_IPV4 === 'true' || process.env.DB_FORCE_IPV4 === '1') {
@@ -93,6 +94,7 @@ function createPool(connectionString: string): pg.Pool {
     logger.debug('New client connected to pool');
   });
 
+  instrumentPool(pool);
   return pool;
 }
 

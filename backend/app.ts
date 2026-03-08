@@ -17,6 +17,8 @@ import { errorHandler } from './src/middleware/errorHandler.js';
 import { requestIdMiddleware } from './src/middleware/requestId.js';
 import cookieParser from 'cookie-parser';
 import { logger } from './src/lib/logger.js';
+import { metricsMiddleware } from './src/middleware/metricsMiddleware.js';
+import monitoringRouter from './src/routes/monitoring.js';
 
 const apiLimiterBase = {
   windowMs: 15 * 60 * 1000,
@@ -78,6 +80,7 @@ export async function createApp() {
 
   app.use(express.json({ limit: '10mb' }));
   app.use(requestIdMiddleware);
+  app.use(metricsMiddleware);
 
   // Health (not rate-limited)
   app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
@@ -105,6 +108,9 @@ export async function createApp() {
     }
     res.status(200).json({ status: 'ok' });
   });
+
+  // Monitoring routes (metrics, client-logs, queue health)
+  app.use(monitoringRouter);
 
   // Auth routes: stricter rate limit (10 per 15 min)
   app.use('/api/auth/login', authLimiter);
