@@ -3,7 +3,7 @@
  * BeMe is pivoting to a wellness-focused app (Body + Energy + Goals).
  */
 
-exports.up = (pgm) => {
+export const up = (pgm) => {
   pgm.sql('DROP TABLE IF EXISTS transactions CASCADE');
   pgm.sql('DROP TABLE IF EXISTS schedule_items CASCADE');
   pgm.sql('DROP INDEX IF EXISTS idx_schedule_items_user_date');
@@ -13,7 +13,7 @@ exports.up = (pgm) => {
   pgm.sql('ALTER TABLE user_daily_stats DROP COLUMN IF EXISTS total_expenses');
 };
 
-exports.down = (pgm) => {
+export const down = (pgm) => {
   pgm.sql(`
     CREATE TABLE IF NOT EXISTS transactions (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

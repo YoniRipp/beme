@@ -2,7 +2,7 @@
  * One-time import of USDA FoodData Central Foundation Foods JSON into foods table.
  * Run from repo root: node backend/scripts/importFoundationFoods.js
  * Or from backend: node scripts/importFoundationFoods.js
- * Requires DATABASE_URL (e.g. in backend/.env).
+ * Requires DATABASE_URL (e.g. in backend/.env.development).
  *
  * Expects JSON shape: { "FoundationFoods": [ { description, foodNutrients, foodClass }, ... ] }
  * Inserts into foods (name, calories, protein, carbs, fat).
@@ -16,7 +16,7 @@ import pg from 'pg';
 const { Pool: PgPool } = pg;
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
-dotenv.config({ path: join(__dirname, '../.env') });
+dotenv.config({ path: join(__dirname, '../.env.development') });
 
 const NUTRIENT_ENERGY_KCAL = '208';
 const NUTRIENT_ENERGY_KJ = '268';

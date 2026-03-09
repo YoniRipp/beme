@@ -6,7 +6,7 @@
  * Or from backend:    node scripts/seedPopularFoods.js
  * Or via npm:         cd backend && npm run seed:foods
  *
- * Requires DATABASE_URL (e.g. in backend/.env).
+ * Requires DATABASE_URL (e.g. in backend/.env.development).
  */
 
 import dotenv from 'dotenv';
@@ -15,7 +15,6 @@ import { fileURLToPath } from 'url';
 import pg from 'pg';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
-dotenv.config({ path: join(__dirname, '../.env') });
 dotenv.config({ path: join(__dirname, '../.env.development') });
 
 const { Pool } = pg;

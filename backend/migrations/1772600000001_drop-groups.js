@@ -1,10 +1,10 @@
-exports.up = (pgm) => {
+export const up = (pgm) => {
   pgm.sql('DROP TABLE IF EXISTS group_invitations CASCADE');
   pgm.sql('DROP TABLE IF EXISTS group_members CASCADE');
   pgm.sql('DROP TABLE IF EXISTS groups CASCADE');
 };
 
-exports.down = (pgm) => {
+export const down = (pgm) => {
   pgm.sql(`
     CREATE TABLE IF NOT EXISTS groups (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

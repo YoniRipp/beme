@@ -4,6 +4,7 @@ import { Dumbbell, Flame, Moon, Plus } from 'lucide-react';
 import { useGoals } from '@/hooks/useGoals';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
+import { useMacroGoals } from '@/hooks/useMacroGoals';
 import type { Goal } from '@/types/goals';
 import { isWithinInterval } from 'date-fns';
 import { getPeriodRange } from '@/lib/dateRanges';
@@ -136,16 +137,16 @@ export function DashboardProgressCards({
   const { goals } = useGoals();
   const { workouts } = useWorkouts();
   const { foodEntries, checkIns } = useEnergy();
+  const { calorieGoal: macroCalorieGoal } = useMacroGoals();
 
   const cardsData = useMemo((): ProgressCardData[] => {
     const now = new Date();
 
     const workoutsGoal = goals.find((g) => g.type === 'workouts');
-    const caloriesGoal = goals.find((g) => g.type === 'calories');
     const sleepGoal = goals.find((g) => g.type === 'sleep');
 
     const wr = workoutsGoal ? getPeriodRange(workoutsGoal.period, now) : getPeriodRange('weekly', now);
-    const cr = caloriesGoal ? getPeriodRange(caloriesGoal.period, now) : getPeriodRange('daily', now);
+    const cr = getPeriodRange('daily', now);
     const sr = sleepGoal ? getPeriodRange(sleepGoal.period, now) : getPeriodRange('weekly', now);
 
     const workoutsCurrent = workouts.filter((w) =>
@@ -176,14 +177,13 @@ export function DashboardProgressCards({
       },
       {
         current: caloriesCurrent,
-        target: caloriesGoal?.target ?? 0,
+        target: macroCalorieGoal,
         label: 'Calories',
         addLabel: 'Log food',
         cardType: 'calories' as CardType,
         formatValue: (v) => Math.round(v).toLocaleString(),
         icon: <Flame className="h-4 w-4 text-orange-600" />,
         ringColor: '#22c55e',
-        goal: caloriesGoal,
       },
       {
         current: sleepCurrent,
@@ -197,7 +197,7 @@ export function DashboardProgressCards({
         goal: sleepGoal,
       },
     ];
-  }, [goals, workouts, foodEntries, checkIns]);
+  }, [goals, workouts, foodEntries, checkIns, macroCalorieGoal]);
 
   const getOnAdd = (cardType: CardType) => {
     if (cardType === 'workouts') return onAddWorkout;

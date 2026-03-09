@@ -1,4 +1,4 @@
-exports.up = (pgm) => {
+export const up = (pgm) => {
   // Update users role constraint to include 'trainer'
   pgm.sql("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check");
   pgm.sql("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'user', 'trainer'))");
@@ -32,7 +32,7 @@ exports.up = (pgm) => {
   pgm.sql("CREATE INDEX idx_trainer_invitations_email ON trainer_invitations(email, status)");
 };
 
-exports.down = (pgm) => {
+export const down = (pgm) => {
   pgm.sql("DROP TABLE IF EXISTS trainer_invitations CASCADE");
   pgm.sql("DROP TABLE IF EXISTS trainer_clients CASCADE");
   pgm.sql("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check");
