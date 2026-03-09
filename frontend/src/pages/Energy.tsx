@@ -314,6 +314,12 @@ export function Energy() {
 
   const selectedSleep = sleepData[sleepPeriod];
 
+  const calorieGoal = useMemo(
+    () => goals.find((g) => g.type === 'calories' && g.period === 'daily'),
+    [goals]
+  );
+  const calGoalTarget = calorieGoal?.target ?? 2000;
+
   const todayCheckIn = useMemo(() => {
     return checkIns.find(c => isSameDay(new Date(c.date), today));
   }, [checkIns, today]);
@@ -390,8 +396,6 @@ export function Energy() {
       <ContentWithLoading loading={energyLoading} loadingText="Loading energy...">
       {/* Calorie Progress Ring */}
       {(() => {
-        const calorieGoal = goals.find((g) => g.type === 'calories' && g.period === 'daily');
-        const calGoalTarget = calorieGoal?.target ?? 2000;
         const calPct = calGoalTarget > 0 ? Math.min(periodTotals.calories / calGoalTarget, 1) : 0;
         const calRemaining = Math.max(calGoalTarget - periodTotals.calories, 0);
         return (
