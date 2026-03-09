@@ -6,8 +6,8 @@ import { WorkoutModal } from '@/components/body/WorkoutModal';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { SearchBar } from '@/components/shared/SearchBar';
-import { Card } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
+import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
+import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import { toast } from 'sonner';
 import { format, isToday, isYesterday, parseISO, isWithinInterval } from 'date-fns';
 import { getPeriodRange } from '@/lib/dateRanges';
@@ -61,17 +61,8 @@ export function Body() {
     () => filteredWorkouts.filter((w) => new Date(w.date) < weekStart),
     [filteredWorkouts, weekStart]
   );
+  const groupedThisWeek = useMemo(() => groupWorkoutsByDate(workoutsThisWeek), [workoutsThisWeek]);
   const groupedOlder = useMemo(() => groupWorkoutsByDate(workoutsOlder), [workoutsOlder]);
-
-  const weekSummary = useMemo(() => {
-    const byDay = new Map<number, number>();
-    workoutsThisWeek.forEach((w) => {
-      const day = new Date(w.date).getDay();
-      byDay.set(day, (byDay.get(day) ?? 0) + 1);
-    });
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return dayNames.map((name, i) => (byDay.get(i) ? `${name} ${byDay.get(i)}` : null)).filter(Boolean) as string[];
-  }, [workoutsThisWeek]);
 
   const handleSave = (workout: Omit<Workout, 'id'>) => {
     if (editingWorkout) {
@@ -97,9 +88,9 @@ export function Body() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-xl font-semibold flex-1">Workouts</h2>
-          <div className="w-full max-w-64">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+          <h2 className="text-xl font-semibold sm:flex-1">Workouts</h2>
+          <div className="w-full sm:max-w-64">
             <SearchBar
               value={searchQuery}
               onChange={setSearchQuery}
@@ -110,34 +101,35 @@ export function Body() {
         <ContentWithLoading loading={workoutsLoading} loadingText="Loading workouts...">
           <div className="space-y-6">
             {filteredWorkouts.length === 0 ? (
-              <Card 
-                className="p-8 border-2 border-dashed cursor-pointer hover:border-primary transition-colors text-center"
+              <EmptyStateCard
                 onClick={handleAddNew}
-              >
-                <Plus className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-lg font-medium mb-1">Add your first workout</p>
-                <p className="text-sm text-muted-foreground">Tap to start tracking your fitness</p>
-              </Card>
+                title="Add your first workout"
+                description="Tap to start tracking your fitness"
+              />
             ) : (
               <>
-                {workoutsThisWeek.length > 0 && (
+                {groupedThisWeek.length > 0 && (
                   <section>
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-3">
                       <h3 className="text-sm font-medium text-muted-foreground">This week</h3>
-                      {weekSummary.length > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          {weekSummary.join(', ')}
-                        </span>
-                      )}
                     </div>
-                    <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
-                      {workoutsThisWeek.map((workout) => (
-                        <WorkoutCard
-                          key={workout.id}
-                          workout={workout}
-                          onEdit={handleEdit}
-                          onDelete={setDeleteConfirmId}
-                        />
+                    <div className="space-y-4">
+                      {groupedThisWeek.map(({ date: dateStr, label, workouts: dayWorkouts }) => (
+                        <div key={dateStr} className="rounded-lg border bg-muted/20 p-3">
+                          <h4 className="text-xs font-medium text-muted-foreground mb-2 pl-0.5">
+                            {label}
+                          </h4>
+                          <div className="space-y-2">
+                            {dayWorkouts.map((workout) => (
+                              <WorkoutCard
+                                key={workout.id}
+                                workout={workout}
+                                onEdit={handleEdit}
+                                onDelete={setDeleteConfirmId}
+                              />
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </section>
@@ -166,13 +158,7 @@ export function Body() {
                     ))}
                   </>
                 )}
-                <Card 
-                  className="p-6 border-2 border-dashed cursor-pointer hover:border-primary transition-colors text-center bg-muted/50"
-                  onClick={handleAddNew}
-                >
-                  <Plus className="w-8 h-8 mx-auto text-primary" />
-                  <p className="text-sm font-medium mt-2 text-muted-foreground">Add another workout</p>
-                </Card>
+                <AddAnotherCard onClick={handleAddNew} label="Add another workout" />
               </>
             )}
           </div>

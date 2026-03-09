@@ -1,9 +1,12 @@
+import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useNotifications } from '@/context/NotificationContext';
 import { SettingsSection } from './SettingsSection';
+import { FEATURE_FLAGS } from '@/lib/featureFlags';
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from '@/lib/pushSubscription';
 
 export function NotificationsSection() {
   const {
@@ -13,6 +16,30 @@ export function NotificationsSection() {
     requestPermission,
     testNotification,
   } = useNotifications();
+
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    if (FEATURE_FLAGS.PWA_PUSH_NOTIFICATIONS) {
+      isPushSubscribed().then(setPushEnabled);
+    }
+  }, []);
+
+  const handlePushToggle = async () => {
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+      } else {
+        const sub = await subscribeToPush();
+        setPushEnabled(sub !== null);
+      }
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   return (
     <SettingsSection icon={Bell} title="Notifications" iconColor="text-blue-600">
@@ -154,6 +181,27 @@ export function NotificationsSection() {
                 <Button onClick={testNotification} variant="outline" size="sm">
                   Test Notification
                 </Button>
+
+                {FEATURE_FLAGS.PWA_PUSH_NOTIFICATIONS && (
+                  <div className="pt-4 border-t">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Push Notifications</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Receive notifications even when the app is closed
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handlePushToggle}
+                        disabled={pushLoading}
+                        variant={pushEnabled ? 'destructive' : 'default'}
+                        size="sm"
+                      >
+                        {pushLoading ? 'Loading...' : pushEnabled ? 'Disable' : 'Enable'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </>

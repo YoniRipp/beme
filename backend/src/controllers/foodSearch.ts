@@ -70,6 +70,8 @@ export const lookupOrCreate = asyncHandler(async (req: Request, res: Response) =
     referenceGrams: 100,
     isLiquid: row.is_liquid,
     servingSizesMl: row.serving_sizes_ml ?? null,
+    defaultUnit: row.default_unit ?? null,
+    unitWeightGrams: row.unit_weight_grams != null ? Number(row.unit_weight_grams) : null,
   };
   sendJson(res, payload);
 });

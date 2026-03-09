@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
+  Home,
   Dumbbell,
-  Zap,
+  UtensilsCrossed,
   Target,
   Menu,
   X,
@@ -15,6 +15,9 @@ import {
   ShieldCheck,
   LogOut,
   User,
+  Users,
+  BookOpen,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
@@ -26,33 +29,43 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { VoiceAgentButton } from '../voice/VoiceAgentButton';
+import { QuickAddMenu } from '../shared/QuickAddMenu';
+import { BottomNavigation } from './BottomNavigation';
 
 const ROUTE_TO_TITLE: Record<string, string> = {
-  '/': 'Dashboard',
-  '/body': 'Body',
-  '/energy': 'Energy',
+  '/': 'Home',
+  '/body': 'Workouts',
+  '/energy': 'Food',
   '/goals': 'Goals',
   '/insights': 'Insights',
   '/settings': 'Settings',
+  '/trainer': 'Trainer',
   '/admin': 'Admin',
 };
 
 const SIDEBAR_NAV_BASE = [
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { name: 'Body', path: '/body', icon: Dumbbell },
-  { name: 'Energy', path: '/energy', icon: Zap },
+  { name: 'Home', path: '/', icon: Home },
+  { name: 'Workouts', path: '/body', icon: Dumbbell },
+  { name: 'Food', path: '/energy', icon: UtensilsCrossed },
   { name: 'Goals', path: '/goals', icon: Target },
   { name: 'Insights', path: '/insights', icon: TrendingUp },
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
-function getSidebarNav(isAdmin: boolean) {
-  if (!isAdmin) return SIDEBAR_NAV_BASE;
-  return [...SIDEBAR_NAV_BASE, { name: 'Admin', path: '/admin', icon: ShieldCheck }];
-}
+/** MFP-style bottom nav: 4 items split around a center "+" button */
+const BOTTOM_NAV_ITEMS = [
+  { name: 'Dashboard', path: '/', icon: Home },
+  { name: 'Diary', path: '/energy', icon: BookOpen },
+  { name: 'Goals', path: '/goals', icon: Target },
+  { name: 'More', path: '/settings', icon: MoreHorizontal },
+];
 
-/** Base44-style: first 4 items only (Dashboard, Body, Energy, Goals) */
-const BOTTOM_NAV_ITEMS = 4;
+function getSidebarNav(isAdmin: boolean, isTrainer: boolean) {
+  const nav = [...SIDEBAR_NAV_BASE];
+  if (isTrainer) nav.push({ name: 'Trainer', path: '/trainer', icon: Users });
+  if (isAdmin) nav.push({ name: 'Admin', path: '/admin', icon: ShieldCheck });
+  return nav;
+}
 
 function getPageTitle(pathname: string): string {
   return ROUTE_TO_TITLE[pathname] ?? (pathname.slice(1) || 'Dashboard');
@@ -63,6 +76,7 @@ export function Base44Layout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const { user } = useApp();
   const { logout } = useAuth();
 
@@ -70,7 +84,7 @@ export function Base44Layout() {
     logout();
     navigate('/login', { replace: true });
   };
-  const sidebarNav = useMemo(() => getSidebarNav(user?.role === 'admin'), [user?.role]);
+  const sidebarNav = useMemo(() => getSidebarNav(user?.role === 'admin', user?.role === 'trainer'), [user?.role]);
 
   const pageTitle = getPageTitle(pathname);
 
@@ -118,14 +132,14 @@ export function Base44Layout() {
                 <Leaf className="w-5 h-5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-charcoal">BeMe</h1>
+                <h1 className="text-xl font-bold tracking-tight">BeMe</h1>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-primary font-medium">Life Balance</p>
               </div>
             </Link>
           </div>
 
           <nav className="flex-1 px-3 py-2">
-            <p className="px-3 mb-2 text-[10px] uppercase tracking-[0.15em] text-stone font-semibold">Navigate</p>
+            <p className="px-3 mb-2 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-semibold">Navigate</p>
             <div className="space-y-0.5">
               {sidebarNav.map((item) => {
                 const isActive = pathname === item.path;
@@ -137,7 +151,7 @@ export function Base44Layout() {
                     className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
                       ${isActive
                         ? 'bg-primary/10 text-primary'
-                        : 'text-stone hover:bg-cream-warm/60 hover:text-charcoal'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                       }`}
                   >
                     <div
@@ -157,9 +171,9 @@ export function Base44Layout() {
             </div>
           </nav>
 
-          <div className="p-4 mx-3 mb-3 rounded-2xl bg-gradient-to-br from-cream-warm to-mist/50 border border-border">
-            <p className="text-xs font-medium text-stone">Your wellness journey</p>
-            <p className="text-[10px] text-stone/70 mt-0.5">Every step counts</p>
+          <div className="p-4 mx-3 mb-3 rounded-2xl bg-muted border border-border">
+            <p className="text-xs font-medium text-muted-foreground">Your wellness journey</p>
+            <p className="text-[10px] text-muted-foreground/70 mt-0.5">Every step counts</p>
           </div>
         </div>
       </aside>
@@ -168,31 +182,31 @@ export function Base44Layout() {
       <div className="lg:ml-72 min-h-screen">
         <header
           className={`sticky top-0 z-30 transition-all duration-300
-            ${scrolled ? 'bg-card/80 backdrop-blur-xl shadow-sm border-b border-border' : 'bg-transparent'}`}
+            ${scrolled ? 'bg-white/80 backdrop-blur-xl shadow-sm border-b border-border' : 'bg-transparent'}`}
         >
           <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3 min-h-[4rem]">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setSidebarOpen((o) => !o)}
-                className="lg:hidden p-2 rounded-xl hover:bg-cream-warm transition-colors"
+                className="lg:hidden p-2 rounded-xl hover:bg-muted transition-colors"
                 aria-label="Toggle menu"
               >
                 {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
-              <h2 className="text-lg font-semibold text-charcoal">{pageTitle}</h2>
+              <h2 className="text-lg font-semibold">{pageTitle}</h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-cream-warm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 shrink-0"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 shrink-0"
                   aria-label="Open user menu"
                 >
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                     <User className="w-4 h-4 text-primary" />
                   </div>
-                  <span className="hidden sm:inline text-sm font-medium text-charcoal">{user?.name ?? 'Account'}</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-stone rotate-90" />
+                  <span className="hidden sm:inline text-sm font-medium">{user?.name ?? 'Account'}</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground rotate-90" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-[10rem]">
                   <DropdownMenuItem asChild>
@@ -204,7 +218,7 @@ export function Base44Layout() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleSignOut}
-                    className="flex items-center gap-2 cursor-pointer text-stone focus:text-charcoal"
+                    className="flex items-center gap-2 cursor-pointer text-muted-foreground focus:text-foreground"
                   >
                     <LogOut className="h-4 w-4" />
                     Sign out
@@ -221,37 +235,19 @@ export function Base44Layout() {
           </div>
         </header>
 
-        <main className="px-4 sm:px-6 lg:px-8 pb-24 lg:pb-8 pt-2 animate-fade-up">
+        <main className="px-4 sm:px-6 lg:px-8 pb-28 lg:pb-8 pt-2 animate-fade-up">
           <Outlet />
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-xl border-t border-border z-30 lg:hidden"
-        aria-label="Main navigation"
-      >
-        <div className="flex items-center justify-around px-2 py-1">
-          {sidebarNav.slice(0, BOTTOM_NAV_ITEMS).map((item) => {
-            const isActive = pathname === item.path;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all
-                  ${isActive ? 'text-primary' : 'text-stone'}`}
-              >
-                <div className={`p-1 rounded-lg ${isActive ? 'bg-primary/15' : ''}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] font-medium">{item.name}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+      {/* Mobile bottom nav with center "+" */}
+      <BottomNavigation
+        items={BOTTOM_NAV_ITEMS}
+        currentPath={pathname}
+        onCenterPress={() => setQuickAddOpen(true)}
+      />
 
+      <QuickAddMenu open={quickAddOpen} onOpenChange={setQuickAddOpen} />
       <VoiceAgentButton />
     </div>
   );

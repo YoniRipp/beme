@@ -1,50 +1,201 @@
-# BMe
-
-Full-stack wellness app: body, energy, goals, voice.
-
-## Stack
-- Backend: Node/Express, TypeScript, PostgreSQL, optional Redis
-- Frontend: React 18, Vite, TypeScript, React Query, Tailwind, shadcn/ui
-- Voice: Google Gemini; audio requires Redis + BullMQ
-
-## Commands
-- Backend dev: `cd backend && npm run dev`
-- Frontend dev: `cd frontend && npm run dev`
-- Backend typecheck: `cd backend && npx tsc --noEmit`
-- Frontend typecheck: `cd frontend && npx tsc --noEmit`
-- Frontend tests: `cd frontend && npx vitest run`
-- E2E tests: `cd frontend && npx playwright test`
-
-## Architecture
-- Backend: controllers (src/controllers/) -> services (src/services/) -> models (src/models/)
-- Use asyncHandler wrapper, sendJson/sendError from utils/response
-- Frontend: hooks in src/hooks/, features in src/features/, @/ alias for src/
-- Events: domain events published via src/events/publish.ts
-
-## Conventions
-- ES modules (import/export), not CommonJS
-- Dates stored as YYYY-MM-DD strings
-- API responses use sendJson/sendError helpers
-- All DB access through models, never raw queries in controllers
-
-## Interaction rules
-- ALWAYS ask clarifying questions before starting implementation. Do not assume requirements.
-- When given a vague request, break it into specific questions and present them before writing code.
-- Confirm the scope, affected files, and approach before making changes.
-- If a request could be interpreted multiple ways, ask which interpretation is correct.
-
-## Architecture goals
-This project follows a modular monolith pattern designed for incremental extraction:
-- Each domain (body, energy, goals) can run as a standalone service
-- The main app acts as an API gateway when *_SERVICE_URL env vars are set
-- getPool(context) supports per-domain database URLs (BODY_DATABASE_URL, etc.)
-- Event bus supports memory, Redis/BullMQ, and SQS transports (config-driven)
-- Voice worker can run in-process or separately (SEPARATE_WORKERS=true)
-- When adding new features, keep domain boundaries clean: own model, service, controller, events
-- Never create cross-domain direct imports between service layers; use events for cross-domain communication
-
-## Env vars needed
-- DATABASE_URL, GEMINI_API_KEY, JWT_SECRET
-- Optional: REDIS_URL (voice, rate limiting, events)
-
-@README.md
+# Claude Project Context
+## Project Overview
+This project is a mobile-oriented fitness tracking application.
+The application allows users to:
+- track food and calories
+- log workouts
+- manage exercises
+- record portions and nutritional values
+- browse foods and workouts
+The project already contains working functionality.
+The goal of future modifications is to **improve the user interface and user experience** so the application feels like a **real production mobile app** instead of a prototype.
+---
+# Critical Development Rules
+When modifying this project you MUST follow these rules:
+1. Never break existing functionality.
+2. Never remove working features.
+3. Do not rewrite backend logic unless absolutely necessary.
+4. Avoid changing APIs unless required.
+5. Focus primarily on UI, UX, and bug fixing.
+This project should evolve gradually while preserving stability.
+---
+# Product Vision
+The final product should feel like a polished mobile fitness application similar to:
+- MyFitnessPal
+- Strong App
+- Apple Fitness
+- Nike Training Club
+The UI should feel:
+- modern
+- simple
+- fast
+- mobile-first
+- production ready
+Avoid generic AI-generated layouts.
+Design decisions should resemble real consumer fitness apps used by millions of users.
+---
+# Mobile First Design Principles
+This application should behave like a **native mobile application**.
+Important design principles:
+- vertical scrolling
+- clear sections
+- large touch targets
+- comfortable spacing
+- readable typography
+- minimal clutter
+Avoid desktop-style dashboards.
+---
+# Layout System
+The interface should use **card-based layouts**.
+Each major item should appear inside a card:
+- Food items
+- Workouts
+- Exercises
+Cards should have:
+- rounded corners
+- soft shadows
+- clear spacing
+- readable text hierarchy
+---
+# Spacing System
+Use consistent spacing.
+Spacing scale:
+4px
+8px
+12px
+16px
+24px
+32px
+Avoid cramped UI elements.
+Always maintain padding from screen edges.
+---
+# Typography Hierarchy
+Use clear typography levels:
+Primary Title
+Section Title
+Item Title
+Body Text
+Secondary Text
+Food names and workout names should be visually prominent.
+Calories and sets/reps should be secondary but readable.
+---
+# Food Tracking UI
+Food items should appear as **Food Cards**.
+Each food card should include:
+- food image
+- food name
+- portion size
+- calorie count
+Example layout:
+[Food Image]
+Chicken Breast
+200g
+330 kcal
+If no image exists, display a **food placeholder image**.
+Calories should be visually emphasized.
+Food names should be larger than other text.
+---
+# Workout Tracking UI
+Workouts should appear as **Workout Cards**.
+Each workout card should contain:
+- workout name
+- list of exercises
+- sets and reps
+Example structure:
+Push Day
+Bench Press
+4 x 8
+Incline Dumbbell Press
+3 x 10
+Exercises should be clearly separated and easy to scan.
+---
+# Exercise Items
+Each exercise should display:
+- exercise name
+- sets
+- reps
+- optional exercise image or icon
+Example:
+Bench Press
+4 sets × 8 reps
+If images exist, display them consistently.
+If not, use an exercise placeholder.
+---
+# Image Handling
+The application should support images for:
+- foods
+- exercises
+Image rules:
+- square images
+- rounded corners
+- consistent size
+- optimized for mobile
+If images are missing, use placeholders.
+Example placeholders:
+food-placeholder.png
+exercise-placeholder.png
+---
+# Navigation
+The app should support **mobile-friendly navigation**.
+Preferred layout:
+Bottom navigation bar.
+Example:
+Home | Food | Workouts | Profile
+Navigation rules:
+- fixed to bottom
+- thumb reachable
+- icon + label
+---
+# UI Bug Fixing
+When modifying UI, also fix common issues such as:
+- broken alignment
+- text overflow
+- inconsistent spacing
+- elements touching screen edges
+- buttons too small for mobile
+- poor responsiveness
+---
+# Component Architecture
+Prefer reusable UI components.
+Recommended components:
+FoodCard
+WorkoutCard
+ExerciseItem
+BottomNavigation
+ImagePlaceholder
+Reusable components help maintain UI consistency.
+---
+# Performance
+UI changes should not degrade performance.
+Avoid:
+- unnecessary re-renders
+- heavy layouts
+- excessive DOM nesting
+Prefer clean, efficient components.
+---
+# Code Style
+Follow consistent structure.
+Prefer:
+- clear component separation
+- readable code
+- reusable UI patterns
+- small focused components
+Avoid large monolithic UI components.
+---
+# When Improving UI
+Before making large UI changes:
+1. Analyze the current layout
+2. Identify UX problems
+3. Propose improvements
+4. Implement the improvements
+Avoid random UI modifications.
+Changes should be deliberate and structured.
+---
+# Expected Result
+After improvements the application should feel like:
+- a polished mobile fitness app
+- visually modern
+- easy to use
+- production ready
+- consistent across screens
+Users should feel they are using a real product, not a prototype.

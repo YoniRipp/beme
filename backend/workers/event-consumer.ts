@@ -8,11 +8,13 @@ import { config } from '../src/config/index.js';
 import { subscribe, startEventsWorker, closeEventsBus } from '../src/events/bus.js';
 import { registerUserActivityLogConsumer } from '../src/events/consumers/userActivityLog.js';
 import { registerStatsAggregatorConsumer } from '../src/events/consumers/statsAggregator.js';
+import { registerPushNotifierConsumer } from '../src/events/consumers/pushNotifier.js';
 import { getRedisClient, closeRedis } from '../src/redis/client.js';
 import { logger } from '../src/lib/logger.js';
 
 registerUserActivityLogConsumer(subscribe);
 registerStatsAggregatorConsumer(subscribe);
+registerPushNotifierConsumer(subscribe);
 
 const worker = startEventsWorker();
 if (!worker) {

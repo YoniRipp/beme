@@ -3,6 +3,7 @@
  * Exports async createApp() to support optional Redis-backed rate limiting.
  */
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -16,16 +17,18 @@ import { errorHandler } from './src/middleware/errorHandler.js';
 import { requestIdMiddleware } from './src/middleware/requestId.js';
 import cookieParser from 'cookie-parser';
 import { logger } from './src/lib/logger.js';
+import { metricsMiddleware } from './src/middleware/metricsMiddleware.js';
+import monitoringRouter from './src/routes/monitoring.js';
 
 const apiLimiterBase = {
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: parseInt(process.env.API_RATE_LIMIT_MAX || '200', 10),
   message: { error: 'Too many requests, please try again later.' },
 };
 
 const authLimiterBase = {
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: parseInt(process.env.AUTH_RATE_LIMIT_MAX || '10', 10),
   message: { error: 'Too many login attempts, please try again later.' },
 };
 
@@ -66,6 +69,7 @@ export async function createApp() {
   app.use(cors(corsOptions));
   logger.info({ corsOrigin: config.corsOrigin, nodeEnv: process.env.NODE_ENV }, 'CORS configured');
   app.use(helmet({ crossOriginOpenerPolicy: false }));
+  app.use(compression());
   app.use(cookieParser());
 
   // Lemon Squeezy webhook needs raw body for HMAC signature verification — mount BEFORE express.json()
@@ -76,6 +80,7 @@ export async function createApp() {
 
   app.use(express.json({ limit: '10mb' }));
   app.use(requestIdMiddleware);
+  app.use(metricsMiddleware);
 
   // Health (not rate-limited)
   app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
@@ -104,12 +109,16 @@ export async function createApp() {
     res.status(200).json({ status: 'ok' });
   });
 
+  // Monitoring routes (metrics, client-logs, queue health)
+  app.use(monitoringRouter);
+
   // Auth routes: stricter rate limit (10 per 15 min)
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', authLimiter);
   app.use('/api/auth/google', authLimiter);
   app.use('/api/auth/facebook', authLimiter);
   app.use('/api/auth/twitter', authLimiter);
+  app.use('/api/auth/forgot-password', authLimiter);
 
   // Request logging (skip health checks to reduce noise; include requestId for tracing)
   app.use((req: import('express').Request & { id?: string }, res, next) => {

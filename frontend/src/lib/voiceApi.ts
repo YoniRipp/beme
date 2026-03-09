@@ -4,12 +4,20 @@ import { parseVoiceAction, type VoiceAction } from '@/schemas/voice';
 
 export type { VoiceAction };
 
-function getUserTimezone(): string {
+export function getUserTimezone(): string {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   } catch {
-    return '';
+    return 'UTC';
   }
+}
+
+export function getPreferredAudioMimeType(): string {
+  if (typeof MediaRecorder !== 'undefined') {
+    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
+    if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm';
+  }
+  return 'audio/mp4';
 }
 
 export interface VoiceExecuteResult {

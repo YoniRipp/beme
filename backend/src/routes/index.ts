@@ -17,12 +17,16 @@ import searchRouter from './search.js';
 import insightsRouter from './insights.js';
 import uploadsRouter from './uploads.js';
 import subscriptionRouter from './subscription.js';
+import pushRouter from './push.js';
+import trainerRouter from './trainer.js';
 
 const router = Router();
 
 router.use(authRouter);
 router.use(adminRouter);
 router.use(subscriptionRouter);
+router.use(pushRouter);
+router.use(trainerRouter);
 router.use(usersRouter);
 if (!config.bodyServiceUrl) router.use(workoutRouter);
 if (!config.energyServiceUrl) {

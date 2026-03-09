@@ -1,24 +1,11 @@
-import { useState, useEffect } from 'react';
 import { WifiOff, Loader2 } from 'lucide-react';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
+import { useSyncQueue } from '@/lib/syncManager';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 
 export function OfflineIndicator() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  // TODO: Wire this to sync queue when implementing offline sync (PR #3)
-  const [pendingCount] = useState(0);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  const isOnline = useOnlineStatus();
+  const { pendingCount } = useSyncQueue();
 
   // Only show if PWA offline sync is enabled
   if (!FEATURE_FLAGS.PWA_OFFLINE_SYNC) {
@@ -46,23 +33,4 @@ export function OfflineIndicator() {
       )}
     </div>
   );
-}
-
-export function useOnlineStatus(): boolean {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  return isOnline;
 }

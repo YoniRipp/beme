@@ -13,9 +13,8 @@ export function registerServiceWorker(): void {
     updateSW = registerSW({
       immediate: true,
       onNeedRefresh() {
-        if (confirm('New content available. Reload to update?')) {
-          updateSW?.(true);
-        }
+        // Dispatch event for UI to show a mobile-friendly update banner
+        window.dispatchEvent(new CustomEvent('pwa:update-available'));
       },
       onOfflineReady() {
         console.log('[PWA] App ready to work offline');
@@ -28,6 +27,10 @@ export function registerServiceWorker(): void {
       },
     });
   }
+}
+
+export function applyUpdate(): void {
+  updateSW?.(true);
 }
 
 export function unregisterServiceWorker(): Promise<void> {

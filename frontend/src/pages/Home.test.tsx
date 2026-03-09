@@ -78,17 +78,17 @@ describe('Home Page', () => {
 
   it('renders home page with progress cards', () => {
     render(<Home />, { wrapper });
-    expect(screen.getByText(/workouts/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/workouts/i).length).toBeGreaterThanOrEqual(1);
   });
 
 it('displays dashboard stats section', () => {
     render(<Home />, { wrapper });
-    expect(screen.getByText(/workouts/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/workouts/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('displays calories and avg sleep in progress cards', () => {
     render(<Home />, { wrapper });
-    expect(screen.getByText(/calories/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/calories/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/avg sleep/i)).toBeInTheDocument();
   });
 

@@ -17,11 +17,16 @@ Response shape (use these exact keys):
   "carbs": number (g),
   "fat": number (g),
   "is_liquid": boolean (true for drinks: soda, juice, coffee, milk, etc.),
-  "serving_sizes_ml": { "can": number, "bottle": number, "glass": number } in ml, only for liquids; omit or null for solids
+  "serving_sizes_ml": { "can": number, "bottle": number, "glass": number } in ml, only for liquids; omit or null for solids,
+  "default_unit": string or null (for foods naturally counted in units like eggs, slices, cans — e.g. "egg", "slice", "can", "tortilla". null for bulk foods like chicken, rice, etc.),
+  "unit_weight_grams": number or null (grams per 1 unit when default_unit is set — e.g. 50 for an egg, 30 for a bread slice. null when default_unit is null),
+  "search_aliases": array of strings or null (common informal names, abbreviations, or regional names for this food — e.g. ["coke zero", "zero"] for "Coca-Cola Zero Sugar". null if no common aliases)
 }
 
 Rules:
 - One object only. No array, no extra text.
+- For countable foods (eggs, bread slices, tortillas, meatballs, dumplings, etc.) set default_unit and unit_weight_grams. For bulk/weighed foods (chicken breast, rice, etc.) leave both null.
+- For branded or commonly nicknamed foods, include search_aliases with common names people use. For generic foods, set search_aliases to null.
 - Include "cooked" or "uncooked" in the name when relevant. Use the word "uncooked" only (not "raw") for consistency. Default to cooked: e.g. "chicken breast" or "rice" → "Chicken breast, cooked" or "Rice, cooked". Only if the user says "uncooked" or "raw" use ", uncooked" (e.g. "Rice, uncooked"). For drinks, no need to add.
 - For drinks (soda, juice, coffee, tea, milk, etc.) set is_liquid true and provide per 100ml values; include serving_sizes_ml with typical can (e.g. 330), bottle (e.g. 500), glass (e.g. 250).
 - For solid foods set is_liquid false; serving_sizes_ml can be null or omitted.
@@ -42,6 +47,9 @@ const GeminiFoodSchema = z.object({
     })
     .nullable()
     .optional(),
+  default_unit: z.string().min(1).nullable().optional(),
+  unit_weight_grams: z.number().min(1).max(5000).nullable().optional(),
+  search_aliases: z.array(z.string().min(1)).nullable().optional(),
 });
 
 function extractJson(text: unknown) {
@@ -69,9 +77,10 @@ function extractJson(text: unknown) {
 async function findExistingByName(pool: { query: (sql: string, params: unknown[]) => Promise<{ rows: Record<string, unknown>[] }> }, name: string) {
   const normalized = name.toLowerCase().trim().replace(/\s+/g, ' ');
   const result = await pool.query(
-    `SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml
+    `SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, default_unit, unit_weight_grams
      FROM foods
      WHERE lower(trim(regexp_replace(name, '\\s+', ' ', 'g'))) = $1
+        OR $1 = ANY(search_aliases)
      LIMIT 1`,
     [normalized]
   );
@@ -133,6 +142,8 @@ export async function lookupAndCreateFood(pool: { query: (sql: string, params: u
       fat: Number(existing.fat),
       is_liquid: Boolean(existing.is_liquid),
       serving_sizes_ml: existing.serving_sizes_ml ?? null,
+      default_unit: (existing.default_unit as string) ?? null,
+      unit_weight_grams: existing.unit_weight_grams != null ? Number(existing.unit_weight_grams) : null,
     };
   }
 
@@ -141,9 +152,9 @@ export async function lookupAndCreateFood(pool: { query: (sql: string, params: u
     : null;
 
   const insertResult = await pool.query(
-    `INSERT INTO foods (name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)
-     RETURNING id, name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml`,
+    `INSERT INTO foods (name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, default_unit, unit_weight_grams, search_aliases)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12::text[])
+     RETURNING id, name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, default_unit, unit_weight_grams`,
     [
       nameForDb,
       nameForDb,  // common_name = name for Gemini foods (already clean)
@@ -154,6 +165,9 @@ export async function lookupAndCreateFood(pool: { query: (sql: string, params: u
       data.is_liquid,
       servingSizesMl,
       preparation,
+      data.default_unit ?? null,
+      data.unit_weight_grams ?? null,
+      data.search_aliases ?? null,
     ]
   );
   const row = insertResult.rows[0];
@@ -167,5 +181,7 @@ export async function lookupAndCreateFood(pool: { query: (sql: string, params: u
     fat: Number(row.fat),
     is_liquid: Boolean(row.is_liquid),
     serving_sizes_ml: row.serving_sizes_ml ?? null,
+    default_unit: (row.default_unit as string) ?? null,
+    unit_weight_grams: row.unit_weight_grams != null ? Number(row.unit_weight_grams) : null,
   };
 }

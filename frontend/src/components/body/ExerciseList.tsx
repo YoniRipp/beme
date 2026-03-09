@@ -1,4 +1,5 @@
 import { Exercise } from '@/types/workout';
+import { ImagePlaceholder } from '@/components/shared/ImagePlaceholder';
 
 interface ExerciseListProps {
   exercises: Exercise[];
@@ -14,7 +15,8 @@ export function ExerciseList({ exercises }: ExerciseListProps) {
   return (
     <div className="space-y-2">
       {exercises.map((exercise, idx) => (
-        <div key={idx} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+        <div key={idx} className="flex items-center gap-3 p-2 bg-muted rounded-lg">
+          <ImagePlaceholder type="exercise" size="sm" />
           <div>
             <p className="font-medium">{exercise.name}</p>
             <p className="text-sm text-muted-foreground">

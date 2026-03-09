@@ -20,6 +20,7 @@ describe('WorkoutCard', () => {
     render(<WorkoutCard workout={mockWorkout} />);
     expect(screen.getByText('Chest Day')).toBeInTheDocument();
     expect(screen.getByText('strength')).toBeInTheDocument();
+    expect(screen.getByText(/Bench Press/)).toBeInTheDocument();
   });
 
   it('calls onEdit when clicked', async () => {

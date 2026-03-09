@@ -6,8 +6,11 @@ import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { config } from '../config/index.js';
 import { getPool } from '../db/pool.js';
+import { kvGet } from '../lib/keyValueStore.js';
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+const TOKEN_BLOCKLIST_PREFIX = 'blocked:';
+
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : req.cookies?.token;
   if (!token) {
@@ -23,7 +26,15 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 
   try {
-    const payload = jwt.verify(token, config.jwtSecret!) as { sub?: string; email?: string; role?: string };
+    const payload = jwt.verify(token, config.jwtSecret!, { algorithms: ['HS256'] }) as { sub?: string; email?: string; role?: string };
+
+    // Check token blocklist (SEC3: revoked tokens on logout/password-reset)
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const blocked = await kvGet(TOKEN_BLOCKLIST_PREFIX + tokenHash);
+    if (blocked) {
+      return res.status(401).json({ error: 'Token has been revoked' });
+    }
+
     req.user = {
       id: payload.sub!,
       email: payload.email!,
@@ -45,6 +56,39 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+export function requireTrainer(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (req.user.role !== 'trainer' && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Trainer access required' });
+  }
+  next();
+}
+
+export async function resolveTrainerClientUserId(req: Request, res: Response, next: NextFunction) {
+  const clientId = req.params.clientId;
+  if (!clientId) {
+    return res.status(400).json({ error: 'Client ID required' });
+  }
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(clientId)) {
+    return res.status(400).json({ error: 'Invalid client ID format' });
+  }
+  try {
+    // Dynamic import to avoid circular dependency
+    const { isClientOfTrainer } = await import('../models/trainerClient.js');
+    const isClient = await isClientOfTrainer(req.user!.id, clientId);
+    if (!isClient && req.user!.role !== 'admin') {
+      return res.status(403).json({ error: 'Not your client' });
+    }
+    req.effectiveUserId = clientId;
+    next();
+  } catch (e) {
+    next(e);
+  }
+}
+
 /**
  * Synchronous version for backwards compatibility. Prefer getEffectiveUserIdAsync in controllers
  * when admin userId override may be used, so the target user can be validated.
@@ -62,6 +106,11 @@ export async function resolveEffectiveUserId(req: Request, res: Response, next: 
   if (req.user!.role !== 'admin' || !adminUserId) {
     req.effectiveUserId = req.user!.id;
     return next();
+  }
+  // Validate UUID format to prevent invalid DB queries
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (typeof adminUserId !== 'string' || !uuidRegex.test(adminUserId)) {
+    return res.status(400).json({ error: 'Invalid userId format' });
   }
   try {
     const pool = getPool();

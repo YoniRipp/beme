@@ -154,3 +154,27 @@ export interface ApiErrorResponse {
     details?: unknown;
   };
 }
+
+// ─── Trainer ───────────────────────────────────────────────
+export type TrainerClientStatus = 'pending' | 'active' | 'removed';
+export type TrainerInvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+
+export interface TrainerClient {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  clientName: string;
+  clientEmail: string;
+  status: TrainerClientStatus;
+  createdAt: string;
+}
+
+export interface TrainerInvitation {
+  id: string;
+  trainerId: string;
+  email?: string;
+  inviteCode?: string;
+  status: TrainerInvitationStatus;
+  expiresAt: string;
+  createdAt: string;
+}

@@ -17,7 +17,7 @@ const VALUES = [
   {
     icon: BrainCircuit,
     title: 'AI That Helps, Not Hypes',
-    description: 'Our AI gives you practical insights based on your real data — not generic advice. It connects patterns across your health, finances, and habits to surface what actually matters.',
+    description: 'Our AI gives you practical insights based on your real data — not generic advice. It connects patterns across your health and habits to surface what actually matters.',
   },
 ];
 
@@ -36,14 +36,14 @@ export function About() {
       <section className="mx-auto max-w-3xl px-6 pb-16">
         <h2 className="text-2xl font-bold tracking-tight">Our Mission</h2>
         <p className="mt-4 text-muted-foreground leading-relaxed">
-          BeMe was born from a simple frustration: tracking health, finances, and goals meant juggling
+          BeMe was born from a simple frustration: tracking health and goals meant juggling
           multiple apps that never talked to each other. We built BeMe to be the single place where all
-          your life data lives — and where AI connects the dots to give you insights no single-purpose
+          your wellness data lives — and where AI connects the dots to give you insights no single-purpose
           app ever could.
         </p>
         <p className="mt-4 text-muted-foreground leading-relaxed">
-          Whether you're monitoring your spending habits, logging workouts, counting macros, or planning
-          your week, BeMe brings it all together. And with voice-first input, tracking takes seconds
+          Whether you're logging workouts, counting macros, tracking sleep, or setting goals,
+          BeMe brings it all together. And with voice-first input, tracking takes seconds
           instead of minutes.
         </p>
       </section>
@@ -70,16 +70,14 @@ export function About() {
       <section className="mx-auto max-w-3xl px-6 py-16">
         <h2 className="text-2xl font-bold tracking-tight">The Product</h2>
         <p className="mt-4 text-muted-foreground leading-relaxed">
-          BeMe covers six life domains: <strong>Money</strong> (income & expense tracking),{' '}
-          <strong>Body</strong> (workouts & exercise logging), <strong>Energy</strong> (nutrition,
-          sleep & wellness), <strong>Schedule</strong> (daily planning), <strong>Goals</strong>{' '}
-          (measurable targets), and <strong>Groups</strong> (household & team management). Every
-          domain supports voice input powered by Google Gemini AI.
+          BeMe covers three wellness domains: <strong>Body</strong> (workouts & exercise logging),{' '}
+          <strong>Energy</strong> (nutrition, sleep & wellness), and <strong>Goals</strong>{' '}
+          (measurable targets). Every domain supports voice input powered by Google Gemini AI.
         </p>
         <p className="mt-4 text-muted-foreground leading-relaxed">
           Pro subscribers get AI-powered insights that connect patterns across all domains — like
-          how your sleep quality affects your workout performance, or how your spending habits shift
-          with your energy levels.
+          how your sleep quality affects your workout performance, or how your nutrition choices
+          impact your energy levels.
         </p>
         <div className="mt-6">
           <Link to="/welcome#features">

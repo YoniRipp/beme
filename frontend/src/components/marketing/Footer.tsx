@@ -43,7 +43,7 @@ export function Footer() {
               </div>
             </div>
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Track money, body, energy, and goals in one place.
+              Track body, energy, and goals in one place.
             </p>
           </div>
 

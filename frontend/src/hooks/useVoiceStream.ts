@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { getVoiceStreamUrl, parseVoiceResult, type VoiceUnderstandResult } from '@/lib/voiceApi';
+import { getVoiceStreamUrl, parseVoiceResult, getUserTimezone, getPreferredAudioMimeType, type VoiceUnderstandResult } from '@/lib/voiceApi';
 import { toLocalDateString } from '@/lib/dateRanges';
 import { getToken } from '@/core/api/client';
 
@@ -18,13 +18,6 @@ function isMediaRecorderSupported(): boolean {
   return typeof window !== 'undefined' && !!window.MediaRecorder;
 }
 
-function getUserTimezone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-  } catch {
-    return '';
-  }
-}
 
 /**
  * Voice streaming hook using WebSocket + MediaRecorder.start(timeslice).
@@ -94,11 +87,7 @@ export function useVoiceStream(): UseVoiceStreamReturn {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     streamRef.current = stream;
 
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : 'audio/mp4';
+    const mimeType = getPreferredAudioMimeType();
 
     // Open WebSocket
     const ws = new WebSocket(wsUrl);

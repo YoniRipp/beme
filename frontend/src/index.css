@@ -9,21 +9,21 @@
 
 @layer base {
   :root {
-    /* base44 palette (hex ref: sage #7C9A82, cream #FAFAF7, charcoal #2D3436, terracotta #C67B5C, gold #C4A962, stone #636E72, mist #DFE6E9, cream-warm #F5F0E8, border #E8E5DF) */
+    /* Brand palette — sage green primary, clean white backgrounds */
     --sage: 138 15% 54%;
     --sage-light: 138 20% 68%;
     --sage-dark: 130 16% 42%;
-    --cream: 60 33% 98%;
-    --cream-warm: 36 33% 93%;
+    --cream: 0 0% 100%;
+    --cream-warm: 220 14% 96%;
     --terracotta: 17 48% 60%;
     --terracotta-light: 18 65% 75%;
     --gold: 43 44% 58%;
-    --charcoal: 195 9% 18%;
-    --stone: 195 7% 42%;
-    --mist: 200 15% 91%;
-    --border-base44: 36 15% 90%;
-    /* Semantic tokens mapped to base44 */
-    --background: var(--cream);
+    --charcoal: 220 13% 18%;
+    --stone: 220 8% 46%;
+    --mist: 220 14% 96%;
+    --border-base44: 220 13% 91%;
+    /* Semantic tokens — clean MFP-inspired with sage accent */
+    --background: 0 0% 100%;
     --foreground: var(--charcoal);
     --card: 0 0% 100%;
     --card-foreground: var(--charcoal);
@@ -31,33 +31,33 @@
     --popover-foreground: var(--charcoal);
     --primary: var(--sage-dark);
     --primary-foreground: 0 0% 100%;
-    --secondary: var(--cream-warm);
+    --secondary: 220 14% 96%;
     --secondary-foreground: var(--charcoal);
-    --muted: var(--cream-warm);
+    --muted: 220 14% 96%;
     --muted-foreground: var(--stone);
-    --accent: var(--cream-warm);
+    --accent: 220 14% 96%;
     --accent-foreground: var(--charcoal);
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: var(--border-base44);
-    --input: var(--border-base44);
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
     --ring: var(--charcoal);
     --radius: 0.5rem;
-    /* Sidebar (base44) */
+    /* Sidebar */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: var(--charcoal);
     --sidebar-primary: var(--sage-dark);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: var(--cream-warm);
+    --sidebar-accent: 220 14% 96%;
     --sidebar-accent-foreground: var(--charcoal);
-    --sidebar-border: var(--border-base44);
+    --sidebar-border: 220 13% 91%;
     --sidebar-ring: var(--charcoal);
     /* Chart */
     --chart-1: 138 15% 54%;
     --chart-2: 17 48% 60%;
     --chart-3: 43 44% 58%;
-    --chart-4: 195 7% 42%;
-    --chart-5: 200 15% 91%;
+    --chart-4: 220 8% 46%;
+    --chart-5: 220 14% 96%;
   }
 
 }

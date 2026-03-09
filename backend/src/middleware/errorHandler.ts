@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { AppError, type ErrorCode } from '../errors.js';
 import { logger } from '../lib/logger.js';
+import { recordError } from '../lib/metrics.js';
 
 /**
  * Wraps async route handlers to forward errors to Express error middleware.
@@ -24,6 +25,7 @@ export function errorHandler(err: Error & { code?: string; constraint?: string }
 
   // Domain errors (AppError subclasses)
   if (err instanceof AppError) {
+    recordError(err.code);
     return res.status(err.statusCode).json({
       error: {
         code: err.code,
@@ -37,6 +39,7 @@ export function errorHandler(err: Error & { code?: string; constraint?: string }
   if (err?.code === '23505') {
     const constraint = err?.constraint ?? '';
     const message = constraint.includes('email') ? 'Email already registered' : 'A record with this value already exists';
+    recordError('CONFLICT');
     return res.status(409).json({
       error: {
         code: 'CONFLICT' as ErrorCode,
@@ -48,6 +51,7 @@ export function errorHandler(err: Error & { code?: string; constraint?: string }
   // Unhandled errors
   const ref = `ERR-${Date.now().toString(36).toUpperCase()}`;
   const reqWithId = req as Request & { id?: string };
+  recordError('INTERNAL_ERROR');
   logger.error({ err, ref, requestId: reqWithId?.id }, 'Unhandled error');
 
   const message = process.env.NODE_ENV === 'production'

@@ -36,14 +36,14 @@ describe('Energy Page', () => {
   it('renders energy page', async () => {
     render(<Energy />, { wrapper });
     await waitFor(() => {
-      expect(screen.getByText(/calorie balance/i)).toBeInTheDocument();
+      expect(screen.getByText(/eaten/i)).toBeInTheDocument();
     });
   });
 
-  it('shows calorie balance section', async () => {
+  it('shows calorie progress section', async () => {
     render(<Energy />, { wrapper });
     await waitFor(() => {
-      expect(screen.getByText(/calorie balance/i)).toBeInTheDocument();
+      expect(screen.getByText(/remaining of/i)).toBeInTheDocument();
     });
   });
 

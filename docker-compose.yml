@@ -24,11 +24,17 @@ services:
       - backend/.env
     environment:
       - PORT=3000
-      - NODE_ENV=production
+      - NODE_ENV=development
       - CORS_ORIGIN=http://localhost:5173
       - REDIS_URL=redis://redis:6379
     depends_on:
       - redis
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     # Uncomment if using a Postgres service in compose:
     # depends_on:
     #   - db

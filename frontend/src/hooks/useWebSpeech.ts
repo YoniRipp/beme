@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { submitVoiceAudio, pollForVoiceResult, blobToBase64, type VoiceUnderstandResult } from '@/lib/voiceApi';
+import { submitVoiceAudio, pollForVoiceResult, blobToBase64, getPreferredAudioMimeType, type VoiceUnderstandResult } from '@/lib/voiceApi';
 
 interface UseWebSpeechOptions {
   language?: string;
@@ -83,11 +83,7 @@ export function useWebSpeech(options: UseWebSpeechOptions = {}): UseWebSpeechRet
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : 'audio/mp4';
+      const mimeType = getPreferredAudioMimeType();
 
       const recorder = new MediaRecorder(stream, { mimeType });
 

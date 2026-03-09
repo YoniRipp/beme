@@ -72,6 +72,9 @@ const configSchema = z.object({
 const PORT = process.env.PORT;
 const DATABASE_URL = process.env.DATABASE_URL;
 const JWT_SECRET = process.env.JWT_SECRET || (isProduction ? null : 'dev-secret-change-in-production');
+if (JWT_SECRET === 'dev-secret-change-in-production') {
+  logger.warn('JWT_SECRET is using development default; set a real secret for production');
+}
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || process.env.CORS_ORIGIN;
 const CORS_ORIGIN = process.env.CORS_ORIGIN != null && process.env.CORS_ORIGIN !== ''
   ? process.env.CORS_ORIGIN
@@ -80,7 +83,7 @@ if (isProduction && (CORS_ORIGIN === true || CORS_ORIGIN === 'true')) {
   throw new Error('CORS_ORIGIN must be an explicit origin in production, not true');
 }
 if (isProduction && !process.env.CORS_ORIGIN) {
-  logger.warn('CORS_ORIGIN not set in production; using FRONTEND_ORIGIN. Set CORS_ORIGIN explicitly for security.');
+  throw new Error('CORS_ORIGIN must be explicitly set in production for security.');
 }
 
 const rawConfig = {

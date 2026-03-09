@@ -4,7 +4,8 @@ import { GoalCard } from '@/components/goals/GoalCard';
 import { GoalModal } from '@/components/goals/GoalModal';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
+import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
+import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import type { Goal } from '@/types/goals';
 
 export function Goals() {
@@ -37,32 +38,26 @@ export function Goals() {
           <ContentWithLoading loading={goalsLoading} loadingText="Loading goals..." error={goalsError}>
             <div className="space-y-3">
               {goals.length === 0 ? (
-                <Card
-                  className="p-8 border-2 border-dashed border-border cursor-pointer hover:border-primary transition-colors text-center"
+                <EmptyStateCard
                   onClick={() => {
                     setEditingGoal(undefined);
                     setGoalModalOpen(true);
                   }}
-                >
-                  <Plus className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-lg font-medium mb-1">Add your first goal</p>
-                  <p className="text-sm text-muted-foreground">Tap to track your progress</p>
-                </Card>
+                  title="Add your first goal"
+                  description="Tap to track your progress"
+                />
               ) : (
                 <>
                   {goals.map((goal) => (
                     <GoalCard key={goal.id} goal={goal} onEdit={handleGoalEdit} />
                   ))}
-                  <Card
-                    className="p-6 border-2 border-dashed border-border cursor-pointer hover:border-primary transition-colors text-center bg-muted"
+                  <AddAnotherCard
                     onClick={() => {
                       setEditingGoal(undefined);
                       setGoalModalOpen(true);
                     }}
-                  >
-                    <Plus className="w-8 h-8 mx-auto text-primary" />
-                    <p className="text-sm font-medium mt-2 text-muted-foreground">Add another goal</p>
-                  </Card>
+                    label="Add another goal"
+                  />
                 </>
               )}
             </div>
