@@ -28,7 +28,6 @@ function MacroRing({
 }) {
   const pct = goal > 0 ? Math.min(current / goal, 1) : 0;
   const offset = CIRCUMFERENCE * (1 - pct);
-  const remaining = Math.max(goal - current, 0);
 
   return (
     <div className="flex flex-col items-center gap-1 flex-1">
@@ -58,7 +57,6 @@ function MacroRing({
           <span className="text-[10px] text-muted-foreground leading-none mt-0.5">/{goal}g</span>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">{Math.round(remaining)}g left</p>
     </div>
   );
 }

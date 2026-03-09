@@ -32,5 +32,7 @@ export function useMacroGoals() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   }, []);
 
-  return { macroGoals: goals, setMacroGoals: setGoals };
+  const calorieGoal = goals.carbs * 4 + goals.fat * 9 + goals.protein * 4;
+
+  return { macroGoals: goals, setMacroGoals: setGoals, calorieGoal };
 }

@@ -77,6 +77,14 @@ export function MacroGoalModal({ open, onOpenChange, goals, onSave }: MacroGoalM
               onChange={(e) => setProtein(parseInt(e.target.value, 10) || 0)}
             />
           </div>
+          <div className="pt-2 border-t">
+            <p className="text-sm text-muted-foreground">
+              Calorie goal:{' '}
+              <span className="font-semibold text-foreground">
+                {Math.max(1, carbs) * 4 + Math.max(1, fat) * 9 + Math.max(1, protein) * 4} cal
+              </span>
+            </p>
+          </div>
         </div>
         <DialogFooter className="mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

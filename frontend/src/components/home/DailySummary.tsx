@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useEnergy } from '@/hooks/useEnergy';
-import { useGoals } from '@/hooks/useGoals';
+import { useMacroGoals } from '@/hooks/useMacroGoals';
 import { Card, CardContent } from '@/components/ui/card';
 import { isSameDay } from 'date-fns';
-import { Flame, Beef, Wheat, Droplets } from 'lucide-react';
+import { Beef, Wheat, Droplets } from 'lucide-react';
 
 function MacroBar({ label, current, goal, color, icon }: {
   label: string;
@@ -78,7 +78,7 @@ function CalorieRing({ consumed, goal }: { consumed: number; goal: number }) {
 
 export function DailySummary() {
   const { foodEntries } = useEnergy();
-  const { goals } = useGoals();
+  const { calorieGoal: macroCalorieGoal } = useMacroGoals();
 
   const today = new Date();
 
@@ -101,13 +101,8 @@ export function DailySummary() {
     [todayEntries]
   );
 
-  const calorieGoal = useMemo(
-    () => goals.find((g) => g.type === 'calories' && g.period === 'daily'),
-    [goals]
-  );
-
   // Only show if there's something to display
-  if (todayEntries.length === 0 && !calorieGoal) return null;
+  if (todayEntries.length === 0) return null;
 
   return (
     <Card>
@@ -116,15 +111,7 @@ export function DailySummary() {
           Today's Nutrition
         </p>
         <div className="flex items-start gap-4">
-          {calorieGoal ? (
-            <CalorieRing consumed={Math.round(totals.calories)} goal={calorieGoal.target} />
-          ) : (
-            <div className="flex flex-col items-center justify-center w-24 h-24 rounded-full bg-orange-50 border-2 border-orange-200">
-              <Flame className="w-6 h-6 text-orange-500 mb-0.5" />
-              <span className="text-lg font-bold text-orange-600">{Math.round(totals.calories)}</span>
-              <span className="text-xs text-muted-foreground">cal</span>
-            </div>
-          )}
+          <CalorieRing consumed={Math.round(totals.calories)} goal={macroCalorieGoal} />
 
           <div className="flex-1 flex gap-3 flex-wrap">
             <MacroBar
