@@ -312,12 +312,6 @@ export function Energy() {
 
   const selectedSleep = sleepData[sleepPeriod];
 
-  const calorieGoal = useMemo(
-    () => goals.find((g) => g.type === 'calories' && g.period === 'daily'),
-    [goals]
-  );
-  const calGoalTarget = calorieGoal?.target ?? 2000;
-
   const todayCheckIn = useMemo(() => {
     return checkIns.find(c => isSameDay(new Date(c.date), today));
   }, [checkIns, today]);
