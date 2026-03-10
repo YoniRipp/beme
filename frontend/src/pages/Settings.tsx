@@ -4,6 +4,9 @@ import { toast } from 'sonner';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { DEFAULT_SETTINGS } from '@/types/settings';
 import { AccountSection } from '@/components/settings/AccountSection';
+import { ProfileSection } from '@/components/settings/ProfileSection';
+import { CycleSection } from '@/components/settings/CycleSection';
+import { useProfile } from '@/hooks/useProfile';
 import { DateFormatSection } from '@/components/settings/DateFormatSection';
 import { UnitsSection } from '@/components/settings/UnitsSection';
 import { AppearanceSection } from '@/components/settings/AppearanceSection';
@@ -15,6 +18,7 @@ import { PendingInvitations } from '@/components/trainer/PendingInvitations';
 
 export function Settings() {
   const { updateSettings } = useSettings();
+  const { profile } = useProfile();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -41,6 +45,8 @@ export function Settings() {
     <div className="max-w-6xl mx-auto space-y-6">
       <SubscriptionSection />
       <AccountSection />
+      <ProfileSection />
+      {profile.sex === 'female' && <CycleSection />}
       <DateFormatSection />
       <UnitsSection />
       <AppearanceSection />

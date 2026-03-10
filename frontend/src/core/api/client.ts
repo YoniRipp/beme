@@ -56,7 +56,7 @@ export function handleUnauthorized(): void {
 }
 
 export interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   headers?: HeadersInit;
   body?: unknown;
   timeoutMs?: number;

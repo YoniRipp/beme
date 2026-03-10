@@ -19,4 +19,9 @@ export const queryKeys = {
   myTrainer: ['myTrainer'] as const,
   pendingTrainerInvitations: ['pendingTrainerInvitations'] as const,
   trainerClientData: (clientId: string) => ['trainerClientData', clientId] as const,
+  profile: ['profile'] as const,
+  weightEntries: ['weightEntries'] as const,
+  waterToday: (date: string) => ['waterToday', date] as const,
+  waterHistory: ['waterHistory'] as const,
+  cycleEntries: ['cycleEntries'] as const,
 };

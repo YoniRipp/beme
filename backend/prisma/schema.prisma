@@ -30,7 +30,11 @@ model User {
   groupMembers   GroupMember[]
   ownedGroups    Group[]  @relation("GroupOwner")
   settings       UserSettings?
-  
+  profile        UserProfile?
+  weightEntries  WeightEntry[]
+  waterEntries   WaterEntry[]
+  cycleEntries   CycleEntry[]
+
   @@map("users")
 }
 
@@ -287,6 +291,80 @@ model UserSettings {
   updatedAt DateTime @updatedAt @map("updated_at")
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@map("user_settings")
+}
+
+// ============================================
+// Health Tracking
+// ============================================
+
+model UserProfile {
+  id                   String   @id @default(uuid())
+  userId               String   @unique @map("user_id")
+  dateOfBirth          DateTime? @map("date_of_birth") @db.Date
+  sex                  String?  // "male", "female", "other", "prefer_not_to_say"
+  heightCm             Float?   @map("height_cm")
+  currentWeight        Float?   @map("current_weight") // kg
+  targetWeight         Float?   @map("target_weight") // kg
+  activityLevel        String?  @map("activity_level") // "sedentary", "light", "moderate", "active", "very_active"
+  waterGoalGlasses     Int      @default(8) @map("water_goal_glasses")
+  cycleTrackingEnabled Boolean  @default(false) @map("cycle_tracking_enabled")
+  averageCycleLength   Int?     @default(28) @map("average_cycle_length")
+  setupCompleted       Boolean  @default(false) @map("setup_completed")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model WeightEntry {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  date      DateTime @db.Date
+  weight    Float    // kg
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("weight_entries")
+}
+
+model WaterEntry {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  date      DateTime @db.Date
+  glasses   Int      @default(0) // number of glasses (1 glass = 250ml)
+  mlTotal   Int      @default(0) @map("ml_total") // total ml for precise tracking
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("water_entries")
+}
+
+model CycleEntry {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  date        DateTime @db.Date
+  periodStart Boolean  @default(false) @map("period_start")
+  periodEnd   Boolean  @default(false) @map("period_end")
+  flow        String?  // "light", "medium", "heavy"
+  symptoms    Json     @default("[]") // JSON array of strings
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("cycle_entries")
 }

@@ -14,6 +14,11 @@ import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { VoiceMicHero } from '@/components/voice/VoiceMicHero';
+import { WaterTracker } from '@/components/home/WaterTracker';
+import { WeightProgress } from '@/components/home/WeightProgress';
+import { CycleTracker } from '@/components/home/CycleTracker';
+import { SetupWizard } from '@/components/onboarding/SetupWizard';
+import { useProfile } from '@/hooks/useProfile';
 import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
@@ -26,6 +31,7 @@ export function Home() {
   const { checkIns, foodEntries, addCheckIn, updateCheckIn, addFoodEntry, getCheckInByDate, energyLoading } = useEnergy();
   const { addGoal, updateGoal, goalsLoading } = useGoals();
   const { macroGoals, setMacroGoals, calorieGoal } = useMacroGoals();
+  const { profile, profileLoading } = useProfile();
 
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>(undefined);
@@ -114,6 +120,11 @@ export function Home() {
 
   const calPct = calGoalTarget > 0 ? Math.min(todaySummary.totalCal / calGoalTarget, 1) : 0;
 
+  // Show setup wizard if profile not completed
+  if (!profileLoading && !profile.setupCompleted) {
+    return <SetupWizard onComplete={() => window.location.reload()} />;
+  }
+
   return (
     <div className="max-w-lg md:max-w-2xl mx-auto space-y-5">
       <h1 className="text-2xl font-bold tracking-tight">Today</h1>
@@ -193,6 +204,15 @@ export function Home() {
 
         {/* Voice Hero */}
         <VoiceMicHero />
+
+        {/* Health Trackers */}
+        <div className="grid grid-cols-2 gap-3">
+          <WaterTracker />
+          <WeightProgress />
+        </div>
+
+        {/* Cycle Tracker (if enabled) */}
+        {profile.cycleTrackingEnabled && <CycleTracker />}
 
         {/* Goals Progress */}
         <Card className="rounded-2xl overflow-hidden">

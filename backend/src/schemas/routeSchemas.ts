@@ -104,6 +104,64 @@ export const updateGoalSchema = z.object({
   period: goalPeriod.optional(),
 }).strict().refine((obj) => Object.keys(obj).length > 0, 'At least one field required');
 
+// ─── Profile schemas ──────────────────────────────────────────
+const sexEnum = z.enum(['male', 'female', 'other', 'prefer_not_to_say']);
+const activityLevelEnum = z.enum(['sedentary', 'light', 'moderate', 'active', 'very_active']);
+
+export const upsertProfileSchema = z.object({
+  dateOfBirth: dateString.optional().nullable(),
+  sex: sexEnum.optional().nullable(),
+  heightCm: z.number().min(50).max(300).optional().nullable(),
+  currentWeight: z.number().min(10).max(500).optional().nullable(),
+  targetWeight: z.number().min(10).max(500).optional().nullable(),
+  activityLevel: activityLevelEnum.optional().nullable(),
+  waterGoalGlasses: z.number().int().min(1).max(30).optional(),
+  cycleTrackingEnabled: z.boolean().optional(),
+  averageCycleLength: z.number().int().min(15).max(60).optional().nullable(),
+  setupCompleted: z.boolean().optional(),
+});
+
+// ─── Weight entry schemas ─────────────────────────────────────
+export const createWeightEntrySchema = z.object({
+  date: dateString,
+  weight: z.number().min(10).max(500),
+  notes: z.string().max(500).optional().nullable(),
+});
+
+export const updateWeightEntrySchema = z.object({
+  date: dateString.optional(),
+  weight: z.number().min(10).max(500).optional(),
+  notes: z.string().max(500).optional().nullable(),
+}).strict().refine((obj) => Object.keys(obj).length > 0, 'At least one field required');
+
+// ─── Water entry schemas ──────────────────────────────────────
+export const upsertWaterEntrySchema = z.object({
+  date: dateString,
+  glasses: z.number().int().min(0).max(50).optional(),
+  mlTotal: z.number().int().min(0).max(20000).optional(),
+});
+
+// ─── Cycle entry schemas ──────────────────────────────────────
+const flowEnum = z.enum(['light', 'medium', 'heavy']);
+
+export const createCycleEntrySchema = z.object({
+  date: dateString,
+  periodStart: z.boolean().optional(),
+  periodEnd: z.boolean().optional(),
+  flow: flowEnum.optional().nullable(),
+  symptoms: z.array(z.string().max(100)).max(20).optional(),
+  notes: z.string().max(1000).optional().nullable(),
+});
+
+export const updateCycleEntrySchema = z.object({
+  date: dateString.optional(),
+  periodStart: z.boolean().optional(),
+  periodEnd: z.boolean().optional(),
+  flow: flowEnum.optional().nullable(),
+  symptoms: z.array(z.string().max(100)).max(20).optional(),
+  notes: z.string().max(1000).optional().nullable(),
+}).strict().refine((obj) => Object.keys(obj).length > 0, 'At least one field required');
+
 // ─── Type exports for inference ─────────────────────────────
 export type CreateWorkoutBody = z.infer<typeof createWorkoutSchema>;
 export type UpdateWorkoutBody = z.infer<typeof updateWorkoutSchema>;
@@ -114,3 +172,9 @@ export type UpdateCheckInBody = z.infer<typeof updateCheckInSchema>;
 export type CreateGoalBody = z.infer<typeof createGoalSchema>;
 export type UpdateGoalBody = z.infer<typeof updateGoalSchema>;
 export type PaginationQuery = z.infer<typeof paginationSchema>;
+export type UpsertProfileBody = z.infer<typeof upsertProfileSchema>;
+export type CreateWeightEntryBody = z.infer<typeof createWeightEntrySchema>;
+export type UpdateWeightEntryBody = z.infer<typeof updateWeightEntrySchema>;
+export type UpsertWaterEntryBody = z.infer<typeof upsertWaterEntrySchema>;
+export type CreateCycleEntryBody = z.infer<typeof createCycleEntrySchema>;
+export type UpdateCycleEntryBody = z.infer<typeof updateCycleEntrySchema>;

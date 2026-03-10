@@ -178,3 +178,98 @@ export interface TrainerInvitation {
   expiresAt: string;
   createdAt: string;
 }
+
+// ─── User Profile ────────────────────────────────────────────
+export interface UserProfile {
+  id: string;
+  dateOfBirth?: string;
+  sex?: string;
+  heightCm?: number;
+  currentWeight?: number;
+  targetWeight?: number;
+  activityLevel?: string;
+  waterGoalGlasses: number;
+  cycleTrackingEnabled: boolean;
+  averageCycleLength?: number;
+  setupCompleted: boolean;
+}
+
+export interface UpsertProfileInput {
+  userId: string;
+  dateOfBirth?: string;
+  sex?: string;
+  heightCm?: number;
+  currentWeight?: number;
+  targetWeight?: number;
+  activityLevel?: string;
+  waterGoalGlasses?: number;
+  cycleTrackingEnabled?: boolean;
+  averageCycleLength?: number;
+  setupCompleted?: boolean;
+}
+
+// ─── Weight Entry ────────────────────────────────────────────
+export interface WeightEntry {
+  id: string;
+  date: string;
+  weight: number;
+  notes?: string;
+}
+
+export interface CreateWeightEntryInput {
+  userId: string;
+  date: string;
+  weight: number;
+  notes?: string;
+}
+
+export interface UpdateWeightEntryInput {
+  date?: string;
+  weight?: number;
+  notes?: string;
+}
+
+// ─── Water Entry ─────────────────────────────────────────────
+export interface WaterEntry {
+  id: string;
+  date: string;
+  glasses: number;
+  mlTotal: number;
+}
+
+export interface UpsertWaterEntryInput {
+  userId: string;
+  date: string;
+  glasses?: number;
+  mlTotal?: number;
+}
+
+// ─── Cycle Entry ─────────────────────────────────────────────
+export interface CycleEntry {
+  id: string;
+  date: string;
+  periodStart: boolean;
+  periodEnd: boolean;
+  flow?: string;
+  symptoms: string[];
+  notes?: string;
+}
+
+export interface CreateCycleEntryInput {
+  userId: string;
+  date: string;
+  periodStart?: boolean;
+  periodEnd?: boolean;
+  flow?: string;
+  symptoms?: string[];
+  notes?: string;
+}
+
+export interface UpdateCycleEntryInput {
+  date?: string;
+  periodStart?: boolean;
+  periodEnd?: boolean;
+  flow?: string;
+  symptoms?: string[];
+  notes?: string;
+}
