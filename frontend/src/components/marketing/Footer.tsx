@@ -49,7 +49,7 @@ export function Footer() {
 
           {footerGroups.map((group) => (
             <div key={group.label}>
-              <h4 className="mb-4 text-xs font-semibold tracking-wide text-foreground">
+              <h4 className="mb-4 text-sm font-semibold tracking-wide text-foreground">
                 {group.label}
               </h4>
               <ul className="space-y-2.5">
@@ -57,7 +57,7 @@ export function Footer() {
                   <li key={link.label}>
                     <Link
                       to={link.to}
-                      className="text-xs text-muted-foreground transition-colors hover:text-primary"
+                      className="text-sm text-muted-foreground transition-colors hover:text-primary"
                     >
                       {link.label}
                     </Link>
