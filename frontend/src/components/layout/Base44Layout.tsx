@@ -133,13 +133,13 @@ export function Base44Layout() {
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight">BeMe</h1>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-primary font-medium">Life Balance</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-primary font-medium">Life Balance</p>
               </div>
             </Link>
           </div>
 
           <nav className="flex-1 px-3 py-2">
-            <p className="px-3 mb-2 text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-semibold">Navigate</p>
+            <p className="px-3 mb-2 text-xs uppercase tracking-[0.15em] text-muted-foreground font-semibold">Navigate</p>
             <div className="space-y-0.5">
               {sidebarNav.map((item) => {
                 const isActive = pathname === item.path;
@@ -173,7 +173,7 @@ export function Base44Layout() {
 
           <div className="p-4 mx-3 mb-3 rounded-2xl bg-muted border border-border">
             <p className="text-xs font-medium text-muted-foreground">Your wellness journey</p>
-            <p className="text-[10px] text-muted-foreground/70 mt-0.5">Every step counts</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Every step counts</p>
           </div>
         </div>
       </aside>

@@ -54,7 +54,7 @@ function MacroRing({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-lg font-bold leading-none tabular-nums">{Math.round(current)}</span>
-          <span className="text-[10px] text-muted-foreground leading-none mt-0.5">/{goal}g</span>
+          <span className="text-xs text-muted-foreground leading-none mt-0.5">/{goal}g</span>
         </div>
       </div>
     </div>

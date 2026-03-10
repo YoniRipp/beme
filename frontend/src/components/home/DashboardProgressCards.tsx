@@ -108,7 +108,7 @@ function ProgressCard({
           </span>
         </div>
         {!hasGoal && onAddGoal && (
-          <p className="text-[10px] text-muted-foreground mt-1">Tap to set goal</p>
+          <p className="text-xs text-muted-foreground mt-1">Tap to set goal</p>
         )}
         {hasGoal && onAdd && (
           <div className="mt-1 flex items-center justify-center">
