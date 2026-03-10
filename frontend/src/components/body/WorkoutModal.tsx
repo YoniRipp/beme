@@ -24,6 +24,8 @@ import {
 import { Plus, Trash2, Copy, Save } from 'lucide-react';
 import { STORAGE_KEYS, storage } from '@/lib/storage';
 import { toast } from 'sonner';
+import { useSettings } from '@/hooks/useSettings';
+import { getWeightUnit } from '@/lib/utils';
 
 export type WorkoutTemplate = Omit<Workout, 'id' | 'date'>;
 
@@ -52,6 +54,8 @@ const defaultValues: WorkoutFormValues = {
 };
 
 export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutModalProps) {
+  const { settings } = useSettings();
+  const unit = getWeightUnit(settings.units);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
 
   const {
@@ -154,6 +158,10 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
       toast.error('Please add a title and at least one exercise before saving as template');
       return;
     }
+    if (templates.some(t => t.title.toLowerCase() === title.toLowerCase())) {
+      toast.error('A template with this name already exists');
+      return;
+    }
     const template: WorkoutTemplate = {
       title,
       type: watch('type'),
@@ -175,6 +183,13 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not save template. Please try again.');
     }
+  };
+
+  const deleteTemplate = (idx: number) => {
+    const updated = templates.filter((_, i) => i !== idx);
+    storage.set(STORAGE_KEYS.WORKOUT_TEMPLATES, updated);
+    setTemplates(updated);
+    toast.success('Template removed');
   };
 
   const onSubmit = (data: WorkoutFormValues) => {
@@ -209,22 +224,33 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
-            {templates.length > 0 && !workout && (
+            {templates.length > 0 && (
               <div className="p-3 bg-muted rounded-lg">
                 <Label className="mb-2 block">Saved Workouts</Label>
                 <div className="flex flex-wrap gap-2">
                   {templates.map((t, idx) => (
-                    <Button
-                      key={idx}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => loadTemplate(t)}
-                      className="text-xs"
-                    >
-                      <Copy className="w-3 h-3 mr-1" />
-                      {t.title}
-                    </Button>
+                    <div key={idx} className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadTemplate(t)}
+                        className="text-xs"
+                      >
+                        <Copy className="w-3 h-3 mr-1" />
+                        {t.title}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => deleteTemplate(idx)}
+                        aria-label={`Delete template: ${t.title}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -308,7 +334,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                   <span>Exercise name</span>
                   <span className="text-center">Sets</span>
                   <span>Reps per set</span>
-                  <span className="text-center">Weight (kg)</span>
+                  <span className="text-center">{`Weight (${unit})`}</span>
                 </div>
                 {fields.map((field, idx) => {
                   const setsCount = Math.min(20, Math.max(1, Number(watchedExercises?.[idx]?.sets) || 1));
@@ -370,7 +396,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                           render={({ field: weightField }) => (
                             <Input
                               type="number"
-                              placeholder="kg"
+                              placeholder={unit}
                               className="w-full"
                               value={weightField.value ?? ''}
                               onChange={(e) => weightField.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
@@ -400,7 +426,6 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
 
           <DialogFooter className="mt-6">
             <div className="flex justify-between w-full">
-              {!workout && (
                 <Button
                   type="button"
                   variant="outline"
@@ -410,7 +435,6 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                   <Save className="w-4 h-4 mr-1" />
                   Save as Template
                 </Button>
-              )}
               <div className="flex gap-2 ml-auto">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancel

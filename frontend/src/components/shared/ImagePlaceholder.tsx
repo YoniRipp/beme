@@ -23,12 +23,24 @@ const SIZES = {
 interface ImagePlaceholderProps {
   type: 'food' | 'exercise';
   size?: 'sm' | 'md' | 'lg';
+  imageUrl?: string;
   className?: string;
 }
 
-export function ImagePlaceholder({ type, size = 'md', className }: ImagePlaceholderProps) {
+export function ImagePlaceholder({ type, size = 'md', imageUrl, className }: ImagePlaceholderProps) {
   const { icon: Icon, bg, text } = CONFIG[type];
   const { container, icon } = SIZES[size];
+
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt=""
+        className={cn('rounded-xl object-cover shrink-0', container, className)}
+        loading="lazy"
+      />
+    );
+  }
 
   return (
     <div className={cn('rounded-xl flex items-center justify-center shrink-0', bg, container, className)}>

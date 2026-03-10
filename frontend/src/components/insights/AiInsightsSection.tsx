@@ -2,7 +2,7 @@
  * AI-powered Insights section — calls the backend Gemini endpoints
  * to show a wellness score, smart summary, highlights, and suggestions.
  */
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Sparkles, TrendingUp, Lightbulb, AlertCircle, Search, X, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -205,13 +205,37 @@ export function AiInsightsSection() {
     staleTime: 15 * 60 * 1000, // 15 min cache
   });
 
+  const autoRefreshTriggered = useRef(false);
+
   const refreshMutation = useMutation({
     mutationFn: aiInsightsApi.refreshInsights,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['ai-insights'] });
       void queryClient.invalidateQueries({ queryKey: ['ai-today-recs'] });
+      void queryClient.invalidateQueries({ queryKey: ['ai-insights-freshness'] });
+      autoRefreshTriggered.current = false;
     },
   });
+
+  // Auto-refresh when user has new activity since last insight generation
+  const { data: freshness } = useQuery({
+    queryKey: ['ai-insights-freshness'],
+    queryFn: aiInsightsApi.getFreshness,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (
+      freshness?.needsRefresh &&
+      !autoRefreshTriggered.current &&
+      !refreshMutation.isPending &&
+      !isLoading &&
+      data
+    ) {
+      autoRefreshTriggered.current = true;
+      refreshMutation.mutate();
+    }
+  }, [freshness?.needsRefresh, refreshMutation.isPending, isLoading, data]);
 
   return (
     <div className="space-y-4">

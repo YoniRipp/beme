@@ -12,5 +12,6 @@ router.get('/api/insights', requireAuth, requirePro, insightsController.getInsig
 router.post('/api/insights/refresh', requireAuth, requirePro, insightsController.refreshInsightsController);
 router.get('/api/insights/stats', requireAuth, insightsController.getStats);
 router.get('/api/insights/today', requireAuth, requirePro, insightsController.getTodayRecommendations);
+router.get('/api/insights/freshness', requireAuth, requirePro, insightsController.getFreshness);
 
 export default router;

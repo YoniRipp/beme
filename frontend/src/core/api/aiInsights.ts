@@ -34,6 +34,12 @@ export interface SearchResponse {
   total: number;
 }
 
+export interface FreshnessResponse {
+  lastActivityAt: string | null;
+  lastInsightAt: string | null;
+  needsRefresh: boolean;
+}
+
 export const aiInsightsApi = {
   getInsights: (): Promise<AiInsights> =>
     request('/api/insights'),
@@ -43,6 +49,9 @@ export const aiInsightsApi = {
 
   getTodayRecommendations: (): Promise<TodayRecommendations> =>
     request('/api/insights/today'),
+
+  getFreshness: (): Promise<FreshnessResponse> =>
+    request('/api/insights/freshness'),
 
   getStats: (days = 30): Promise<{ days: number; stats: DailyStat[] }> =>
     request(`/api/insights/stats?days=${days}`),

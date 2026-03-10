@@ -1,10 +1,12 @@
 import { memo } from 'react';
 import { Workout } from '@/types/workout';
-import { formatDate } from '@/lib/utils';
+import { formatDate, getWeightUnit } from '@/lib/utils';
+import { useSettings } from '@/hooks/useSettings';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImagePlaceholder } from '@/components/shared/ImagePlaceholder';
+import { useExerciseImages } from '@/hooks/useExerciseImages';
 
 interface WorkoutCardProps {
   workout: Workout;
@@ -13,6 +15,10 @@ interface WorkoutCardProps {
 }
 
 export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete }: WorkoutCardProps) {
+  const { settings } = useSettings();
+  const unit = getWeightUnit(settings.units);
+  const { getImageUrl } = useExerciseImages();
+  const cardImageUrl = workout.exercises.map(ex => getImageUrl(ex.name)).find(Boolean);
   return (
     <div
       className="flex items-start gap-3 p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80 transition-colors"
@@ -27,7 +33,7 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
         }
       }}
     >
-      <ImagePlaceholder type="exercise" size="md" />
+      <ImagePlaceholder type="exercise" size="md" imageUrl={cardImageUrl} />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
@@ -47,7 +53,7 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
               <p key={i} className="text-xs text-muted-foreground truncate">
                 {ex.name}{' '}
                 <span className="text-muted-foreground/70">
-                  {ex.sets} × {ex.reps}{ex.weight ? ` @ ${ex.weight}lbs` : ''}
+                  {ex.sets} × {ex.reps}{ex.weight ? ` ${ex.weight} ${unit}` : ''}
                 </span>
               </p>
             ))}

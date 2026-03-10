@@ -8,7 +8,7 @@ import * as appLog from '../services/appLog.js';
 import * as userActivityLog from '../models/userActivityLog.js';
 import * as adminStatsService from '../services/adminStats.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { sendJson } from '../utils/response.js';
+import { sendJson, sendError } from '../utils/response.js';
 import { escapeLike } from '../utils/escapeLike.js';
 
 const router = Router();
@@ -81,6 +81,82 @@ router.get('/api/admin/users/search', requireAuth, requireAdmin, async (req, res
 router.get('/api/admin/stats', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
   const stats = await adminStatsService.getAll();
   sendJson(res, stats);
+}));
+
+// ─── Exercise Image Management ───────────────────────────────────────────────
+
+router.get('/api/admin/exercise-images', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+  const pool = getPool();
+  const result = await pool.query(`SELECT id, name, image_url, created_at FROM exercise_images ORDER BY name ASC`);
+  sendJson(res, result.rows.map(r => ({ id: r.id, name: r.name, imageUrl: r.image_url, createdAt: r.created_at })));
+}));
+
+router.post('/api/admin/exercise-images', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  const { name, imageUrl } = req.body ?? {};
+  if (!name || typeof name !== 'string' || !imageUrl || typeof imageUrl !== 'string') {
+    return sendError(res, 400, 'name and imageUrl are required');
+  }
+  const result = await pool.query(
+    `INSERT INTO exercise_images (name, image_url, uploaded_by)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (name) DO UPDATE SET image_url = EXCLUDED.image_url, uploaded_by = EXCLUDED.uploaded_by
+     RETURNING id, name, image_url, created_at`,
+    [name.trim(), imageUrl.trim(), req.user!.id],
+  );
+  const r = result.rows[0];
+  sendJson(res, { id: r.id, name: r.name, imageUrl: r.image_url, createdAt: r.created_at });
+}));
+
+router.delete('/api/admin/exercise-images/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  await pool.query(`DELETE FROM exercise_images WHERE id = $1`, [req.params.id]);
+  sendJson(res, { success: true });
+}));
+
+// ─── Admin Food Search (with image_url) ─────────────────────────────────────
+
+router.get('/api/admin/foods/search', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  const limit = Math.min(Math.max(1, parseInt(String(req.query.limit ?? 50), 10) || 50), 100);
+  if (!q || q.length < 2) return sendJson(res, []);
+  const pool = getPool();
+  const pattern = `%${escapeLike(q)}%`;
+  const result = await pool.query(
+    `SELECT id, name, image_url FROM foods
+     WHERE name ILIKE $1
+     ORDER BY name ASC
+     LIMIT $2`,
+    [pattern, limit],
+  );
+  sendJson(res, result.rows.map(r => ({ id: r.id, name: r.name, imageUrl: r.image_url })));
+}));
+
+// ─── Food Image Management ──────────────────────────────────────────────────
+
+router.patch('/api/admin/foods/:id/image', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  const { imageUrl } = req.body ?? {};
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    return sendError(res, 400, 'imageUrl is required');
+  }
+  const result = await pool.query(
+    `UPDATE foods SET image_url = $1 WHERE id = $2 RETURNING id, name, image_url`,
+    [imageUrl.trim(), req.params.id],
+  );
+  if (result.rows.length === 0) return sendError(res, 404, 'Food not found');
+  const r = result.rows[0];
+  sendJson(res, { id: r.id, name: r.name, imageUrl: r.image_url });
+}));
+
+router.delete('/api/admin/foods/:id/image', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  const result = await pool.query(
+    'UPDATE foods SET image_url = NULL WHERE id = $1 RETURNING id, name',
+    [req.params.id]
+  );
+  if (result.rowCount === 0) return sendError(res, 404, 'Food not found');
+  sendJson(res, { success: true });
 }));
 
 export default router;
