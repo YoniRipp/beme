@@ -194,6 +194,66 @@ export async function initSchema() {
       )
     `);
 
+    // Health tracking tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_profiles (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+        date_of_birth date,
+        sex text,
+        height_cm double precision,
+        current_weight double precision,
+        target_weight double precision,
+        activity_level text,
+        water_goal_glasses int NOT NULL DEFAULT 8,
+        cycle_tracking_enabled boolean NOT NULL DEFAULT false,
+        average_cycle_length int DEFAULT 28,
+        setup_completed boolean NOT NULL DEFAULT false,
+        created_at timestamptz DEFAULT now(),
+        updated_at timestamptz DEFAULT now()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS weight_entries (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        date date NOT NULL,
+        weight double precision NOT NULL,
+        notes text,
+        created_at timestamptz DEFAULT now(),
+        UNIQUE (user_id, date)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS water_entries (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        date date NOT NULL,
+        glasses int NOT NULL DEFAULT 0,
+        ml_total int NOT NULL DEFAULT 0,
+        created_at timestamptz DEFAULT now(),
+        updated_at timestamptz DEFAULT now(),
+        UNIQUE (user_id, date)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS cycle_entries (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        date date NOT NULL,
+        period_start boolean NOT NULL DEFAULT false,
+        period_end boolean NOT NULL DEFAULT false,
+        flow text,
+        symptoms jsonb NOT NULL DEFAULT '[]',
+        notes text,
+        created_at timestamptz DEFAULT now(),
+        UNIQUE (user_id, date)
+      );
+    `);
+
     // Indexes
     await client.query('CREATE INDEX IF NOT EXISTS idx_goals_user ON goals(user_id)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_workouts_user_date ON workouts(user_id, date DESC)');

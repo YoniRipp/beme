@@ -57,6 +57,48 @@ vi.mock('@/hooks/useGoals', () => ({
     refetchGoals: vi.fn(),
   }),
 }));
+
+vi.mock('@/hooks/useProfile', () => ({
+  useProfile: () => ({
+    profile: { setupCompleted: true, waterGoalGlasses: 8, cycleTrackingEnabled: false },
+    profileLoading: false,
+    profileError: null,
+    updateProfile: vi.fn(),
+    isUpdating: false,
+  }),
+}));
+
+vi.mock('@/hooks/useWater', () => ({
+  useWater: () => ({
+    glasses: 0,
+    mlTotal: 0,
+    waterLoading: false,
+    addGlass: vi.fn(),
+    removeGlass: vi.fn(),
+  }),
+}));
+
+vi.mock('@/hooks/useWeight', () => ({
+  useWeight: () => ({
+    weightEntries: [],
+    weightLoading: false,
+    weightError: null,
+    addWeight: vi.fn(),
+    deleteWeight: vi.fn(),
+    latestWeight: null,
+  }),
+}));
+
+vi.mock('@/hooks/useCycle', () => ({
+  useCycle: () => ({
+    cycleEntries: [],
+    cycleLoading: false,
+    addCycleEntry: vi.fn(),
+    deleteCycleEntry: vi.fn(),
+    currentCycleDay: null,
+    lastPeriodStart: null,
+  }),
+}));
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 });

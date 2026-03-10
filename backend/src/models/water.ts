@@ -49,8 +49,8 @@ export async function upsert(input: UpsertWaterEntryInput, client?: pg.Pool | pg
   const glasses = input.glasses ?? 0;
   const mlTotal = input.mlTotal ?? glasses * 250;
   const result = await db.query(
-    `INSERT INTO water_entries (user_id, date, glasses, ml_total)
-     VALUES ($1, $2::date, $3, $4)
+    `INSERT INTO water_entries (id, user_id, date, glasses, ml_total, updated_at)
+     VALUES (gen_random_uuid(), $1, $2::date, $3, $4, NOW())
      ON CONFLICT (user_id, date)
      DO UPDATE SET glasses = $3, ml_total = $4, updated_at = NOW()
      RETURNING ${RETURNING}`,
@@ -62,8 +62,8 @@ export async function upsert(input: UpsertWaterEntryInput, client?: pg.Pool | pg
 export async function addGlass(userId: string, date: string, client?: pg.Pool | pg.PoolClient): Promise<WaterEntry> {
   const db = client ?? getPool();
   const result = await db.query(
-    `INSERT INTO water_entries (user_id, date, glasses, ml_total)
-     VALUES ($1, $2::date, 1, 250)
+    `INSERT INTO water_entries (id, user_id, date, glasses, ml_total, updated_at)
+     VALUES (gen_random_uuid(), $1, $2::date, 1, 250, NOW())
      ON CONFLICT (user_id, date)
      DO UPDATE SET glasses = water_entries.glasses + 1, ml_total = water_entries.ml_total + 250, updated_at = NOW()
      RETURNING ${RETURNING}`,
@@ -75,8 +75,8 @@ export async function addGlass(userId: string, date: string, client?: pg.Pool | 
 export async function removeGlass(userId: string, date: string, client?: pg.Pool | pg.PoolClient): Promise<WaterEntry> {
   const db = client ?? getPool();
   const result = await db.query(
-    `INSERT INTO water_entries (user_id, date, glasses, ml_total)
-     VALUES ($1, $2::date, 0, 0)
+    `INSERT INTO water_entries (id, user_id, date, glasses, ml_total, updated_at)
+     VALUES (gen_random_uuid(), $1, $2::date, 0, 0, NOW())
      ON CONFLICT (user_id, date)
      DO UPDATE SET glasses = GREATEST(0, water_entries.glasses - 1), ml_total = GREATEST(0, water_entries.ml_total - 250), updated_at = NOW()
      RETURNING ${RETURNING}`,

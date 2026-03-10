@@ -56,8 +56,8 @@ export async function findByUserId(userId: string, startDate?: string, endDate?:
 export async function create(input: CreateCycleEntryInput, client?: pg.Pool | pg.PoolClient): Promise<CycleEntry> {
   const db = client ?? getPool();
   const result = await db.query(
-    `INSERT INTO cycle_entries (user_id, date, period_start, period_end, flow, symptoms, notes)
-     VALUES ($1, $2::date, $3, $4, $5, $6::jsonb, $7)
+    `INSERT INTO cycle_entries (id, user_id, date, period_start, period_end, flow, symptoms, notes)
+     VALUES (gen_random_uuid(), $1, $2::date, $3, $4, $5, $6::jsonb, $7)
      ON CONFLICT (user_id, date)
      DO UPDATE SET period_start = $3, period_end = $4, flow = $5, symptoms = $6::jsonb, notes = $7
      RETURNING ${RETURNING}`,

@@ -27,6 +27,47 @@ vi.mock('sonner', () => ({
   },
 }));
 
+// ProfileSection uses Radix Select components that hang in jsdom; mock it
+vi.mock('@/components/settings/ProfileSection', () => ({
+  ProfileSection: () => <div data-testid="profile-section">Profile</div>,
+}));
+
+// Mock hooks that make API calls
+vi.mock('@/hooks/useProfile', () => ({
+  useProfile: () => ({
+    profile: { setupCompleted: true, waterGoalGlasses: 8, cycleTrackingEnabled: false, sex: 'male' },
+    profileLoading: false,
+    profileError: null,
+    updateProfile: vi.fn(),
+    isUpdating: false,
+  }),
+}));
+
+vi.mock('@/hooks/useTrainer', () => ({
+  usePendingTrainerInvitations: () => ({ data: [], isLoading: false }),
+  useAcceptInvitation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useMyTrainer: () => ({ data: null, isLoading: false }),
+}));
+
+// Mock API modules to prevent real network calls
+vi.mock('@/core/api/trainer', () => ({
+  trainerApi: {
+    listClients: vi.fn(() => Promise.resolve([])),
+    listInvitations: vi.fn(() => Promise.resolve([])),
+    inviteByEmail: vi.fn(() => Promise.resolve({})),
+    getMyTrainer: vi.fn(() => Promise.resolve(null)),
+    getPendingInvitations: vi.fn(() => Promise.resolve([])),
+    getClientWorkouts: vi.fn(() => Promise.resolve([])),
+  },
+}));
+
+vi.mock('@/core/api/subscription', () => ({
+  subscriptionApi: {
+    createCheckout: vi.fn(() => Promise.resolve({ url: '' })),
+    createPortal: vi.fn(() => Promise.resolve({ url: '' })),
+  },
+}));
+
 // Mock storage
 vi.mock('@/lib/storage', () => ({
   storage: {
@@ -39,6 +80,8 @@ vi.mock('@/lib/storage', () => ({
     TRANSACTIONS: 'beme_transactions',
     WORKOUTS: 'beme_workouts',
     SETTINGS: 'beme_settings',
+    TOKEN: 'beme_token',
+    NOTIFICATION_PREFERENCES: 'beme_notification_preferences',
   },
 }));
 
@@ -56,6 +99,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 
 describe('Settings Page', () => {
   beforeEach(() => {
+    queryClient.clear();
     vi.clearAllMocks();
   });
 

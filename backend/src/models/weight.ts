@@ -50,8 +50,8 @@ export async function findByUserId(userId: string, startDate?: string, endDate?:
 export async function create(input: CreateWeightEntryInput, client?: pg.Pool | pg.PoolClient): Promise<WeightEntry> {
   const db = client ?? getPool();
   const result = await db.query(
-    `INSERT INTO weight_entries (user_id, date, weight, notes)
-     VALUES ($1, $2::date, $3, $4)
+    `INSERT INTO weight_entries (id, user_id, date, weight, notes)
+     VALUES (gen_random_uuid(), $1, $2::date, $3, $4)
      ON CONFLICT (user_id, date)
      DO UPDATE SET weight = $3, notes = $4
      RETURNING ${RETURNING}`,

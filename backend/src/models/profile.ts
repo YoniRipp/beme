@@ -32,8 +32,8 @@ export async function findByUserId(userId: string, client?: pg.Pool | pg.PoolCli
 export async function upsert(input: UpsertProfileInput, client?: pg.Pool | pg.PoolClient): Promise<UserProfile> {
   const db = client ?? getPool();
   const result = await db.query(
-    `INSERT INTO user_profiles (user_id, date_of_birth, sex, height_cm, current_weight, target_weight, activity_level, water_goal_glasses, cycle_tracking_enabled, average_cycle_length, setup_completed)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `INSERT INTO user_profiles (id, user_id, date_of_birth, sex, height_cm, current_weight, target_weight, activity_level, water_goal_glasses, cycle_tracking_enabled, average_cycle_length, setup_completed, updated_at)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
      ON CONFLICT (user_id)
      DO UPDATE SET
        date_of_birth = COALESCE($2, user_profiles.date_of_birth),
