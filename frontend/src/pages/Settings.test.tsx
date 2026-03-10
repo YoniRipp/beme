@@ -30,7 +30,7 @@ vi.mock('sonner', () => ({
 // Mock storage
 vi.mock('@/lib/storage', () => ({
   storage: {
-    get: vi.fn(() => []),
+    get: vi.fn(() => null),
     set: vi.fn(),
     remove: vi.fn(),
     clear: vi.fn(),
@@ -39,7 +39,66 @@ vi.mock('@/lib/storage', () => ({
     TRANSACTIONS: 'beme_transactions',
     WORKOUTS: 'beme_workouts',
     SETTINGS: 'beme_settings',
+    NOTIFICATION_PREFERENCES: 'beme_notification_preferences',
   },
+}));
+
+// Mock useProfile to avoid real API calls
+vi.mock('@/hooks/useProfile', () => ({
+  useProfile: () => ({
+    profile: { setupCompleted: false, waterGoalGlasses: 8, cycleTrackingEnabled: false },
+    profileLoading: false,
+    profileError: null,
+    updateProfile: vi.fn(),
+    isUpdating: false,
+  }),
+}));
+
+// Mock useSubscription to avoid real API calls
+vi.mock('@/hooks/useSubscription', () => ({
+  useSubscription: () => ({
+    isPro: false,
+    subscriptionStatus: 'free',
+    manage: vi.fn(),
+  }),
+}));
+
+// Mock useTrainer hooks to avoid real API calls
+vi.mock('@/hooks/useTrainer', () => ({
+  usePendingTrainerInvitations: () => ({ data: [], isLoading: false }),
+  useMyTrainer: () => ({ data: null, isLoading: false }),
+  useAcceptInvitation: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+// Mock syncQueue to avoid IndexedDB usage in jsdom
+vi.mock('@/lib/syncQueue', () => ({
+  enqueue: vi.fn(),
+  getPendingCount: vi.fn(() => Promise.resolve(0)),
+  getAll: vi.fn(() => Promise.resolve([])),
+  remove: vi.fn(),
+  flush: vi.fn(() => Promise.resolve(0)),
+}));
+
+// Mock idb to avoid IndexedDB in jsdom
+vi.mock('idb', () => ({
+  openDB: vi.fn(),
+}));
+
+// Mock pushSubscription to avoid service worker APIs
+vi.mock('@/lib/pushSubscription', () => ({
+  subscribeToPush: vi.fn(() => Promise.resolve(null)),
+  unsubscribeFromPush: vi.fn(() => Promise.resolve()),
+  isPushSubscribed: vi.fn(() => Promise.resolve(false)),
+}));
+
+// Mock ProfileSection and CycleSection to avoid Radix UI Select hanging in jsdom.
+// The Radix Select component performs viewport measurements that never complete in jsdom,
+// causing the test runner to hang indefinitely.
+vi.mock('@/components/settings/ProfileSection', () => ({
+  ProfileSection: () => null,
+}));
+vi.mock('@/components/settings/CycleSection', () => ({
+  CycleSection: () => null,
 }));
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
