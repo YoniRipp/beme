@@ -11,6 +11,13 @@ vi.mock('@/lib/storage', () => ({
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: { units: 'metric', dateFormat: 'DD/MM/YYYY', theme: 'system' },
+    updateSettings: vi.fn(),
+  }),
+}));
+
 describe('WorkoutModal', () => {
   it('renders Add Workout form with N rep inputs when sets = N', () => {
     const onSave = vi.fn();

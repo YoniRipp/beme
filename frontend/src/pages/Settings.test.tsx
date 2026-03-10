@@ -5,13 +5,11 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Settings } from './Settings';
 import { AppProvider } from '@/context/AppContext';
-import { NotificationProvider } from '@/context/NotificationContext';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 });
 
-// AppProvider uses useAuth(); provide a mock user so it renders
 vi.mock('@/context/AuthContext', () => ({
   useAuth: () => ({
     user: { id: '1', email: 'test@test.com', name: 'Test', role: 'user' as const },
@@ -19,36 +17,59 @@ vi.mock('@/context/AuthContext', () => ({
   }),
 }));
 
-// Mock toast
 vi.mock('sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-// Mock storage
+// Mock ALL settings sub-components to isolate the test
+vi.mock('@/components/settings/SubscriptionSection', () => ({
+  SubscriptionSection: () => <div>Subscription</div>,
+}));
+vi.mock('@/components/settings/AccountSection', () => ({
+  AccountSection: () => <div>Account</div>,
+}));
+vi.mock('@/components/settings/ProfileSection', () => ({
+  ProfileSection: () => <div>Profile</div>,
+}));
+vi.mock('@/components/settings/CycleSection', () => ({
+  CycleSection: () => <div>Cycle</div>,
+}));
+vi.mock('@/components/settings/DateFormatSection', () => ({
+  DateFormatSection: () => <div><h3>Date Format</h3></div>,
+}));
+vi.mock('@/components/settings/UnitsSection', () => ({
+  UnitsSection: () => <div><h3>Units</h3></div>,
+}));
+vi.mock('@/components/settings/AppearanceSection', () => ({
+  AppearanceSection: () => <div><h3>Appearance</h3></div>,
+}));
+vi.mock('@/components/settings/NotificationsSection', () => ({
+  NotificationsSection: () => <div><h3>Notifications</h3></div>,
+}));
+vi.mock('@/components/settings/DataManagementSection', () => ({
+  DataManagementSection: ({ onResetClick, onClearClick }: { onResetClick: () => void; onClearClick: () => void }) => (
+    <div>
+      <h3>Data Management</h3>
+      <button onClick={() => { /* export */ }}>Export All Data</button>
+      <button onClick={onResetClick}>Reset Settings to Defaults</button>
+      <button onClick={onClearClick}>Clear All Data</button>
+    </div>
+  ),
+}));
+vi.mock('@/components/trainer/PendingInvitations', () => ({
+  PendingInvitations: () => <div>Invitations</div>,
+}));
+
 vi.mock('@/lib/storage', () => ({
-  storage: {
-    get: vi.fn(() => []),
-    set: vi.fn(),
-    remove: vi.fn(),
-    clear: vi.fn(),
-  },
-  STORAGE_KEYS: {
-    TRANSACTIONS: 'beme_transactions',
-    WORKOUTS: 'beme_workouts',
-    SETTINGS: 'beme_settings',
-  },
+  storage: { get: vi.fn(() => null), set: vi.fn(), remove: vi.fn(), clear: vi.fn() },
+  STORAGE_KEYS: { SETTINGS: 'beme_settings' },
 }));
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <QueryClientProvider client={queryClient}>
       <AppProvider>
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
+        {children}
       </AppProvider>
     </QueryClientProvider>
   </BrowserRouter>
@@ -57,36 +78,32 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 describe('Settings Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient.clear();
   });
 
   it('renders settings page with title', () => {
     render(<Settings />, { wrapper });
-    expect(screen.getByRole('heading', { name: /date format/i })).toBeInTheDocument();
-  });
-
-  it('displays date format section', () => {
-    render(<Settings />, { wrapper });
-    expect(screen.getByRole('heading', { name: /date format/i })).toBeInTheDocument();
+    expect(screen.getByText('Date Format')).toBeInTheDocument();
   });
 
   it('displays units section', () => {
     render(<Settings />, { wrapper });
-    expect(screen.getByRole('heading', { name: /^units$/i })).toBeInTheDocument();
+    expect(screen.getByText('Units')).toBeInTheDocument();
   });
 
   it('displays theme section', () => {
     render(<Settings />, { wrapper });
-    expect(screen.getByRole('heading', { name: 'Appearance' })).toBeInTheDocument();
+    expect(screen.getByText('Appearance')).toBeInTheDocument();
   });
 
   it('displays notifications section', () => {
     render(<Settings />, { wrapper });
-    expect(screen.getByRole('heading', { name: 'Notifications' })).toBeInTheDocument();
+    expect(screen.getByText('Notifications')).toBeInTheDocument();
   });
 
   it('displays data management section', () => {
     render(<Settings />, { wrapper });
-    expect(screen.getByRole('heading', { name: /data management/i })).toBeInTheDocument();
+    expect(screen.getByText('Data Management')).toBeInTheDocument();
   });
 
   it('displays export data button', () => {

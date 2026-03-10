@@ -4,6 +4,17 @@ import userEvent from '@testing-library/user-event';
 import { WorkoutCard } from './WorkoutCard';
 import { Workout } from '@/types/workout';
 
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: { units: 'metric', dateFormat: 'DD/MM/YYYY', theme: 'system' },
+    updateSettings: vi.fn(),
+  }),
+}));
+
+vi.mock('@/hooks/useExerciseImages', () => ({
+  useExerciseImages: () => ({ images: [], getImageUrl: () => undefined }),
+}));
+
 const mockWorkout: Workout = {
   id: '1',
   date: new Date(2025, 0, 16),
