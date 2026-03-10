@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useWeight } from '@/hooks/useWeight';
 import { useProfile } from '@/hooks/useProfile';
-import { Scale, Plus, TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import { Scale, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { WeightLogModal } from './WeightLogModal';
 
 export function WeightProgress() {
@@ -22,16 +22,11 @@ export function WeightProgress() {
 
   return (
     <>
-      <Card className="rounded-2xl overflow-hidden">
+      <Card className="rounded-2xl overflow-hidden cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setModalOpen(true)} role="button">
         <CardContent className="p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Scale className="w-4 h-4 text-purple-500" />
-              <h3 className="text-sm font-medium">Weight</h3>
-            </div>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setModalOpen(true)}>
-              <Plus className="w-3 h-3 mr-1" /> Log
-            </Button>
+          <div className="flex items-center gap-2 mb-3">
+            <Scale className="w-4 h-4 text-purple-500" />
+            <h3 className="text-sm font-medium">Weight</h3>
           </div>
 
           {current ? (

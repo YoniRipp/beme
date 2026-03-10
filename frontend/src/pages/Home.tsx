@@ -149,12 +149,6 @@ export function Home() {
                   </div>
                 </div>
               </div>
-              {todaySummary.mealsCount > 0 && (
-                <p className="text-sm text-center text-muted-foreground">
-                  You've logged <span className="font-semibold text-foreground">{todaySummary.mealsCount} meal{todaySummary.mealsCount !== 1 ? 's' : ''}</span> and{' '}
-                  <span className="font-semibold text-foreground">{Math.round(todaySummary.totalProtein)}g of protein</span>.
-                </p>
-              )}
             </CardContent>
           </Card>
           <Card className="rounded-2xl overflow-hidden">
@@ -193,26 +187,11 @@ export function Home() {
                 />
               </div>
             </div>
-            {todaySummary.mealsCount > 0 && (
-              <p className="text-sm text-center text-muted-foreground mt-3">
-                You've logged <span className="font-semibold text-foreground">{todaySummary.mealsCount} meal{todaySummary.mealsCount !== 1 ? 's' : ''}</span> and{' '}
-                <span className="font-semibold text-foreground">{Math.round(todaySummary.totalProtein)}g of protein</span>.
-              </p>
-            )}
           </CardContent>
         </Card>
 
         {/* Voice Hero */}
         <VoiceMicHero />
-
-        {/* Health Trackers */}
-        <div className="grid grid-cols-2 gap-3">
-          <WaterTracker />
-          <WeightProgress />
-        </div>
-
-        {/* Cycle Tracker (if enabled) */}
-        {profile.cycleTrackingEnabled && <CycleTracker />}
 
         {/* Goals Progress */}
         <Card className="rounded-2xl overflow-hidden">
@@ -229,6 +208,15 @@ export function Home() {
             />
           </CardContent>
         </Card>
+
+        {/* Health Trackers */}
+        <div className="grid grid-cols-2 gap-3">
+          <WaterTracker />
+          <WeightProgress />
+        </div>
+
+        {/* Cycle Tracker (if enabled) */}
+        {profile.cycleTrackingEnabled && <CycleTracker />}
 
         {/* Recent Activity */}
         {recentActivity.length > 0 && (

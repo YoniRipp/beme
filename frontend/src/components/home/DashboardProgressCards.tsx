@@ -111,10 +111,9 @@ function ProgressCard({
           <p className="text-[10px] text-muted-foreground mt-1">Tap to set goal</p>
         )}
         {hasGoal && onAdd && (
-          <p className="text-[10px] text-primary mt-1 flex items-center gap-0.5">
-            <Plus className="h-2.5 w-2.5" />
-            {data.addLabel}
-          </p>
+          <div className="mt-1 flex items-center justify-center">
+            <Plus className="h-3.5 w-3.5 text-primary" />
+          </div>
         )}
       </CardContent>
     </Card>

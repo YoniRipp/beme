@@ -32,8 +32,8 @@ function MacroRing({
   return (
     <div className="flex flex-col items-center gap-1 flex-1">
       <p className="text-xs font-medium text-primary mb-1">{label}</p>
-      <div className="relative w-[76px] h-[76px]">
-        <svg className="w-[76px] h-[76px] -rotate-90" viewBox="0 0 80 80">
+      <div className="relative w-[96px] h-[96px]">
+        <svg className="w-[96px] h-[96px] -rotate-90" viewBox="0 0 80 80">
           <circle
             cx="40" cy="40" r={R}
             fill="none"
@@ -64,9 +64,8 @@ function MacroRing({
 export function MacroCircles({ carbs, fat, protein, onEditGoals }: MacroCirclesProps) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Macros</p>
-        {onEditGoals && (
+      {onEditGoals && (
+        <div className="flex justify-end mb-2">
           <button
             type="button"
             onClick={onEditGoals}
@@ -75,14 +74,14 @@ export function MacroCircles({ carbs, fat, protein, onEditGoals }: MacroCirclesP
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
-        )}
-      </div>
-      <div className="flex items-start justify-center gap-2">
+        </div>
+      )}
+      <div className="flex items-start justify-center gap-5">
       <MacroRing
         label="Carbs"
         current={carbs.current}
         goal={carbs.goal}
-        color="hsl(138, 15%, 54%)"
+        color="hsl(45, 85%, 55%)"
       />
       <MacroRing
         label="Fat"
