@@ -38,7 +38,7 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
                 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
             >
               <Icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.name}</span>
+              <span className="text-xs font-medium">{item.name}</span>
             </Link>
           );
         })}
@@ -67,7 +67,7 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
                 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
             >
               <Icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.name}</span>
+              <span className="text-xs font-medium">{item.name}</span>
             </Link>
           );
         })}

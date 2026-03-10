@@ -145,7 +145,7 @@ export function Home() {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-3xl font-bold tabular-nums leading-none">{Math.round(todaySummary.totalCal)}</span>
-                    <span className="text-[11px] text-muted-foreground leading-none mt-1">/{calGoalTarget}</span>
+                    <span className="text-xs text-muted-foreground leading-none mt-1">/{calGoalTarget}</span>
                   </div>
                 </div>
               </div>
@@ -175,7 +175,7 @@ export function Home() {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-3xl font-bold tabular-nums leading-none">{Math.round(todaySummary.totalCal)}</span>
-                  <span className="text-[11px] text-muted-foreground leading-none mt-1">/{calGoalTarget}</span>
+                  <span className="text-xs text-muted-foreground leading-none mt-1">/{calGoalTarget}</span>
                 </div>
               </div>
               <div className="flex-1">

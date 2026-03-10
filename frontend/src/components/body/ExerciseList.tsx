@@ -24,7 +24,7 @@ export function ExerciseList({ exercises }: ExerciseListProps) {
         <div key={idx} className="flex items-center gap-3 p-2 bg-muted rounded-lg">
           <ImagePlaceholder type="exercise" size="sm" imageUrl={getImageUrl(exercise.name)} />
           <div>
-            <p className="font-medium">{exercise.name}</p>
+            <p className="text-sm font-medium">{exercise.name}</p>
             <p className="text-sm text-muted-foreground">
               {exercise.sets} sets × {exercise.reps} reps
               {exercise.weight && ` ${exercise.weight} ${unit}`}

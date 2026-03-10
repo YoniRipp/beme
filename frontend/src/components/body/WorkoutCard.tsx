@@ -37,7 +37,7 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <p className="font-medium truncate">{workout.title}</p>
+          <p className="text-sm font-medium truncate">{workout.title}</p>
           <Badge variant="secondary">{workout.type}</Badge>
         </div>
         <div className="flex items-center gap-4 text-sm text-muted-foreground mb-1">
@@ -52,13 +52,13 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
             {workout.exercises.slice(0, 3).map((ex, i) => (
               <p key={i} className="text-xs text-muted-foreground truncate">
                 {ex.name}{' '}
-                <span className="text-muted-foreground/70">
+                <span className="text-muted-foreground">
                   {ex.sets} × {ex.reps}{ex.weight ? ` ${ex.weight} ${unit}` : ''}
                 </span>
               </p>
             ))}
             {workout.exercises.length > 3 && (
-              <p className="text-xs text-muted-foreground/50">
+              <p className="text-xs text-muted-foreground">
                 +{workout.exercises.length - 3} more
               </p>
             )}
