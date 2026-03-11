@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -524,7 +525,7 @@ export function Landing() {
                 </div>
                 <Button
                   className="w-full"
-                  onClick={() => alert('Contact form coming soon! For now, email us at support@beme.app')}
+                  onClick={() => toast.info('Contact form coming soon! For now, email us at support@beme.app')}
                 >
                   Send Message
                 </Button>

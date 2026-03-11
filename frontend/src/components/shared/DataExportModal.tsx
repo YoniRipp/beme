@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { exportAllData, importAllData, exportToCSV, downloadFile } from '@/lib/export';
 import { queryKeys } from '@/lib/queryClient';
+import { useSettings } from '@/hooks/useSettings';
 import { Download, Upload, FileJson, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,6 +23,7 @@ interface DataExportModalProps {
 export function DataExportModal({ open, onOpenChange }: DataExportModalProps) {
   const [importing, setImporting] = useState(false);
   const queryClient = useQueryClient();
+  const { settings } = useSettings();
 
   const handleExportJSON = () => {
     try {
@@ -48,6 +50,7 @@ export function DataExportModal({ open, onOpenChange }: DataExportModalProps) {
       const csvData = {
         workouts: (queryClient.getQueryData(queryKeys.workouts) as import('@/types/workout').Workout[]) ?? [],
         foodEntries: (queryClient.getQueryData(queryKeys.foodEntries) as import('@/types/energy').FoodEntry[]) ?? [],
+        units: settings.units,
       };
       const csv = exportToCSV(type, csvData);
       downloadFile(csv, `beme-${type}-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');

@@ -24,7 +24,7 @@ export function SubscriptionSection() {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5 text-stone" />
+          <CreditCard className="h-5 w-5 text-muted-foreground" />
           <CardTitle className="text-base">Subscription</CardTitle>
         </div>
         <CardDescription>Manage your BeMe subscription</CardDescription>

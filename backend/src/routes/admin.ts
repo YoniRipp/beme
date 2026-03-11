@@ -8,7 +8,7 @@ import * as appLog from '../services/appLog.js';
 import * as userActivityLog from '../models/userActivityLog.js';
 import * as adminStatsService from '../services/adminStats.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { sendJson } from '../utils/response.js';
+import { sendJson, sendError } from '../utils/response.js';
 import { escapeLike } from '../utils/escapeLike.js';
 
 const router = Router();
@@ -81,6 +81,144 @@ router.get('/api/admin/users/search', requireAuth, requireAdmin, async (req, res
 router.get('/api/admin/stats', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
   const stats = await adminStatsService.getAll();
   sendJson(res, stats);
+}));
+
+// ─── Exercise Catalog Management ────────────────────────────────────────────
+
+router.get('/api/admin/exercises', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+  const pool = getPool();
+  const result = await pool.query(
+    `SELECT id, name, muscle_group, category, image_url, video_url, created_at, updated_at FROM exercises ORDER BY name ASC`
+  );
+  sendJson(res, result.rows.map(r => ({
+    id: r.id,
+    name: r.name,
+    muscleGroup: r.muscle_group,
+    category: r.category,
+    imageUrl: r.image_url,
+    videoUrl: r.video_url,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  })));
+}));
+
+router.post('/api/admin/exercises', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  const { name, muscleGroup, category, imageUrl, videoUrl } = req.body ?? {};
+  if (!name || typeof name !== 'string') {
+    return sendError(res, 400, 'name is required');
+  }
+  const result = await pool.query(
+    `INSERT INTO exercises (name, muscle_group, category, image_url, video_url, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (name) DO UPDATE SET
+       muscle_group = COALESCE(EXCLUDED.muscle_group, exercises.muscle_group),
+       category = COALESCE(EXCLUDED.category, exercises.category),
+       image_url = COALESCE(EXCLUDED.image_url, exercises.image_url),
+       video_url = COALESCE(EXCLUDED.video_url, exercises.video_url),
+       updated_at = now()
+     RETURNING id, name, muscle_group, category, image_url, video_url, created_at, updated_at`,
+    [name.trim(), muscleGroup || null, category || null, imageUrl || null, videoUrl || null, req.user!.id],
+  );
+  const r = result.rows[0];
+  sendJson(res, {
+    id: r.id,
+    name: r.name,
+    muscleGroup: r.muscle_group,
+    category: r.category,
+    imageUrl: r.image_url,
+    videoUrl: r.video_url,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
+}));
+
+router.patch('/api/admin/exercises/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  const { name, muscleGroup, category, imageUrl, videoUrl } = req.body ?? {};
+  const sets: string[] = [];
+  const params: any[] = [];
+  let idx = 1;
+
+  if (name !== undefined) { sets.push(`name = $${idx++}`); params.push(name); }
+  if (muscleGroup !== undefined) { sets.push(`muscle_group = $${idx++}`); params.push(muscleGroup || null); }
+  if (category !== undefined) { sets.push(`category = $${idx++}`); params.push(category || null); }
+  if (imageUrl !== undefined) { sets.push(`image_url = $${idx++}`); params.push(imageUrl || null); }
+  if (videoUrl !== undefined) { sets.push(`video_url = $${idx++}`); params.push(videoUrl || null); }
+
+  if (sets.length === 0) return sendError(res, 400, 'No fields to update');
+
+  sets.push(`updated_at = now()`);
+  params.push(req.params.id);
+
+  const result = await pool.query(
+    `UPDATE exercises SET ${sets.join(', ')} WHERE id = $${idx}
+     RETURNING id, name, muscle_group, category, image_url, video_url, created_at, updated_at`,
+    params,
+  );
+  if (result.rows.length === 0) return sendError(res, 404, 'Exercise not found');
+  const r = result.rows[0];
+  sendJson(res, {
+    id: r.id,
+    name: r.name,
+    muscleGroup: r.muscle_group,
+    category: r.category,
+    imageUrl: r.image_url,
+    videoUrl: r.video_url,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
+}));
+
+router.delete('/api/admin/exercises/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  await pool.query(`DELETE FROM exercises WHERE id = $1`, [req.params.id]);
+  sendJson(res, { success: true });
+}));
+
+// ─── Admin Food Search (with image_url) ─────────────────────────────────────
+
+router.get('/api/admin/foods/search', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  const limit = Math.min(Math.max(1, parseInt(String(req.query.limit ?? 50), 10) || 50), 100);
+  if (!q || q.length < 2) return sendJson(res, []);
+  const pool = getPool();
+  const pattern = `%${escapeLike(q)}%`;
+  const result = await pool.query(
+    `SELECT id, name, image_url FROM foods
+     WHERE name ILIKE $1
+     ORDER BY name ASC
+     LIMIT $2`,
+    [pattern, limit],
+  );
+  sendJson(res, result.rows.map(r => ({ id: r.id, name: r.name, imageUrl: r.image_url })));
+}));
+
+// ─── Food Image Management ──────────────────────────────────────────────────
+
+router.patch('/api/admin/foods/:id/image', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  const { imageUrl } = req.body ?? {};
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    return sendError(res, 400, 'imageUrl is required');
+  }
+  const result = await pool.query(
+    `UPDATE foods SET image_url = $1 WHERE id = $2 RETURNING id, name, image_url`,
+    [imageUrl.trim(), req.params.id],
+  );
+  if (result.rows.length === 0) return sendError(res, 404, 'Food not found');
+  const r = result.rows[0];
+  sendJson(res, { id: r.id, name: r.name, imageUrl: r.image_url });
+}));
+
+router.delete('/api/admin/foods/:id/image', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  const result = await pool.query(
+    'UPDATE foods SET image_url = NULL WHERE id = $1 RETURNING id, name',
+    [req.params.id]
+  );
+  if (result.rowCount === 0) return sendError(res, 404, 'Food not found');
+  sendJson(res, { success: true });
 }));
 
 export default router;

@@ -53,7 +53,7 @@ function CalorieRing({ consumed, goal }: { consumed: number; goal: number }) {
             fill="none"
             strokeWidth="7"
             strokeLinecap="round"
-            stroke={over ? '#ef4444' : '#22c55e'}
+            stroke={over ? 'hsl(var(--destructive))' : 'hsl(var(--primary))'}
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             style={{ transition: 'stroke-dashoffset 0.6s ease' }}

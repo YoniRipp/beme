@@ -43,7 +43,7 @@ describe('Energy Page', () => {
   it('shows calorie progress section', async () => {
     render(<Energy />, { wrapper });
     await waitFor(() => {
-      expect(screen.getAllByText(/macros/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/carbs/i).length).toBeGreaterThan(0);
     });
   });
 

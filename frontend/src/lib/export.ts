@@ -63,6 +63,7 @@ export type ExportCSVType = 'workouts' | 'food';
 export interface ExportCSVData {
   workouts: Workout[];
   foodEntries: FoodEntry[];
+  units?: 'metric' | 'imperial';
 }
 
 function getCSVRows(
@@ -78,7 +79,7 @@ function getCSVRows(
         w.durationMinutes.toString(),
         (w.exercises ?? [])
           .map(e =>
-            `${e.name} (${e.sets}x${e.reps}${e.weight ? ` @ ${e.weight}lbs` : ''})`
+            `${e.name} (${e.sets}x${e.reps}${e.weight ? ` ${e.weight} ${data.units === 'imperial' ? 'lbs' : 'kg'}` : ''})`
           )
           .join('; '),
       ]);

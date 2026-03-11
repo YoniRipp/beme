@@ -147,12 +147,11 @@ export async function initSchema() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS user_activity_log (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        action text NOT NULL,
-        entity_type text NOT NULL,
-        entity_id text,
-        metadata jsonb,
-        source text DEFAULT 'api',
+        user_id uuid REFERENCES users(id),
+        event_type text NOT NULL,
+        event_id text NOT NULL UNIQUE,
+        summary text NOT NULL,
+        payload jsonb,
         created_at timestamptz DEFAULT now()
       );
     `);
@@ -194,6 +193,128 @@ export async function initSchema() {
       )
     `);
 
+    // Health tracking tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_profiles (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        date_of_birth date,
+        sex text,
+        height_cm numeric,
+        current_weight numeric,
+        target_weight numeric,
+        activity_level text,
+        water_goal_glasses int DEFAULT 8,
+        cycle_tracking_enabled boolean DEFAULT false,
+        average_cycle_length int DEFAULT 28,
+        setup_completed boolean DEFAULT false,
+        created_at timestamptz DEFAULT now(),
+        updated_at timestamptz DEFAULT now()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS energy_checkins (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        date date NOT NULL,
+        sleep_hours numeric(3,1),
+        sleep_quality text,
+        energy_level int,
+        stress_level int,
+        mood text,
+        calories_consumed int,
+        calories_burned int,
+        created_at timestamptz DEFAULT now(),
+        updated_at timestamptz DEFAULT now(),
+        UNIQUE (user_id, date)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS weight_entries (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        date date NOT NULL,
+        weight numeric NOT NULL,
+        notes text,
+        created_at timestamptz DEFAULT now(),
+        UNIQUE (user_id, date)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS water_entries (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        date date NOT NULL,
+        glasses int DEFAULT 0,
+        ml_total int DEFAULT 0,
+        created_at timestamptz DEFAULT now(),
+        updated_at timestamptz DEFAULT now(),
+        UNIQUE (user_id, date)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS cycle_entries (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        date date NOT NULL,
+        period_start boolean DEFAULT false,
+        period_end boolean DEFAULT false,
+        flow text,
+        symptoms jsonb DEFAULT '[]',
+        notes text,
+        created_at timestamptz DEFAULT now(),
+        UNIQUE (user_id, date)
+      );
+    `);
+
+    // Exercise catalog
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS exercises (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        name text NOT NULL UNIQUE,
+        muscle_group text,
+        category text,
+        image_url text,
+        video_url text,
+        created_by uuid REFERENCES users(id),
+        created_at timestamptz DEFAULT now(),
+        updated_at timestamptz DEFAULT now()
+      );
+    `);
+
+    // AI chat messages
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role text NOT NULL,
+        content text NOT NULL,
+        created_at timestamptz DEFAULT now()
+      );
+    `);
+
+    // AI insights cache
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ai_insights (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        summary text,
+        highlights jsonb,
+        suggestions jsonb,
+        score int,
+        today_workout text,
+        today_sleep text,
+        today_nutrition text,
+        today_focus text,
+        period_days int DEFAULT 30,
+        created_at timestamptz DEFAULT now()
+      );
+    `);
+
     // Indexes
     await client.query('CREATE INDEX IF NOT EXISTS idx_goals_user ON goals(user_id)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_workouts_user_date ON workouts(user_id, date DESC)');
@@ -212,6 +333,17 @@ export async function initSchema() {
     await client.query('CREATE INDEX IF NOT EXISTS idx_trainer_clients_client ON trainer_clients(client_id, status)');
     await client.query("CREATE INDEX IF NOT EXISTS idx_trainer_invitations_code ON trainer_invitations(invite_code) WHERE status = 'pending'");
     await client.query("CREATE INDEX IF NOT EXISTS idx_trainer_invitations_email ON trainer_invitations(email, status)");
+    // Health tracking indexes
+    await client.query('CREATE INDEX IF NOT EXISTS idx_energy_checkins_user_date ON energy_checkins(user_id, date DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_weight_entries_user_date ON weight_entries(user_id, date DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_water_entries_user_date ON water_entries(user_id, date DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_cycle_entries_user_date ON cycle_entries(user_id, date DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_exercises_name ON exercises (lower(name))');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_exercises_muscle_group ON exercises (muscle_group)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_chat_messages_user_created ON chat_messages(user_id, created_at DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_ai_insights_user_created ON ai_insights(user_id, created_at DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_user_activity_log_user_created ON user_activity_log(user_id, created_at DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_user_activity_log_event_type_created ON user_activity_log(event_type, created_at DESC)');
 
     // pgvector (optional, non-fatal)
     try {

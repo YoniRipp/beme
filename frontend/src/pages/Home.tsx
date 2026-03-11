@@ -141,20 +141,14 @@ export function Home() {
                 <div className="relative w-44 h-44">
                   <svg viewBox="0 0 100 100" className="w-44 h-44 -rotate-90">
                     <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="7" className="text-muted" />
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(138, 15%, 54%)" strokeWidth="7" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="7" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-3xl font-bold tabular-nums leading-none">{Math.round(todaySummary.totalCal)}</span>
-                    <span className="text-[11px] text-muted-foreground leading-none mt-1">/{calGoalTarget}</span>
+                    <span className="text-xs text-muted-foreground leading-none mt-1">/{calGoalTarget}</span>
                   </div>
                 </div>
               </div>
-              {todaySummary.mealsCount > 0 && (
-                <p className="text-sm text-center text-muted-foreground">
-                  You've logged <span className="font-semibold text-foreground">{todaySummary.mealsCount} meal{todaySummary.mealsCount !== 1 ? 's' : ''}</span> and{' '}
-                  <span className="font-semibold text-foreground">{Math.round(todaySummary.totalProtein)}g of protein</span>.
-                </p>
-              )}
             </CardContent>
           </Card>
           <Card className="rounded-2xl overflow-hidden">
@@ -177,11 +171,11 @@ export function Home() {
               <div className="relative w-44 h-44 shrink-0">
                 <svg viewBox="0 0 100 100" className="w-44 h-44 -rotate-90">
                   <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="7" className="text-muted" />
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(138, 15%, 54%)" strokeWidth="7" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" />
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="7" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-3xl font-bold tabular-nums leading-none">{Math.round(todaySummary.totalCal)}</span>
-                  <span className="text-[11px] text-muted-foreground leading-none mt-1">/{calGoalTarget}</span>
+                  <span className="text-xs text-muted-foreground leading-none mt-1">/{calGoalTarget}</span>
                 </div>
               </div>
               <div className="flex-1">
@@ -193,31 +187,16 @@ export function Home() {
                 />
               </div>
             </div>
-            {todaySummary.mealsCount > 0 && (
-              <p className="text-sm text-center text-muted-foreground mt-3">
-                You've logged <span className="font-semibold text-foreground">{todaySummary.mealsCount} meal{todaySummary.mealsCount !== 1 ? 's' : ''}</span> and{' '}
-                <span className="font-semibold text-foreground">{Math.round(todaySummary.totalProtein)}g of protein</span>.
-              </p>
-            )}
           </CardContent>
         </Card>
 
         {/* Voice Hero */}
         <VoiceMicHero />
 
-        {/* Health Trackers */}
-        <div className="grid grid-cols-2 gap-3">
-          <WaterTracker />
-          <WeightProgress />
-        </div>
-
-        {/* Cycle Tracker (if enabled) */}
-        {profile.cycleTrackingEnabled && <CycleTracker />}
-
         {/* Goals Progress */}
         <Card className="rounded-2xl overflow-hidden">
           <CardContent className="p-5">
-            <SectionHeader title="Goals" subtitle="Today's progress" />
+            <SectionHeader title="Goals" subtitle="Your progress" />
             <DashboardProgressCards
               onAddGoal={() => {
                 setEditingGoal(undefined);
@@ -229,6 +208,15 @@ export function Home() {
             />
           </CardContent>
         </Card>
+
+        {/* Health Trackers */}
+        <div className="grid grid-cols-2 gap-3">
+          <WaterTracker />
+          <WeightProgress />
+        </div>
+
+        {/* Cycle Tracker (if enabled) */}
+        {profile.cycleTrackingEnabled && <CycleTracker />}
 
         {/* Recent Activity */}
         {recentActivity.length > 0 && (

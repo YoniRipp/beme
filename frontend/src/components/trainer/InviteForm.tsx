@@ -114,7 +114,7 @@ export function InviteForm({
 
         {pendingInvitations.length > 0 && (
           <div className="mt-6">
-            <p className="text-xs uppercase tracking-wide text-stone font-semibold mb-2">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">
               Pending Invitations
             </p>
             <div className="space-y-2">
@@ -123,7 +123,7 @@ export function InviteForm({
                   key={inv.id}
                   className="flex items-center justify-between p-2 rounded-lg border border-border text-sm"
                 >
-                  <span className="text-stone truncate">
+                  <span className="text-muted-foreground truncate">
                     {inv.email || `Code: ${inv.inviteCode?.slice(0, 8)}...`}
                   </span>
                   <Badge variant="secondary">pending</Badge>

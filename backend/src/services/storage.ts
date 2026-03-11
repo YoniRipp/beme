@@ -27,6 +27,9 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/png',
   'image/webp',
   'image/gif',
+  'video/mp4',
+  'video/quicktime',
+  'video/webm',
 ]);
 
 /**

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Workout, Exercise, WORKOUT_TYPES } from '@/types/workout';
@@ -24,6 +24,10 @@ import {
 import { Plus, Trash2, Copy, Save } from 'lucide-react';
 import { STORAGE_KEYS, storage } from '@/lib/storage';
 import { toast } from 'sonner';
+import { useSettings } from '@/hooks/useSettings';
+import { getWeightUnit } from '@/lib/utils';
+import { useExercises, type CatalogExercise } from '@/hooks/useExercises';
+import { ImagePlaceholder } from '@/components/shared/ImagePlaceholder';
 
 export type WorkoutTemplate = Omit<Workout, 'id' | 'date'>;
 
@@ -51,8 +55,119 @@ const defaultValues: WorkoutFormValues = {
   exercises: [defaultExercise],
 };
 
+function ExerciseNameInput({
+  value,
+  onChange,
+  onBlur,
+  exercises,
+  placeholder,
+  ariaInvalid,
+  ariaDescribedBy,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  onBlur: () => void;
+  exercises: CatalogExercise[];
+  placeholder?: string;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
+}) {
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(-1);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const query = value.toLowerCase().trim();
+  const suggestions = query.length >= 1
+    ? exercises.filter(ex => ex.name.toLowerCase().includes(query)).slice(0, 8)
+    : [];
+
+  useEffect(() => {
+    setHighlightIdx(-1);
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectSuggestion = (name: string) => {
+    onChange(name);
+    setShowSuggestions(false);
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <Input
+        placeholder={placeholder}
+        className="w-full"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setShowSuggestions(true);
+        }}
+        onFocus={() => setShowSuggestions(true)}
+        onBlur={() => {
+          // Delay to allow click on suggestion
+          setTimeout(() => onBlur(), 150);
+        }}
+        onKeyDown={(e) => {
+          if (!showSuggestions || suggestions.length === 0) return;
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightIdx(prev => Math.min(prev + 1, suggestions.length - 1));
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightIdx(prev => Math.max(prev - 1, 0));
+          } else if (e.key === 'Enter' && highlightIdx >= 0) {
+            e.preventDefault();
+            selectSuggestion(suggestions[highlightIdx].name);
+          } else if (e.key === 'Escape') {
+            setShowSuggestions(false);
+          }
+        }}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
+        autoComplete="off"
+      />
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {suggestions.map((ex, i) => (
+            <button
+              key={ex.id}
+              type="button"
+              className={`flex items-center gap-2 w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors ${
+                i === highlightIdx ? 'bg-muted' : ''
+              }`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                selectSuggestion(ex.name);
+              }}
+            >
+              <ImagePlaceholder type="exercise" size="sm" imageUrl={ex.imageUrl} />
+              <div className="min-w-0">
+                <p className="font-medium truncate">{ex.name}</p>
+                {ex.muscleGroup && (
+                  <p className="text-xs text-muted-foreground capitalize">{ex.muscleGroup}{ex.category ? ` · ${ex.category}` : ''}</p>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutModalProps) {
+  const { settings } = useSettings();
+  const unit = getWeightUnit(settings.units);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const { exercises: catalogExercises } = useExercises();
 
   const {
     register,
@@ -154,6 +269,10 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
       toast.error('Please add a title and at least one exercise before saving as template');
       return;
     }
+    if (templates.some(t => t.title.toLowerCase() === title.toLowerCase())) {
+      toast.error('A template with this name already exists');
+      return;
+    }
     const template: WorkoutTemplate = {
       title,
       type: watch('type'),
@@ -175,6 +294,13 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not save template. Please try again.');
     }
+  };
+
+  const deleteTemplate = (idx: number) => {
+    const updated = templates.filter((_, i) => i !== idx);
+    storage.set(STORAGE_KEYS.WORKOUT_TEMPLATES, updated);
+    setTemplates(updated);
+    toast.success('Template removed');
   };
 
   const onSubmit = (data: WorkoutFormValues) => {
@@ -209,22 +335,33 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
-            {templates.length > 0 && !workout && (
+            {templates.length > 0 && (
               <div className="p-3 bg-muted rounded-lg">
                 <Label className="mb-2 block">Saved Workouts</Label>
                 <div className="flex flex-wrap gap-2">
                   {templates.map((t, idx) => (
-                    <Button
-                      key={idx}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => loadTemplate(t)}
-                      className="text-xs"
-                    >
-                      <Copy className="w-3 h-3 mr-1" />
-                      {t.title}
-                    </Button>
+                    <div key={idx} className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadTemplate(t)}
+                        className="text-xs"
+                      >
+                        <Copy className="w-3 h-3 mr-1" />
+                        {t.title}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => deleteTemplate(idx)}
+                        aria-label={`Delete template: ${t.title}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -308,7 +445,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                   <span>Exercise name</span>
                   <span className="text-center">Sets</span>
                   <span>Reps per set</span>
-                  <span className="text-center">Weight (kg)</span>
+                  <span className="text-center">{`Weight (${unit})`}</span>
                 </div>
                 {fields.map((field, idx) => {
                   const setsCount = Math.min(20, Math.max(1, Number(watchedExercises?.[idx]?.sets) || 1));
@@ -318,12 +455,20 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                     <div key={field.id} className="space-y-1">
                       <div className="grid gap-2 grid-cols-[1fr_5rem_minmax(0,1fr)_6rem] items-start">
                         <div>
-                          <Input
-                            placeholder="e.g. Squat, Deadlift"
-                            className="w-full"
-                            {...register(`exercises.${idx}.name`)}
-                            aria-invalid={!!errors.exercises?.[idx]?.name}
-                            aria-describedby={errors.exercises?.[idx]?.name ? `exercise-${idx}-name-error` : undefined}
+                          <Controller
+                            name={`exercises.${idx}.name`}
+                            control={control}
+                            render={({ field: nameField }) => (
+                              <ExerciseNameInput
+                                value={nameField.value}
+                                onChange={nameField.onChange}
+                                onBlur={nameField.onBlur}
+                                exercises={catalogExercises}
+                                placeholder="e.g. Squat, Deadlift"
+                                ariaInvalid={!!errors.exercises?.[idx]?.name}
+                                ariaDescribedBy={errors.exercises?.[idx]?.name ? `exercise-${idx}-name-error` : undefined}
+                              />
+                            )}
                           />
                           {errors.exercises?.[idx]?.name && (
                             <p id={`exercise-${idx}-name-error`} className="text-xs text-destructive mt-1">
@@ -370,7 +515,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                           render={({ field: weightField }) => (
                             <Input
                               type="number"
-                              placeholder="kg"
+                              placeholder={unit}
                               className="w-full"
                               value={weightField.value ?? ''}
                               onChange={(e) => weightField.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
@@ -400,7 +545,6 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
 
           <DialogFooter className="mt-6">
             <div className="flex justify-between w-full">
-              {!workout && (
                 <Button
                   type="button"
                   variant="outline"
@@ -410,7 +554,6 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                   <Save className="w-4 h-4 mr-1" />
                   Save as Template
                 </Button>
-              )}
               <div className="flex gap-2 ml-auto">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancel

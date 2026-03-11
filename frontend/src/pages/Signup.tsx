@@ -52,7 +52,7 @@ export function Signup() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <img src="/logo.png" alt="BeMê" className="mx-auto max-w-[160px] w-auto h-16 rounded-full object-contain" />
+          <img src="/logo.png" alt="BeMe" className="mx-auto max-w-[160px] w-auto h-16 rounded-lg object-contain" />
           <CardTitle>{plan ? 'Create an account to start your trial' : 'Create an account'}</CardTitle>
           <CardDescription>{plan ? 'Sign up and start your 7-day free Pro trial.' : 'Enter your details to get started.'}</CardDescription>
         </CardHeader>

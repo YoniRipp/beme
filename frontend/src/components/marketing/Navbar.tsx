@@ -43,7 +43,7 @@ export function Navbar() {
                 BeMe
               </span>
               <p
-                className="text-[9px] font-medium uppercase leading-none tracking-widest text-muted-foreground"
+                className="text-[10px] font-medium uppercase leading-none tracking-widest text-muted-foreground"
               >
                 Life Balance
               </p>

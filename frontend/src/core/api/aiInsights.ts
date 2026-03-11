@@ -34,15 +34,24 @@ export interface SearchResponse {
   total: number;
 }
 
-export const aiInsightsApi = {
-  getInsights: (): Promise<AiInsights> =>
-    request('/api/insights'),
+export interface FreshnessResponse {
+  lastActivityAt: string | null;
+  lastInsightAt: string | null;
+  needsRefresh: boolean;
+}
 
-  refreshInsights: (): Promise<AiInsights> =>
-    request('/api/insights/refresh', { method: 'POST' }),
+export const aiInsightsApi = {
+  getInsights: (days = 30): Promise<AiInsights> =>
+    request(`/api/insights?days=${days}`),
+
+  refreshInsights: (days = 30): Promise<AiInsights> =>
+    request(`/api/insights/refresh?days=${days}`, { method: 'POST' }),
 
   getTodayRecommendations: (): Promise<TodayRecommendations> =>
     request('/api/insights/today'),
+
+  getFreshness: (): Promise<FreshnessResponse> =>
+    request('/api/insights/freshness'),
 
   getStats: (days = 30): Promise<{ days: number; stats: DailyStat[] }> =>
     request(`/api/insights/stats?days=${days}`),

@@ -1,0 +1,242 @@
+/**
+ * AI Chat Panel — slide-up panel for conversational AI fitness coaching.
+ * Loads chat history from DB, sends messages, displays responses.
+ */
+import { useState, useRef, useEffect, type FormEvent } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Send, Trash2, Loader2, MessageCircle } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { chatApi, type ChatMessage } from '@/core/api/chat';
+import { cn } from '@/lib/utils';
+
+interface AiChatPanelProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function AiChatPanel({ open, onOpenChange }: AiChatPanelProps) {
+  const queryClient = useQueryClient();
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load history
+  const { data: historyData, isLoading: historyLoading } = useQuery({
+    queryKey: ['chat-history'],
+    queryFn: () => chatApi.getHistory(50),
+    enabled: open,
+    staleTime: 0,
+  });
+
+  const messages = historyData?.messages ?? [];
+
+  // Send message
+  const sendMutation = useMutation({
+    mutationFn: chatApi.sendMessage,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['chat-history'] });
+    },
+  });
+
+  // Clear history
+  const clearMutation = useMutation({
+    mutationFn: chatApi.clearHistory,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['chat-history'] });
+    },
+  });
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length, sendMutation.isPending]);
+
+  // Focus input when panel opens
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 300);
+    }
+  }, [open]);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const trimmed = input.trim();
+    if (!trimmed || sendMutation.isPending) return;
+    setInput('');
+    sendMutation.mutate(trimmed);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="h-[85vh] flex flex-col p-0 rounded-t-2xl"
+      >
+        {/* Header */}
+        <SheetHeader className="px-4 py-3 border-b shrink-0">
+          <div className="flex items-center justify-between">
+            <SheetTitle className="flex items-center gap-2 text-base">
+              <MessageCircle className="w-4 h-4 text-violet-600" />
+              AI Fitness Coach
+            </SheetTitle>
+            {messages.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => clearMutation.mutate()}
+                disabled={clearMutation.isPending}
+                className="text-muted-foreground hover:text-destructive h-8 px-2"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
+        </SheetHeader>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Loading conversation...
+            </div>
+          ) : messages.length === 0 && !sendMutation.isPending ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center px-6">
+              <div className="w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-3">
+                <MessageCircle className="w-6 h-6 text-violet-600" />
+              </div>
+              <h3 className="font-semibold text-sm mb-1">Your AI Fitness Coach</h3>
+              <p className="text-xs text-muted-foreground max-w-[280px]">
+                Ask me anything about your nutrition, workouts, or goals. I have access to all your data and can give personalized advice.
+              </p>
+              <div className="mt-4 space-y-2 w-full max-w-[280px]">
+                {[
+                  'Am I eating enough protein?',
+                  'How should I adjust my workouts?',
+                  'What should I eat today?',
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => {
+                      setInput(suggestion);
+                      inputRef.current?.focus();
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg border text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              {messages.map((msg) => (
+                <MessageBubble key={msg.id} message={msg} />
+              ))}
+              {sendMutation.isPending && (
+                <>
+                  <MessageBubble
+                    message={{
+                      id: 'pending-user',
+                      role: 'user',
+                      content: sendMutation.variables ?? '',
+                      created_at: new Date().toISOString(),
+                    }}
+                  />
+                  <div className="flex gap-2 items-start">
+                    <div className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
+                      <MessageCircle className="w-3.5 h-3.5 text-violet-600" />
+                    </div>
+                    <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    </div>
+                  </div>
+                </>
+              )}
+              {sendMutation.isError && (
+                <p className="text-xs text-destructive text-center">
+                  Failed to send message. Please try again.
+                </p>
+              )}
+            </>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input */}
+        <form
+          onSubmit={handleSubmit}
+          className="border-t px-4 py-3 flex gap-2 items-end shrink-0 bg-background"
+        >
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask your coach..."
+            rows={1}
+            className={cn(
+              'flex-1 resize-none rounded-xl border px-3 py-2 text-sm',
+              'focus:outline-none focus:ring-2 focus:ring-violet-500/50',
+              'max-h-[120px] min-h-[40px]',
+              'bg-background'
+            )}
+            style={{ height: 'auto' }}
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = 'auto';
+              target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+            }}
+          />
+          <Button
+            type="submit"
+            size="sm"
+            disabled={!input.trim() || sendMutation.isPending}
+            className="bg-violet-600 hover:bg-violet-700 text-white h-10 w-10 p-0 rounded-xl shrink-0"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// ─── Message Bubble ─────────────────────────────────────────────────────────────
+
+function MessageBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === 'user';
+
+  return (
+    <div className={cn('flex gap-2 items-start', isUser && 'flex-row-reverse')}>
+      {!isUser && (
+        <div className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
+          <MessageCircle className="w-3.5 h-3.5 text-violet-600" />
+        </div>
+      )}
+      <div
+        className={cn(
+          'max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap',
+          isUser
+            ? 'bg-violet-600 text-white rounded-tr-sm'
+            : 'bg-muted rounded-tl-sm'
+        )}
+      >
+        {message.content}
+      </div>
+    </div>
+  );
+}

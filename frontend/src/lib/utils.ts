@@ -123,3 +123,7 @@ export function isSameDay(date1: Date | string, date2: Date | string): boolean {
   const d2 = typeof date2 === 'string' ? new Date(date2) : date2;
   return d1.toDateString() === d2.toDateString();
 }
+
+export function getWeightUnit(units: 'metric' | 'imperial'): string {
+  return units === 'metric' ? 'kg' : 'lbs';
+}

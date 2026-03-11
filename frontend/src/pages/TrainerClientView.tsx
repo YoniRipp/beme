@@ -39,11 +39,11 @@ export default function TrainerClientView() {
           Back
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-charcoal">
+          <h1 className="text-2xl font-bold text-foreground">
             {client?.clientName ?? 'Client'}
           </h1>
           {client?.clientEmail && (
-            <p className="text-sm text-stone">{client.clientEmail}</p>
+            <p className="text-sm text-muted-foreground">{client.clientEmail}</p>
           )}
         </div>
       </div>
@@ -78,16 +78,16 @@ export default function TrainerClientView() {
               renderItem={(item: Record<string, unknown>) => (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-charcoal">
+                    <p className="text-sm font-medium text-foreground">
                       {String(item.title || 'Workout')}
                     </p>
-                    <p className="text-xs text-stone">
+                    <p className="text-xs text-muted-foreground">
                       {String(item.date || '')} - {String(item.type || 'strength')}
                       {item.durationMinutes ? ` - ${item.durationMinutes} min` : ''}
                     </p>
                   </div>
                   {Array.isArray(item.exercises) && (
-                    <span className="text-xs text-stone">
+                    <span className="text-xs text-muted-foreground">
                       {item.exercises.length} exercise{item.exercises.length !== 1 ? 's' : ''}
                     </span>
                   )}
@@ -103,16 +103,16 @@ export default function TrainerClientView() {
               renderItem={(item: Record<string, unknown>) => (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-charcoal">
+                    <p className="text-sm font-medium text-foreground">
                       {String(item.name || 'Food')}
                     </p>
-                    <p className="text-xs text-stone">
+                    <p className="text-xs text-muted-foreground">
                       {String(item.date || '')}
                       {item.mealType ? ` - ${item.mealType}` : ''}
                     </p>
                   </div>
                   {item.calories != null && (
-                    <span className="text-xs text-stone">{String(item.calories)} cal</span>
+                    <span className="text-xs text-muted-foreground">{String(item.calories)} cal</span>
                   )}
                 </div>
               )}
@@ -126,10 +126,10 @@ export default function TrainerClientView() {
               renderItem={(item: Record<string, unknown>) => (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-charcoal">
+                    <p className="text-sm font-medium text-foreground">
                       {String(item.date || '')}
                     </p>
-                    <p className="text-xs text-stone">
+                    <p className="text-xs text-muted-foreground">
                       {item.sleepHours != null ? `Sleep: ${item.sleepHours}h` : ''}
                       {item.energyLevel != null ? ` | Energy: ${item.energyLevel}/10` : ''}
                       {item.mood != null ? ` | Mood: ${item.mood}/10` : ''}
@@ -147,10 +147,10 @@ export default function TrainerClientView() {
               renderItem={(item: Record<string, unknown>) => (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-charcoal">
+                    <p className="text-sm font-medium text-foreground">
                       {String(item.type || 'Goal')}: {String(item.target || '')}
                     </p>
-                    <p className="text-xs text-stone">
+                    <p className="text-xs text-muted-foreground">
                       {String(item.period || '')}
                       {item.startDate ? ` | ${item.startDate}` : ''}
                     </p>
@@ -176,7 +176,7 @@ function DataList({ items, emptyMessage, renderItem }: DataListProps) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <p className="text-stone text-sm">{emptyMessage}</p>
+          <p className="text-muted-foreground text-sm">{emptyMessage}</p>
         </CardContent>
       </Card>
     );
@@ -185,14 +185,14 @@ function DataList({ items, emptyMessage, renderItem }: DataListProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm text-stone">{items.length} entries</CardTitle>
+        <CardTitle className="text-sm text-muted-foreground">{items.length} entries</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
           {items.map((item, index) => (
             <div
               key={String(item.id ?? index)}
-              className="p-3 rounded-lg border border-border hover:bg-cream-warm/30 transition-colors"
+              className="p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors"
             >
               {renderItem(item)}
             </div>

@@ -23,7 +23,7 @@ const GOAL_TYPE_BORDER: Record<GoalType, string> = {
 const GOAL_LABELS: Record<GoalType, string> = {
   calories: 'calories',
   workouts: 'workouts',
-  sleep: 'h avg',
+  sleep: 'hours avg',
 };
 const formatGoalValue = (type: GoalType, value: number) =>
   type === 'sleep' ? `${value.toFixed(1)}h` : value.toLocaleString();
@@ -54,7 +54,7 @@ export function GoalCard({ goal, onEdit }: GoalCardProps) {
           <div className="flex items-center gap-3">
             {GOAL_ICONS[goal.type]}
             <div>
-              <h4 className="font-semibold capitalize">
+              <h4 className="text-sm font-semibold capitalize">
                 {goal.type} Goal ({goal.period})
               </h4>
               <p className="text-sm text-muted-foreground">

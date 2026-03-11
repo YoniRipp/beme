@@ -411,11 +411,11 @@ export function Energy() {
           <div className="relative w-44 h-44">
             <svg viewBox="0 0 100 100" className="w-44 h-44 -rotate-90">
               <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="7" className="text-muted" />
-              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(138, 15%, 54%)" strokeWidth="7" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="7" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-bold tabular-nums leading-none">{Math.round(periodTotals.calories)}</span>
-              <span className="text-[11px] text-muted-foreground leading-none mt-1">/{calGoalTarget}{caloriePeriod !== 'daily' ? ' cal/day' : ''}</span>
+              <span className="text-xs text-muted-foreground leading-none mt-1">/{calGoalTarget}{caloriePeriod !== 'daily' ? ' cal/day' : ''}</span>
             </div>
           </div>
         );

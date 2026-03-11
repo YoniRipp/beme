@@ -16,6 +16,7 @@ import adminRouter from './admin.js';
 import searchRouter from './search.js';
 import insightsRouter from './insights.js';
 import uploadsRouter from './uploads.js';
+import exercisesRouter from './exercises.js';
 import subscriptionRouter from './subscription.js';
 import pushRouter from './push.js';
 import trainerRouter from './trainer.js';
@@ -23,6 +24,7 @@ import profileRouter from './profile.js';
 import weightRouter from './weight.js';
 import waterRouter from './water.js';
 import cycleRouter from './cycle.js';
+import chatRouter from './chat.js';
 
 const router = Router();
 
@@ -44,9 +46,11 @@ router.use(jobsRouter);
 router.use(searchRouter);
 router.use(insightsRouter);
 router.use(uploadsRouter);
+router.use(exercisesRouter);
 router.use(profileRouter);
 router.use(weightRouter);
 router.use(waterRouter);
 router.use(cycleRouter);
+router.use(chatRouter);
 
 export default router;

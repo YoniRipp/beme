@@ -160,7 +160,7 @@ it('opens goal modal when a progress card without a goal is clicked', async () =
     await user.click(card);
 
     await waitFor(() => {
-      const createGoalElements = screen.getAllByText(/create goal/i);
+      const createGoalElements = screen.getAllByText(/add goal/i);
       expect(createGoalElements.length).toBeGreaterThanOrEqual(1);
     });
   });

@@ -1,11 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { ShieldCheck, LayoutDashboard, Users, Activity, Server } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Users, Activity, Server, Image } from 'lucide-react';
 
 const tabs = [
   { to: '/admin', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/admin/users', label: 'Users', icon: Users, end: false },
   { to: '/admin/activity', label: 'Activity', icon: Activity, end: false },
   { to: '/admin/system', label: 'System', icon: Server, end: false },
+  { to: '/admin/images', label: 'Images', icon: Image, end: false },
 ];
 
 export function AdminLayout() {

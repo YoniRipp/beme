@@ -54,8 +54,8 @@ export default function Trainer() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-charcoal">Trainer Dashboard</h1>
-        <p className="text-sm text-stone mt-1">
+        <h1 className="text-2xl font-bold text-foreground">Trainer Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Manage your clients and invitations
         </p>
       </div>

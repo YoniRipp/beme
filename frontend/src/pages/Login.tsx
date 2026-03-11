@@ -33,7 +33,7 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <img src="/logo.png" alt="BeMê" className="mx-auto max-w-[160px] w-auto h-16 rounded-full object-contain" />
+          <img src="/logo.png" alt="BeMe" className="mx-auto max-w-[160px] w-auto h-16 rounded-lg object-contain" />
           <CardTitle>Sign in</CardTitle>
           <CardDescription>Enter your email and password to access your account.</CardDescription>
         </CardHeader>

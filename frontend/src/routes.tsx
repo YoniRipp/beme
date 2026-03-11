@@ -17,6 +17,7 @@ const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'));
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
 const AdminActivityPage = lazy(() => import('./pages/admin/AdminActivityPage'));
 const AdminSystemPage = lazy(() => import('./pages/admin/AdminSystemPage'));
+const AdminImagesPage = lazy(() => import('./pages/admin/AdminImagesPage'));
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 const Insights = lazy(() => import('./pages/Insights').then((m) => ({ default: m.Insights })));
 const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })));
@@ -38,10 +39,10 @@ const About = lazy(() =>
   import('./pages/About').then((m) => ({ default: m.About }))
 );
 const PrivacyPolicy = lazy(() =>
-  import('./pages/PrivacyPolicy').then((m) => ({ default: m.PrivacyPolicy }))
+  import('./pages/Privacy').then((m) => ({ default: m.Privacy }))
 );
 const TermsOfService = lazy(() =>
-  import('./pages/TermsOfService').then((m) => ({ default: m.TermsOfService }))
+  import('./pages/Terms').then((m) => ({ default: m.Terms }))
 );
 const Contact = lazy(() =>
   import('./pages/Contact').then((m) => ({ default: m.Contact }))
@@ -208,6 +209,14 @@ function ProtectedAppRoutes() {
             element={
               <Suspense fallback={<LoadingSpinner text="Loading system..." />}>
                 <AdminSystemPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="images"
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading images..." />}>
+                <AdminImagesPage />
               </Suspense>
             }
           />

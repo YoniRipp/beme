@@ -1,10 +1,12 @@
 import { memo } from 'react';
 import { Workout } from '@/types/workout';
-import { formatDate } from '@/lib/utils';
+import { formatDate, getWeightUnit } from '@/lib/utils';
+import { useSettings } from '@/hooks/useSettings';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImagePlaceholder } from '@/components/shared/ImagePlaceholder';
+import { useExercises } from '@/hooks/useExercises';
 
 interface WorkoutCardProps {
   workout: Workout;
@@ -13,9 +15,13 @@ interface WorkoutCardProps {
 }
 
 export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete }: WorkoutCardProps) {
+  const { settings } = useSettings();
+  const unit = getWeightUnit(settings.units);
+  const { getImageUrl } = useExercises();
+  const cardImageUrl = workout.exercises.map(ex => getImageUrl(ex.name)).find(Boolean);
   return (
     <div
-      className="flex items-start gap-3 p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80 transition-colors"
+      className="flex items-start gap-3 p-3 bg-white border border-border/50 rounded-xl cursor-pointer hover:shadow-sm transition-all"
       onClick={() => onEdit && onEdit(workout)}
       role="button"
       tabIndex={0}
@@ -27,11 +33,11 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
         }
       }}
     >
-      <ImagePlaceholder type="exercise" size="md" />
+      <ImagePlaceholder type="exercise" size="md" imageUrl={cardImageUrl} />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <p className="font-medium truncate">{workout.title}</p>
+          <p className="text-sm font-medium truncate">{workout.title}</p>
           <Badge variant="secondary">{workout.type}</Badge>
         </div>
         <div className="flex items-center gap-4 text-sm text-muted-foreground mb-1">
@@ -46,13 +52,13 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
             {workout.exercises.slice(0, 3).map((ex, i) => (
               <p key={i} className="text-xs text-muted-foreground truncate">
                 {ex.name}{' '}
-                <span className="text-muted-foreground/70">
-                  {ex.sets} × {ex.reps}{ex.weight ? ` @ ${ex.weight}lbs` : ''}
+                <span className="text-muted-foreground">
+                  {ex.sets} × {ex.reps}{ex.weight ? ` ${ex.weight} ${unit}` : ''}
                 </span>
               </p>
             ))}
             {workout.exercises.length > 3 && (
-              <p className="text-xs text-muted-foreground/50">
+              <p className="text-xs text-muted-foreground">
                 +{workout.exercises.length - 3} more
               </p>
             )}
