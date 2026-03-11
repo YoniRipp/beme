@@ -230,6 +230,11 @@ function splitQueryWords(q: string): string[] {
   return q.toLowerCase().split(/\s+/).filter((w) => w.length > 0);
 }
 
+/** Escape special regex characters for PostgreSQL ~* operator. */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * Build a parameterized WHERE clause requiring ALL query words in a column.
  * "chicken breast" on column "lower(name)" with startIdx 3:
@@ -240,6 +245,18 @@ function wordSplitLike(col: string, words: string[], startIdx: number): { sql: s
   if (words.length === 0) return { sql: 'FALSE', values: [] };
   const conditions = words.map((_, i) => `${col} LIKE $${startIdx + i}`);
   const values = words.map((w) => '%' + escapeLike(w) + '%');
+  return { sql: conditions.length === 1 ? conditions[0] : `(${conditions.join(' AND ')})`, values };
+}
+
+/**
+ * Word-boundary-aware matching using PostgreSQL regex ~*.
+ * "cheese" matches "cream cheese" and "cheese, sliced" but NOT "cheesecake".
+ * Uses \m (word start) and \M (word end) PostgreSQL regex anchors.
+ */
+function wordSplitWordBound(col: string, words: string[], startIdx: number): { sql: string; values: string[] } {
+  if (words.length === 0) return { sql: 'FALSE', values: [] };
+  const conditions = words.map((_, i) => `${col} ~* $${startIdx + i}`);
+  const values = words.map((w) => '\\m' + escapeRegex(w) + '\\M');
   return { sql: conditions.length === 1 ? conditions[0] : `(${conditions.join(' AND ')})`, values };
 }
 
@@ -340,17 +357,17 @@ export async function getNutritionForFoodName(pool: Pool, foodName: string, amou
   const wantPrep = preferUncooked ? 'uncooked' : 'cooked';
   const words = splitQueryWords(query);
 
-  // $1=query, $2=prefix, $3=wantPrep, $4+=word LIKE params
-  const cnLike = wordSplitLike('lower(COALESCE(common_name, name))', words, 4);
-  const nmLike = wordSplitLike('lower(name)', words, 4 + cnLike.values.length);
-  const allValues = [query, escapeLike(query) + '%', wantPrep, ...cnLike.values, ...nmLike.values];
+  // $1=query, $2=prefix, $3=wantPrep, $4+=word-boundary regex params
+  const cnWord = wordSplitWordBound('lower(COALESCE(common_name, name))', words, 4);
+  const nmWord = wordSplitWordBound('lower(name)', words, 4 + cnWord.values.length);
+  const allValues = [query, escapeLike(query) + '%', wantPrep, ...cnWord.values, ...nmWord.values];
 
   let result;
   try {
     result = await pool.query(
       `SELECT id, name, common_name, calories, protein, carbs, fat, is_liquid, preparation
        FROM foods
-       WHERE ${cnLike.sql} OR ${nmLike.sql}
+       WHERE ${cnWord.sql} OR ${nmWord.sql}
           OR similarity(lower(COALESCE(common_name, name)), $1) > 0.6
        ORDER BY
          (lower(COALESCE(common_name, name)) = $1) DESC,
@@ -363,7 +380,7 @@ export async function getNutritionForFoodName(pool: Pool, foodName: string, amou
     );
   } catch {
     // Fallback without pg_trgm / common_name — use only guaranteed columns
-    const fbNm = wordSplitLike('lower(name)', words, 3);
+    const fbNm = wordSplitWordBound('lower(name)', words, 3);
 
     result = await pool.query(
       `SELECT id, name, calories, protein, carbs, fat, is_liquid, preparation
