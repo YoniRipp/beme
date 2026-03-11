@@ -148,7 +148,7 @@ function ExerciseNameInput({
                 selectSuggestion(ex.name);
               }}
             >
-              <ImagePlaceholder type="exercise" size="sm" imageUrl={ex.imageUrl} />
+              <ImagePlaceholder type="exercise" size="sm" imageUrl={ex.imageUrl} muscleGroup={ex.muscleGroup} />
               <div className="min-w-0">
                 <p className="font-medium truncate">{ex.name}</p>
                 {ex.muscleGroup && (

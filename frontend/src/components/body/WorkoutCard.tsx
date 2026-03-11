@@ -17,8 +17,9 @@ interface WorkoutCardProps {
 export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete }: WorkoutCardProps) {
   const { settings } = useSettings();
   const unit = getWeightUnit(settings.units);
-  const { getImageUrl } = useExercises();
+  const { getImageUrl, getMuscleGroup } = useExercises();
   const cardImageUrl = workout.exercises.map(ex => getImageUrl(ex.name)).find(Boolean);
+  const cardMuscleGroup = workout.exercises.map(ex => getMuscleGroup(ex.name)).find(Boolean);
   return (
     <div
       className="flex items-start gap-3 p-3 bg-white border border-border/50 rounded-xl cursor-pointer hover:shadow-sm transition-all"
@@ -33,7 +34,7 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
         }
       }}
     >
-      <ImagePlaceholder type="exercise" size="md" imageUrl={cardImageUrl} />
+      <ImagePlaceholder type="exercise" size="md" imageUrl={cardImageUrl} muscleGroup={cardMuscleGroup} />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">

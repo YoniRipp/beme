@@ -29,13 +29,19 @@ export function useExercises() {
     return data.find(ex => ex.name.toLowerCase().trim() === normalized)?.videoUrl;
   };
 
+  const getMuscleGroup = (exerciseName: string): string | undefined => {
+    if (!data) return undefined;
+    const normalized = exerciseName.toLowerCase().trim();
+    return data.find(ex => ex.name.toLowerCase().trim() === normalized)?.muscleGroup;
+  };
+
   const searchExercises = (query: string): CatalogExercise[] => {
     if (!data || !query.trim()) return data ?? [];
     const normalized = query.toLowerCase().trim();
     return data.filter(ex => ex.name.toLowerCase().includes(normalized));
   };
 
-  return { exercises: data ?? [], getImageUrl, getVideoUrl, searchExercises };
+  return { exercises: data ?? [], getImageUrl, getVideoUrl, getMuscleGroup, searchExercises };
 }
 
 /** @deprecated Use useExercises instead */

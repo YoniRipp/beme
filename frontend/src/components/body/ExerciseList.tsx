@@ -23,7 +23,7 @@ function getYouTubeEmbedUrl(url: string): string {
 export function ExerciseList({ exercises }: ExerciseListProps) {
   const { settings } = useSettings();
   const unit = getWeightUnit(settings.units);
-  const { getImageUrl, getVideoUrl } = useExercises();
+  const { getImageUrl, getVideoUrl, getMuscleGroup } = useExercises();
   const [videoModal, setVideoModal] = useState<{ name: string; url: string } | null>(null);
 
   if (exercises.length === 0) {
@@ -40,7 +40,7 @@ export function ExerciseList({ exercises }: ExerciseListProps) {
           return (
             <div key={idx} className="flex items-center gap-3 p-2 bg-muted rounded-xl">
               <div className="relative">
-                <ImagePlaceholder type="exercise" size="sm" imageUrl={getImageUrl(exercise.name)} />
+                <ImagePlaceholder type="exercise" size="sm" imageUrl={getImageUrl(exercise.name)} muscleGroup={getMuscleGroup(exercise.name)} />
                 {videoUrl && (
                   <button
                     onClick={(e) => {
