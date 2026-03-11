@@ -32,17 +32,6 @@ interface FoodRow {
   imageUrl: string | null;
 }
 
-interface FoodSearchResult {
-  name: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  referenceGrams: number;
-  isLiquid: boolean;
-  preparation: string;
-}
-
 type Tab = 'exercises' | 'foods';
 
 const MUSCLE_GROUPS = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'full_body'];
@@ -75,6 +64,8 @@ function ExerciseCatalogTab() {
   const [uploading, setUploading] = useState<string | null>(null);
   const [videoUrlInput, setVideoUrlInput] = useState<Record<string, string>>({});
   const [showVideoInput, setShowVideoInput] = useState<Record<string, boolean>>({});
+  const [imageUrlInput, setImageUrlInput] = useState<Record<string, string>>({});
+  const [showImageUrlInput, setShowImageUrlInput] = useState<Record<string, boolean>>({});
 
   const { data: exercises = [], isLoading } = useQuery({
     queryKey: ['admin', 'exercises'],
@@ -183,6 +174,36 @@ function ExerciseCatalogTab() {
       toast.success('Video removed');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to remove video');
+    }
+  };
+
+  const handleSetImageUrl = async (id: string) => {
+    const url = imageUrlInput[id]?.trim();
+    if (!url) return;
+    try {
+      await request(`/api/admin/exercises/${id}`, {
+        method: 'PATCH',
+        body: { imageUrl: url },
+      });
+      invalidateExercises(queryClient);
+      setImageUrlInput(prev => ({ ...prev, [id]: '' }));
+      setShowImageUrlInput(prev => ({ ...prev, [id]: false }));
+      toast.success('Image URL saved');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save image URL');
+    }
+  };
+
+  const handleRemoveImage = async (id: string) => {
+    try {
+      await request(`/api/admin/exercises/${id}`, {
+        method: 'PATCH',
+        body: { imageUrl: '' },
+      });
+      invalidateExercises(queryClient);
+      toast.success('Image removed');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to remove image');
     }
   };
 
@@ -335,6 +356,27 @@ function ExerciseCatalogTab() {
                 </Button>
 
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowImageUrlInput(prev => ({ ...prev, [ex.id]: !prev[ex.id] }))}
+                >
+                  <LinkIcon className="w-3 h-3 mr-1" />
+                  Img URL
+                </Button>
+
+                {ex.imageUrl && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-orange-500"
+                    onClick={() => handleRemoveImage(ex.id)}
+                    title="Remove image"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+
+                <Button
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-destructive"
@@ -379,6 +421,26 @@ function ExerciseCatalogTab() {
                   </Button>
                 </div>
               )}
+
+              {/* Image URL input */}
+              {showImageUrlInput[ex.id] && (
+                <div className="flex gap-2 ml-14">
+                  <Input
+                    placeholder="Paste image URL..."
+                    value={imageUrlInput[ex.id] || ''}
+                    onChange={(e) => setImageUrlInput(prev => ({ ...prev, [ex.id]: e.target.value }))}
+                    className="flex-1 h-8 text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    onClick={() => handleSetImageUrl(ex.id)}
+                    disabled={!imageUrlInput[ex.id]?.trim()}
+                  >
+                    Save
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -391,19 +453,13 @@ function FoodImagesTab() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState<string | null>(null);
+  const [imageUrlInput, setImageUrlInput] = useState<Record<string, string>>({});
+  const [showImageUrlInput, setShowImageUrlInput] = useState<Record<string, boolean>>({});
 
   const { data: foods = [], isLoading } = useQuery({
     queryKey: ['admin', 'foods-with-images', search],
-    queryFn: async (): Promise<FoodRow[]> => {
-      const results = await request<FoodSearchResult[]>(
-        `/api/foods/search?q=${encodeURIComponent(search)}&limit=25`
-      );
-      return results.map((r) => ({
-        id: r.name,
-        name: r.name,
-        imageUrl: null,
-      }));
-    },
+    queryFn: (): Promise<FoodRow[]> =>
+      request(`/api/admin/foods/search?q=${encodeURIComponent(search)}&limit=25`),
     enabled: search.length >= 2,
   });
 
@@ -434,6 +490,23 @@ function FoodImagesTab() {
     }
   };
 
+  const handleSetImageUrl = async (foodId: string) => {
+    const url = imageUrlInput[foodId]?.trim();
+    if (!url) return;
+    try {
+      await request(`/api/admin/foods/${foodId}/image`, {
+        method: 'PATCH',
+        body: { imageUrl: url },
+      });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'foods-with-images'] });
+      setImageUrlInput(prev => ({ ...prev, [foodId]: '' }));
+      setShowImageUrlInput(prev => ({ ...prev, [foodId]: false }));
+      toast.success('Food image URL saved');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save image URL');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Input
@@ -451,38 +524,68 @@ function FoodImagesTab() {
       ) : (
         <div className="space-y-2">
           {foods.map((food) => (
-            <div key={food.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-              <ImagePlaceholder type="food" size="md" imageUrl={food.imageUrl ?? undefined} />
-              <span className="flex-1 font-medium truncate">{food.name}</span>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                id={`food-upload-${food.id}`}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleUpload(food.id, file);
-                  e.target.value = '';
-                }}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => document.getElementById(`food-upload-${food.id}`)?.click()}
-                disabled={uploading === food.id}
-              >
-                <Upload className="w-3 h-3 mr-1" />
-                {uploading === food.id ? 'Uploading...' : food.imageUrl ? 'Replace' : 'Upload'}
-              </Button>
-              {food.imageUrl && (
+            <div key={food.id} className="p-3 bg-muted rounded-lg space-y-2">
+              <div className="flex items-center gap-3">
+                <ImagePlaceholder type="food" size="md" imageUrl={food.imageUrl ?? undefined} />
+                <span className="flex-1 font-medium truncate">{food.name}</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  id={`food-upload-${food.id}`}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUpload(food.id, file);
+                    e.target.value = '';
+                  }}
+                />
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive"
-                  onClick={() => handleRemove(food.id)}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById(`food-upload-${food.id}`)?.click()}
+                  disabled={uploading === food.id}
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Upload className="w-3 h-3 mr-1" />
+                  {uploading === food.id ? 'Uploading...' : food.imageUrl ? 'Replace' : 'Upload'}
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowImageUrlInput(prev => ({ ...prev, [food.id]: !prev[food.id] }))}
+                >
+                  <LinkIcon className="w-3 h-3 mr-1" />
+                  URL
+                </Button>
+                {food.imageUrl && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive"
+                    onClick={() => handleRemove(food.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Image URL input */}
+              {showImageUrlInput[food.id] && (
+                <div className="flex gap-2 ml-14">
+                  <Input
+                    placeholder="Paste food image URL..."
+                    value={imageUrlInput[food.id] || ''}
+                    onChange={(e) => setImageUrlInput(prev => ({ ...prev, [food.id]: e.target.value }))}
+                    className="flex-1 h-8 text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    onClick={() => handleSetImageUrl(food.id)}
+                    disabled={!imageUrlInput[food.id]?.trim()}
+                  >
+                    Save
+                  </Button>
+                </div>
               )}
             </div>
           ))}
