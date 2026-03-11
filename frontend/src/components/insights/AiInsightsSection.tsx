@@ -1,15 +1,47 @@
 /**
  * AI-powered Insights section — calls the backend Gemini endpoints
  * to show a wellness score, smart summary, highlights, and suggestions.
+ * Supports configurable time periods and links to AI chat.
  */
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Sparkles, TrendingUp, Lightbulb, AlertCircle, Search, X, RefreshCw } from 'lucide-react';
+import { Sparkles, TrendingUp, Lightbulb, AlertCircle, Search, X, RefreshCw, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { aiInsightsApi, type SearchResult } from '@/core/api/aiInsights';
 import { cn } from '@/lib/utils';
+import { AiChatPanel } from './AiChatPanel';
+
+// ─── Period Options ─────────────────────────────────────────────────────────────
+
+const PERIOD_OPTIONS = [
+  { label: '7d', days: 7 },
+  { label: '14d', days: 14 },
+  { label: '30d', days: 30 },
+  { label: '90d', days: 90 },
+] as const;
+
+function PeriodSelector({ value, onChange }: { value: number; onChange: (days: number) => void }) {
+  return (
+    <div className="flex gap-1">
+      {PERIOD_OPTIONS.map((opt) => (
+        <button
+          key={opt.days}
+          onClick={() => onChange(opt.days)}
+          className={cn(
+            'px-3 py-1 rounded-full text-xs font-medium transition-colors',
+            value === opt.days
+              ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          )}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // ─── Wellness Score Ring ───────────────────────────────────────────────────────
 
@@ -199,18 +231,21 @@ function TodayRecommendations() {
 
 export function AiInsightsSection() {
   const queryClient = useQueryClient();
+  const [periodDays, setPeriodDays] = useState(30);
+  const [chatOpen, setChatOpen] = useState(false);
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['ai-insights'],
-    queryFn: aiInsightsApi.getInsights,
+    queryKey: ['ai-insights', periodDays],
+    queryFn: () => aiInsightsApi.getInsights(periodDays),
     staleTime: 15 * 60 * 1000, // 15 min cache
   });
 
   const autoRefreshTriggered = useRef(false);
 
   const refreshMutation = useMutation({
-    mutationFn: aiInsightsApi.refreshInsights,
+    mutationFn: () => aiInsightsApi.refreshInsights(periodDays),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['ai-insights'] });
+      void queryClient.invalidateQueries({ queryKey: ['ai-insights', periodDays] });
       void queryClient.invalidateQueries({ queryKey: ['ai-today-recs'] });
       void queryClient.invalidateQueries({ queryKey: ['ai-insights-freshness'] });
       autoRefreshTriggered.current = false;
@@ -244,17 +279,20 @@ export function AiInsightsSection() {
           <Sparkles className="w-5 h-5 text-violet-500" />
           AI-Powered Insights
         </h2>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={isLoading || refreshMutation.isPending}
-          onClick={() => refreshMutation.mutate()}
-        >
-          <RefreshCw
-            className={cn('w-4 h-4 mr-1.5', (isLoading || refreshMutation.isPending) && 'animate-spin')}
-          />
-          Refresh insights
-        </Button>
+        <div className="flex items-center gap-2">
+          <PeriodSelector value={periodDays} onChange={setPeriodDays} />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isLoading || refreshMutation.isPending}
+            onClick={() => refreshMutation.mutate()}
+          >
+            <RefreshCw
+              className={cn('w-4 h-4 mr-1.5', (isLoading || refreshMutation.isPending) && 'animate-spin')}
+            />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Score + Summary card */}
@@ -344,11 +382,38 @@ export function AiInsightsSection() {
         </div>
       )}
 
+      {/* AI Coach Chat Button */}
+      <Card className="bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-950/20 dark:to-indigo-950/20 border-violet-200 dark:border-violet-800">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 text-violet-600" />
+                AI Fitness Coach
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Ask anything about your nutrition, workouts, or goals. Your coach knows all your data.
+              </p>
+            </div>
+            <Button
+              onClick={() => setChatOpen(true)}
+              className="bg-violet-600 hover:bg-violet-700 text-white shrink-0"
+              size="sm"
+            >
+              Chat Now
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Today's Recommendations */}
       <TodayRecommendations />
 
       {/* Semantic Search */}
       <SearchBox />
+
+      {/* Chat Panel */}
+      <AiChatPanel open={chatOpen} onOpenChange={setChatOpen} />
     </div>
   );
 }

@@ -20,6 +20,10 @@ vi.mock('@/core/api/aiInsights', () => ({
   },
 }));
 
+vi.mock('./AiChatPanel', () => ({
+  AiChatPanel: () => null,
+}));
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 });
@@ -51,7 +55,7 @@ describe('AiInsightsSection', () => {
   it('renders AI-Powered Insights heading and Refresh button', async () => {
     render(<AiInsightsSection />, { wrapper });
     expect(screen.getByRole('heading', { name: /AI-Powered Insights/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Refresh insights/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Refresh/i })).toBeInTheDocument();
   });
 
   it('shows loading state while fetching', () => {
@@ -112,7 +116,7 @@ describe('AiInsightsSection', () => {
     mockGetInsights.mockClear();
     mockRefreshInsights.mockResolvedValue(successData);
 
-    await user.click(screen.getByRole('button', { name: /Refresh insights/i }));
+    await user.click(screen.getByRole('button', { name: /Refresh/i }));
 
     await waitFor(() => {
       expect(mockRefreshInsights).toHaveBeenCalled();

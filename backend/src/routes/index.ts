@@ -24,6 +24,7 @@ import profileRouter from './profile.js';
 import weightRouter from './weight.js';
 import waterRouter from './water.js';
 import cycleRouter from './cycle.js';
+import chatRouter from './chat.js';
 
 const router = Router();
 
@@ -50,5 +51,6 @@ router.use(profileRouter);
 router.use(weightRouter);
 router.use(waterRouter);
 router.use(cycleRouter);
+router.use(chatRouter);
 
 export default router;

@@ -41,11 +41,11 @@ export interface FreshnessResponse {
 }
 
 export const aiInsightsApi = {
-  getInsights: (): Promise<AiInsights> =>
-    request('/api/insights'),
+  getInsights: (days = 30): Promise<AiInsights> =>
+    request(`/api/insights?days=${days}`),
 
-  refreshInsights: (): Promise<AiInsights> =>
-    request('/api/insights/refresh', { method: 'POST' }),
+  refreshInsights: (days = 30): Promise<AiInsights> =>
+    request(`/api/insights/refresh?days=${days}`, { method: 'POST' }),
 
   getTodayRecommendations: (): Promise<TodayRecommendations> =>
     request('/api/insights/today'),
