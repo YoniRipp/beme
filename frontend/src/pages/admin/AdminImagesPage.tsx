@@ -5,14 +5,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ImagePlaceholder } from '@/components/shared/ImagePlaceholder';
-import { Upload, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Upload, Trash2, Image as ImageIcon, Video, Link as LinkIcon, Play } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-interface ExerciseImageRow {
+interface ExerciseRow {
   id: string;
   name: string;
-  imageUrl: string;
+  muscleGroup: string | null;
+  category: string | null;
+  imageUrl: string | null;
+  videoUrl: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface FoodRow {
@@ -34,7 +45,10 @@ interface FoodSearchResult {
 
 type Tab = 'exercises' | 'foods';
 
-async function uploadToS3(file: File, context: 'workout' | 'food'): Promise<string> {
+const MUSCLE_GROUPS = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'full_body'];
+const CATEGORIES = ['barbell', 'dumbbell', 'machine', 'bodyweight', 'cable', 'cardio'];
+
+async function uploadToS3(file: File, context: string): Promise<string> {
   const { uploadUrl, fileUrl } = await request<{ uploadUrl: string; fileUrl: string }>('/api/uploads/presigned-url', {
     method: 'POST',
     body: { mimeType: file.type, context },
@@ -47,27 +61,35 @@ async function uploadToS3(file: File, context: 'workout' | 'food'): Promise<stri
   return fileUrl;
 }
 
-function ExerciseImagesTab() {
+function invalidateExercises(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({ queryKey: ['admin', 'exercises'] });
+  void queryClient.invalidateQueries({ queryKey: ['exercises'] });
+}
+
+function ExerciseCatalogTab() {
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [newMuscleGroup, setNewMuscleGroup] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const imageFileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [videoUrlInput, setVideoUrlInput] = useState<Record<string, string>>({});
+  const [showVideoInput, setShowVideoInput] = useState<Record<string, boolean>>({});
 
-  const { data: images = [], isLoading } = useQuery({
-    queryKey: ['admin', 'exercise-images'],
-    queryFn: (): Promise<ExerciseImageRow[]> => request('/api/admin/exercise-images'),
+  const { data: exercises = [], isLoading } = useQuery({
+    queryKey: ['admin', 'exercises'],
+    queryFn: (): Promise<ExerciseRow[]> => request('/api/admin/exercises'),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => request(`/api/admin/exercise-images/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => request(`/api/admin/exercises/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'exercise-images'] });
-      void queryClient.invalidateQueries({ queryKey: ['exercise-images'] });
-      toast.success('Image removed');
+      invalidateExercises(queryClient);
+      toast.success('Exercise removed');
     },
   });
 
-  const handleUploadNew = async (file: File) => {
+  const handleAddExercise = async (file?: File) => {
     const name = newName.trim();
     if (!name) {
       toast.error('Enter an exercise name first');
@@ -75,15 +97,41 @@ function ExerciseImagesTab() {
     }
     setUploading('new');
     try {
-      const fileUrl = await uploadToS3(file, 'workout');
-      await request('/api/admin/exercise-images', {
+      let imageUrl: string | undefined;
+      if (file) {
+        imageUrl = await uploadToS3(file, 'workout');
+      }
+      await request('/api/admin/exercises', {
         method: 'POST',
-        body: { name, imageUrl: fileUrl },
+        body: {
+          name,
+          muscleGroup: newMuscleGroup || undefined,
+          category: newCategory || undefined,
+          imageUrl,
+        },
       });
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'exercise-images'] });
-      void queryClient.invalidateQueries({ queryKey: ['exercise-images'] });
+      invalidateExercises(queryClient);
       setNewName('');
-      toast.success(`Image added for "${name}"`);
+      setNewMuscleGroup('');
+      setNewCategory('');
+      toast.success(`Exercise "${name}" added`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to add exercise');
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const handleReplaceImage = async (id: string, file: File) => {
+    setUploading(`img-${id}`);
+    try {
+      const imageUrl = await uploadToS3(file, 'workout');
+      await request(`/api/admin/exercises/${id}`, {
+        method: 'PATCH',
+        body: { imageUrl },
+      });
+      invalidateExercises(queryClient);
+      toast.success('Image updated');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Upload failed');
     } finally {
@@ -91,21 +139,50 @@ function ExerciseImagesTab() {
     }
   };
 
-  const handleReplace = async (id: string, name: string, file: File) => {
-    setUploading(id);
+  const handleUploadVideo = async (id: string, file: File) => {
+    setUploading(`vid-${id}`);
     try {
-      const fileUrl = await uploadToS3(file, 'workout');
-      await request('/api/admin/exercise-images', {
-        method: 'POST',
-        body: { name, imageUrl: fileUrl },
+      const videoUrl = await uploadToS3(file, 'exercise-video');
+      await request(`/api/admin/exercises/${id}`, {
+        method: 'PATCH',
+        body: { videoUrl },
       });
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'exercise-images'] });
-      void queryClient.invalidateQueries({ queryKey: ['exercise-images'] });
-      toast.success(`Image updated for "${name}"`);
+      invalidateExercises(queryClient);
+      toast.success('Video uploaded');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Upload failed');
+      toast.error(e instanceof Error ? e.message : 'Video upload failed');
     } finally {
       setUploading(null);
+    }
+  };
+
+  const handleSetVideoUrl = async (id: string) => {
+    const url = videoUrlInput[id]?.trim();
+    if (!url) return;
+    try {
+      await request(`/api/admin/exercises/${id}`, {
+        method: 'PATCH',
+        body: { videoUrl: url },
+      });
+      invalidateExercises(queryClient);
+      setVideoUrlInput(prev => ({ ...prev, [id]: '' }));
+      setShowVideoInput(prev => ({ ...prev, [id]: false }));
+      toast.success('Video URL saved');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save video URL');
+    }
+  };
+
+  const handleRemoveVideo = async (id: string) => {
+    try {
+      await request(`/api/admin/exercises/${id}`, {
+        method: 'PATCH',
+        body: { videoUrl: '' },
+      });
+      invalidateExercises(queryClient);
+      toast.success('Video removed');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to remove video');
     }
   };
 
@@ -113,9 +190,9 @@ function ExerciseImagesTab() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Add New Exercise Image</CardTitle>
+          <CardTitle className="text-base">Add New Exercise</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div className="flex gap-2 items-end">
             <div className="flex-1">
               <Input
@@ -124,23 +201,64 @@ function ExerciseImagesTab() {
                 onChange={(e) => setNewName(e.target.value)}
               />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={newMuscleGroup} onValueChange={setNewMuscleGroup}>
+              <SelectTrigger>
+                <SelectValue placeholder="Muscle group" />
+              </SelectTrigger>
+              <SelectContent>
+                {MUSCLE_GROUPS.map(mg => (
+                  <SelectItem key={mg} value={mg}>
+                    {mg.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={newCategory} onValueChange={setNewCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map(cat => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
             <input
-              ref={fileRef}
+              ref={imageFileRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleUploadNew(file);
+                if (file) handleAddExercise(file);
                 e.target.value = '';
               }}
             />
             <Button
-              onClick={() => fileRef.current?.click()}
+              onClick={() => {
+                if (!newName.trim()) {
+                  toast.error('Enter an exercise name first');
+                  return;
+                }
+                imageFileRef.current?.click();
+              }}
               disabled={!newName.trim() || uploading === 'new'}
+              variant="outline"
             >
               <Upload className="w-4 h-4 mr-1" />
-              {uploading === 'new' ? 'Uploading...' : 'Upload'}
+              {uploading === 'new' ? 'Adding...' : 'Add with Image'}
+            </Button>
+            <Button
+              onClick={() => handleAddExercise()}
+              disabled={!newName.trim() || uploading === 'new'}
+            >
+              {uploading === 'new' ? 'Adding...' : 'Add Exercise'}
             </Button>
           </div>
         </CardContent>
@@ -148,42 +266,119 @@ function ExerciseImagesTab() {
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
-      ) : images.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No exercise images yet. Add one above.</p>
+      ) : exercises.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No exercises yet. Add one above.</p>
       ) : (
         <div className="space-y-2">
-          {images.map((img) => (
-            <div key={img.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-              <ImagePlaceholder type="exercise" size="md" imageUrl={img.imageUrl} />
-              <span className="flex-1 font-medium">{img.name}</span>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                id={`replace-${img.id}`}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleReplace(img.id, img.name, file);
-                  e.target.value = '';
-                }}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => document.getElementById(`replace-${img.id}`)?.click()}
-                disabled={uploading === img.id}
-              >
-                <Upload className="w-3 h-3 mr-1" />
-                {uploading === img.id ? 'Uploading...' : 'Replace'}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive"
-                onClick={() => deleteMutation.mutate(img.id)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+          {exercises.map((ex) => (
+            <div key={ex.id} className="p-3 bg-muted rounded-lg space-y-2">
+              <div className="flex items-center gap-3">
+                <ImagePlaceholder type="exercise" size="md" imageUrl={ex.imageUrl ?? undefined} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{ex.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {[ex.muscleGroup, ex.category].filter(Boolean).join(' · ') || 'No category'}
+                  </p>
+                </div>
+
+                {/* Image upload/replace */}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  id={`img-${ex.id}`}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleReplaceImage(ex.id, file);
+                    e.target.value = '';
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById(`img-${ex.id}`)?.click()}
+                  disabled={uploading === `img-${ex.id}`}
+                >
+                  <Upload className="w-3 h-3 mr-1" />
+                  {uploading === `img-${ex.id}` ? '...' : ex.imageUrl ? 'Replace' : 'Image'}
+                </Button>
+
+                {/* Video actions */}
+                <input
+                  type="file"
+                  accept="video/mp4,video/quicktime,video/webm"
+                  className="hidden"
+                  id={`vid-${ex.id}`}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadVideo(ex.id, file);
+                    e.target.value = '';
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById(`vid-${ex.id}`)?.click()}
+                  disabled={uploading === `vid-${ex.id}`}
+                >
+                  <Video className="w-3 h-3 mr-1" />
+                  {uploading === `vid-${ex.id}` ? '...' : 'Video'}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowVideoInput(prev => ({ ...prev, [ex.id]: !prev[ex.id] }))}
+                >
+                  <LinkIcon className="w-3 h-3 mr-1" />
+                  URL
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive"
+                  onClick={() => deleteMutation.mutate(ex.id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Video URL indicator */}
+              {ex.videoUrl && (
+                <div className="flex items-center gap-2 ml-14 text-xs">
+                  <Play className="w-3 h-3 text-green-600" />
+                  <span className="text-muted-foreground truncate flex-1">{ex.videoUrl}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs text-destructive"
+                    onClick={() => handleRemoveVideo(ex.id)}
+                  >
+                    Remove video
+                  </Button>
+                </div>
+              )}
+
+              {/* Video URL input */}
+              {showVideoInput[ex.id] && (
+                <div className="flex gap-2 ml-14">
+                  <Input
+                    placeholder="Paste YouTube or video URL..."
+                    value={videoUrlInput[ex.id] || ''}
+                    onChange={(e) => setVideoUrlInput(prev => ({ ...prev, [ex.id]: e.target.value }))}
+                    className="flex-1 h-8 text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    onClick={() => handleSetVideoUrl(ex.id)}
+                    disabled={!videoUrlInput[ex.id]?.trim()}
+                  >
+                    Save
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -203,11 +398,8 @@ function FoodImagesTab() {
       const results = await request<FoodSearchResult[]>(
         `/api/foods/search?q=${encodeURIComponent(search)}&limit=25`
       );
-      // The food search endpoint does not return id or imageUrl,
-      // so we use name as the identifier for display purposes.
-      // Admin food image PATCH/DELETE requires a backend admin food search endpoint.
       return results.map((r) => ({
-        id: r.name, // Use name as key until admin endpoint is available
+        id: r.name,
         name: r.name,
         imageUrl: null,
       }));
@@ -307,7 +499,7 @@ export default function AdminImagesPage() {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <ImageIcon className="w-5 h-5 text-primary" />
-        <h2 className="text-lg font-semibold">Image Management</h2>
+        <h2 className="text-lg font-semibold">Exercise Catalog & Images</h2>
       </div>
 
       <div className="flex gap-1 border-b border-border">
@@ -319,7 +511,7 @@ export default function AdminImagesPage() {
           }`}
           onClick={() => setTab('exercises')}
         >
-          Exercise Images
+          Exercise Catalog
         </button>
         <button
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
@@ -333,7 +525,7 @@ export default function AdminImagesPage() {
         </button>
       </div>
 
-      {tab === 'exercises' ? <ExerciseImagesTab /> : <FoodImagesTab />}
+      {tab === 'exercises' ? <ExerciseCatalogTab /> : <FoodImagesTab />}
     </div>
   );
 }

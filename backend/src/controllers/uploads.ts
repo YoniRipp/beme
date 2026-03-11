@@ -13,7 +13,7 @@ import { sendJson, sendError } from '../utils/response.js';
 import { createPresignedUploadUrl } from '../services/storage.js';
 import { config } from '../config/index.js';
 
-const VALID_CONTEXTS = ['avatar', 'workout', 'food'];
+const VALID_CONTEXTS = ['avatar', 'workout', 'food', 'exercise-video'];
 
 export const presignedUrl = asyncHandler(async (req: Request, res: Response) => {
   if (!config.awsRegion || !config.awsS3Bucket) {

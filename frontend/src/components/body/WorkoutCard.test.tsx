@@ -11,8 +11,8 @@ vi.mock('@/hooks/useSettings', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useExerciseImages', () => ({
-  useExerciseImages: () => ({ images: [], getImageUrl: () => undefined }),
+vi.mock('@/hooks/useExercises', () => ({
+  useExercises: () => ({ exercises: [], getImageUrl: () => undefined, getVideoUrl: () => undefined, searchExercises: () => [] }),
 }));
 
 const mockWorkout: Workout = {

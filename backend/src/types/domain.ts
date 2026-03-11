@@ -3,6 +3,19 @@
  * Models, services, and controllers import from here.
  */
 
+// ─── Exercise Catalog ───────────────────────────────────────
+export type MuscleGroup = 'chest' | 'back' | 'legs' | 'shoulders' | 'arms' | 'core' | 'full_body';
+export type ExerciseCategory = 'barbell' | 'dumbbell' | 'machine' | 'bodyweight' | 'cable' | 'cardio';
+
+export interface CatalogExercise {
+  id: string;
+  name: string;
+  muscleGroup?: MuscleGroup;
+  category?: ExerciseCategory;
+  imageUrl?: string;
+  videoUrl?: string;
+}
+
 // ─── Workout ────────────────────────────────────────────────
 export type WorkoutType = 'strength' | 'cardio' | 'flexibility' | 'sports';
 

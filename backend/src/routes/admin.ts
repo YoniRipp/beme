@@ -83,34 +83,96 @@ router.get('/api/admin/stats', requireAuth, requireAdmin, asyncHandler(async (_r
   sendJson(res, stats);
 }));
 
-// ─── Exercise Image Management ───────────────────────────────────────────────
+// ─── Exercise Catalog Management ────────────────────────────────────────────
 
-router.get('/api/admin/exercise-images', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
+router.get('/api/admin/exercises', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
   const pool = getPool();
-  const result = await pool.query(`SELECT id, name, image_url, created_at FROM exercise_images ORDER BY name ASC`);
-  sendJson(res, result.rows.map(r => ({ id: r.id, name: r.name, imageUrl: r.image_url, createdAt: r.created_at })));
+  const result = await pool.query(
+    `SELECT id, name, muscle_group, category, image_url, video_url, created_at, updated_at FROM exercises ORDER BY name ASC`
+  );
+  sendJson(res, result.rows.map(r => ({
+    id: r.id,
+    name: r.name,
+    muscleGroup: r.muscle_group,
+    category: r.category,
+    imageUrl: r.image_url,
+    videoUrl: r.video_url,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  })));
 }));
 
-router.post('/api/admin/exercise-images', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+router.post('/api/admin/exercises', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   const pool = getPool();
-  const { name, imageUrl } = req.body ?? {};
-  if (!name || typeof name !== 'string' || !imageUrl || typeof imageUrl !== 'string') {
-    return sendError(res, 400, 'name and imageUrl are required');
+  const { name, muscleGroup, category, imageUrl, videoUrl } = req.body ?? {};
+  if (!name || typeof name !== 'string') {
+    return sendError(res, 400, 'name is required');
   }
   const result = await pool.query(
-    `INSERT INTO exercise_images (name, image_url, uploaded_by)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (name) DO UPDATE SET image_url = EXCLUDED.image_url, uploaded_by = EXCLUDED.uploaded_by
-     RETURNING id, name, image_url, created_at`,
-    [name.trim(), imageUrl.trim(), req.user!.id],
+    `INSERT INTO exercises (name, muscle_group, category, image_url, video_url, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (name) DO UPDATE SET
+       muscle_group = COALESCE(EXCLUDED.muscle_group, exercises.muscle_group),
+       category = COALESCE(EXCLUDED.category, exercises.category),
+       image_url = COALESCE(EXCLUDED.image_url, exercises.image_url),
+       video_url = COALESCE(EXCLUDED.video_url, exercises.video_url),
+       updated_at = now()
+     RETURNING id, name, muscle_group, category, image_url, video_url, created_at, updated_at`,
+    [name.trim(), muscleGroup || null, category || null, imageUrl || null, videoUrl || null, req.user!.id],
   );
   const r = result.rows[0];
-  sendJson(res, { id: r.id, name: r.name, imageUrl: r.image_url, createdAt: r.created_at });
+  sendJson(res, {
+    id: r.id,
+    name: r.name,
+    muscleGroup: r.muscle_group,
+    category: r.category,
+    imageUrl: r.image_url,
+    videoUrl: r.video_url,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
 }));
 
-router.delete('/api/admin/exercise-images/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+router.patch('/api/admin/exercises/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   const pool = getPool();
-  await pool.query(`DELETE FROM exercise_images WHERE id = $1`, [req.params.id]);
+  const { name, muscleGroup, category, imageUrl, videoUrl } = req.body ?? {};
+  const sets: string[] = [];
+  const params: any[] = [];
+  let idx = 1;
+
+  if (name !== undefined) { sets.push(`name = $${idx++}`); params.push(name); }
+  if (muscleGroup !== undefined) { sets.push(`muscle_group = $${idx++}`); params.push(muscleGroup || null); }
+  if (category !== undefined) { sets.push(`category = $${idx++}`); params.push(category || null); }
+  if (imageUrl !== undefined) { sets.push(`image_url = $${idx++}`); params.push(imageUrl || null); }
+  if (videoUrl !== undefined) { sets.push(`video_url = $${idx++}`); params.push(videoUrl || null); }
+
+  if (sets.length === 0) return sendError(res, 400, 'No fields to update');
+
+  sets.push(`updated_at = now()`);
+  params.push(req.params.id);
+
+  const result = await pool.query(
+    `UPDATE exercises SET ${sets.join(', ')} WHERE id = $${idx}
+     RETURNING id, name, muscle_group, category, image_url, video_url, created_at, updated_at`,
+    params,
+  );
+  if (result.rows.length === 0) return sendError(res, 404, 'Exercise not found');
+  const r = result.rows[0];
+  sendJson(res, {
+    id: r.id,
+    name: r.name,
+    muscleGroup: r.muscle_group,
+    category: r.category,
+    imageUrl: r.image_url,
+    videoUrl: r.video_url,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
+}));
+
+router.delete('/api/admin/exercises/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  await pool.query(`DELETE FROM exercises WHERE id = $1`, [req.params.id]);
   sendJson(res, { success: true });
 }));
 
