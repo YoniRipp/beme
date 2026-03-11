@@ -18,7 +18,7 @@ export function ClientList({ clients, onRemove, removing }: ClientListProps) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <p className="text-stone text-sm">No clients yet. Invite someone to get started.</p>
+          <p className="text-muted-foreground text-sm">No clients yet. Invite someone to get started.</p>
         </CardContent>
       </Card>
     );
@@ -34,13 +34,13 @@ export function ClientList({ clients, onRemove, removing }: ClientListProps) {
           {clients.map((client) => (
             <div
               key={client.id}
-              className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-cream-warm/30 transition-colors"
+              className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors"
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-charcoal truncate">
+                <p className="text-sm font-medium text-foreground truncate">
                   {client.clientName}
                 </p>
-                <p className="text-xs text-stone truncate">{client.clientEmail}</p>
+                <p className="text-xs text-muted-foreground truncate">{client.clientEmail}</p>
               </div>
               <div className="flex items-center gap-2 ml-3">
                 <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
