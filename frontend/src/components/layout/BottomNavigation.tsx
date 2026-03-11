@@ -25,7 +25,7 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
       className="fixed bottom-0 left-0 right-0 bg-white border-t border-border z-30 lg:hidden"
       aria-label="Main navigation"
     >
-      <div className="flex items-end justify-around px-2 pb-1 pt-1">
+      <div className="flex items-end px-2 pb-1 pt-1">
         {/* Left nav items */}
         {leftItems.map((item) => {
           const isActive = currentPath === item.path;
@@ -34,7 +34,7 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center gap-0.5 px-3 py-2 min-w-[56px] transition-colors
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors
                 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
             >
               <Icon className="w-5 h-5" />
@@ -44,7 +44,7 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
         })}
 
         {/* Center "+" button */}
-        <div className="flex flex-col items-center -mt-4">
+        <div className="flex-1 flex flex-col items-center -mt-4">
           <button
             type="button"
             onClick={onCenterPress}
@@ -63,7 +63,7 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center gap-0.5 px-3 py-2 min-w-[56px] transition-colors
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors
                 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
             >
               <Icon className="w-5 h-5" />
