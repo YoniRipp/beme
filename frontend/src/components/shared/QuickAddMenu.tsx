@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Dumbbell, UtensilsCrossed, Moon } from 'lucide-react';
+import { Dumbbell, UtensilsCrossed, Moon, Scale } from 'lucide-react';
 import { WorkoutModal } from '@/components/body/WorkoutModal';
 import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
 import { SleepEditModal } from '@/components/energy/SleepEditModal';
+import { WeightLogModal } from '@/components/home/WeightLogModal';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
 import type { Workout } from '@/types/workout';
@@ -13,6 +14,7 @@ const MENU_ITEMS = [
   { key: 'workout', label: 'Workout', icon: Dumbbell, color: 'bg-blue-500' },
   { key: 'food', label: 'Food', icon: UtensilsCrossed, color: 'bg-orange-500' },
   { key: 'sleep', label: 'Sleep', icon: Moon, color: 'bg-indigo-500' },
+  { key: 'weight', label: 'Weight', icon: Scale, color: 'bg-purple-500' },
 ] as const;
 
 type MenuAction = (typeof MENU_ITEMS)[number]['key'];
@@ -75,7 +77,7 @@ export function QuickAddMenu({ open, onOpenChange }: QuickAddMenuProps) {
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-xl animate-fade-up p-6 pb-8">
           <div className="w-10 h-1 bg-muted rounded-full mx-auto mb-6" />
           <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Quick Add</p>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {MENU_ITEMS.map((item) => {
               const Icon = item.icon;
               return (
@@ -114,6 +116,11 @@ export function QuickAddMenu({ open, onOpenChange }: QuickAddMenuProps) {
         onOpenChange={(isOpen) => { if (!isOpen) setActiveModal(null); }}
         onSave={handleSleepSave}
         currentHours={todayCheckIn?.sleepHours}
+      />
+
+      <WeightLogModal
+        open={activeModal === 'weight'}
+        onOpenChange={(isOpen) => { if (!isOpen) setActiveModal(null); }}
       />
     </>
   );

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dumbbell, Flame, Moon, Plus } from 'lucide-react';
+import { Dumbbell, Flame, Moon } from 'lucide-react';
 import { useGoals } from '@/hooks/useGoals';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
@@ -20,6 +20,7 @@ interface ProgressCardData {
   target: number;
   label: string;
   addLabel: string;
+  period: string;
   cardType: CardType;
   formatValue: (v: number) => string;
   icon: React.ReactNode;
@@ -107,13 +108,12 @@ function ProgressCard({
             {data.label}
           </span>
         </div>
+        <span className="text-[10px] text-muted-foreground/70">{data.period}</span>
         {!hasGoal && onAddGoal && (
           <p className="text-xs text-muted-foreground mt-1">Tap to set goal</p>
         )}
         {hasGoal && onAdd && (
-          <div className="mt-1 flex items-center justify-center">
-            <Plus className="h-3.5 w-3.5 text-primary" />
-          </div>
+          <span className="text-xs text-primary font-medium mt-1.5">+ {data.addLabel}</span>
         )}
       </CardContent>
     </Card>
@@ -168,6 +168,7 @@ export function DashboardProgressCards({
         target: workoutsGoal?.target ?? 0,
         label: 'Workouts',
         addLabel: 'Add workout',
+        period: workoutsGoal?.period === 'monthly' ? 'this month' : 'this week',
         cardType: 'workouts' as CardType,
         formatValue: (v) => Math.round(v).toString(),
         icon: <Dumbbell className="h-4 w-4 text-blue-600" />,
@@ -179,6 +180,7 @@ export function DashboardProgressCards({
         target: macroCalorieGoal,
         label: 'Calories',
         addLabel: 'Log food',
+        period: 'today',
         cardType: 'calories' as CardType,
         formatValue: (v) => Math.round(v).toLocaleString(),
         icon: <Flame className="h-4 w-4 text-orange-600" />,
@@ -189,6 +191,7 @@ export function DashboardProgressCards({
         target: sleepGoal?.target ?? 0,
         label: 'Avg sleep',
         addLabel: 'Log sleep',
+        period: sleepGoal?.period === 'monthly' ? 'avg this month' : 'avg this week',
         cardType: 'sleep' as CardType,
         formatValue: (v) => (v > 0 ? `${v.toFixed(1)}h` : '0h'),
         icon: <Moon className="h-4 w-4 text-indigo-600" />,
