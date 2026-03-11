@@ -3,7 +3,6 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home,
   Dumbbell,
-  UtensilsCrossed,
   Target,
   Menu,
   X,
@@ -18,9 +17,11 @@ import {
   Users,
   BookOpen,
   MoreHorizontal,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { AiChatPanel } from '../insights/AiChatPanel';
 import { VoiceAgentButton } from '../voice/VoiceAgentButton';
 import { QuickAddMenu } from '../shared/QuickAddMenu';
 import { BottomNavigation } from './BottomNavigation';
@@ -35,7 +38,7 @@ import { BottomNavigation } from './BottomNavigation';
 const ROUTE_TO_TITLE: Record<string, string> = {
   '/': 'Home',
   '/body': 'Workouts',
-  '/energy': 'Food',
+  '/energy': 'Journal',
   '/goals': 'Goals',
   '/insights': 'Insights',
   '/settings': 'Settings',
@@ -46,7 +49,7 @@ const ROUTE_TO_TITLE: Record<string, string> = {
 const SIDEBAR_NAV_BASE = [
   { name: 'Home', path: '/', icon: Home },
   { name: 'Workouts', path: '/body', icon: Dumbbell },
-  { name: 'Food', path: '/energy', icon: UtensilsCrossed },
+  { name: 'Journal', path: '/energy', icon: BookOpen },
   { name: 'Goals', path: '/goals', icon: Target },
   { name: 'Insights', path: '/insights', icon: TrendingUp },
   { name: 'Settings', path: '/settings', icon: Settings },
@@ -55,7 +58,7 @@ const SIDEBAR_NAV_BASE = [
 /** MFP-style bottom nav: 4 items split around a center "+" button */
 const BOTTOM_NAV_ITEMS = [
   { name: 'Dashboard', path: '/', icon: Home },
-  { name: 'Diary', path: '/energy', icon: BookOpen },
+  { name: 'Journal', path: '/energy', icon: BookOpen },
   { name: 'Goals', path: '/goals', icon: Target },
   { name: 'More', path: '/settings', icon: MoreHorizontal },
 ];
@@ -77,8 +80,10 @@ export function Base44Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
   const { user } = useApp();
   const { logout } = useAuth();
+  const { isPro } = useSubscription();
 
   const handleSignOut = () => {
     logout();
@@ -148,17 +153,17 @@ export function Base44Layout() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+                    className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 active:scale-[0.98]
                       ${isActive
                         ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground hover:scale-[1.01]'
                       }`}
                   >
                     <div
                       className={`p-1.5 rounded-lg transition-all duration-200
                         ${isActive
                           ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'bg-transparent group-hover:bg-primary/10'
+                          : 'bg-muted group-hover:bg-primary/15 group-hover:text-primary'
                         }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -249,6 +254,19 @@ export function Base44Layout() {
 
       <QuickAddMenu open={quickAddOpen} onOpenChange={setQuickAddOpen} />
       <VoiceAgentButton />
+
+      {/* AI Chat FAB — bottom-right, below mic button */}
+      {isPro && pathname !== '/insights' && (
+        <Button
+          size="icon"
+          onClick={() => setAiChatOpen(true)}
+          className="fixed bottom-20 right-4 z-50 h-14 w-14 rounded-full bg-violet-600 hover:bg-violet-700 text-white shadow-lg transition-all md:right-6 lg:bottom-6"
+          aria-label="Open AI Coach"
+        >
+          <Sparkles className="h-6 w-6" />
+        </Button>
+      )}
+      <AiChatPanel open={aiChatOpen} onOpenChange={setAiChatOpen} />
     </div>
   );
 }

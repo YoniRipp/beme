@@ -318,11 +318,29 @@ export function AiInsightsSection() {
               </div>
             </div>
           ) : error ? (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-destructive" />
-                AI insights are temporarily unavailable. Please try refreshing.
-              </p>
+            <div className="flex flex-col items-center gap-3 py-4 text-center">
+              <AlertCircle className="w-8 h-8 text-muted-foreground" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium">
+                  {String((error as Error)?.message ?? '').includes('503')
+                    ? 'AI insights require server configuration'
+                    : 'Could not load AI insights right now'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {String((error as Error)?.message ?? '').includes('503')
+                    ? 'Contact support if this persists.'
+                    : 'The AI service may be temporarily unavailable.'}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refreshMutation.mutate()}
+                disabled={refreshMutation.isPending}
+              >
+                <RefreshCw className={cn('w-4 h-4 mr-1.5', refreshMutation.isPending && 'animate-spin')} />
+                Retry
+              </Button>
             </div>
           ) : data ? (
             <div className="flex gap-6 items-start flex-wrap">

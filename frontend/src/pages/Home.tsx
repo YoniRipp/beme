@@ -196,7 +196,7 @@ export function Home() {
         {/* Goals Progress */}
         <Card className="rounded-2xl overflow-hidden">
           <CardContent className="p-5">
-            <SectionHeader title="Goals" subtitle="Today's progress" />
+            <SectionHeader title="Goals" subtitle="Your progress" />
             <DashboardProgressCards
               onAddGoal={() => {
                 setEditingGoal(undefined);
