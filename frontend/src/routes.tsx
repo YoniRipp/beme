@@ -39,10 +39,10 @@ const About = lazy(() =>
   import('./pages/About').then((m) => ({ default: m.About }))
 );
 const PrivacyPolicy = lazy(() =>
-  import('./pages/PrivacyPolicy').then((m) => ({ default: m.PrivacyPolicy }))
+  import('./pages/Privacy').then((m) => ({ default: m.Privacy }))
 );
 const TermsOfService = lazy(() =>
-  import('./pages/TermsOfService').then((m) => ({ default: m.TermsOfService }))
+  import('./pages/Terms').then((m) => ({ default: m.Terms }))
 );
 const Contact = lazy(() =>
   import('./pages/Contact').then((m) => ({ default: m.Contact }))

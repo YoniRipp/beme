@@ -23,7 +23,7 @@ const GOAL_TYPE_BORDER: Record<GoalType, string> = {
 const GOAL_LABELS: Record<GoalType, string> = {
   calories: 'calories',
   workouts: 'workouts',
-  sleep: 'h avg',
+  sleep: 'hours avg',
 };
 const formatGoalValue = (type: GoalType, value: number) =>
   type === 'sleep' ? `${value.toFixed(1)}h` : value.toLocaleString();

@@ -49,10 +49,10 @@ export function CycleTracker() {
                 <svg viewBox="0 0 36 36" className="w-12 h-12 -rotate-90">
                   <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted" />
                   <circle
-                    cx="18" cy="18" r="15" fill="none" stroke="rgb(236 72 153)" strokeWidth="3" strokeLinecap="round"
+                    cx="18" cy="18" r="15" fill="none" strokeWidth="3" strokeLinecap="round"
                     strokeDasharray={2 * Math.PI * 15}
                     strokeDashoffset={2 * Math.PI * 15 * (1 - Math.min(currentCycleDay / cycleLength, 1))}
-                    className="transition-all duration-500"
+                    className="stroke-pink-500 transition-all duration-500"
                   />
                 </svg>
               </div>

@@ -83,7 +83,7 @@ export function GoalModal({ open, onOpenChange, onSave, goal }: GoalModalProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{goal ? 'Edit Goal' : 'Create Goal'}</DialogTitle>
+          <DialogTitle>{goal ? 'Edit Goal' : 'Add Goal'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
@@ -171,7 +171,7 @@ export function GoalModal({ open, onOpenChange, onSave, goal }: GoalModalProps) 
               Cancel
             </Button>
             <Button type="submit" disabled={!isFormValid()}>
-              {goal ? 'Update' : 'Create'} Goal
+              {goal ? 'Update' : 'Add'} Goal
             </Button>
           </DialogFooter>
         </form>

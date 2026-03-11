@@ -21,7 +21,7 @@ export function ExerciseList({ exercises }: ExerciseListProps) {
   return (
     <div className="space-y-2">
       {exercises.map((exercise, idx) => (
-        <div key={idx} className="flex items-center gap-3 p-2 bg-muted rounded-lg">
+        <div key={idx} className="flex items-center gap-3 p-2 bg-muted rounded-xl">
           <ImagePlaceholder type="exercise" size="sm" imageUrl={getImageUrl(exercise.name)} />
           <div>
             <p className="text-sm font-medium">{exercise.name}</p>

@@ -46,7 +46,7 @@ export function PendingInvitations() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-stone mb-3">
+          <p className="text-sm text-muted-foreground mb-3">
             Have an invite code from a trainer? Enter it below to connect.
           </p>
           <form onSubmit={handleManualSubmit} className="flex gap-2">
@@ -80,16 +80,16 @@ export function PendingInvitations() {
       <CardContent className="space-y-4">
         {trainer && (
           <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
-            <p className="text-sm font-medium text-charcoal">
+            <p className="text-sm font-medium text-foreground">
               Your trainer: {trainer.name}
             </p>
-            <p className="text-xs text-stone">{trainer.email}</p>
+            <p className="text-xs text-muted-foreground">{trainer.email}</p>
           </div>
         )}
 
         {hasPending && (
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wide text-stone font-semibold">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
               Pending Invitations
             </p>
             {invitations.map((inv) => (
@@ -98,7 +98,7 @@ export function PendingInvitations() {
                 className="flex items-center justify-between p-3 rounded-lg border border-border"
               >
                 <div>
-                  <p className="text-sm font-medium text-charcoal">
+                  <p className="text-sm font-medium text-foreground">
                     From: {inv.trainerName || 'A trainer'}
                   </p>
                   <Badge variant="secondary" className="mt-1">pending</Badge>
@@ -123,7 +123,7 @@ export function PendingInvitations() {
 
         {!trainer && (
           <>
-            <p className="text-sm text-stone">
+            <p className="text-sm text-muted-foreground">
               Have an invite code from a trainer? Enter it below.
             </p>
             <form onSubmit={handleManualSubmit} className="flex gap-2">
