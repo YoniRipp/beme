@@ -18,6 +18,10 @@ vi.mock('@/hooks/useSettings', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useExercises', () => ({
+  useExercises: () => ({ exercises: [], getImageUrl: () => undefined, getVideoUrl: () => undefined, searchExercises: () => [] }),
+}));
+
 describe('WorkoutModal', () => {
   it('renders Add Workout form with N rep inputs when sets = N', () => {
     const onSave = vi.fn();

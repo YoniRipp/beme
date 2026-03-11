@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImagePlaceholder } from '@/components/shared/ImagePlaceholder';
-import { useExerciseImages } from '@/hooks/useExerciseImages';
+import { useExercises } from '@/hooks/useExercises';
 
 interface WorkoutCardProps {
   workout: Workout;
@@ -17,7 +17,7 @@ interface WorkoutCardProps {
 export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete }: WorkoutCardProps) {
   const { settings } = useSettings();
   const unit = getWeightUnit(settings.units);
-  const { getImageUrl } = useExerciseImages();
+  const { getImageUrl } = useExercises();
   const cardImageUrl = workout.exercises.map(ex => getImageUrl(ex.name)).find(Boolean);
   return (
     <div
