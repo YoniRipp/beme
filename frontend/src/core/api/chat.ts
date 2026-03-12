@@ -7,8 +7,18 @@ export interface ChatMessage {
   created_at: string;
 }
 
+export interface AgentAction {
+  intent: string;
+  success: boolean;
+  message?: string;
+}
+
+export interface ChatResponse extends ChatMessage {
+  actions: AgentAction[];
+}
+
 export const chatApi = {
-  sendMessage: (message: string): Promise<ChatMessage> =>
+  sendMessage: (message: string): Promise<ChatResponse> =>
     request('/api/chat', { method: 'POST', body: { message }, timeoutMs: 60000 }),
 
   getHistory: (limit = 30): Promise<{ messages: ChatMessage[] }> =>

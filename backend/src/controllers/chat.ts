@@ -21,8 +21,8 @@ export const chat = asyncHandler(async (req: Request, res: Response) => {
   if (message.length > 2000) {
     return sendError(res, 400, 'Message too long (max 2000 characters)');
   }
-  const response = await sendMessage(req.user!.id, message.trim());
-  return sendJson(res, response);
+  const { message: reply, actions } = await sendMessage(req.user!.id, message.trim());
+  return sendJson(res, { ...reply, actions });
 });
 
 export const getHistory = asyncHandler(async (req: Request, res: Response) => {

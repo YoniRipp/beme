@@ -192,6 +192,29 @@ export const VOICE_TOOLS = [
           },
         },
       },
+      {
+        name: 'query_user_data',
+        description: 'Look up the user\'s logged data. Use this when the user asks about their history, data, or records — e.g. "what did I eat yesterday?", "show my workouts this week", "how much did I sleep last month?". Returns actual records from the database.',
+        parameters: {
+          type: 'object',
+          properties: {
+            dataType: {
+              type: 'string',
+              enum: ['workouts', 'food', 'sleep', 'goals', 'weight'],
+              description: 'Which data to query',
+            },
+            dateFrom: {
+              type: 'string',
+              description: 'Start date YYYY-MM-DD (inclusive). Defaults to 7 days ago.',
+            },
+            dateTo: {
+              type: 'string',
+              description: 'End date YYYY-MM-DD (inclusive). Defaults to today.',
+            },
+          },
+          required: ['dataType'],
+        },
+      },
     ],
   },
 ];
