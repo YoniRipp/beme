@@ -145,6 +145,45 @@ export interface UpdateGoalInput {
   period?: GoalPeriod;
 }
 
+// ─── Meal Plan ─────────────────────────────────────────────
+export type MealType = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
+
+export interface MealPlanItem {
+  id: string;
+  mealType: MealType;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  portionAmount?: number;
+  portionUnit?: string;
+  startTime?: string;
+  sortOrder: number;
+}
+
+export interface MealPlanTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  items: MealPlanItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMealPlanInput {
+  userId: string;
+  name: string;
+  description?: string;
+  items: Omit<MealPlanItem, 'id'>[];
+}
+
+export interface UpdateMealPlanInput {
+  name?: string;
+  description?: string;
+  items?: Omit<MealPlanItem, 'id'>[];
+}
+
 // ─── Pagination ─────────────────────────────────────────────
 export interface PaginationParams {
   limit: number;

@@ -162,6 +162,42 @@ export const updateCycleEntrySchema = z.object({
   notes: z.string().max(1000).optional().nullable(),
 }).strict().refine((obj) => Object.keys(obj).length > 0, 'At least one field required');
 
+// ─── Meal plan schemas ─────────────────────────────────────
+const mealTypeEnum = z.enum(['Breakfast', 'Lunch', 'Dinner', 'Snack']);
+
+const mealPlanItemSchema = z.object({
+  mealType: mealTypeEnum,
+  name: z.string().min(1).max(500).transform((s) => s.trim()),
+  calories: z.number().min(0).max(99999).default(0),
+  protein: z.number().min(0).max(99999).default(0),
+  carbs: z.number().min(0).max(99999).default(0),
+  fats: z.number().min(0).max(99999).default(0),
+  portionAmount: z.number().min(0).max(99999).optional().nullable(),
+  portionUnit: z.string().max(50).optional().nullable(),
+  startTime: timeString,
+  sortOrder: z.number().int().min(0).default(0),
+});
+
+export const createMealPlanSchema = z.object({
+  name: z.string().min(1).max(200).transform((s) => s.trim()),
+  description: z.string().max(1000).optional().nullable(),
+  items: z.array(mealPlanItemSchema).min(1).max(100),
+});
+
+export const updateMealPlanSchema = z.object({
+  name: z.string().min(1).max(200).transform((s) => s.trim()).optional(),
+  description: z.string().max(1000).optional().nullable(),
+  items: z.array(mealPlanItemSchema).min(1).max(100).optional(),
+}).strict().refine((obj) => Object.keys(obj).length > 0, 'At least one field required');
+
+export const applyMealPlanSchema = z.object({
+  date: dateString,
+});
+
+export const lookupNutritionSchema = z.object({
+  names: z.array(z.string().min(1).max(500)).min(1).max(100),
+});
+
 // ─── Type exports for inference ─────────────────────────────
 export type CreateWorkoutBody = z.infer<typeof createWorkoutSchema>;
 export type UpdateWorkoutBody = z.infer<typeof updateWorkoutSchema>;
@@ -178,3 +214,7 @@ export type UpdateWeightEntryBody = z.infer<typeof updateWeightEntrySchema>;
 export type UpsertWaterEntryBody = z.infer<typeof upsertWaterEntrySchema>;
 export type CreateCycleEntryBody = z.infer<typeof createCycleEntrySchema>;
 export type UpdateCycleEntryBody = z.infer<typeof updateCycleEntrySchema>;
+export type CreateMealPlanBody = z.infer<typeof createMealPlanSchema>;
+export type UpdateMealPlanBody = z.infer<typeof updateMealPlanSchema>;
+export type ApplyMealPlanBody = z.infer<typeof applyMealPlanSchema>;
+export type LookupNutritionBody = z.infer<typeof lookupNutritionSchema>;

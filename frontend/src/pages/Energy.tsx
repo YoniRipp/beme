@@ -14,9 +14,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import { PeriodSelector } from '@/components/shared/PeriodSelector';
-import { Moon, Trash2, Pencil, ChevronDown, Plus } from 'lucide-react';
+import { Moon, Trash2, Pencil, ChevronDown, Plus, ClipboardList } from 'lucide-react';
 import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
+import { useNavigate } from 'react-router-dom';
 
 interface FoodGroup {
   key: string;
@@ -213,6 +214,7 @@ function MealSection({
 }
 
 export function Energy() {
+  const navigate = useNavigate();
   const { checkIns, foodEntries, energyLoading, addCheckIn, updateCheckIn, deleteCheckIn, addFoodEntry, updateFoodEntry, deleteFoodEntry } = useEnergy();
   const { macroGoals, setMacroGoals, calorieGoal } = useMacroGoals();
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
@@ -457,6 +459,16 @@ export function Energy() {
           </>
         );
       })()}
+
+      {/* Meal Plans link */}
+      <Button
+        variant="outline"
+        className="w-full rounded-2xl"
+        onClick={() => navigate('/meal-plans')}
+      >
+        <ClipboardList className="w-4 h-4 mr-2" />
+        Meal Plans
+      </Button>
 
       {/* Food entries */}
       <div className="space-y-3">

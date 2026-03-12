@@ -47,6 +47,7 @@ const TermsOfService = lazy(() =>
 const Contact = lazy(() =>
   import('./pages/Contact').then((m) => ({ default: m.Contact }))
 );
+const MealPlans = lazy(() => import('./pages/MealPlans').then((m) => ({ default: m.MealPlans })));
 const Trainer = lazy(() => import('./pages/Trainer'));
 const TrainerClientView = lazy(() => import('./pages/TrainerClientView'));
 const NotFound = lazy(() =>
@@ -132,6 +133,14 @@ function ProtectedAppRoutes() {
                 <Insights />
               </Suspense>
             </LocalErrorBoundary>
+          }
+        />
+        <Route
+          path="meal-plans"
+          element={
+            <Suspense fallback={<LoadingSpinner text="Loading meal plans..." />}>
+              <MealPlans />
+            </Suspense>
           }
         />
         <Route
