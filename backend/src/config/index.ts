@@ -67,6 +67,10 @@ const configSchema = z.object({
   lemonSqueezyWebhookSecret: z.string().optional(),
   lemonSqueezyVariantIdMonthly: z.string().optional(),
   lemonSqueezyVariantIdYearly: z.string().optional(),
+  whatsappAccessToken: z.string().optional(),
+  whatsappPhoneNumberId: z.string().optional(),
+  whatsappVerifyToken: z.string().optional(),
+  whatsappBusinessAccountId: z.string().optional(),
 });
 
 const PORT = process.env.PORT;
@@ -128,6 +132,10 @@ const rawConfig = {
   lemonSqueezyWebhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET,
   lemonSqueezyVariantIdMonthly: process.env.LEMONSQUEEZY_VARIANT_ID_MONTHLY,
   lemonSqueezyVariantIdYearly: process.env.LEMONSQUEEZY_VARIANT_ID_YEARLY,
+  whatsappAccessToken: process.env.WHATSAPP_ACCESS_TOKEN,
+  whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
+  whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'beme-whatsapp-verify',
+  whatsappBusinessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
 };
 
 const parsed = configSchema.safeParse(rawConfig);
