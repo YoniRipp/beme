@@ -200,6 +200,7 @@ function rowToResult(row: Record<string, unknown>) {
     preparation: (row.preparation as string) ?? 'cooked',
     defaultUnit: (row.default_unit as string) ?? null,
     unitWeightGrams: row.unit_weight_grams != null ? Number(row.unit_weight_grams) : null,
+    imageUrl: (row.image_url as string) ?? null,
   };
 }
 
@@ -285,7 +286,7 @@ export async function search(q: string, limit = 10) {
 
   try {
     const sql = `
-      SELECT id, name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, default_unit, unit_weight_grams
+      SELECT id, name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, default_unit, unit_weight_grams, image_url
       FROM foods
       WHERE ${cnLike.sql}
          OR ${nmLike.sql}
@@ -310,7 +311,7 @@ export async function search(q: string, limit = 10) {
 
     try {
       const sql = `
-        SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, default_unit, unit_weight_grams
+        SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, default_unit, unit_weight_grams, image_url
         FROM foods
         WHERE ${fbNm.sql}
         ORDER BY
@@ -325,7 +326,7 @@ export async function search(q: string, limit = 10) {
     } catch {
       // Fallback tier 2: only baseline columns
       const sql = `
-        SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation
+        SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, image_url
         FROM foods
         WHERE ${fbNm.sql}
         ORDER BY
