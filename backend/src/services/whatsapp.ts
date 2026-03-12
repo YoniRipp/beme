@@ -256,7 +256,7 @@ Or just ask me anything about fitness and nutrition!`;
 
     case 'summary': {
       const response = await sendChatMessage(userId, 'Give me a brief summary of my day today — food, workouts, water, sleep. Keep it short with emojis, formatted for WhatsApp.');
-      return response.content;
+      return response.message.content;
     }
 
     default:
@@ -284,7 +284,7 @@ export async function processIncomingMessage(phoneNumber: string, text: string, 
   // 4. Fall back to AI chat for general questions/conversation
   try {
     const chatResponse = await sendChatMessage(user.id, text);
-    return chatResponse.content;
+    return chatResponse.message.content;
   } catch (err) {
     logger.error({ err }, 'WhatsApp chat fallback failed');
     return 'Sorry, I encountered an error. Please try again.';
