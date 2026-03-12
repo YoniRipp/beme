@@ -20,6 +20,13 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
   const leftItems = items.slice(0, half);
   const rightItems = items.slice(half);
 
+  const onboardingKey = (path: string) => {
+    if (path === '/body') return 'nav-body';
+    if (path === '/energy') return 'nav-energy';
+    if (path === '/insights') return 'nav-insights';
+    return undefined;
+  };
+
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 bg-white border-t border-border z-30 lg:hidden"
@@ -34,6 +41,7 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
             <Link
               key={item.path}
               to={item.path}
+              data-onboarding={onboardingKey(item.path)}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors
                 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
             >
@@ -63,6 +71,7 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
             <Link
               key={item.path}
               to={item.path}
+              data-onboarding={onboardingKey(item.path)}
               className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors
                 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
             >

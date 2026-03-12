@@ -8,6 +8,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { sendJson, sendError } from '../utils/response.js';
 import { sendMessage, getChatHistory, clearChatHistory } from '../services/chat.js';
+import { sendAgentMessage } from '../services/chatAgent.js';
 import { config } from '../config/index.js';
 
 export const chat = asyncHandler(async (req: Request, res: Response) => {
@@ -34,4 +35,19 @@ export const getHistory = asyncHandler(async (req: Request, res: Response) => {
 export const deleteHistory = asyncHandler(async (req: Request, res: Response) => {
   await clearChatHistory(req.user!.id);
   return res.status(204).send();
+});
+
+export const agentChat = asyncHandler(async (req: Request, res: Response) => {
+  if (!config.geminiApiKey) {
+    return sendError(res, 503, 'AI agent not configured (missing GEMINI_API_KEY)');
+  }
+  const { message } = req.body ?? {};
+  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    return sendError(res, 400, 'Message is required');
+  }
+  if (message.length > 2000) {
+    return sendError(res, 400, 'Message too long (max 2000 characters)');
+  }
+  const result = await sendAgentMessage(req.user!.id, message.trim());
+  return sendJson(res, result);
 });

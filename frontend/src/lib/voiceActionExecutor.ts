@@ -17,6 +17,28 @@ function parseDateOrToday(dateStr?: string): Date {
   return d;
 }
 
+export interface WeightEntry {
+  id: string;
+  weightKg: number;
+  date: string;
+  notes?: string;
+}
+
+export interface WaterEntry {
+  glasses: number;
+  mlTotal: number;
+  date: string;
+}
+
+export interface CycleEntry {
+  id: string;
+  date: string;
+  periodStart?: boolean;
+  flow?: string;
+  symptoms?: string;
+  notes?: string;
+}
+
 export interface VoiceExecutorContext {
   foodEntries: FoodEntry[];
   addFoodEntry: (entry: Omit<FoodEntry, 'id'>) => Promise<void>;
@@ -37,6 +59,25 @@ export interface VoiceExecutorContext {
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt'>) => Promise<void>;
   updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
+
+  // Weight tracking
+  weightEntries?: WeightEntry[];
+  addWeightEntry?: (entry: Omit<WeightEntry, 'id'>) => Promise<void>;
+  updateWeightEntry?: (id: string, updates: Partial<WeightEntry>) => Promise<void>;
+  deleteWeightEntry?: (id: string) => Promise<void>;
+
+  // Water tracking
+  addWaterGlass?: (date?: string) => Promise<void>;
+  removeWaterGlass?: (date?: string) => Promise<void>;
+
+  // Cycle tracking
+  cycleEntries?: CycleEntry[];
+  addCycleEntry?: (entry: Omit<CycleEntry, 'id'>) => Promise<void>;
+  updateCycleEntry?: (id: string, updates: Partial<CycleEntry>) => Promise<void>;
+  deleteCycleEntry?: (id: string) => Promise<void>;
+
+  // Profile
+  updateProfile?: (updates: Record<string, unknown>) => Promise<void>;
 }
 
 export type VoiceExecuteResult = { success: boolean; message?: string };
@@ -244,6 +285,126 @@ const handleDeleteGoal: Handler = async (action, ctx) => {
   return { success: true, message: 'Deleted goal' };
 };
 
+// --- Weight handlers ---
+const handleLogWeight: Handler = async (action, ctx) => {
+  if (action.intent !== 'log_weight') return { success: false };
+  if (!ctx.addWeightEntry) return { success: false, message: 'Weight tracking not available' };
+  await ctx.addWeightEntry({ weightKg: action.weightKg, date: action.date ?? new Date().toISOString().slice(0, 10), notes: action.notes });
+  return { success: true, message: `Logged weight: ${action.weightKg} kg` };
+};
+
+const handleEditWeight: Handler = async (action, ctx) => {
+  if (action.intent !== 'edit_weight') return { success: false };
+  if (!ctx.updateWeightEntry || !ctx.weightEntries) return { success: false, message: 'Weight tracking not available' };
+  const target = action.entryId
+    ? ctx.weightEntries.find((e) => e.id === action.entryId)
+    : action.date
+      ? ctx.weightEntries.find((e) => e.date.startsWith(action.date!))
+      : ctx.weightEntries[0];
+  if (!target) return { success: false, message: 'Weight entry not found' };
+  const updates: Partial<WeightEntry> = {};
+  if (action.weightKg != null) updates.weightKg = action.weightKg;
+  if (action.notes !== undefined) updates.notes = action.notes;
+  await ctx.updateWeightEntry(target.id, updates);
+  return { success: true, message: 'Updated weight entry' };
+};
+
+const handleDeleteWeight: Handler = async (action, ctx) => {
+  if (action.intent !== 'delete_weight') return { success: false };
+  if (!ctx.deleteWeightEntry || !ctx.weightEntries) return { success: false, message: 'Weight tracking not available' };
+  const target = action.entryId
+    ? ctx.weightEntries.find((e) => e.id === action.entryId)
+    : action.date
+      ? ctx.weightEntries.find((e) => e.date.startsWith(action.date!))
+      : ctx.weightEntries[0];
+  if (!target) return { success: false, message: 'Weight entry not found' };
+  await ctx.deleteWeightEntry(target.id);
+  return { success: true, message: 'Deleted weight entry' };
+};
+
+// --- Water handlers ---
+const handleAddWater: Handler = async (action, ctx) => {
+  if (action.intent !== 'add_water') return { success: false };
+  if (!ctx.addWaterGlass) return { success: false, message: 'Water tracking not available' };
+  const glasses = action.glasses ?? 1;
+  for (let i = 0; i < glasses; i++) {
+    await ctx.addWaterGlass(action.date);
+  }
+  return { success: true, message: `Added ${glasses} glass${glasses !== 1 ? 'es' : ''} of water` };
+};
+
+const handleRemoveWater: Handler = async (action, ctx) => {
+  if (action.intent !== 'remove_water') return { success: false };
+  if (!ctx.removeWaterGlass) return { success: false, message: 'Water tracking not available' };
+  await ctx.removeWaterGlass(action.date);
+  return { success: true, message: 'Removed a glass of water' };
+};
+
+// --- Cycle handlers ---
+const handleLogCycle: Handler = async (action, ctx) => {
+  if (action.intent !== 'log_cycle') return { success: false };
+  if (!ctx.addCycleEntry) return { success: false, message: 'Cycle tracking not available' };
+  await ctx.addCycleEntry({
+    date: action.date ?? new Date().toISOString().slice(0, 10),
+    periodStart: action.periodStart,
+    flow: action.flow,
+    symptoms: action.symptoms,
+    notes: action.notes,
+  });
+  return { success: true, message: action.periodStart ? 'Logged period start' : 'Logged cycle entry' };
+};
+
+const handleEditCycle: Handler = async (action, ctx) => {
+  if (action.intent !== 'edit_cycle') return { success: false };
+  if (!ctx.updateCycleEntry || !ctx.cycleEntries) return { success: false, message: 'Cycle tracking not available' };
+  const target = action.entryId
+    ? ctx.cycleEntries.find((e) => e.id === action.entryId)
+    : action.date
+      ? ctx.cycleEntries.find((e) => e.date.startsWith(action.date!))
+      : ctx.cycleEntries[0];
+  if (!target) return { success: false, message: 'Cycle entry not found' };
+  const updates: Partial<CycleEntry> = {};
+  if (action.periodStart !== undefined) updates.periodStart = action.periodStart;
+  if (action.flow) updates.flow = action.flow;
+  if (action.symptoms) updates.symptoms = action.symptoms;
+  if (action.notes !== undefined) updates.notes = action.notes;
+  await ctx.updateCycleEntry(target.id, updates);
+  return { success: true, message: 'Updated cycle entry' };
+};
+
+const handleDeleteCycle: Handler = async (action, ctx) => {
+  if (action.intent !== 'delete_cycle') return { success: false };
+  if (!ctx.deleteCycleEntry || !ctx.cycleEntries) return { success: false, message: 'Cycle tracking not available' };
+  const target = action.entryId
+    ? ctx.cycleEntries.find((e) => e.id === action.entryId)
+    : action.date
+      ? ctx.cycleEntries.find((e) => e.date.startsWith(action.date!))
+      : ctx.cycleEntries[0];
+  if (!target) return { success: false, message: 'Cycle entry not found' };
+  await ctx.deleteCycleEntry(target.id);
+  return { success: true, message: 'Deleted cycle entry' };
+};
+
+// --- Profile handler ---
+const handleUpdateProfile: Handler = async (action, ctx) => {
+  if (action.intent !== 'update_profile') return { success: false };
+  if (!ctx.updateProfile) return { success: false, message: 'Profile update not available' };
+  const updates: Record<string, unknown> = {};
+  if (action.heightCm != null) updates.heightCm = action.heightCm;
+  if (action.currentWeight != null) updates.currentWeight = action.currentWeight;
+  if (action.targetWeight != null) updates.targetWeight = action.targetWeight;
+  if (action.activityLevel) updates.activityLevel = action.activityLevel;
+  if (action.sex) updates.sex = action.sex;
+  if (Object.keys(updates).length === 0) return { success: false, message: 'No updates provided' };
+  await ctx.updateProfile(updates);
+  return { success: true, message: 'Profile updated' };
+};
+
+// --- Trainer handlers (server-side only, frontend returns not-available) ---
+const handleTrainerAction: Handler = async (action) => {
+  return { success: false, message: `Trainer action "${action.intent}" is handled server-side` };
+};
+
 const HANDLERS: Partial<Record<VoiceAction['intent'], Handler>> = {
   add_workout: handleAddWorkout,
   edit_workout: handleEditWorkout,
@@ -257,6 +418,21 @@ const HANDLERS: Partial<Record<VoiceAction['intent'], Handler>> = {
   add_goal: handleAddGoal,
   edit_goal: handleEditGoal,
   delete_goal: handleDeleteGoal,
+  log_weight: handleLogWeight,
+  edit_weight: handleEditWeight,
+  delete_weight: handleDeleteWeight,
+  add_water: handleAddWater,
+  remove_water: handleRemoveWater,
+  log_cycle: handleLogCycle,
+  edit_cycle: handleEditCycle,
+  delete_cycle: handleDeleteCycle,
+  update_profile: handleUpdateProfile,
+  add_client_workout: handleTrainerAction,
+  edit_client_workout: handleTrainerAction,
+  delete_client_workout: handleTrainerAction,
+  add_client_food: handleTrainerAction,
+  edit_client_food: handleTrainerAction,
+  delete_client_food: handleTrainerAction,
 };
 
 /**
