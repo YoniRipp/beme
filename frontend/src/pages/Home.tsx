@@ -18,10 +18,14 @@ import { WaterTracker } from '@/components/home/WaterTracker';
 import { WeightProgress } from '@/components/home/WeightProgress';
 import { CycleTracker } from '@/components/home/CycleTracker';
 import { SetupWizard } from '@/components/onboarding/SetupWizard';
+import { WelcomeSlides } from '@/components/onboarding/WelcomeSlides';
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
+import { isOnboardingCompleted, isWelcomeCompleted, completeWelcome } from '@/lib/onboarding';
 import { useProfile } from '@/hooks/useProfile';
 import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
+import { StreakCard } from '@/components/home/StreakCard';
 import { Dumbbell, UtensilsCrossed } from 'lucide-react';
 import { isSameDay, format } from 'date-fns';
 import { toast } from 'sonner';
@@ -39,6 +43,8 @@ export function Home() {
   const [workoutModalOpen, setWorkoutModalOpen] = useState(false);
   const [foodModalOpen, setFoodModalOpen] = useState(false);
   const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
+  const [welcomeDone, setWelcomeDone] = useState(() => isWelcomeCompleted());
+  const [showTour] = useState(() => !isOnboardingCompleted());
 
   const handleGoalSave = (goal: Omit<Goal, 'id' | 'createdAt'>) => {
     if (editingGoal) {
@@ -120,8 +126,11 @@ export function Home() {
 
   const calPct = calGoalTarget > 0 ? Math.min(todaySummary.totalCal / calGoalTarget, 1) : 0;
 
-  // Show setup wizard if profile not completed
+  // Onboarding flow: WelcomeSlides → SetupWizard → OnboardingTour → Dashboard
   if (!profileLoading && !profile.setupCompleted) {
+    if (!welcomeDone) {
+      return <WelcomeSlides onComplete={() => { completeWelcome(); setWelcomeDone(true); }} />;
+    }
     return <SetupWizard onComplete={() => window.location.reload()} />;
   }
 
@@ -133,7 +142,7 @@ export function Home() {
       <div className="space-y-5">
 
         {/* Mobile: two stacked cards */}
-        <div className="md:hidden space-y-5">
+        <div className="md:hidden space-y-5" data-onboarding="dashboard">
           <Card className="rounded-2xl overflow-hidden">
             <CardContent className="p-5">
               <p className="text-base font-semibold text-center mb-4">{progressMessage}</p>
@@ -191,10 +200,12 @@ export function Home() {
         </Card>
 
         {/* Voice Hero */}
-        <VoiceMicHero />
+        <div data-onboarding="voice">
+          <VoiceMicHero />
+        </div>
 
         {/* Goals Progress */}
-        <Card className="rounded-2xl overflow-hidden">
+        <Card className="rounded-2xl overflow-hidden" data-onboarding="goals">
           <CardContent className="p-5">
             <SectionHeader title="Goals" subtitle="Your progress" />
             <DashboardProgressCards
@@ -209,8 +220,10 @@ export function Home() {
           </CardContent>
         </Card>
 
+        {/* Streaks */}
+        <StreakCard />
         {/* Health Trackers */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3" data-onboarding="trackers">
           <WaterTracker />
           <WeightProgress />
         </div>
@@ -282,6 +295,9 @@ export function Home() {
         goals={macroGoals}
         onSave={setMacroGoals}
       />
+
+      {/* Onboarding tour for first-time users */}
+      {showTour && <OnboardingTour />}
     </div>
   );
 }

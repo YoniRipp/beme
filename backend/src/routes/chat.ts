@@ -9,6 +9,7 @@ import * as chatController from '../controllers/chat.js';
 const router = Router();
 
 router.post('/api/chat', requireAuth, requirePro, chatController.chat);
+router.post('/api/chat/agent', requireAuth, requirePro, chatController.agentChat);
 router.get('/api/chat/history', requireAuth, requirePro, chatController.getHistory);
 router.delete('/api/chat/history', requireAuth, requirePro, chatController.deleteHistory);
 

@@ -192,6 +192,247 @@ export const VOICE_TOOLS = [
           },
         },
       },
+
+      // ─── Weight tracking ──────────────────────────────────────
+      {
+        name: 'log_weight',
+        description: 'Log body weight. E.g. "I weigh 72.5 kg", "72 kilos today".',
+        parameters: {
+          type: 'object',
+          properties: {
+            weightKg: { type: 'number', description: 'Body weight in kg' },
+            date: { type: 'string', description: 'YYYY-MM-DD, default today' },
+            notes: { type: 'string' },
+          },
+          required: ['weightKg'],
+        },
+      },
+      {
+        name: 'edit_weight',
+        description: 'Edit a logged weight entry.',
+        parameters: {
+          type: 'object',
+          properties: {
+            entryId: { type: 'string' },
+            date: { type: 'string', description: 'YYYY-MM-DD for disambiguation' },
+            weightKg: { type: 'number' },
+            notes: { type: 'string' },
+          },
+        },
+      },
+      {
+        name: 'delete_weight',
+        description: 'Remove a weight entry.',
+        parameters: {
+          type: 'object',
+          properties: {
+            entryId: { type: 'string' },
+            date: { type: 'string', description: 'YYYY-MM-DD for disambiguation' },
+          },
+        },
+      },
+
+      // ─── Water tracking ───────────────────────────────────────
+      {
+        name: 'add_water',
+        description: 'Log water intake. E.g. "I drank 3 glasses of water", "had water". Default 1 glass.',
+        parameters: {
+          type: 'object',
+          properties: {
+            glasses: { type: 'number', description: 'Number of glasses (default 1)' },
+            date: { type: 'string', description: 'YYYY-MM-DD, default today' },
+          },
+        },
+      },
+      {
+        name: 'remove_water',
+        description: 'Remove a glass of water from today\'s log.',
+        parameters: {
+          type: 'object',
+          properties: {
+            date: { type: 'string', description: 'YYYY-MM-DD, default today' },
+          },
+        },
+      },
+
+      // ─── Cycle tracking ───────────────────────────────────────
+      {
+        name: 'log_cycle',
+        description: 'Log a cycle/period entry. E.g. "My period started", "log period start heavy flow".',
+        parameters: {
+          type: 'object',
+          properties: {
+            date: { type: 'string', description: 'YYYY-MM-DD, default today' },
+            periodStart: { type: 'boolean', description: 'Whether this marks the start of a period' },
+            flow: { type: 'string', enum: ['light', 'medium', 'heavy'], description: 'Flow intensity' },
+            symptoms: { type: 'string', description: 'Comma-separated symptoms' },
+            notes: { type: 'string' },
+          },
+        },
+      },
+      {
+        name: 'edit_cycle',
+        description: 'Edit a logged cycle entry.',
+        parameters: {
+          type: 'object',
+          properties: {
+            entryId: { type: 'string' },
+            date: { type: 'string', description: 'YYYY-MM-DD for disambiguation' },
+            periodStart: { type: 'boolean' },
+            flow: { type: 'string', enum: ['light', 'medium', 'heavy'] },
+            symptoms: { type: 'string' },
+            notes: { type: 'string' },
+          },
+        },
+      },
+      {
+        name: 'delete_cycle',
+        description: 'Remove a cycle entry.',
+        parameters: {
+          type: 'object',
+          properties: {
+            entryId: { type: 'string' },
+            date: { type: 'string', description: 'YYYY-MM-DD for disambiguation' },
+          },
+        },
+      },
+
+      // ─── Profile ──────────────────────────────────────────────
+      {
+        name: 'update_profile',
+        description: 'Update user profile info. E.g. "update my height to 175", "set target weight to 70 kg".',
+        parameters: {
+          type: 'object',
+          properties: {
+            heightCm: { type: 'number', description: 'Height in centimetres' },
+            currentWeight: { type: 'number', description: 'Current weight in kg' },
+            targetWeight: { type: 'number', description: 'Target weight in kg' },
+            activityLevel: { type: 'string', enum: ['sedentary', 'light', 'moderate', 'active', 'very_active'], description: 'Activity level' },
+            sex: { type: 'string', enum: ['male', 'female', 'other'], description: 'Sex' },
+          },
+        },
+      },
+
+      // ─── Trainer ──────────────────────────────────────────────
+      {
+        name: 'add_client_workout',
+        description: 'Trainer: log a workout for a client. Requires the client\'s name or ID.',
+        parameters: {
+          type: 'object',
+          properties: {
+            clientName: { type: 'string', description: 'Client display name for lookup' },
+            clientId: { type: 'string', description: 'Client user ID if known' },
+            date: { type: 'string', description: 'YYYY-MM-DD, default today' },
+            title: { type: 'string', description: 'Workout name' },
+            type: { type: 'string', enum: ['strength', 'cardio', 'flexibility', 'sports'] },
+            durationMinutes: { type: 'number', description: 'Optional; default 30' },
+            exercises: {
+              type: 'array',
+              description: 'List of exercises with name, sets, reps, weight (kg).',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  sets: { type: 'number' },
+                  reps: { type: 'number' },
+                  weight: { type: 'number', description: 'Weight in kg (optional)' },
+                },
+                required: ['name', 'sets', 'reps'],
+              },
+            },
+          },
+          required: ['title', 'type'],
+        },
+      },
+      {
+        name: 'edit_client_workout',
+        description: 'Trainer: edit a client\'s workout.',
+        parameters: {
+          type: 'object',
+          properties: {
+            clientName: { type: 'string' },
+            clientId: { type: 'string' },
+            workoutTitle: { type: 'string' },
+            workoutId: { type: 'string' },
+            title: { type: 'string' },
+            type: { type: 'string', enum: ['strength', 'cardio', 'flexibility', 'sports'] },
+            durationMinutes: { type: 'number' },
+            exercises: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  sets: { type: 'number' },
+                  reps: { type: 'number' },
+                  weight: { type: 'number' },
+                },
+                required: ['name', 'sets', 'reps'],
+              },
+            },
+          },
+        },
+      },
+      {
+        name: 'delete_client_workout',
+        description: 'Trainer: remove a client\'s workout.',
+        parameters: {
+          type: 'object',
+          properties: {
+            clientName: { type: 'string' },
+            clientId: { type: 'string' },
+            workoutTitle: { type: 'string' },
+            workoutId: { type: 'string' },
+          },
+        },
+      },
+      {
+        name: 'add_client_food',
+        description: 'Trainer: log food for a client.',
+        parameters: {
+          type: 'object',
+          properties: {
+            clientName: { type: 'string', description: 'Client display name for lookup' },
+            clientId: { type: 'string', description: 'Client user ID if known' },
+            food: { type: 'string', description: 'Food name in English' },
+            amount: { type: 'number' },
+            unit: { type: 'string' },
+            date: { type: 'string', description: 'YYYY-MM-DD, default today' },
+          },
+          required: ['food'],
+        },
+      },
+      {
+        name: 'edit_client_food',
+        description: 'Trainer: edit a client\'s food entry.',
+        parameters: {
+          type: 'object',
+          properties: {
+            clientName: { type: 'string' },
+            clientId: { type: 'string' },
+            foodName: { type: 'string' },
+            entryId: { type: 'string' },
+            name: { type: 'string' },
+            calories: { type: 'number' },
+            protein: { type: 'number' },
+            carbs: { type: 'number' },
+            fats: { type: 'number' },
+          },
+        },
+      },
+      {
+        name: 'delete_client_food',
+        description: 'Trainer: remove a client\'s food entry.',
+        parameters: {
+          type: 'object',
+          properties: {
+            clientName: { type: 'string' },
+            clientId: { type: 'string' },
+            foodName: { type: 'string' },
+            entryId: { type: 'string' },
+          },
+        },
+      },
     ],
   },
 ];

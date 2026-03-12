@@ -26,6 +26,11 @@ Examples: "Diet Coke" or "had a Diet Coke" → add_food only. "I ate from 6 to 8
 Sleep: When the user talks about sleep or waking up, use log_sleep (hours). E.g. "slept 7 hours" → log_sleep(sleepHours: 7). "slept from 6 to 8" → log_sleep(sleepHours: 2). Do NOT use add_food for sleep-related phrases.
 Workouts: When the user says they worked out and gives exercises with sets/reps/weight, call add_workout with type "strength". Use title "Workout" when they do not give a workout name; when they say a program name (e.g. SS, Starting Strength) use that as title. When the user says they did a SAVED or NAMED workout without listing exercises (e.g. "I did Yoni's workout", "did my Monday routine") call add_workout with title = that workout name and exercises = [] (empty array) so the app can copy from the user's saved workout. If they add overrides (e.g. "I did Yoni's workout with 150kg squat") pass title and only the override in exercises (e.g. one exercise: Squat, weight 150). Do not use an exercise name as the workout title. Each exercise in the exercises array must use the exact exercise name the user said (e.g. Squat, Deadlift). Sets and reps: use sets × reps (e.g. 3 reps 5 sets = 5 sets of 3 reps; 3x3 = 3 sets, 3 reps). durationMinutes is optional (default 30).
 Goals: Types are calories, workouts, or sleep. Periods are weekly, monthly, or yearly.
+Weight: When the user mentions their weight (e.g. "I weigh 72.5 kg", "72 kilos today"), call log_weight. "Change yesterday's weight to 73" → edit_weight.
+Water: When the user mentions drinking water (e.g. "I drank 3 glasses of water", "had water"), call add_water. "Remove a glass" → remove_water.
+Cycle: When the user mentions period/menstruation (e.g. "My period started", "log period start"), call log_cycle. "Period ended" → edit_cycle.
+Profile: When the user wants to update profile info (e.g. "update my height to 175", "set target weight to 70"), call update_profile.
+Trainer: When a trainer wants to add entries for a client, use add_client_workout or add_client_food with the client's name.
 Call all relevant functions; the user may combine multiple actions in one message.`;
 
 // ─── Fallback helpers ───────────────────────────────────────

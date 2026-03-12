@@ -286,3 +286,13 @@ export interface UpdateCycleEntryInput {
   symptoms?: string[];
   notes?: string;
 }
+
+// ─── Streak ──────────────────────────────────────────────────
+export interface Streak {
+  id: string;
+  type: 'workout' | 'food' | 'water' | 'weight' | 'login';
+  currentCount: number;
+  bestCount: number;
+  lastDate: string | null;
+  createdAt: string;
+}

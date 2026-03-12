@@ -1,12 +1,13 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Mic, Loader2, Lock } from 'lucide-react';
+import { Mic, Loader2, Lock, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useVoiceActions } from '@/hooks/useVoiceActions';
 import { toast } from '@/components/shared/ToastProvider';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
+import { ChatAgentPanel } from '@/components/chat/ChatAgentPanel';
 
 interface VoiceAgentButtonProps {
   /** When provided, the button only toggles the voice panel (one tap open, one tap close). */
@@ -18,6 +19,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
   const { pathname } = useLocation();
   const { isPro } = useSubscription();
   const { processVoiceResult, showResultToasts } = useVoiceActions();
+  const [chatOpen, setChatOpen] = useState(false);
 
   const {
     isAvailable,
@@ -28,7 +30,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
     getVoiceResult,
   } = useSpeechRecognition();
 
-  const handleClick = useCallback(async () => {
+  const handleMicClick = useCallback(async () => {
     if (onTogglePanel != null) {
       onTogglePanel();
       return;
@@ -78,36 +80,66 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
   if (pathname === '/') return null;
 
   return (
-    <Button
-      size="icon"
-      className={cn(
-        'fixed bottom-36 right-4 z-50 h-14 w-14 rounded-full shadow-lg transition-all md:right-6 lg:bottom-22',
-        isActive && 'animate-pulse ring-2 ring-primary ring-offset-2 ring-offset-background'
-      )}
-      aria-label={
-        onTogglePanel != null
-          ? panelOpen
-            ? 'Close voice panel'
-            : 'Open voice panel'
-          : state === 'listening'
-            ? 'Stop recording and send'
-            : state === 'processing'
-              ? 'Processing voice'
-              : 'Start voice input'
-      }
-      onClick={handleClick}
-      disabled={onTogglePanel == null && state === 'processing'}
-    >
-      {onTogglePanel == null && state === 'processing' ? (
-        <Loader2 className="h-6 w-6 animate-spin" />
-      ) : !isPro ? (
-        <div className="relative">
+    <>
+      {/* Chat agent button */}
+      <Button
+        size="icon"
+        variant="outline"
+        className="fixed bottom-52 right-4 z-50 h-12 w-12 rounded-full shadow-md transition-all md:right-6 lg:bottom-36"
+        aria-label="Open AI Coach"
+        onClick={() => {
+          if (!isPro) {
+            toast.error('Pro subscription required', { description: 'Upgrade to Pro to use AI Coach.' });
+            return;
+          }
+          setChatOpen(true);
+        }}
+      >
+        {!isPro ? (
+          <div className="relative">
+            <MessageCircle className="h-5 w-5" />
+            <Lock className="absolute -bottom-1 -right-1 h-3 w-3 text-amber-400" />
+          </div>
+        ) : (
+          <MessageCircle className="h-5 w-5" />
+        )}
+      </Button>
+
+      {/* Mic button */}
+      <Button
+        size="icon"
+        className={cn(
+          'fixed bottom-36 right-4 z-50 h-14 w-14 rounded-full shadow-lg transition-all md:right-6 lg:bottom-22',
+          isActive && 'animate-pulse ring-2 ring-primary ring-offset-2 ring-offset-background'
+        )}
+        aria-label={
+          onTogglePanel != null
+            ? panelOpen
+              ? 'Close voice panel'
+              : 'Open voice panel'
+            : state === 'listening'
+              ? 'Stop recording and send'
+              : state === 'processing'
+                ? 'Processing voice'
+                : 'Start voice input'
+        }
+        onClick={handleMicClick}
+        disabled={onTogglePanel == null && state === 'processing'}
+      >
+        {onTogglePanel == null && state === 'processing' ? (
+          <Loader2 className="h-6 w-6 animate-spin" />
+        ) : !isPro ? (
+          <div className="relative">
+            <Mic className="h-6 w-6" />
+            <Lock className="absolute -bottom-1 -right-1 h-3 w-3 text-amber-400" />
+          </div>
+        ) : (
           <Mic className="h-6 w-6" />
-          <Lock className="absolute -bottom-1 -right-1 h-3 w-3 text-amber-400" />
-        </div>
-      ) : (
-        <Mic className="h-6 w-6" />
-      )}
-    </Button>
+        )}
+      </Button>
+
+      {/* Chat panel */}
+      <ChatAgentPanel open={chatOpen} onOpenChange={setChatOpen} />
+    </>
   );
 }
