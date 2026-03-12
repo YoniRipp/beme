@@ -6,6 +6,11 @@ import * as workoutService from './workout.js';
 import * as foodEntryService from './foodEntry.js';
 import * as dailyCheckInService from './dailyCheckIn.js';
 import * as goalService from './goal.js';
+import * as weightModel from '../models/weight.js';
+import * as waterModel from '../models/water.js';
+import * as cycleModel from '../models/cycle.js';
+import * as profileModel from '../models/profile.js';
+import * as trainerClientModel from '../models/trainerClient.js';
 import { isDbConfigured } from '../db/index.js';
 import { getPool } from '../db/pool.js';
 import { voiceContext } from '../lib/voiceContext.js';
@@ -145,6 +150,41 @@ async function resolveGoal(userId: string, action: VoiceAction) {
   }
   if (action.goalType) {
     return goals.find((g) => g.type === action.goalType) ?? null;
+  }
+  return null;
+}
+
+async function resolveWeightEntry(userId: string, action: VoiceAction) {
+  const entries = await weightModel.findByUserId(userId);
+  if (action.entryId) {
+    return entries.find((e) => e.id === action.entryId) ?? null;
+  }
+  if (action.date) {
+    const dateStr = parseDate(action.date);
+    return entries.find((e) => String(e.date).startsWith(dateStr)) ?? null;
+  }
+  return entries[0] ?? null;
+}
+
+async function resolveCycleEntry(userId: string, action: VoiceAction) {
+  const entries = await cycleModel.findByUserId(userId);
+  if (action.entryId) {
+    return entries.find((e) => e.id === action.entryId) ?? null;
+  }
+  if (action.date) {
+    const dateStr = parseDate(action.date);
+    return entries.find((e) => String(e.date).startsWith(dateStr)) ?? null;
+  }
+  return entries[0] ?? null;
+}
+
+async function resolveClientId(trainerId: string, action: VoiceAction): Promise<string | null> {
+  if (action.clientId) return action.clientId as string;
+  if (action.clientName) {
+    const clients = await trainerClientModel.findClientsByTrainerId(trainerId);
+    const lower = String(action.clientName).toLowerCase();
+    const match = clients.find((c) => c.clientName.toLowerCase().includes(lower));
+    return match?.clientId ?? null;
   }
   return null;
 }
@@ -331,14 +371,229 @@ export async function executeActions(actions: VoiceAction[], userId: string): Pr
           break;
         }
 
-        case 'query_user_data': {
-          const data = await queryUserData(
+        // ─── Weight ─────────────────────────────────────────
+        case 'log_weight': {
+          const dateStr = parseDate(action.date);
+          const weightKg = Number(action.weightKg) || 0;
+          await weightModel.create({ userId, date: dateStr, weight: weightKg, notes: action.notes as string });
+          results.push({ intent: 'log_weight', success: true, message: `Logged weight: ${weightKg} kg` });
+          break;
+        }
+
+        case 'edit_weight': {
+          const entry = await resolveWeightEntry(userId, action);
+          if (!entry) {
+            results.push({ intent: 'edit_weight', success: false, message: 'Weight entry not found' });
+            break;
+          }
+          await weightModel.update(entry.id, userId, {
+            weight: action.weightKg != null ? Number(action.weightKg) : undefined,
+            date: action.date ? parseDate(action.date) : undefined,
+            notes: action.notes as string | undefined,
+          });
+          results.push({ intent: 'edit_weight', success: true, message: 'Updated weight entry' });
+          break;
+        }
+
+        case 'delete_weight': {
+          const entry = await resolveWeightEntry(userId, action);
+          if (!entry) {
+            results.push({ intent: 'delete_weight', success: false, message: 'Weight entry not found' });
+            break;
+          }
+          await weightModel.deleteById(entry.id, userId);
+          results.push({ intent: 'delete_weight', success: true, message: 'Deleted weight entry' });
+          break;
+        }
+
+        // ─── Water ──────────────────────────────────────────
+        case 'add_water': {
+          const dateStr = parseDate(action.date);
+          const glasses = Number(action.glasses) || 1;
+          for (let i = 0; i < glasses; i++) {
+            await waterModel.addGlass(userId, dateStr);
+          }
+          results.push({ intent: 'add_water', success: true, message: `Added ${glasses} glass${glasses > 1 ? 'es' : ''} of water` });
+          break;
+        }
+
+        case 'remove_water': {
+          const dateStr = parseDate(action.date);
+          await waterModel.removeGlass(userId, dateStr);
+          results.push({ intent: 'remove_water', success: true, message: 'Removed a glass of water' });
+          break;
+        }
+
+        // ─── Cycle ──────────────────────────────────────────
+        case 'log_cycle': {
+          const dateStr = parseDate(action.date);
+          const symptoms = action.symptoms ? String(action.symptoms).split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+          await cycleModel.create({
             userId,
-            action.dataType as string,
-            action.dateFrom as string | undefined,
-            action.dateTo as string | undefined,
-          );
-          results.push({ intent: 'query_user_data', success: true, message: data });
+            date: dateStr,
+            periodStart: action.periodStart === true,
+            flow: action.flow as string | undefined,
+            symptoms,
+            notes: action.notes as string | undefined,
+          });
+          results.push({ intent: 'log_cycle', success: true, message: 'Logged cycle entry' });
+          break;
+        }
+
+        case 'edit_cycle': {
+          const entry = await resolveCycleEntry(userId, action);
+          if (!entry) {
+            results.push({ intent: 'edit_cycle', success: false, message: 'Cycle entry not found' });
+            break;
+          }
+          const updates: Record<string, unknown> = {};
+          if (action.periodStart != null) updates.periodStart = action.periodStart === true;
+          if (action.flow != null) updates.flow = action.flow as string;
+          if (action.symptoms != null) updates.symptoms = String(action.symptoms).split(',').map((s: string) => s.trim()).filter(Boolean);
+          if (action.notes != null) updates.notes = action.notes as string;
+          if (action.date) updates.date = parseDate(action.date);
+          await cycleModel.update(entry.id, userId, updates as Parameters<typeof cycleModel.update>[2]);
+          results.push({ intent: 'edit_cycle', success: true, message: 'Updated cycle entry' });
+          break;
+        }
+
+        case 'delete_cycle': {
+          const entry = await resolveCycleEntry(userId, action);
+          if (!entry) {
+            results.push({ intent: 'delete_cycle', success: false, message: 'Cycle entry not found' });
+            break;
+          }
+          await cycleModel.deleteById(entry.id, userId);
+          results.push({ intent: 'delete_cycle', success: true, message: 'Deleted cycle entry' });
+          break;
+        }
+
+        // ─── Profile ────────────────────────────────────────
+        case 'update_profile': {
+          await profileModel.upsert({
+            userId,
+            heightCm: action.heightCm != null ? Number(action.heightCm) : undefined,
+            currentWeight: action.currentWeight != null ? Number(action.currentWeight) : undefined,
+            targetWeight: action.targetWeight != null ? Number(action.targetWeight) : undefined,
+            activityLevel: action.activityLevel as string | undefined,
+            sex: action.sex as string | undefined,
+          });
+          results.push({ intent: 'update_profile', success: true, message: 'Updated profile' });
+          break;
+        }
+
+        // ─── Trainer: client workouts ───────────────────────
+        case 'add_client_workout': {
+          const clientId = await resolveClientId(userId, action);
+          if (!clientId) {
+            results.push({ intent: 'add_client_workout', success: false, message: 'Client not found' });
+            break;
+          }
+          await workoutService.create(clientId, {
+            date: parseDate(action.date),
+            title: (action.title as string) ?? 'Workout',
+            type: ((action.type as string) ?? 'cardio') as WorkoutType,
+            durationMinutes: Number(action.durationMinutes) || 30,
+            exercises: Array.isArray(action.exercises) ? action.exercises : [],
+            notes: action.notes as string,
+          });
+          results.push({ intent: 'add_client_workout', success: true, message: `Logged workout for client: ${(action.title as string) ?? 'Workout'}` });
+          break;
+        }
+
+        case 'edit_client_workout': {
+          const clientId = await resolveClientId(userId, action);
+          if (!clientId) {
+            results.push({ intent: 'edit_client_workout', success: false, message: 'Client not found' });
+            break;
+          }
+          const w = await resolveWorkout(clientId, action);
+          if (!w) {
+            results.push({ intent: 'edit_client_workout', success: false, message: 'Client workout not found' });
+            break;
+          }
+          await workoutService.update(clientId, w.id as string, {
+            title: action.title as string,
+            type: action.type as WorkoutType | undefined,
+            durationMinutes: action.durationMinutes != null ? Number(action.durationMinutes) : undefined,
+            exercises: Array.isArray(action.exercises) ? action.exercises : undefined,
+          });
+          results.push({ intent: 'edit_client_workout', success: true, message: 'Updated client workout' });
+          break;
+        }
+
+        case 'delete_client_workout': {
+          const clientId = await resolveClientId(userId, action);
+          if (!clientId) {
+            results.push({ intent: 'delete_client_workout', success: false, message: 'Client not found' });
+            break;
+          }
+          const w = await resolveWorkout(clientId, action);
+          if (!w) {
+            results.push({ intent: 'delete_client_workout', success: false, message: 'Client workout not found' });
+            break;
+          }
+          await workoutService.remove(clientId, w.id as string);
+          results.push({ intent: 'delete_client_workout', success: true, message: 'Deleted client workout' });
+          break;
+        }
+
+        // ─── Trainer: client food ───────────────────────────
+        case 'add_client_food': {
+          const clientId = await resolveClientId(userId, action);
+          if (!clientId) {
+            results.push({ intent: 'add_client_food', success: false, message: 'Client not found' });
+            break;
+          }
+          await foodEntryService.create(clientId, {
+            date: parseDate(action.date),
+            name: (action.name as string) ?? 'Unknown',
+            calories: Number(action.calories) || 0,
+            protein: Number(action.protein) || 0,
+            carbs: Number(action.carbs) || 0,
+            fats: Number(action.fats) || 0,
+            portionAmount: action.portionAmount != null ? Number(action.portionAmount) : undefined,
+            portionUnit: action.portionUnit as string,
+          });
+          results.push({ intent: 'add_client_food', success: true, message: `Logged food for client: ${(action.name as string) ?? 'food'}` });
+          break;
+        }
+
+        case 'edit_client_food': {
+          const clientId = await resolveClientId(userId, action);
+          if (!clientId) {
+            results.push({ intent: 'edit_client_food', success: false, message: 'Client not found' });
+            break;
+          }
+          const e = await resolveFoodEntry(clientId, action);
+          if (!e) {
+            results.push({ intent: 'edit_client_food', success: false, message: 'Client food entry not found' });
+            break;
+          }
+          await foodEntryService.update(clientId, e.id as string, {
+            name: action.name as string,
+            calories: action.calories != null ? Number(action.calories) : undefined,
+            protein: action.protein != null ? Number(action.protein) : undefined,
+            carbs: action.carbs != null ? Number(action.carbs) : undefined,
+            fats: action.fats != null ? Number(action.fats) : undefined,
+          });
+          results.push({ intent: 'edit_client_food', success: true, message: 'Updated client food entry' });
+          break;
+        }
+
+        case 'delete_client_food': {
+          const clientId = await resolveClientId(userId, action);
+          if (!clientId) {
+            results.push({ intent: 'delete_client_food', success: false, message: 'Client not found' });
+            break;
+          }
+          const e = await resolveFoodEntry(clientId, action);
+          if (!e) {
+            results.push({ intent: 'delete_client_food', success: false, message: 'Client food entry not found' });
+            break;
+          }
+          await foodEntryService.remove(clientId, e.id as string);
+          results.push({ intent: 'delete_client_food', success: true, message: 'Deleted client food entry' });
           break;
         }
 

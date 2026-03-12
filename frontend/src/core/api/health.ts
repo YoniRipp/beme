@@ -99,3 +99,17 @@ export const cycleApi = {
   delete: (id: string) =>
     request<void>(`/api/cycle-entries/${id}`, { method: 'DELETE' }),
 };
+
+// ─── Streaks ─────────────────────────────────────────────────
+export interface ApiStreak {
+  id: string;
+  type: 'workout' | 'food' | 'water' | 'weight' | 'login';
+  currentCount: number;
+  bestCount: number;
+  lastDate: string | null;
+  createdAt: string;
+}
+
+export const streakApi = {
+  list: () => request<ApiStreak[]>('/api/streaks'),
+};

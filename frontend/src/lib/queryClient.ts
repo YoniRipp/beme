@@ -24,4 +24,5 @@ export const queryKeys = {
   waterToday: (date: string) => ['waterToday', date] as const,
   waterHistory: ['waterHistory'] as const,
   cycleEntries: ['cycleEntries'] as const,
+  streaks: ['streaks'] as const,
 };

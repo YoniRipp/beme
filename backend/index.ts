@@ -14,6 +14,7 @@ import { subscribe, startEventsWorker, closeEventsBus } from './src/events/bus.j
 import { registerStatsAggregatorConsumer } from './src/events/consumers/statsAggregator.js';
 import { registerUserActivityLogConsumer } from './src/events/consumers/userActivityLog.js';
 import { registerPushNotifierConsumer } from './src/events/consumers/pushNotifier.js';
+import { registerStreakUpdaterConsumer } from './src/events/consumers/streakUpdater.js';
 import { setupVoiceStreamingWs } from './src/ws/voiceStreaming.js';
 import { logger } from './src/lib/logger.js';
 
@@ -21,6 +22,7 @@ import { logger } from './src/lib/logger.js';
 registerUserActivityLogConsumer(subscribe);
 registerStatsAggregatorConsumer(subscribe);
 registerPushNotifierConsumer(subscribe);
+registerStreakUpdaterConsumer(subscribe);
 
 async function start() {
   // Initialize database if configured - exit on failure since API requires it

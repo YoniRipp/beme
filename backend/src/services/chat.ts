@@ -34,7 +34,7 @@ export async function getChatHistory(userId: string, limit = 30): Promise<ChatMe
   return result.rows.reverse(); // oldest first
 }
 
-async function saveChatMessage(userId: string, role: 'user' | 'assistant', content: string): Promise<ChatMessage> {
+export async function saveChatMessage(userId: string, role: 'user' | 'assistant', content: string): Promise<ChatMessage> {
   const pool = getPool();
   const result = await pool.query(
     `INSERT INTO chat_messages (user_id, role, content)
@@ -92,7 +92,7 @@ async function buildDetailedFood(userId: string): Promise<string> {
   return `Recent daily nutrition (last 7 days):\n${lines.join('\n')}`;
 }
 
-async function buildChatSystemPrompt(userId: string): Promise<string> {
+export async function buildChatSystemPrompt(userId: string): Promise<string> {
   const ctx = await fetchUserContext(userId, 30);
   const [detailedWorkouts, detailedFood] = await Promise.all([
     buildDetailedWorkouts(userId),
