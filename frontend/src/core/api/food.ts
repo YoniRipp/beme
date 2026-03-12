@@ -58,6 +58,7 @@ export interface FoodSearchResult {
   servingSizesMl?: { can?: number; bottle?: number; glass?: number } | null;
   defaultUnit?: string | null;
   unitWeightGrams?: number | null;
+  imageUrl?: string | null;
 }
 
 export function searchFoods(query: string, limit = 10): Promise<FoodSearchResult[]> {

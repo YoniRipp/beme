@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImagePlaceholder } from '@/components/shared/ImagePlaceholder';
+import { getFoodImageUrl } from '@/hooks/useFoodImages';
 import type { FoodEntry } from '@/types/energy';
 
 interface FoodCardProps {
@@ -30,7 +31,7 @@ export const FoodCard = memo(function FoodCard({ entry, onEdit, onDelete }: Food
       }}
     >
       <div className="shrink-0">
-        <ImagePlaceholder type="food" size="md" className="rounded-full" />
+        <ImagePlaceholder type="food" size="md" imageUrl={getFoodImageUrl(entry.name)} className="rounded-full" />
       </div>
 
       <div className="flex-1 min-w-0">
