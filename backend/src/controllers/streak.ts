@@ -9,6 +9,16 @@ import { sendJson } from '../utils/response.js';
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const userId = getEffectiveUserId(req);
-  const streaks = await streakService.list(userId);
-  sendJson(res, streaks);
+  try {
+    const streaks = await streakService.list(userId);
+    sendJson(res, streaks);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.includes('relation') && msg.includes('does not exist')) {
+      // Table not yet migrated — return empty array
+      sendJson(res, []);
+      return;
+    }
+    throw err;
+  }
 });
