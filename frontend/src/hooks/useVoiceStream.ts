@@ -182,6 +182,11 @@ export function useVoiceStream(): UseVoiceStreamReturn {
       doneRejectRef.current?.(new Error('Connection closed'));
       doneResolveRef.current = null;
       doneRejectRef.current = null;
+      cleanup();
+      if (isMountedRef.current) {
+        setIsListening(false);
+        setIsProcessing(false);
+      }
     };
 
     // Start MediaRecorder with 250ms timeslice — fires ondataavailable every 250ms
@@ -228,6 +233,11 @@ export function useVoiceStream(): UseVoiceStreamReturn {
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'stop' }));
+    } else {
+      // WebSocket already closed — no point waiting for 'done'
+      cleanup();
+      if (isMountedRef.current) setIsProcessing(false);
+      return '';
     }
 
     // Wait for 'done' message from server
