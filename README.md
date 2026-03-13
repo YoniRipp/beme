@@ -707,6 +707,194 @@ docker run -p 5173:3000 beme-frontend
 
 ---
 
+## Railway Architecture Deep Dive
+
+On Railway, BeMe runs as a **single backend process** that contains both the Express API and the BullMQ Voice Worker in the same Node.js process. Redis connects the synchronous API layer to asynchronous background processing.
+
+### Railway Service Topology
+
+```mermaid
+flowchart TB
+  subgraph user [User]
+    Browser[Browser / Mobile]
+  end
+
+  subgraph railway [Railway]
+    subgraph fe [Frontend Service]
+      SPA[React SPA<br/>server.cjs]
+    end
+
+    subgraph be [Backend Service - Single Process]
+      API[Express API<br/>Routes + Controllers]
+      VoiceWorker[Voice Worker<br/>BullMQ concurrency:5]
+      EventsWorker[Events Worker<br/>BullMQ concurrency:5]
+    end
+
+    Redis[(Railway Redis)]
+  end
+
+  subgraph supabase [Supabase]
+    Postgres[(PostgreSQL<br/>+ pgvector + pg_trgm)]
+  end
+
+  subgraph external [External APIs]
+    Gemini[Google Gemini API]
+    S3[AWS S3<br/>Images/Videos]
+  end
+
+  Browser -->|HTTPS| SPA
+  SPA -->|"VITE_API_URL<br/>REST + JWT"| API
+  API <-->|DATABASE_URL| Postgres
+  API <-->|"REDIS_URL"| Redis
+  API -->|"enqueue voice job"| Redis
+  Redis -->|"dequeue"| VoiceWorker
+  VoiceWorker --> Gemini
+  VoiceWorker --> Postgres
+  VoiceWorker -->|"store result"| Redis
+  API -->|"publish event"| Redis
+  Redis -->|"consume"| EventsWorker
+  EventsWorker --> Postgres
+  API --> S3
+```
+
+### Voice Action Flow: Text Mode (Synchronous)
+
+When the user types or uses browser speech-to-text, the entire flow is **synchronous** within a single HTTP request:
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant F as Frontend
+  participant A as Backend API
+  participant G as Gemini API
+  participant DB as PostgreSQL
+  participant R as Redis
+  participant EW as Events Worker
+
+  U->>F: Speaks "two eggs and a coffee"
+  Note over F: Browser Web Speech API<br/>transcribes to text
+  F->>A: POST /api/voice/understand<br/>{ transcript: "two eggs and a coffee" }
+  A->>G: Send transcript + 23 function declarations
+  G-->>A: Function calls:<br/>add_food("egg", 2, "eggs")<br/>add_food("coffee", 1, "cup")
+
+  Note over A: Food Lookup Pipeline (per food)
+
+  A->>DB: Tier 1: Search foods table<br/>"egg" → word-boundary match
+  DB-->>A: Found: Egg, per 100g<br/>cal:148, p:10, c:1.6, f:11
+
+  A->>DB: Tier 1: Search foods table<br/>"coffee" → word-boundary match
+  DB-->>A: Found: Coffee, per 100ml<br/>cal:2, p:0.3, c:0, f:0
+
+  Note over A: Scale to portions:<br/>2 eggs = 100g → cal:148<br/>1 cup coffee = 240ml → cal:5
+
+  A->>DB: INSERT food_entries (×2)
+
+  Note over A: Publish domain events (async)
+  A->>R: Enqueue: energy.FoodEntryCreated (×2)
+  A-->>F: { actions: [...], results: [...] }
+  F-->>U: Shows logged food with calories
+
+  Note over R,EW: Meanwhile, asynchronously...
+  R->>EW: Dequeue events
+  EW->>DB: Update user_daily_stats (total calories)
+  EW->>DB: Log to user_activity_log
+  EW->>DB: Update streak counts
+  Note over EW: Send push notification<br/>(if subscribed)
+```
+
+### Voice Action Flow: Audio Mode (Fully Async)
+
+When the user sends raw audio (e.g., from mobile), the flow is **fully asynchronous** with Redis as the job queue:
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant F as Frontend
+  participant A as Backend API
+  participant R as Redis
+  participant VW as Voice Worker
+  participant G as Gemini API
+  participant DB as PostgreSQL
+
+  U->>F: Records audio
+  F->>A: POST /api/voice/understand<br/>{ audio: "<base64>", mimeType: "audio/webm" }
+  A->>R: Create BullMQ job in "voice" queue<br/>Store: job:{jobId} = {status:"pending"}
+  A-->>F: { jobId: "abc123", pollUrl: "/api/jobs/abc123" }
+
+  Note over F: Client starts polling every ~1s
+
+  F->>A: GET /api/jobs/abc123
+  A->>R: GET job:abc123
+  R-->>A: { status: "pending" }
+  A-->>F: { status: "pending" }
+
+  Note over VW: Voice Worker picks up job<br/>(concurrency: 5)
+
+  R->>VW: Dequeue voice job
+  VW->>G: Send raw audio + 23 function declarations
+  G-->>VW: Function calls:<br/>add_food("egg", 2, "eggs")<br/>add_food("coffee", 1, "cup")
+  VW->>DB: Lookup nutrition + INSERT food_entries
+  VW->>R: SET job:abc123 = {status:"completed", result:{...}}<br/>TTL: 300s (5 min)
+
+  F->>A: GET /api/jobs/abc123
+  A->>R: GET job:abc123
+  R-->>A: { status: "completed", result: {actions:[...]} }
+  A-->>F: { status: "completed", actions: [...] }
+  F-->>U: Shows logged food with calories
+```
+
+### Event-Driven Pipeline
+
+Every write operation (food entry, workout, goal, check-in) publishes a domain event. On Railway, these are processed by the Events Worker running in the same process:
+
+```mermaid
+flowchart LR
+  subgraph "API Write Operations"
+    FE[Food Entry Created]
+    WO[Workout Created]
+    GO[Goal Updated]
+    CI[Check-In Created]
+  end
+
+  subgraph "Redis BullMQ"
+    EQ["events" queue<br/>3 retries, exponential backoff]
+    DLQ["events-dlq"<br/>Dead Letter Queue]
+  end
+
+  subgraph "Event Consumers (async)"
+    SA[statsAggregator<br/>Updates user_daily_stats<br/>total calories + workout count]
+    UAL[userActivityLog<br/>Logs action to<br/>user_activity_log table]
+    PN[pushNotifier<br/>Sends browser push<br/>notification]
+    SU[streakUpdater<br/>Updates workout<br/>streak counts]
+  end
+
+  FE --> EQ
+  WO --> EQ
+  GO --> EQ
+  CI --> EQ
+
+  EQ --> SA
+  EQ --> UAL
+  EQ --> PN
+  EQ --> SU
+
+  EQ -->|"Failed after 3 retries"| DLQ
+```
+
+### Key Takeaways
+
+| Aspect | How It Works on Railway |
+|--------|------------------------|
+| **Process model** | Single Node.js process runs API + Voice Worker + Events Worker |
+| **Voice text** | Synchronous: Gemini call happens within the HTTP request (~2-5s) |
+| **Voice audio** | Async: Job enqueued to Redis, worker processes, client polls for result |
+| **Domain events** | Always async: Published to Redis BullMQ queue after DB write |
+| **Event consumers** | 4 consumers run in the Events Worker: stats, activity log, push, streaks |
+| **Failure handling** | Events retry 3x with exponential backoff, then move to Dead Letter Queue |
+| **Scaling option** | Can split into API process + `node workers/event-consumer.js` as separate Railway service |
+
+---
+
 ## Project Structure
 
 ```
