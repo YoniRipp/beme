@@ -384,7 +384,7 @@ export function Energy() {
   };
 
   return (
-    <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto space-y-5 pb-24">
+    <div className="max-w-lg md:max-w-6xl mx-auto space-y-5 pb-24">
       <ContentWithLoading loading={energyLoading} loadingText="Loading energy...">
       {/* Calorie + Macro Section */}
       {(() => {

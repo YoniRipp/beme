@@ -135,7 +135,7 @@ export function Home() {
   }
 
   return (
-    <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto space-y-5">
+    <div className="max-w-lg md:max-w-6xl mx-auto space-y-5">
       <h1 className="text-2xl font-bold tracking-tight">Today</h1>
 
       <ContentWithLoading loading={workoutsLoading || energyLoading || goalsLoading} loadingText="Loading dashboard...">
