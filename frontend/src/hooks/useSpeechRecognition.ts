@@ -55,7 +55,6 @@ export function useSpeechRecognition(
   const useNativeImpl = isNative && native.isAvailable;
   const useStreamImpl = !useNativeImpl && stream.isAvailable && !streamingFailedRef.current;
 
-  console.log(TAG, 'hook render — isNative:', isNative, 'useNativeImpl:', useNativeImpl, 'useStreamImpl:', useStreamImpl, 'streamAvailable:', stream.isAvailable, 'streamingFailed:', streamingFailedRef.current);
 
   const impl = useMemo(
     () => (useNativeImpl ? native : useStreamImpl ? stream : web),

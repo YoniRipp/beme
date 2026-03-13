@@ -60,7 +60,7 @@ function buildSetupMessage(mimeType: string) {
 
   return {
     setup: {
-      model: `models/${config.geminiLiveModel ?? config.geminiModel}`,
+      model: `models/${config.geminiLiveModel ?? 'gemini-2.0-flash-live-001'}`,
       generationConfig: {
         responseModalities: ['TEXT'],
       },
@@ -125,11 +125,23 @@ async function handleConnection(clientWs: WebSocket, req: IncomingMessage) {
   /** Open WebSocket to Gemini Live API and set up handlers. */
   function connectToGemini() {
     const geminiUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${config.geminiApiKey}`;
+    const liveModel = config.geminiLiveModel ?? 'gemini-2.0-flash-live-001';
+
+    logger.info({ userId: user.id, model: liveModel }, 'Voice stream: connecting to Gemini');
 
     geminiWs = new WebSocket(geminiUrl);
 
+    // Timeout: if setupComplete doesn't arrive in 10s, abort
+    const setupTimer = setTimeout(() => {
+      if (!sessionReady) {
+        logger.error({ userId: user.id, model: liveModel }, 'Voice stream: Gemini setup timed out (10s)');
+        sendToClient(clientWs, { type: 'error', message: 'Voice streaming setup timed out' });
+        cleanup();
+      }
+    }, 10_000);
+
     geminiWs.on('open', () => {
-      // Send setup message
+      logger.info({ userId: user.id }, 'Voice stream: Gemini WS open, sending setup');
       const setup = buildSetupMessage(sessionMetadata?.mimeType ?? 'audio/webm');
       geminiWs!.send(JSON.stringify(setup));
     });
@@ -140,7 +152,9 @@ async function handleConnection(clientWs: WebSocket, req: IncomingMessage) {
 
         // Setup complete
         if (msg.setupComplete) {
+          clearTimeout(setupTimer);
           sessionReady = true;
+          logger.info({ userId: user.id }, 'Voice stream: Gemini setup complete');
           sendToClient(clientWs, { type: 'ready' });
           return;
         }
@@ -202,15 +216,26 @@ async function handleConnection(clientWs: WebSocket, req: IncomingMessage) {
     });
 
     geminiWs.on('error', (err) => {
-      logger.error({ err }, 'Voice stream: Gemini WS error');
+      clearTimeout(setupTimer);
+      logger.error({ err, userId: user.id }, 'Voice stream: Gemini WS error');
       sendToClient(clientWs, { type: 'error', message: 'Voice streaming connection failed' });
       cleanup();
     });
 
-    geminiWs.on('close', () => {
-      // If Gemini closes unexpectedly before we're done, signal done
-      if (clientWs.readyState === WebSocket.OPEN && allActions.length > 0) {
-        finishSession().catch(() => {});
+    geminiWs.on('close', (code, reason) => {
+      clearTimeout(setupTimer);
+      logger.info({ userId: user.id, code, reason: reason?.toString() }, 'Voice stream: Gemini WS closed');
+      if (clientWs.readyState === WebSocket.OPEN) {
+        if (allActions.length > 0) {
+          finishSession().catch(() => {});
+        } else if (!sessionReady) {
+          // Gemini closed before setup completed — surface the error
+          sendToClient(clientWs, { type: 'error', message: 'Voice streaming connection closed before ready' });
+          cleanup();
+        } else {
+          // Session was ready but no actions collected — send done with unknown
+          finishSession().catch(() => {});
+        }
       }
     });
   }

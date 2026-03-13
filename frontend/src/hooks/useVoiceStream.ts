@@ -73,7 +73,6 @@ export function useVoiceStream(): UseVoiceStreamReturn {
 
   const isAvailable = isMediaRecorderSupported() && !!getVoiceStreamUrl('test');
 
-  console.log(TAG, 'hook render — isAvailable:', isAvailable, 'isListening:', isListening, 'isProcessing:', isProcessing);
 
   const startListening = useCallback(async (): Promise<void> => {
     console.log(TAG, 'startListening called — isAvailable:', isAvailable, 'isListeningRef:', isListeningRef.current, 'isStartingRef:', isStartingRef.current);
@@ -114,15 +113,23 @@ export function useVoiceStream(): UseVoiceStreamReturn {
       wsRef.current = ws;
 
       await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const fail = (err: Error) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          reject(err);
+        };
+
+        // Total timeout covers connect + ready — NOT cleared on open
         const timeout = setTimeout(() => {
-          console.error(TAG, 'WebSocket connection TIMEOUT (5s)');
-          reject(new Error('WebSocket connection timeout'));
+          console.error(TAG, 'setup TIMEOUT (8s) — server never sent ready');
+          fail(new Error('Voice streaming setup timed out'));
           ws.close();
-        }, 5000);
+        }, 8000);
 
         ws.onopen = () => {
           console.log(TAG, 'WebSocket OPEN — sending start message');
-          clearTimeout(timeout);
           ws.send(JSON.stringify({
             type: 'start',
             today: toLocalDateString(new Date()),
@@ -136,20 +143,21 @@ export function useVoiceStream(): UseVoiceStreamReturn {
             const msg = JSON.parse(event.data);
             console.log(TAG, 'setup message:', msg.type, msg.message ?? '');
             if (msg.type === 'ready') {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timeout);
               console.log(TAG, 'received READY — resolving setup');
               resolve();
             } else if (msg.type === 'error') {
               console.error(TAG, 'setup ERROR from server:', msg.message);
-              clearTimeout(timeout);
-              reject(new Error(msg.message ?? 'Voice streaming failed'));
+              fail(new Error(msg.message ?? 'Voice streaming failed'));
             }
           } catch { /* ignore parse errors during setup */ }
         };
 
         ws.onerror = (ev) => {
           console.error(TAG, 'WebSocket ERROR during setup', ev);
-          clearTimeout(timeout);
-          reject(new Error('WebSocket connection failed'));
+          fail(new Error('WebSocket connection failed'));
         };
       });
 
