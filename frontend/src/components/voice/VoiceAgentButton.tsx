@@ -23,6 +23,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
   const [isStarting, setIsStarting] = useState(false);
   const busyRef = useRef(false);
   const stoppingRef = useRef(false);
+  const startAbortRef = useRef(false);
 
   const {
     isAvailable,
@@ -55,6 +56,15 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
 
     if (!isPro) {
       toast.error('Pro subscription required', { description: 'Upgrade to Pro to use voice input.' });
+      return;
+    }
+
+    // Allow cancelling a pending start
+    if (busyRef.current && !isListeningRef.current) {
+      startAbortRef.current = true;
+      setIsStarting(false);
+      busyRef.current = false;
+      toast('Recording cancelled');
       return;
     }
 
@@ -94,10 +104,18 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
 
       try {
         setIsStarting(true);
-        await startListening();
+        startAbortRef.current = false;
+        await Promise.race([
+          startListening(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Start timed out. Please try again.')), 10_000)
+          ),
+        ]);
+        if (startAbortRef.current) return; // user cancelled during start
         // Sync update ref immediately — closes gap before busyRef resets
         isListeningRef.current = true;
       } catch (e) {
+        if (startAbortRef.current) return; // user cancelled during start
         const msg = e instanceof Error ? e.message : 'Could not start listening. Please check microphone permissions.';
         toast.error('Could not start recording', { description: msg });
       } finally {
@@ -159,9 +177,9 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
                 : 'Start voice input'
         }
         onClick={handleMicClick}
-        disabled={onTogglePanel == null && (state === 'processing' || state === 'starting')}
+        disabled={onTogglePanel == null && state === 'processing'}
       >
-        {onTogglePanel == null && (state === 'processing' || state === 'starting') ? (
+        {onTogglePanel == null && state === 'processing' ? (
           <Loader2 className="h-6 w-6 animate-spin" />
         ) : !isPro ? (
           <div className="relative">
