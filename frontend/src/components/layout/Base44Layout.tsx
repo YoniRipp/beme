@@ -253,7 +253,7 @@ export function Base44Layout() {
       />
 
       <QuickAddMenu open={quickAddOpen} onOpenChange={setQuickAddOpen} />
-      <VoiceAgentButton />
+      {pathname !== '/' && <VoiceAgentButton />}
 
       {/* AI Chat FAB — bottom-right, below mic button */}
       {isPro && pathname !== '/insights' && (

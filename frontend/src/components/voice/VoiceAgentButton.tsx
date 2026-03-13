@@ -22,6 +22,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
   const [chatOpen, setChatOpen] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const busyRef = useRef(false);
+  const stoppingRef = useRef(false);
 
   const {
     isAvailable,
@@ -57,30 +58,35 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
       return;
     }
 
-    // Prevent concurrent execution
+    // Stop is ALWAYS allowed — never gate behind busyRef so user can stop at any time
+    if (isListeningRef.current) {
+      if (stoppingRef.current) return;
+      stoppingRef.current = true;
+      try {
+        await stopListening();
+        const result = await getVoiceResult();
+
+        if (!result || result.actions.length === 0 || result.actions[0].intent === 'unknown') {
+          toast.error('No speech captured or not understood. Try again.');
+          return;
+        }
+
+        const processResult = await processVoiceResult(result);
+        showResultToasts(processResult);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Network or server error. Please try again.';
+        toast.error('Voice processing failed', { description: msg });
+      } finally {
+        stoppingRef.current = false;
+      }
+      return;
+    }
+
+    // Start uses busyRef to prevent double-start
     if (busyRef.current) return;
     busyRef.current = true;
 
     try {
-      if (isListeningRef.current) {
-        try {
-          await stopListening();
-          const result = await getVoiceResult();
-
-          if (!result || result.actions.length === 0 || result.actions[0].intent === 'unknown') {
-            toast.error('No speech captured or not understood. Try again.');
-            return;
-          }
-
-          const processResult = await processVoiceResult(result);
-          showResultToasts(processResult);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : 'Network or server error. Please try again.';
-          toast.error('Voice processing failed', { description: msg });
-        }
-        return;
-      }
-
       if (!isAvailable) {
         toast.error('Voice not available', { description: 'Microphone access required. Please use Chrome or Edge.' });
         return;
@@ -89,6 +95,8 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
       try {
         setIsStarting(true);
         await startListening();
+        // Sync update ref immediately — closes gap before busyRef resets
+        isListeningRef.current = true;
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Could not start listening. Please check microphone permissions.';
         toast.error('Could not start recording', { description: msg });

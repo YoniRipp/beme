@@ -16,6 +16,7 @@ export function VoiceMicHero() {
   const [hasUsedVoice, setHasUsedVoice] = useState(() => localStorage.getItem(VOICE_USED_KEY) === '1');
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const busyRef = useRef(false);
+  const stoppingRef = useRef(false);
 
   const { processVoiceResult, showResultToasts } = useVoiceActions();
 
@@ -55,36 +56,41 @@ export function VoiceMicHero() {
       return;
     }
 
-    // Prevent concurrent execution (e.g. tapping while startListening is pending)
+    // Stop is ALWAYS allowed — never gate behind busyRef so user can stop at any time
+    if (isListeningRef.current) {
+      if (stoppingRef.current) return;
+      stoppingRef.current = true;
+      try {
+        setStatusText('Processing...');
+        await stopListening();
+        const result = await getVoiceResult();
+
+        if (!result || result.actions.length === 0 || result.actions[0].intent === 'unknown') {
+          setStatusText('');
+          toast.error('No speech captured or not understood. Try again.');
+          return;
+        }
+
+        const processResult = await processVoiceResult(result);
+        const msg = showResultToasts(processResult);
+        setStatusText(msg || (processResult.failed.length > 0 ? `${processResult.failed.length} failed` : ''));
+
+        clearTimeout(statusTimeoutRef.current);
+        statusTimeoutRef.current = setTimeout(() => setStatusText(''), 5000);
+      } catch (e) {
+        setStatusText('');
+        toast.error('Voice processing failed', { description: e instanceof Error ? e.message : 'Please try again.' });
+      } finally {
+        stoppingRef.current = false;
+      }
+      return;
+    }
+
+    // Start uses busyRef to prevent double-start
     if (busyRef.current) return;
     busyRef.current = true;
 
     try {
-      if (isListeningRef.current) {
-        try {
-          setStatusText('Processing...');
-          await stopListening();
-          const result = await getVoiceResult();
-
-          if (!result || result.actions.length === 0 || result.actions[0].intent === 'unknown') {
-            setStatusText('');
-            toast.error('No speech captured or not understood. Try again.');
-            return;
-          }
-
-          const processResult = await processVoiceResult(result);
-          const msg = showResultToasts(processResult);
-          setStatusText(msg || (processResult.failed.length > 0 ? `${processResult.failed.length} failed` : ''));
-
-          clearTimeout(statusTimeoutRef.current);
-          statusTimeoutRef.current = setTimeout(() => setStatusText(''), 5000);
-        } catch (e) {
-          setStatusText('');
-          toast.error('Voice processing failed', { description: e instanceof Error ? e.message : 'Please try again.' });
-        }
-        return;
-      }
-
       if (!isAvailable) {
         toast.error('Voice not available', { description: 'Microphone access required.' });
         return;
@@ -97,7 +103,8 @@ export function VoiceMicHero() {
           localStorage.setItem(VOICE_USED_KEY, '1');
         }
         await startListening();
-        // isListening is now true — state-driven UI shows "Listening... Tap to stop"
+        // Sync update ref immediately — closes gap before busyRef resets
+        isListeningRef.current = true;
       } catch (e) {
         setStatusText('');
         toast.error('Could not start recording', { description: e instanceof Error ? e.message : 'Check microphone permissions.' });
