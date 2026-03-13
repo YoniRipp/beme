@@ -1,391 +1,1174 @@
 # BeMe Backend
 
-Node/Express REST API for the BeMe wellness app: authentication, workouts, food entries, daily check-ins, goals, food search, and voice intent (Google Gemini). Persistent data is stored in PostgreSQL; the voice pipeline parses natural language and executes actions against the database.
+Node.js + Express + TypeScript REST API for the BeMe wellness application. Handles authentication, domain CRUD (workouts, food entries, check-ins, goals), intelligent food search, voice intent parsing (Google Gemini), vector embeddings, file uploads (S3), and an event-driven architecture with optional Redis and extracted microservices.
 
-The backend is **event-ready**: after every write (create/update/delete) in Body, Energy, Goals, a domain event is published to an **event bus** (Redis/BullMQ or SQS). An optional **event-consumer** process runs handlers. The same codebase can run as a **single API** or as a **gateway** that proxies to **extracted context services** (Body, Energy, Goals) when `*_SERVICE_URL` are set.
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [LLM / Gemini Integration](#llm--gemini-integration)
+  - [Voice Intent Parsing](#1-voice-intent-parsing)
+  - [Food Nutrition Lookup](#2-food-nutrition-lookup)
+- [Food Lookup Pipeline](#food-lookup-pipeline)
+- [Food Search Algorithm](#food-search-algorithm)
+- [Vector Embeddings & Semantic Search](#vector-embeddings--semantic-search)
+- [Redis Architecture](#redis-architecture)
+- [Database Schema](#database-schema)
+- [Image & Video Handling](#image--video-handling)
+- [Voice Pipeline](#voice-pipeline)
+- [Guardrails & Validation](#guardrails--validation)
+- [Event Bus](#event-bus)
+- [API Reference](#api-reference)
+- [Auth Middleware](#auth-middleware)
+- [Meal Copying & Repetition](#meal-copying--repetition)
+- [Future: Meal Plan Feature](#future-meal-plan-feature)
+- [Configuration](#configuration)
+- [Scripts](#scripts)
+- [Testing](#testing)
+- [Deployment](#deployment)
+
+---
 
 ## Overview
 
 The backend serves:
 
-- **Auth**: Register, login (email/password and social: Google, Facebook, Twitter), and `GET /api/auth/me` with JWT.
-- **Domain APIs**: CRUD for workouts, food entries, daily check-ins, and goals. All are scoped by the authenticated user (or by admin override when supported).
-- **Food search**: Public `GET /api/food/search` against the `foundation_foods` table (USDA data).
-- **Voice**: `POST /api/voice/understand` – accepts user text, calls Gemini with function declarations, and performs add/edit/delete for workouts, food, sleep (daily check-in), and goals.
-- **Event bus** — publish/subscribe interface; Redis (BullMQ) or SQS; optional standalone consumer process.
+- **Auth**: Register, login (email/password + social: Google, Facebook, Twitter), JWT sessions
+- **Domain APIs**: CRUD for workouts, food entries, daily check-ins, goals, weight, water, cycle tracking
+- **Food search**: Public search against the `foods` table with multi-tier matching (word-split, trigram, FTS, aliases)
+- **Voice**: Natural language understanding via Gemini function calling -- parse text/audio into structured actions
+- **Food lookup**: 2-tier pipeline (database -> Gemini AI) that resolves food names to nutrition data
+- **Embeddings**: Semantic search across user content using 768-dim vectors
+- **File uploads**: S3 pre-signed URLs for images and videos
+- **Event bus**: Publish domain events after every write (Redis BullMQ or SQS)
 
-When `DATABASE_URL` is not set, the server still starts but auth and data APIs are not mounted. When `GEMINI_API_KEY` is not set, the voice understand endpoint returns an error.
+The backend is **event-ready** and supports three deployment modes: single process, API + event consumer, or gateway + extracted services. See the [root README](../README.md) for architecture diagrams.
 
-For app-wide conventions and the full changelog (Updates 1–17, latest first), see the root [README.md](../README.md) and [CHANGELOG.md](../CHANGELOG.md).
+---
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|------------|
-| Runtime | Node.js (ES modules) |
-| Framework | Express |
-| Database | PostgreSQL (pg) |
-| Auth | jsonwebtoken, bcrypt, google-auth-library |
-| Voice | @google/generative-ai (Gemini) |
-| Validation | Zod (config and request body schemas) |
-| Env | dotenv |
-| CORS | cors |
-| Rate limit | express-rate-limit (Redis store via rate-limit-redis when REDIS_URL set) |
-| Redis | redis, rate-limit-redis (optional) |
-| Event bus | BullMQ, @aws-sdk/client-sqs (optional), [src/events/bus.js](src/events/bus.js), [src/events/schema.js](src/events/schema.js) |
-| Gateway | http-proxy-middleware (when `*_SERVICE_URL` set) |
-| Per-context DB | getPool(context) in [src/db/pool.js](src/db/pool.js) |
-| Security headers | helmet |
-| Logging | pino |
-| Migrations | node-pg-migrate |
+| Category | Technology | Purpose |
+|----------|-----------|---------|
+| Runtime | Node.js 20 (ES modules) | Server runtime |
+| Framework | Express | HTTP routing, middleware |
+| Language | TypeScript | Type safety, compiled with tsup |
+| Database | PostgreSQL (pg) | Primary data store |
+| Extensions | pgvector, pg_trgm | Vector similarity search, fuzzy text matching |
+| Migrations | node-pg-migrate | Versioned schema migrations |
+| Schema | Prisma | Schema definition and management |
+| Auth | jsonwebtoken, bcrypt | JWT signing, password hashing |
+| OAuth | google-auth-library | Google social login |
+| LLM | @google/generative-ai | Gemini for voice + food lookup |
+| Validation | Zod | Config, request body, LLM response validation |
+| Logging | Pino | Structured JSON logging |
+| Security | Helmet | HTTP security headers |
+| Rate Limiting | express-rate-limit, rate-limit-redis | Per-IP request throttling |
+| Cache/Queue | Redis, BullMQ | Food search cache, voice queue, event bus |
+| File Storage | @aws-sdk/client-s3 | Pre-signed URLs for uploads |
+| Gateway | http-proxy-middleware | Proxy to extracted services |
+| Event Bus | BullMQ, @aws-sdk/client-sqs | Domain event transport |
 
 ### Conventions
+- **TypeScript-only**: All new backend source files must be `.ts`; no new `.js` source files
+- **Nutrition values**: Stored per 100g/100ml in the `foods` reference table
+- **Dates**: Local calendar `YYYY-MM-DD`
 
-- **TypeScript-only:** All new backend source files must be `.ts`; no new `.js` source files. Tests use `.test.ts`.
+---
 
 ## Project Structure
 
 ```
 backend/
-├── app.js                 # Express app: CORS, helmet, json, health/ready, rate limit, gateway proxy (when *_SERVICE_URL), API router, error handler
-├── index.js               # Entry: load config, init DB schema, start HTTP server
-├── body-service.js        # Optional standalone Body (workouts) API
-├── energy-service.js      # Optional standalone Energy (food entries, daily check-ins) API
-├── goals-service.js       # Optional standalone Goals API
+├── app.ts                    # Express app: CORS, Helmet, rate limit, gateway proxy, routes, error handler
+├── index.ts                  # Entry: load config, init DB, start HTTP server, optional voice worker
+├── body-service.ts           # Optional standalone Body (workouts) API
+├── energy-service.ts         # Optional standalone Energy (food, check-ins) API
+├── goals-service.ts          # Optional standalone Goals API
 ├── workers/
-│   └── event-consumer.js  # Standalone event consumer (no HTTP; requires Redis or SQS)
-├── routes/
-│   ├── auth.js            # register, login, loginGoogle, loginFacebook, loginTwitter, twitterRedirect, twitterCallback, me
-│   └── users.js           # listUsers, createUser, updateUser, deleteUser (admin)
-├── middleware/
-│   └── auth.js            # Legacy/auth helpers (if any)
+│   └── event-consumer.js     # Standalone event consumer (no HTTP; requires Redis/SQS)
 ├── src/
 │   ├── config/
-│   │   ├── index.js       # Load .env, export config (port, dbUrl, jwtSecret, redisUrl, etc.)
-│   │   └── constants.js
+│   │   ├── index.ts          # Env loading + Zod validation
+│   │   └── constants.ts      # App constants
 │   ├── db/
-│   │   ├── index.js       # initSchema, getPool, closePool
-│   │   ├── pool.js        # pg Pool; getPool(context) for per-context DB URLs
-│   │   └── schema.js      # CREATE TABLE users, goals, workouts, food_entries, daily_check_ins, foundation_foods
+│   │   ├── index.ts          # initSchema, getPool, closePool
+│   │   ├── pool.ts           # pg Pool; getPool(context) for per-context DB URLs
+│   │   └── schema.ts         # CREATE TABLE statements for schema init
 │   ├── redis/
-│   │   └── client.js      # getRedisClient, closeRedis, isRedisConfigured (optional)
+│   │   └── client.ts         # getRedisClient, closeRedis, isRedisConfigured
+│   ├── events/
+│   │   ├── bus.ts            # Event bus: publish, subscribe (Redis BullMQ or SQS)
+│   │   ├── schema.ts         # Zod event envelope schema
+│   │   ├── publish.ts        # publishEvent helper
+│   │   └── transports/
+│   │       └── sqs.ts        # AWS SQS transport
+│   ├── queue/
+│   │   └── index.ts          # BullMQ voice queue setup
 │   ├── middleware/
-│   │   ├── auth.js        # requireAuth, requireAdmin, getEffectiveUserId, resolveEffectiveUserId
-│   │   ├── errorHandler.js
-│   │   └── validateBody.js  # Zod request-body validation middleware
-│   ├── events/            # Event bus: bus.js, schema.js, publish.js, transports/sqs.js
+│   │   ├── auth.ts           # requireAuth, requireAdmin, resolveEffectiveUserId
+│   │   ├── errorHandler.ts   # Global error handler (JSON responses)
+│   │   ├── validateBody.ts   # Zod request body validation
+│   │   └── idempotency.ts    # Idempotency key middleware
 │   ├── routes/
-│   │   ├── index.js       # Mount routes; conditionally excludes context routes when *_SERVICE_URL set
-│   │   ├── workout.js
-│   │   ├── foodEntry.js
-│   │   ├── dailyCheckIn.js
-│   │   ├── goal.js
-│   │   ├── foodSearch.js
-│   │   └── voice.js
-│   ├── controllers/       # One per domain (list, add, update, remove)
-│   ├── services/          # Business logic per domain
-│   ├── models/            # Data access per domain
+│   │   ├── index.ts          # Mount all routes; skip context routes when *_SERVICE_URL set
+│   │   ├── workout.ts        # GET/POST/PATCH/DELETE /api/workouts
+│   │   ├── foodEntry.ts      # GET/POST/PATCH/DELETE /api/food-entries
+│   │   ├── dailyCheckIn.ts   # GET/POST/PATCH/DELETE /api/daily-check-ins
+│   │   ├── goal.ts           # GET/POST/PATCH/DELETE /api/goals
+│   │   ├── foodSearch.ts     # GET /api/food/search (public, cached)
+│   │   ├── voice.ts          # POST /api/voice/understand
+│   │   └── uploads.ts        # POST /api/uploads/presigned-url
+│   ├── controllers/
+│   │   ├── foodSearch.ts     # Search handler with Redis caching
+│   │   ├── voice.ts          # Voice understanding controller
+│   │   ├── uploads.ts        # Pre-signed URL generation
+│   │   ├── jobs.ts           # Voice job polling
+│   │   └── ...               # Domain controllers (workouts, food entries, etc.)
+│   ├── services/
+│   │   ├── voice.ts          # Voice service: parseTranscript, parseAudio, VOICE_PROMPT
+│   │   ├── voice/
+│   │   │   ├── geminiClient.ts     # Gemini API client, processGeminiResponse
+│   │   │   ├── actionBuilders.ts   # Map function calls to actions (HANDLERS registry)
+│   │   │   └── foodLookupPipeline.ts # 2-tier food lookup: DB -> Gemini
+│   │   ├── foodLookupGemini.ts     # Gemini-based food nutrition lookup + DB insert
+│   │   ├── embeddings.ts          # Vector embedding generation + semantic search
+│   │   ├── voiceExecutor.ts       # Execute voice actions server-side
+│   │   ├── storage.ts             # S3 pre-signed URL generation
+│   │   └── ...                    # Domain services
+│   ├── models/
+│   │   ├── foodSearch.ts     # Food search: multi-tier matching, getNutritionForFoodName
+│   │   └── ...               # Domain models (workouts, food entries, etc.)
+│   ├── workers/
+│   │   └── voiceWorker.ts    # BullMQ worker: process audio jobs via Gemini
 │   ├── lib/
-│   │   └── logger.js      # Pino structured logger
-│   ├── utils/
-│   │   ├── response.js    # sendJson, sendError, sendCreated, sendNoContent
-│   │   ├── validation.js
-│   │   └── serviceHelpers.js
-│   └── errors.js
-├── migrations/            # node-pg-migrate (baseline, add-indexes)
+│   │   ├── logger.ts         # Pino structured logger
+│   │   └── keyValueStore.ts  # Redis KV with in-memory LRU fallback
+│   └── utils/
+│       ├── response.ts       # sendJson, sendError, sendCreated, sendNoContent
+│       ├── validation.ts     # normTime, parseDate, validateNonNegative
+│       └── escapeLike.ts     # SQL LIKE character escaping
 ├── voice/
-│   └── tools.js           # Gemini function declarations (add_workout, add_food, log_sleep, add_goal, etc.)
+│   ├── tools.js              # 23 Gemini function declarations (VOICE_TOOLS)
+│   └── agentTools.js         # Extended tools: read + copy operations (AGENT_TOOLS)
+├── migrations/               # node-pg-migrate versioned migrations
+├── prisma/
+│   └── schema.prisma         # Prisma schema definition
+├── mcp-server/               # MCP server for Claude integration
 ├── scripts/
-│   └── importFoundationFoods.js   # One-time USDA Foundation Foods import
-├── mcp-server/            # MCP server (see mcp-server/README.md)
+│   ├── importFoundationFoods.js   # USDA Foundation Foods import
+│   └── seedPopularFoods.js        # Seed ~100 popular foods
+├── lambdas/                  # AWS Lambda handlers (event, voice)
+├── template.yaml             # AWS SAM template
 └── package.json
 ```
 
-## Scripts
+---
 
-From `backend/`:
+## LLM / Gemini Integration
 
-| Script | Description |
-|--------|-------------|
-| `npm start` | `node index.js` – start server |
-| `npm run dev` | `node --watch index.js` – start with auto-reload |
-| `npm run start:consumer` | Run event consumer process (requires Redis or SQS) |
-| `npm run start:body` | Run Body (workouts) service only |
-| `npm run start:energy` | Run Energy (food entries, daily check-ins) service only |
-| `npm run start:goals` | Run Goals service only |
-| `npm run lint` | `node --check index.js` – syntax check |
-| `npm run test` | Run Vitest unit tests (validation, appLog, transaction service) |
-| `npm run migrate:up` | Run pending database migrations (requires `DATABASE_URL`) |
-| `npm run migrate:create <name>` | Create a new migration file |
-| `npm run import:foods` | Run `scripts/importFoundationFoods.js` (requires `DATABASE_URL` and Foundation Foods JSON path) |
-| `npm run seed:popular-foods` | Replace all foods with ~100 popular foods (see [Food import](#food-import)) |
-| `npm run remove:non-foundation-foods` | Remove foods not in Foundation JSON (run from `backend/`) |
+BeMe uses Google Gemini (`@google/generative-ai`) in two distinct roles. Both are configured in `src/config/index.ts`:
 
-From repo root: `npm run start:backend` or `npm run dev:backend`.
+```
+Model: gemini-2.5-flash (configurable via GEMINI_MODEL env var)
+Safety: All harm categories set to BLOCK_NONE
+```
 
-## Configuration
+### 1. Voice Intent Parsing
 
-Configuration is loaded from [src/config/index.js](src/config/index.js): first `backend/.env`, then `.env.{NODE_ENV}` (e.g. `.env.development`, `.env.production`). All config is validated at startup with a Zod schema; invalid values throw on boot.
+**Files:** `src/services/voice.ts`, `src/services/voice/geminiClient.ts`, `voice/tools.js`
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | For data/auth/voice/food | PostgreSQL connection string |
-| `JWT_SECRET` | Yes in production | Secret for signing JWTs; dev default exists |
-| `GEMINI_API_KEY` | For voice | Google Gemini API key |
-| `GEMINI_MODEL` | No | Model name (default: `gemini-2.5-flash`) |
-| `PORT` | No | HTTP port (default: 3000) |
-| `FRONTEND_ORIGIN` | No | Frontend origin (default: `http://localhost:5173`) |
-| `CORS_ORIGIN` | No | CORS allowed origin; overrides default |
-| `GOOGLE_CLIENT_ID` | For Google login | OAuth client ID |
-| `FACEBOOK_APP_ID` | For Facebook login | Facebook app ID |
-| `TWITTER_CLIENT_ID` | For Twitter login | Twitter OAuth client ID |
-| `TWITTER_CLIENT_SECRET` | For Twitter callback | Twitter client secret |
-| `TWITTER_REDIRECT_URI` | No | Callback URL (default: `http://localhost:3000/api/auth/twitter/callback`) |
-| `REDIS_URL` | No | Redis connection string. When set, enables distributed rate limiting, food search caching, BullMQ voice queue, and event bus; when unset, uses in-memory rate limiting and no cache. |
-| `EVENT_TRANSPORT` | No | `redis` \| `sqs`; default `redis` |
-| `EVENT_QUEUE_URL` | When `EVENT_TRANSPORT=sqs` | SQS queue URL |
-| `AWS_REGION` | When using SQS | AWS region |
-| `BODY_DATABASE_URL` | No | Per-context DB for Body; fallback `DATABASE_URL` |
-| `ENERGY_DATABASE_URL` | No | Per-context DB for Energy; fallback `DATABASE_URL` |
-| `GOALS_DATABASE_URL` | No | Per-context DB for Goals; fallback `DATABASE_URL` |
-| `BODY_SERVICE_URL` | No | When set, main app proxies workout routes to this URL |
-| `ENERGY_SERVICE_URL` | No | When set, main app proxies food entries and daily check-ins to this URL |
-| `GOALS_SERVICE_URL` | No | When set, main app proxies goals routes to this URL |
+The voice system sends user text to Gemini along with **23 function declarations** (tools). Gemini returns structured function calls that map to CRUD operations.
 
-- **Missing `DATABASE_URL`**: Server starts; auth routes and data API are not mounted; warnings logged.
-- **Missing `GEMINI_API_KEY`**: Warning logged; `POST /api/voice/understand` will return an error.
-- **`LOG_LEVEL`** (optional): Pino log level (default: `info` in production, `debug` otherwise).
+**System prompt** (`src/services/voice.ts`):
+```
+The voice prompt instructs Gemini to:
+- Extract exact food names (preserve brand names, percentages like "cheese 28%")
+- Parse sleep hours (only from sleep-related phrases)
+- Parse workouts with sets/reps/weight and program names
+- Handle goals with periods (weekly/monthly/yearly)
+- Route food-only phrases directly to add_food
+- Support trainer operations for managing client data
+```
 
-### Redis
+**Function declarations** (`voice/tools.js`):
+23 tools covering all domain operations:
 
-When `REDIS_URL` is set, the backend uses Redis for:
+| Category | Tools |
+|----------|-------|
+| Food | `add_food` (food, amount, unit, date, startTime, endTime), `edit_food_entry`, `delete_food_entry` |
+| Workouts | `add_workout` (title, type, exercises[], date), `edit_workout`, `delete_workout` |
+| Sleep | `log_sleep` (hours, date), `edit_check_in`, `delete_check_in` |
+| Goals | `add_goal` (type, target, period), `edit_goal`, `delete_goal` |
+| Health | `log_weight`, `log_water`, `log_cycle`, `update_profile` |
+| Trainer | `trainer_add_food`, `trainer_add_workout`, `trainer_edit_food_entry`, `trainer_delete_food_entry`, `trainer_edit_workout`, `trainer_delete_workout` |
 
-- **Rate limiting store** — Shares rate-limit counters across multiple backend instances (via `rate-limit-redis`).
-- **Food search cache** — Caches `GET /api/food/search` results with 1-hour TTL to reduce PostgreSQL load.
-- **BullMQ voice queue** — Voice jobs are queued for background processing.
-- **Event bus** — When `EVENT_TRANSPORT=redis` (default), BullMQ queue `events` for domain events; API publishes; optional **event-consumer** process consumes and runs handlers.
+**Processing flow** (`src/services/voice/geminiClient.ts`):
+1. `processGeminiResponse()` receives Gemini's response
+2. Extracts function call parts from the response
+3. Maps each function call name to a handler via the `HANDLERS` registry in `actionBuilders.ts`
+4. Each handler builds a structured action (e.g., `{ type: "add_food", food: "egg", amount: 2, ... }`)
+5. If `VOICE_EXECUTE_ON_SERVER=true`, `voiceExecutor.ts` executes actions immediately against the database
 
-The Redis client lives in [src/redis/client.js](src/redis/client.js). Connection is closed on graceful shutdown. `GET /ready` returns 503 with `reason: 'Redis unreachable'` if Redis is configured but unreachable. When `REDIS_URL` is not set, the app uses in-memory rate limiting and no food search cache.
+**Safety settings:**
+All harm categories (`HATE_SPEECH`, `SEXUALLY_EXPLICIT`, `HARASSMENT`, `DANGEROUS_CONTENT`) are set to `BLOCK_NONE`. This is intentional -- food-related phrases like "bloody steak" or "killer brownie" could trigger content filters and block legitimate food logging.
 
-## Event bus and consumers
+**Fallback on Gemini failure:**
+If Gemini blocks the response, throws an error, or returns no function calls, the backend returns a fallback `add_food` action with the raw transcript as the food name and zero nutrition values. This ensures the user can always log food and edit details later.
 
-- **Interface:** `publish(event)`, `subscribe(eventType, handler)`. Envelope: `eventId`, `type`, `payload`, `metadata` (userId, timestamp, version). See [docs/event-schema.md](../docs/event-schema.md).
-- **Transport:** Configurable via `EVENT_TRANSPORT`: `redis` (BullMQ queue `events`) or `sqs` (one queue; requires `EVENT_QUEUE_URL`, `AWS_REGION`). When Redis is not set, in-memory (sync) for tests.
-- **Producers:** Services call `publishEvent(type, payload, userId)` from [src/events/publish.js](src/events/publish.js) after DB write. Event types: `body.*`, `energy.*`, `goals.*` (see [docs/event-schema.md](../docs/event-schema.md)).
-- **Consumers:** Handlers register via `subscribe()`. In production, run **event-consumer** (`node workers/event-consumer.js`) so consumers run in a separate process; API only publishes.
+### 2. Food Nutrition Lookup
 
-## Per-context database and extracted services
+**File:** `src/services/foodLookupGemini.ts`
 
-- **Per-context DB:** Optional env vars `BODY_DATABASE_URL`, etc. [src/db/pool.js](src/db/pool.js) exports `getPool(context)`. Models use `getPool('body')`, `getPool('energy')`, etc. If not set, fallback to `DATABASE_URL`. All can point to the same DB.
-- **Extracted services:** When `BODY_SERVICE_URL` (or others) is set, [app.js](app.js) proxies workout routes to that URL and [src/routes/index.js](src/routes/index.js) does not mount those routes locally. Run the corresponding service (e.g. `node body-service.js`) and point the URL to it. Same pattern for Energy, Goals.
-- **Gateway:** Single entrypoint for the client; path-based routing to each service.
+When a food is not found in the local database, Gemini acts as a nutrition data assistant.
 
-## Logging
+**Prompt** (excerpt from `src/services/foodLookupGemini.ts:10-33`):
+```
+You are a nutrition data assistant. Given a food or drink name, return exactly
+one JSON object with nutrition per 100g for solid foods or per 100ml for liquids.
 
-[src/lib/logger.js](src/lib/logger.js) uses [Pino](https://getpino.io/) for structured JSON logging. Replace `console.log`/`console.error` with `logger.info`, `logger.error`, etc. Used in app.js, index.js, errorHandler.js, and voice.js. Set `LOG_LEVEL` for verbosity (e.g. `debug` in development).
+Response shape:
+{
+  "name": "Official or common name in English",
+  "calories": number (kcal per 100g or 100ml),
+  "protein": number (g),
+  "carbs": number (g),
+  "fat": number (g),
+  "is_liquid": boolean,
+  "serving_sizes_ml": { "can": number, "bottle": number, "glass": number },
+  "default_unit": string or null,
+  "unit_weight_grams": number or null,
+  "search_aliases": array of strings or null
+}
 
-## Testing
+Rules:
+- For countable foods (eggs, slices) set default_unit and unit_weight_grams
+- For branded foods, include search_aliases with common nicknames
+- Include "cooked" or "uncooked" in name when relevant (default: cooked)
+- For drinks: is_liquid=true, per-100ml values, include serving_sizes_ml
+```
 
-Unit tests use [Vitest](https://vitest.dev/). Run with `npm run test` from `backend/`. Tests cover:
+**Zod validation schema** (`GeminiFoodSchema`):
+```typescript
+{
+  name: z.string().min(1).transform(s => s.trim()),
+  calories: z.number().min(0).max(1000),    // Guard: max 1000 kcal/100g
+  protein: z.number().min(0).max(100),       // Guard: max 100g/100g
+  carbs: z.number().min(0).max(100),
+  fat: z.number().min(0).max(100),
+  is_liquid: z.boolean(),
+  serving_sizes_ml: z.object({ can, bottle, glass }).nullable().optional(),
+  default_unit: z.string().min(1).nullable().optional(),
+  unit_weight_grams: z.number().min(1).max(5000).nullable().optional(),
+  search_aliases: z.array(z.string().min(1)).nullable().optional()
+}
+```
 
-- **validation.js** — normTime, parseDate, validateNonNegative, requireNonEmptyString, requirePositiveNumber
-- **appLog.js** — logAction, logError, listLogs (db mocked)
-- **Event schema** — [src/events/schema.test.js](src/events/schema.test.js)
-- **Event bus** — [src/events/bus.test.js](src/events/bus.test.js)
-- **SQS transport** — [src/events/transports/sqs.test.js](src/events/transports/sqs.test.js)
-- **Write paths emit events** — [src/events/write-paths-emit-events.test.js](src/events/write-paths-emit-events.test.js)
+**Response processing:**
+1. Raw text from Gemini is stripped of markdown code fences
+2. First JSON object is extracted via regex
+3. Parsed and validated with `GeminiFoodSchema.safeParse()`
+4. If validation fails, returns `null` (pipeline falls through to fallback)
 
-CI runs backend tests in [.github/workflows/ci.yml](../.github/workflows/ci.yml).
+---
 
-## Database
+## Food Lookup Pipeline
 
-PostgreSQL schema is defined in [src/db/schema.ts](src/db/schema.ts). For development with a fresh DB, run `initSchema()` by not setting `SKIP_SCHEMA_INIT`. For production, set `SKIP_SCHEMA_INIT=true` and run `npm run migrate:up` at deploy.
+**File:** `src/services/voice/foodLookupPipeline.ts`
 
-### Migrations
+The central function `lookupNutrition(foodName, amount, unit)` resolves any food name to nutrition data using a 2-tier strategy:
 
-Versioned migrations live in `migrations/`. For production, run migrations on deploy instead of full schema init:
+```
+Input: foodName="coke zero", amount=330, unit="ml"
 
-- `npm run migrate:up` — run pending migrations (requires `DATABASE_URL`)
-- `npm run migrate:create <name>` — create a new migration file
+┌──────────────────────────────────────────┐
+│ Tier 1: Local Database                   │
+│ getNutritionForFoodName(pool, name, ...) │
+│                                          │
+│ Strategies:                              │
+│ - Word-boundary regex on common_name     │
+│ - Word-boundary regex on name            │
+│ - Trigram similarity > 0.6               │
+│                                          │
+│ Ranking:                                 │
+│ 1. Exact name match                      │
+│ 2. Prefix match                          │
+│ 3. Similarity score                      │
+│ 4. Cooking method (prefer cooked)        │
+│ 5. Shorter name (more specific)          │
+└──────────────────┬───────────────────────┘
+                   │
+           Found?  ├── Yes → Scale to portion → Return (source: "db")
+                   │
+                   No
+                   │
+┌──────────────────▼───────────────────────┐
+│ Tier 2: Gemini AI                        │
+│ lookupAndCreateFood(pool, name)          │
+│                                          │
+│ Steps:                                   │
+│ 1. Send prompt to Gemini                 │
+│ 2. Extract JSON from response            │
+│ 3. Validate with GeminiFoodSchema (Zod)  │
+│ 4. Check for existing duplicate          │
+│    (case-insensitive name or alias)      │
+│ 5. INSERT into foods table               │
+│    (cached for all future lookups)       │
+│ 6. Scale to portion                      │
+└──────────────────┬───────────────────────┘
+                   │
+           Valid?  ├── Yes → Return (source: "gemini")
+                   │
+                   No
+                   │
+┌──────────────────▼───────────────────────┐
+│ Tier 3: Fallback                         │
+│ Return: name + zero nutrition            │
+│ source: "fallback"                       │
+│ (User can edit manually)                 │
+└──────────────────────────────────────────┘
+```
 
-**Runbook:** Run migrations before starting the app. Do not run full schema init in production; use migrations for schema changes.
+### Portion Scaling
 
-### Backup
+All nutrition in the `foods` table is stored **per 100g** (or per 100ml for liquids). When a user specifies a portion, the pipeline scales:
 
-- Run automated PostgreSQL backups (e.g. daily) with retention appropriate for your needs.
-- Back up before running migrations.
-- Use `Export All Data` in the app (Settings → Data Management) to export user data as JSON; data comes from the API (TanStack Query cache).
+```typescript
+const grams = unitToGrams(amount, unit);
+const scale = grams / 100;
+return {
+  calories: Math.round(food.calories * scale),
+  protein: Math.round(food.protein * scale * 10) / 10,
+  carbs: Math.round(food.carbs * scale * 10) / 10,
+  fats: Math.round(food.fat * scale * 10) / 10,
+};
+```
 
-| Table | Description |
-|-------|-------------|
-| `users` | id, email, password_hash, name, role (admin/user), auth_provider, provider_id |
-| `goals` | id, type, target, period, user_id |
-| `workouts` | id, user_id, date, title, type (strength/cardio/flexibility/sports), duration_minutes, exercises (jsonb), notes |
-| `food_entries` | id, user_id, date, name, calories, protein, carbs, fats |
-| `daily_check_ins` | id, user_id, date, sleep_hours |
-| `foods` | id, name, calories, protein, carbs, fat (reference foods; used by food search) |
+### Unit Conversion (`unitToGrams`)
 
-Domain tables reference `users(id)`. Food search uses the `foods` table (index on `lower(name)`).
+| Unit | Conversion |
+|------|-----------|
+| `g` | As-is |
+| `kg` | × 1000 |
+| `ml` | As-is (treated as grams for scaling) |
+| `L` | × 1000 |
+| `cup` | × 240 |
+| `tbsp` | × 15 |
+| `tsp` | × 5 |
+| `egg/eggs` | × 50g |
+| `banana/bananas` | × 120g |
+| `apple/apples` | × 180g |
+| `slice/slices` | × 30g |
+| `piece/pieces` | × 50g |
+| `serving/servings` | × 100g |
 
-### Using Supabase
+### Complete Example
 
-To store all data (including reference foods) in Supabase:
+```
+User says: "I had two eggs"
 
-1. Set **DATABASE_URL** to your Supabase Postgres connection string (Project Settings → Database → Connection string, URI).
-2. Copy `backend/.env.example` to `backend/.env` and set `DATABASE_URL` (and other vars). For production (e.g. Railway), set `DATABASE_URL` in the service Variables.
-3. Start the backend so `initSchema()` runs and creates tables in Supabase.
-4. Run the food import once so reference foods are in Supabase: from `backend/` run `npm run import:foods`, or from repo root `node backend/scripts/importFoundationFoods.js`.
+1. Voice parses: add_food { food: "egg", amount: 2, unit: "eggs" }
 
-## API Overview
+2. lookupNutrition("egg", 2, "eggs"):
+   - Tier 1: Search DB for "egg"
+   - Found: "Egg, scrambled" with per-100g: { cal: 148, protein: 9.99, carbs: 1.61, fat: 10.98 }
+   - unitToGrams(2, "eggs") = 2 × 50 = 100g
+   - scale = 100 / 100 = 1.0
+   - Result: { calories: 148, protein: 10.0, carbs: 1.6, fats: 11.0, source: "db" }
 
-When `BODY_SERVICE_URL` (or `ENERGY_SERVICE_URL`, etc.) is set, the listed routes for that context are proxied to the service URL; they are not mounted locally.
+3. INSERT into food_entries: { name: "Egg", calories: 148, protein: 10, carbs: 1.6, fats: 11 }
+```
 
-**Health endpoints** (not rate-limited):
+---
+
+## Food Search Algorithm
+
+**File:** `src/models/foodSearch.ts`
+
+The public `GET /api/food/search?q=<query>&limit=10` endpoint uses a sophisticated multi-tier search.
+
+### Primary Search (Full Feature Set)
+
+```sql
+SELECT id, name, common_name, calories, protein, carbs, fat,
+       is_liquid, serving_sizes_ml, preparation, default_unit,
+       unit_weight_grams, image_url
+FROM foods
+WHERE
+  -- Word-split LIKE on common_name (all words must appear)
+  (lower(COALESCE(common_name, name)) LIKE '%word1%' AND ... LIKE '%wordN%')
+  -- Word-split LIKE on name
+  OR (lower(name) LIKE '%word1%' AND ... LIKE '%wordN%')
+  -- Trigram similarity > 0.15 (fuzzy matching for typos)
+  OR similarity(lower(COALESCE(common_name, name)), $query) > 0.15
+  -- Full-text search (stemmed matching)
+  OR name_tsv @@ plainto_tsquery('english', $query)
+  -- Search aliases exact match
+  OR lower($query) = ANY(search_aliases)
+ORDER BY
+  (lower(COALESCE(common_name, name)) = $query) DESC,       -- 1. Exact match
+  (lower($query) = ANY(search_aliases)) DESC,                -- 2. Alias match
+  (lower(COALESCE(common_name, name)) LIKE $query || '%') DESC, -- 3. Prefix match
+  CASE WHEN name_tsv @@ plainto_tsquery(...) THEN 1 ELSE 0 END DESC, -- 4. FTS match
+  similarity(lower(COALESCE(common_name, name)), $query) DESC, -- 5. Similarity
+  (COALESCE(preparation, 'cooked') = 'cooked') DESC,        -- 6. Prefer cooked
+  length(COALESCE(common_name, name)) ASC                    -- 7. Shorter = more specific
+LIMIT $limit
+```
+
+### Fallback Tiers
+
+If the primary search fails (e.g., missing pg_trgm extension or common_name column):
+
+| Tier | Available Features | Matching |
+|------|--------------------|----------|
+| **Primary** | common_name, pg_trgm, tsvector, search_aliases | All strategies |
+| **Fallback 1** | name only, no pg_trgm | Word-split LIKE on name |
+| **Fallback 2** | Baseline columns only | Basic LIKE on name |
+
+### Common Name Extraction
+
+USDA foods have verbose descriptions like "Chicken, broilers or fryers, breast, skinless, boneless, meat only, cooked, grilled". The `extractCommonName()` function cleans these to user-friendly names:
+
+```
+"Chicken, broilers or fryers, breast, skinless, boneless, meat only, cooked, grilled"
+  → "Chicken breast, grilled"
+
+"Rice, white, medium-grain, cooked"
+  → "White rice"
+
+"Egg, whole, cooked, scrambled"
+  → "Egg, scrambled"
+```
+
+The algorithm:
+1. Splits by comma into segments
+2. First segment = main ingredient
+3. Filters out noise (e.g., "broilers or fryers", "skinless", "enriched")
+4. Keeps qualifiers (e.g., "white", "breast", "whole wheat")
+5. Keeps specific cooking methods (e.g., "grilled", "scrambled") but drops generic "cooked"
+6. Reassembles: "[Adjectives] Main [Noun parts], [cooking method]"
+
+### Barcode Search
+
+`getByBarcode(pool, barcode)` does an indexed lookup on the `barcode` column for packaged food scanning.
+
+### Caching Search Results
+
+In `src/controllers/foodSearch.ts`:
+- Cache key: `food:search:{query}:{limit}`
+- TTL: 3600 seconds (1 hour)
+- Stored in Redis when available
+- On cache hit, returns immediately without touching PostgreSQL
+
+---
+
+## Vector Embeddings & Semantic Search
+
+**File:** `src/services/embeddings.ts`
+
+### Configuration
+
+| Property | Value |
+|----------|-------|
+| Model | Google `text-embedding-004` |
+| Dimensions | 768 |
+| Database | PostgreSQL with `pgvector` extension |
+| Column type | `vector(768)` |
+| Index | HNSW with `vector_cosine_ops` |
+
+### How Embeddings Are Created
+
+When a food entry or workout is created, the system:
+1. Generates descriptive text for the record (e.g., "Chicken breast 200g 330 calories")
+2. Calls `text-embedding-004` to produce a 768-dimensional vector
+3. Upserts into `user_embeddings` table with `record_type`, `record_id`, `content_text`, and `embedding`
+
+### Semantic Search
+
+```typescript
+async function semanticSearch(userId, query, { types?, limit? }) {
+  // 1. Embed the query text
+  const queryEmbedding = await embed(query);
+
+  // 2. Find nearest neighbors using cosine similarity
+  SELECT record_type, record_id, content_text,
+         1 - (embedding <=> $queryVector) AS similarity
+  FROM user_embeddings
+  WHERE user_id = $userId
+    AND record_type = ANY($types)
+  ORDER BY embedding <=> $queryVector
+  LIMIT $limit;
+
+  // 3. Return ranked results with similarity scores
+}
+```
+
+### Database Table
+
+```sql
+CREATE TABLE user_embeddings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  record_type text NOT NULL,      -- 'food_entry' or 'workout'
+  record_id text NOT NULL,
+  content_text text NOT NULL,
+  embedding vector(768),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE(record_id, record_type)
+);
+
+-- HNSW index for fast approximate nearest neighbor search
+CREATE INDEX idx_user_embeddings_hnsw
+  ON user_embeddings USING hnsw (embedding vector_cosine_ops);
+
+-- User + type index for filtered queries
+CREATE INDEX idx_user_embeddings_user_type
+  ON user_embeddings (user_id, record_type);
+```
+
+---
+
+## Redis Architecture
+
+**Files:** `src/redis/client.ts`, `src/lib/keyValueStore.ts`
+
+Redis is **optional**. When `REDIS_URL` is not set, the app degrades gracefully:
+
+| Feature | With Redis | Without Redis |
+|---------|-----------|---------------|
+| Food search cache | 1h TTL in Redis | No cache (hits DB every time) |
+| Voice queue | BullMQ async processing | Text-only sync mode |
+| Rate limiting | Distributed Redis store | In-memory per-process |
+| Key-value store | Redis-backed | In-memory LRU (10K entries) |
+| Event bus | Redis BullMQ transport | In-memory (sync) |
+| Health check | `/ready` checks Redis reachability | `/ready` skips Redis check |
+
+### Redis Client (`src/redis/client.ts`)
+
+- Connects to `REDIS_URL` or `REDIS_PRIVATE_URL`
+- Lazy initialization on first use
+- Closed gracefully on shutdown
+- `isRedisConfigured()` returns false when URL is not set
+
+### Food Search Cache (`src/controllers/foodSearch.ts`)
+
+```
+Key:    food:search:{normalized_query}:{limit}
+Value:  JSON-serialized array of food results
+TTL:    3600 seconds (1 hour)
+```
+
+Flow:
+1. Check Redis for cached result
+2. Cache hit → parse and return immediately
+3. Cache miss → query PostgreSQL → cache result → return
+
+### Key-Value Store (`src/lib/keyValueStore.ts`)
+
+A TTL-enabled key-value store with automatic fallback:
+
+```
+Redis mode:
+  - kvSet(key, value, ttlSeconds) → SET with EX
+  - kvGet(key) → GET
+  - kvDelete(key) → DEL
+  - kvGetAndDelete(key) → GET + DEL (atomic)
+
+In-memory fallback:
+  - Max entries: 10,000 (LRU eviction when full)
+  - Cleanup interval: 5 minutes (removes expired entries)
+  - TTL tracked per entry
+```
+
+Used for:
+- **Voice job results**: Worker writes result, client polls and reads
+- **Idempotency keys**: Prevent duplicate operations
+- **Temporary data**: Short-lived state
+
+### BullMQ Voice Queue (`src/queue/index.ts`)
+
+- Queue name: configurable
+- Connection: shares Redis client
+- Job data: audio buffer, MIME type, user context
+- Worker: `src/workers/voiceWorker.ts` processes jobs by calling Gemini
+- On completion: result stored in KV store for client polling
+- Fallback: AWS SQS when `VOICE_QUEUE_URL` is set
+
+### Rate Limiting
+
+```
+General API: 200 requests / 15 minutes / IP
+Auth routes: 10 requests / 15 minutes / IP
+
+Redis store:  rate-limit-redis (shared across instances)
+Memory store: express-rate-limit default (per-process)
+```
+
+### Event Bus Transport
+
+When `EVENT_TRANSPORT=redis` (default):
+- BullMQ queue named `events`
+- API processes publish events
+- Optional consumer process subscribes and runs handlers
+
+---
+
+## Database Schema
+
+PostgreSQL with `pgvector` and `pg_trgm` extensions. Managed by node-pg-migrate (migrations in `migrations/`) and Prisma (`prisma/schema.prisma` for schema definition).
+
+### Tables
+
+#### `users`
+```sql
+id uuid PK, email text UNIQUE, password_hash text, name text,
+role text DEFAULT 'user', auth_provider text, provider_id text,
+email_verified boolean, created_at timestamptz, updated_at timestamptz
+```
+
+#### `foods` (Reference Nutrition Database)
+```sql
+id uuid PK, name text NOT NULL, common_name text,
+calories numeric, protein numeric, carbs numeric, fat numeric,
+is_liquid boolean DEFAULT false, serving_sizes_ml jsonb,
+preparation text DEFAULT 'cooked', default_unit text,
+unit_weight_grams numeric, search_aliases text[],
+barcode text UNIQUE, source text DEFAULT 'usda', off_id text UNIQUE,
+name_he text, image_url text, name_tsv tsvector,
+created_at timestamptz
+
+Indexes: barcode, off_id, name trigram, name_tsv FTS, common_name lower
+```
+
+#### `food_entries` (User Food Log)
+```sql
+id uuid PK, user_id uuid FK->users, date date, name text,
+calories numeric, protein numeric, carbs numeric, fats numeric,
+portion_amount numeric, portion_unit text, serving_type text,
+start_time text, end_time text, created_at timestamptz
+
+Index: (user_id, date)
+```
+
+#### `workouts`
+```sql
+id uuid PK, user_id uuid FK->users, date date, title text,
+type text (strength|cardio|flexibility|sports),
+duration_minutes int, exercises jsonb, notes text,
+created_at timestamptz, updated_at timestamptz
+
+Index: (user_id, date)
+```
+
+#### `daily_check_ins`
+```sql
+id uuid PK, user_id uuid FK->users, date date,
+sleep_hours numeric, created_at timestamptz
+
+Unique: (user_id, date)
+```
+
+#### `goals`
+```sql
+id uuid PK, user_id uuid FK->users,
+type text (calories|workouts|sleep),
+target numeric, period text (weekly|monthly|yearly),
+created_at timestamptz, updated_at timestamptz
+
+Index: (user_id, type, period)
+```
+
+#### `user_embeddings`
+```sql
+id uuid PK, user_id uuid FK->users,
+record_type text, record_id text,
+content_text text, embedding vector(768),
+created_at timestamptz, updated_at timestamptz
+
+Unique: (record_id, record_type)
+Indexes: (user_id, record_type), HNSW on embedding
+```
+
+#### `user_daily_stats`
+```sql
+id uuid PK, user_id uuid, date date,
+total_calories numeric DEFAULT 0, workout_count int DEFAULT 0,
+sleep_hours numeric, total_income numeric, total_expenses numeric,
+updated_at timestamptz
+
+Unique: (user_id, date)
+```
+
+#### `weight_entries`
+```sql
+id uuid PK, user_id uuid FK->users, date date,
+weight float (kg), notes text, created_at timestamptz
+
+Unique: (user_id, date)
+```
+
+#### `water_entries`
+```sql
+id uuid PK, user_id uuid FK->users, date date,
+glasses int DEFAULT 0, ml_total int DEFAULT 0,
+created_at timestamptz, updated_at timestamptz
+
+Unique: (user_id, date)
+```
+
+#### `cycle_entries`
+```sql
+id uuid PK, user_id uuid FK->users, date date,
+period_start boolean DEFAULT false, period_end boolean DEFAULT false,
+flow text, symptoms jsonb DEFAULT '[]', notes text,
+created_at timestamptz
+
+Unique: (user_id, date)
+```
+
+#### `user_profiles`
+```sql
+id uuid PK, user_id uuid UNIQUE FK->users,
+date_of_birth date, sex text, height_cm float,
+current_weight float (kg), target_weight float (kg),
+activity_level text, water_goal_glasses int DEFAULT 8,
+cycle_tracking_enabled boolean DEFAULT false,
+average_cycle_length int DEFAULT 28,
+setup_completed boolean DEFAULT false,
+created_at timestamptz, updated_at timestamptz
+```
+
+#### `user_settings`
+```sql
+id uuid PK, user_id uuid UNIQUE FK->users,
+theme text DEFAULT 'system', currency text DEFAULT 'USD',
+language text DEFAULT 'en', timezone text DEFAULT 'UTC',
+created_at timestamptz, updated_at timestamptz
+```
+
+### Food Data Import
+
+**USDA Foundation Foods:**
+```bash
+cd backend
+npm run import:foods  # Requires Foundation Foods JSON + DATABASE_URL
+```
+
+The import script (`scripts/importFoundationFoods.js`):
+1. Reads USDA FoodData Central JSON
+2. Parses each food for name, macros, preparation
+3. Estimates calories from macros using Atwater factors when Energy values are missing
+4. Inserts into `foods` table with `source: 'usda'`
+
+**Popular foods seed (alternative):**
+```bash
+npm run seed:popular-foods  # Seeds ~100 common foods, no external JSON needed
+```
+
+---
+
+## Image & Video Handling
+
+**Files:** `src/services/storage.ts`, `src/controllers/uploads.ts`
+
+### Pre-Signed URL Flow
+
+```
+Client                          Backend                         S3
+  |                               |                              |
+  |-- POST /api/uploads/          |                              |
+  |   presigned-url               |                              |
+  |   { mimeType, context }       |                              |
+  |                               |-- Generate pre-signed        |
+  |                               |   PUT URL (5min expiry)      |
+  |                               |                              |
+  |<-- { uploadUrl, fileUrl }-----|                              |
+  |                               |                              |
+  |-- PUT file directly -------->-|----------------------------->|
+  |   to uploadUrl                |                              |
+  |                               |                              |
+  |-- Store fileUrl on resource   |                              |
+```
+
+### Valid Contexts
+
+| Context | Use Case | S3 Path |
+|---------|----------|---------|
+| `avatar` | User profile picture | `users/{userId}/avatar/{id}.{ext}` |
+| `workout` | Workout photo | `users/{userId}/workout/{id}.{ext}` |
+| `food` | Food photo | `users/{userId}/food/{id}.{ext}` |
+| `exercise-video` | Exercise demonstration | `users/{userId}/exercise-video/{id}.{ext}` |
+
+### Allowed MIME Types
+
+| Category | Types |
+|----------|-------|
+| Images | `image/jpeg`, `image/png`, `image/webp`, `image/gif` |
+| Videos | `video/mp4`, `video/quicktime`, `video/webm` |
+
+### Food & Exercise Images in Database
+
+- `foods.image_url` -- URL for food reference images (seeded via migration)
+- Exercise catalog has `image_url` for exercise demonstration images
+- Search results include `imageUrl` in the response object
+- Missing images are handled by frontend placeholders
+
+---
+
+## Voice Pipeline
+
+### Text Mode (Synchronous)
+
+```
+POST /api/voice/understand { transcript: "two eggs and a coffee" }
+  → voice.parseTranscript(transcript, userId)
+    → Gemini with VOICE_TOOLS
+    → processGeminiResponse()
+    → buildActions() via HANDLERS registry
+    → executeActions() (if VOICE_EXECUTE_ON_SERVER=true)
+  → { actions: [...], results: [...] }
+```
+
+### Audio Mode (Asynchronous, requires Redis)
+
+```
+POST /api/voice/understand { audio: "<base64>", mimeType: "audio/webm" }
+  → Create BullMQ job
+  → { jobId: "abc123", pollUrl: "/api/jobs/abc123" }
+
+Voice Worker picks up job:
+  → voice.parseAudio(audioBuffer, mimeType, userId)
+    → Gemini with audio input + VOICE_TOOLS
+    → processGeminiResponse()
+    → buildActions()
+  → Store result in KV store
+
+Client polls: GET /api/jobs/abc123
+  → { status: "completed", actions: [...] }
+```
+
+### Agent Mode (Extended Tools)
+
+`voice/agentTools.js` extends the standard 23 voice tools with 7 additional read/copy tools:
+
+| Tool | Description |
+|------|-------------|
+| `get_workouts` | Fetch workouts, optionally by date |
+| `get_food_entries` | Fetch food entries, optionally by date |
+| `get_goals` | Fetch all user goals |
+| `get_weight_entries` | Fetch weight history with date range |
+| `get_water_today` | Get water intake for a date |
+| `copy_food_entries` | Copy all food entries from one date to multiple target dates |
+| `copy_workout` | Copy a workout from one date to another |
+
+These enable multi-step reasoning where Gemini can first read data, then act on it.
+
+---
+
+## Guardrails & Validation
+
+### Input Validation
+
+| Layer | Mechanism | File |
+|-------|-----------|------|
+| Config | Zod schema validates all env vars at startup | `src/config/index.ts` |
+| Request bodies | `validateBody` middleware with Zod schemas | `src/middleware/validateBody.ts` |
+| LLM food response | `GeminiFoodSchema` with strict ranges | `src/services/foodLookupGemini.ts` |
+| Event envelopes | Zod schema for event type, payload, metadata | `src/events/schema.ts` |
+
+### Gemini Food Response Guardrails
+
+| Field | Constraint | Rationale |
+|-------|-----------|-----------|
+| `name` | string, min 1, trimmed | Prevent empty names |
+| `calories` | 0-1000 | No food has >1000 kcal/100g (pure fat is ~884) |
+| `protein` | 0-100 | Cannot exceed 100g per 100g |
+| `carbs` | 0-100 | Cannot exceed 100g per 100g |
+| `fat` | 0-100 | Cannot exceed 100g per 100g |
+| `is_liquid` | boolean | Must be explicit |
+| `unit_weight_grams` | 1-5000 or null | Reasonable range for food units |
+
+### JSON Extraction Safety
+
+The `extractJson()` function handles malformed Gemini responses:
+1. Strips markdown code fences (` ```json ... ``` `)
+2. Tries direct `JSON.parse`
+3. Falls back to regex extraction of first `{...}` block
+4. Returns `null` if nothing parseable (pipeline continues to fallback)
+
+### Duplicate Prevention
+
+Before inserting a Gemini-created food, `findExistingByName()` checks:
+```sql
+WHERE lower(trim(regexp_replace(name, '\s+', ' ', 'g'))) = $normalized
+   OR $normalized = ANY(search_aliases)
+```
+This prevents duplicate entries for the same food with different formatting.
+
+### Voice Fallback Chain
+
+1. Gemini returns function calls → process normally
+2. Gemini blocks (safety filter) → return `add_food` with transcript, zero nutrition
+3. Gemini error/timeout → return `add_food` with transcript, zero nutrition
+4. Food not in DB + no Gemini key → return zero nutrition with `source: 'fallback'`
+
+The user is **never blocked** from logging food, regardless of failures.
+
+---
+
+## Event Bus
+
+**Files:** `src/events/bus.ts`, `src/events/schema.ts`, `src/events/publish.ts`
+
+### Event Envelope
+
+```typescript
+{
+  eventId: string,     // UUID
+  type: string,        // e.g., "energy.FoodEntryCreated"
+  payload: object,     // Domain-specific data
+  metadata: {
+    userId: string,
+    timestamp: string, // ISO 8601
+    version: number    // Schema version
+  }
+}
+```
+
+### Event Types
+
+| Context | Events |
+|---------|--------|
+| **Body** | `body.WorkoutCreated`, `body.WorkoutUpdated`, `body.WorkoutDeleted` |
+| **Energy** | `energy.FoodEntryCreated`, `energy.FoodEntryUpdated`, `energy.FoodEntryDeleted`, `energy.CheckInCreated`, `energy.CheckInUpdated`, `energy.CheckInDeleted` |
+| **Goals** | `goals.GoalCreated`, `goals.GoalUpdated`, `goals.GoalDeleted` |
+
+### Transport Options
+
+| Transport | Configuration | Notes |
+|-----------|--------------|-------|
+| **Redis** (default) | `REDIS_URL` set | BullMQ queue `events` |
+| **SQS** | `EVENT_TRANSPORT=sqs`, `EVENT_QUEUE_URL` | AWS SQS with DLQ |
+| **In-memory** | No Redis, no SQS | Synchronous, for testing |
+
+### Consumer
+
+Run as a separate process for production:
+```bash
+node workers/event-consumer.js  # Requires REDIS_URL or SQS config
+```
+
+See [docs/event-schema.md](../docs/event-schema.md) and [docs/bounded-contexts.md](../docs/bounded-contexts.md).
+
+---
+
+## API Reference
+
+### Health (no rate limit)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/health` | Returns `{ status: 'ok' }` (200) |
-| GET | `/ready` | Returns 200 if DB and Redis (when configured) are reachable, else 503 |
+| GET | `/health` | `{ status: 'ok' }` (200) |
+| GET | `/ready` | 200 if DB + Redis reachable, 503 otherwise |
 
-All paths under `/api` are rate-limited (200 requests per 15 minutes per IP). JSON request/response; errors return `{ error: string }`.
-
-### Auth (mounted only when DB is configured)
+### Auth
 
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/auth/register` | Register (email, password, name) |
-| POST | `/api/auth/login` | Login (email, password) → JWT |
-| POST | `/api/auth/google` | Google OAuth token → JWT |
+| POST | `/api/auth/login` | Login → JWT |
+| POST | `/api/auth/google` | Google OAuth → JWT |
 | POST | `/api/auth/facebook` | Facebook token → JWT |
 | POST | `/api/auth/twitter` | Twitter token → JWT |
-| GET | `/api/auth/twitter/redirect` | Redirect to Twitter OAuth |
-| GET | `/api/auth/twitter/callback` | Twitter OAuth callback |
-| GET | `/api/auth/me` | Current user (requires auth) |
+| GET | `/api/auth/me` | Current user (auth required) |
 
-### Users (admin only)
+### Domain APIs (auth required)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/users` | List users (requireAuth + requireAdmin) |
-| POST | `/api/users` | Create user |
-| PATCH | `/api/users/:id` | Update user |
-| DELETE | `/api/users/:id` | Delete user |
+| Resource | GET (list) | POST (create) | PATCH (update) | DELETE |
+|----------|-----------|---------------|----------------|--------|
+| `/api/workouts` | List by user | Add workout | Update `:id` | Delete `:id` |
+| `/api/food-entries` | List by user | Add entry | Update `:id` | Delete `:id` |
+| `/api/daily-check-ins` | List by user | Add check-in | Update `:id` | Delete `:id` |
+| `/api/goals` | List by user | Add goal | Update `:id` | Delete `:id` |
 
-### Workouts
+### Food Search (public)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/workouts` | List (withUser) |
-| POST | `/api/workouts` | Add |
-| PATCH | `/api/workouts/:id` | Update |
-| DELETE | `/api/workouts/:id` | Delete |
+| Method | Path | Parameters | Description |
+|--------|------|-----------|-------------|
+| GET | `/api/food/search` | `q` (query), `limit` (default 10) | Search foods table |
 
-### Food entries
+### Voice (auth required)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/food-entries` | List (withUser) |
-| POST | `/api/food-entries` | Add |
-| PATCH | `/api/food-entries/:id` | Update |
-| DELETE | `/api/food-entries/:id` | Delete |
+| Method | Path | Body | Description |
+|--------|------|------|-------------|
+| POST | `/api/voice/understand` | `{ transcript }` or `{ audio, mimeType }` | Parse natural language → actions |
 
-### Daily check-ins (sleep/wellness)
+### Jobs (auth required)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/daily-check-ins` | List (withUser) |
-| POST | `/api/daily-check-ins` | Add |
-| PATCH | `/api/daily-check-ins/:id` | Update |
-| DELETE | `/api/daily-check-ins/:id` | Delete |
+| GET | `/api/jobs/:jobId` | Poll voice job status |
 
-### Goals
+### Uploads (auth required)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/goals` | List (withUser) |
-| POST | `/api/goals` | Add |
-| PATCH | `/api/goals/:id` | Update |
-| DELETE | `/api/goals/:id` | Delete |
+| Method | Path | Body | Description |
+|--------|------|------|-------------|
+| POST | `/api/uploads/presigned-url` | `{ mimeType, context }` | Get S3 pre-signed upload URL |
 
-### Food search (public)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/food/search` | Query foods table (no auth); returns `{ name, calories, protein, carbs, fat, referenceGrams }` |
-
-### Voice
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/voice/understand` | Body: `{ text }`. Requires auth. Returns parsed actions (Gemini function calling). |
+---
 
 ## Auth Middleware
 
-[src/middleware/auth.js](src/middleware/auth.js):
+**File:** `src/middleware/auth.ts`
 
-- **requireAuth**: Reads `Authorization: Bearer <token>`, verifies JWT with `JWT_SECRET`, sets `req.user` (id, email, role). Returns 401 if missing or invalid.
-- **requireAdmin**: Use after requireAuth; returns 403 if `req.user.role !== 'admin'`.
-- **getEffectiveUserId(req)**: Returns `req.effectiveUserId` if set (admin override), else `req.user.id`.
-- **resolveEffectiveUserId**: If the user is admin and `userId` is passed (query or body), validates that the user exists and sets `req.effectiveUserId`; otherwise sets it to `req.user.id`. Use before controllers that support admin override.
+| Function | Description |
+|----------|-------------|
+| `requireAuth` | Reads `Authorization: Bearer <token>`, verifies JWT, sets `req.user` (id, email, role). Returns 401 if invalid. |
+| `requireAdmin` | After `requireAuth`; returns 403 if role is not `admin` |
+| `getEffectiveUserId(req)` | Returns admin-overridden user ID or authenticated user ID |
+| `resolveEffectiveUserId` | For admin: validates target user exists, sets `req.effectiveUserId` |
 
-Domain routes use a `withUser`-style middleware that resolves the effective user and passes it to controllers so all data is scoped by that user.
+---
 
-## Voice Pipeline
+## Meal Copying & Repetition
 
-1. Frontend sends `POST /api/voice/understand` with `{ text: "user utterance" }`.
-2. Backend loads [voice/tools.js](voice/tools.js) – Gemini function declarations for: add/edit/delete workout, add/edit/delete food entry, log_sleep, edit/delete check_in, add/edit/delete goal.
-3. Backend calls Gemini with the user text and these tools; Gemini returns one or more function calls (name + parameters).
-4. Voice service maps each call to an internal action and executes it (workout, food entry, daily check-in, goal) using the authenticated user ID.
-5. Response is returned to the frontend with the list of actions/results so the UI can update.
+**File:** `voice/agentTools.js`
+
+The `copy_food_entries` tool enables voice-driven meal repetition:
+
+```javascript
+{
+  name: 'copy_food_entries',
+  description: 'Copy all food entries from one date to another date (or multiple dates).',
+  parameters: {
+    fromDate: 'YYYY-MM-DD',    // Source date
+    toDates: ['YYYY-MM-DD']    // Array of target dates
+  }
+}
+```
+
+**Voice examples:**
+- "Copy today's meals to tomorrow"
+- "Repeat this meal plan for the next 3 days"
+- "Copy Monday's food to Wednesday and Thursday"
+
+Similarly, `copy_workout` copies workouts between dates.
+
+---
+
+## Future: Meal Plan Feature
+
+The following capabilities are planned for future development:
+
+| Feature | Description |
+|---------|-------------|
+| **CSV Import** | Upload a CSV with columns: day, meal, food, portion, calories to bulk-create entries |
+| **Named Meal Plans** | Create reusable plans ("Cutting Diet", "Bulking Plan") with foods per meal slot |
+| **Recurring Schedules** | Apply a plan to a date range or repeat pattern (daily, weekdays only) |
+| **Meal Templates** | Save a day's entries as a template for one-tap reuse |
+
+**Current alternative:** Use the `copy_food_entries` voice command to duplicate a day's entries to future dates.
+
+---
+
+## Configuration
+
+**File:** `src/config/index.ts`
+
+Configuration is loaded from `backend/.env` (then `.env.{NODE_ENV}`). All values are validated at startup with a Zod schema -- invalid values cause the server to crash immediately with a clear error message.
+
+See the [root README](../README.md#environment-variables) for the full environment variables table.
+
+Key behaviors:
+- **Missing `DATABASE_URL`**: Server starts but auth/data APIs are not mounted
+- **Missing `GEMINI_API_KEY`**: Voice endpoint returns an error; food lookup skips Tier 2
+- **Missing `REDIS_URL`**: In-memory rate limiting, no cache, text-only voice, sync events
+
+---
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm start` | `node index.js` -- start server |
+| `npm run dev` | Start with auto-reload (tsx watch) |
+| `npm run build` | Build with tsup |
+| `npm test` | Run Vitest unit tests |
+| `npm run migrate:up` | Run pending migrations |
+| `npm run migrate:create <name>` | Create new migration |
+| `npm run import:foods` | Import USDA Foundation Foods |
+| `npm run seed:popular-foods` | Seed ~100 popular foods |
+| `npm run start:consumer` | Run event consumer process |
+| `npm run start:body` | Run Body service only |
+| `npm run start:energy` | Run Energy service only |
+| `npm run start:goals` | Run Goals service only |
+| `npm run lint` | Syntax check |
+
+---
+
+## Testing
+
+Unit tests use [Vitest](https://vitest.dev/). Run with `npm test`.
+
+Test coverage:
+- `validation.ts` -- Input normalization and validation
+- `appLog.ts` -- Action and error logging (DB mocked)
+- `src/events/schema.test.ts` -- Event envelope validation
+- `src/events/bus.test.ts` -- Event bus publish/subscribe
+- `src/events/transports/sqs.test.ts` -- SQS transport
+- `src/events/write-paths-emit-events.test.ts` -- All write paths emit events
+
+---
+
+## Deployment
+
+### Docker
+
+```bash
+docker build -t beme-backend ./backend
+docker run -p 3000:3000 --env-file backend/.env beme-backend
+```
+
+Multi-stage Dockerfile: Node 20-alpine builder → production stage (no devDependencies, non-root `node` user).
+
+### Railway
+
+Set `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `GEMINI_API_KEY`, `REDIS_URL`.
+
+### AWS
+
+SAM template (`template.yaml`) defines:
+- **EventHandlerFunction** (Lambda): Processes domain events (30s timeout, 256MB)
+- **VoiceHandlerFunction** (Lambda): Processes voice jobs (60s timeout, 512MB)
+- SQS queues with DLQs for both
+- 14-day message retention
+
+See [docs/architecture-target-aws.md](../docs/architecture-target-aws.md).
+
+---
+
+## Logging
+
+**File:** `src/lib/logger.ts`
+
+Pino structured JSON logging. Set `LOG_LEVEL` env var (default: `info` in production, `debug` otherwise).
+
+```typescript
+import { logger } from './lib/logger.js';
+logger.info({ userId }, 'Food entry created');
+logger.error({ err }, 'Gemini lookup failed');
+```
+
+---
 
 ## Error Handling
 
-Controllers use [src/utils/response.js](src/utils/response.js): `sendJson`, `sendError`, `sendCreated`, `sendNoContent`. Request bodies are validated with Zod via [validateBody](src/middleware/validateBody.js); invalid payloads return 400 with a schema error message. On validation or application errors, controllers call `sendError(res, statusCode, message)`. The global [errorHandler](src/middleware/errorHandler.js) middleware catches thrown errors and sends a JSON `{ error: string }` response. 4xx/5xx responses are consistently JSON with an `error` field.
-
-## Rate Limiting
-
-[app.js](app.js) applies `express-rate-limit` to all `/api` routes: 200 requests per 15 minutes per IP. Auth routes (`/api/auth/login`, `/api/auth/register`) have a stricter limit: 10 requests per 15 minutes per IP. Exceeding a limit returns a JSON error message.
-
-## Security
-
-- **Helmet** — HTTP security headers (e.g. X-Content-Type-Options, X-Frame-Options) are applied via [helmet](https://github.com/helmetjs/helmet).
-- **JWT** — Authentication uses signed JWTs with `JWT_SECRET`; no cookie-based sessions.
-- **CORS** — Allowed origin is configured via `CORS_ORIGIN` (see [src/config/index.js](src/config/index.js)); production must use explicit origins.
-- **Rate limits** — General API and auth-specific limits (see above) reduce brute-force and abuse.
-- **Secrets** — Keep `JWT_SECRET`, database URLs, and API keys in environment variables only; do not commit them.
-
-## Food Import
-
-The [scripts/importFoundationFoods.js](scripts/importFoundationFoods.js) script reads a USDA FoodData Central Foundation Foods JSON file (e.g. from the project root), parses it, and inserts records into the `foods` table (name, calories, protein, carbs, fat, is_liquid, preparation). Preparation is derived from the description: "uncooked" or "raw" → uncooked; otherwise cooked. When Energy (kcal/kJ) is missing in the JSON, calories are estimated from macros (Atwater). Requires `DATABASE_URL`. Run once after DB setup (and after tables exist in Supabase or your Postgres):
-
-- From `backend/`: `npm run import:foods`
-- From repo root: `node backend/scripts/importFoundationFoods.js`
-
-After pulling changes that affect the import script or schema, run the import again to refresh `foods` with the latest logic. To remove foods that were added outside the Foundation list (e.g. Gemini-created or incomplete entries) so they can be re-looked up with full nutrition, run `npm run remove:non-foundation-foods` from `backend/`. See the [root README](../README.md) for the expected file name and placement.
-
-**Alternative: popular foods only** — To wipe the `foods` table and seed it with ~100 common foods (per-100g nutrition, no external JSON), run from `backend/`: `npm run seed:popular-foods`. This replaces all existing foods with a fixed list (chicken, rice, vegetables, fruits, dairy, common prepared foods, etc.).
-
-## MCP Server
-
-The [mcp-server](mcp-server/) directory contains an MCP server that exposes BeMe goals as tools and resources. It communicates only with this backend API (no direct DB access). See **[mcp-server/README.md](mcp-server/README.md)** for run instructions and Cursor MCP configuration.
-
-## Changelog (latest first)
-
-- **Update 17.0** — AI insights persistence (`ai_insights` table, `getLastInsight`, `saveInsight`, `POST /api/insights/refresh`); food search returns `servingSizesMl`; migration `1730145600000_add-ai-insights.js`. See root [CHANGELOG.md](../CHANGELOG.md).
-- **Update 16.0** — Documentation overhaul, run guides (RUNNING-LOCAL/RAILWAY/AWS), .env.example restored, professional repo polish (LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, .editorconfig, .gitattributes, PR template, root scripts lint:backend, test:backend, test:all). See root [CHANGELOG.md](../CHANGELOG.md).
-- **Update 15.0 — Event-driven migration (Plans 0–12)** — Event bus (Redis/BullMQ or SQS), all write paths emit events, idempotency, transaction analytics consumer, event-consumer as separate process, per-context DB configuration, extracted Money/Schedule/Body/Energy/Goals services, gateway proxy. See [docs/bounded-contexts.md](../docs/bounded-contexts.md), [docs/event-schema.md](../docs/event-schema.md), [docs/architecture-principles.md](../docs/architecture-principles.md).
-- **Update 14.0** — TypeScript monorepo refactor: API, Workers, Scheduler services with queue abstraction (BullMQ/SQS). See root README **Update 14.0** and [UPDATE_14.0.md](../UPDATE_14.0.md).
-- **Update 13.0** — Redis integration: distributed rate limiting and food search caching. See root README **Update 13.0** and [UPDATE_13.0.md](../UPDATE_13.0.md).
-- **Update 12.0** — Testing (Vitest for validation, appLog, transaction; CI backend test step); security (Helmet, auth rate limit 10/15 min, Dependabot, Security subsection); observability (Pino logger, GET /health, GET /ready); migrations (node-pg-migrate, baseline + add-indexes); backup docs. See root README **Update 12.0** and [UPDATE_12.0.md](../UPDATE_12.0.md).
-- **Update 11.0** — Infrastructure, resilience & security audit (Layers 1, 2, 4, 5). See root README **Update 11.0** and [UPDATE_11.0.md](../UPDATE_11.0.md).
-- **Update 10.0** — Voice Live ([voiceLive.js](src/services/voiceLive.js)), graceful shutdown ([index.js](index.js)). See root README **Update 10.0**.
-- **Update 9.0** — Schema, schedule model, voice service, food search. See root README **Update 9.0**.
-- **Update 8.0** — Food entry model/service, voice tools. See root README **Update 8.0**.
-- **Update 7.0** — Voice/food, dates, Gemini robustness. See root README **Update 7.0**.
-- **Update 6.2** — Voice service and tools. See root README **Update 6.2**.
-- **Update 6.1** — Docker. See root README **Update 6.1**.
-- **Update 6.0** — Docker, MCP server, Zod (config, request validation). See root README **Update 6.0**.
-- **Update 5.0** — Monorepo (frontend moved to `frontend/`). See root README **Update 5.0**.
-- **Update 4.1** — Logo. See root README **Update 4.1**.
-- **Update 4.0** — Backend restructure (src/controllers, services, models, routes, db, middleware, voice/tools), app.js, food import. See root README **Update 4.0**.
-- **Update 3.0** — Backend and MCP server, routes, auth, voice, DB. See root README **Update 3.0**.
+- Controllers use `sendJson`, `sendError`, `sendCreated`, `sendNoContent` from `src/utils/response.ts`
+- Request bodies validated with Zod via `validateBody` middleware (400 on failure)
+- Global `errorHandler` middleware catches thrown errors → JSON `{ error: string }` response
+- All 4xx/5xx responses are consistently JSON with an `error` field
