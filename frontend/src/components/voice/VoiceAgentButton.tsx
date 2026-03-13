@@ -108,7 +108,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
         await Promise.race([
           startListening(),
           new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Start timed out. Please try again.')), 10_000)
+            setTimeout(() => reject(new Error('Start timed out. Please try again.')), 20_000)
           ),
         ]);
         if (startAbortRef.current) return; // user cancelled during start

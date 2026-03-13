@@ -122,11 +122,11 @@ export function VoiceMicHero() {
           setHasUsedVoice(true);
           localStorage.setItem(VOICE_USED_KEY, '1');
         }
-        console.log(TAG, 'calling startListening (with 10s timeout)...');
+        console.log(TAG, 'calling startListening (with 20s safety timeout)...');
         await Promise.race([
           startListening(),
           new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Start timed out. Please try again.')), 10_000)
+            setTimeout(() => reject(new Error('Start timed out. Please try again.')), 20_000)
           ),
         ]);
         if (startAbortRef.current) {
