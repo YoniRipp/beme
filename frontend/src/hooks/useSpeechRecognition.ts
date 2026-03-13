@@ -89,7 +89,15 @@ export function useSpeechRecognition(
   const stopListening = useCallback(async (): Promise<void> => {
     const active = activeImplRef.current;
     const activeHook = active === 'native' ? native : active === 'stream' ? stream : web;
-    const transcript = await activeHook.stopListening();
+
+    let transcript: string;
+    try {
+      transcript = await activeHook.stopListening();
+    } catch (e) {
+      // Even if stopListening fails, ensure all impls are reset
+      setIsProcessing(false);
+      throw e;
+    }
 
     if (active === 'native') {
       // Native: we have a transcript, send to backend for Gemini understanding

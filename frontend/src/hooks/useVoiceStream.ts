@@ -39,6 +39,7 @@ export function useVoiceStream(): UseVoiceStreamReturn {
   const lastResultRef = useRef<VoiceUnderstandResult | null>(null);
   const isMountedRef = useRef(true);
   const isListeningRef = useRef(false);
+  const isStartingRef = useRef(false);
 
   // Promise that resolves when the 'done' message arrives
   const doneResolveRef = useRef<((transcript: string) => void) | null>(null);
@@ -72,144 +73,155 @@ export function useVoiceStream(): UseVoiceStreamReturn {
 
   const startListening = useCallback(async (): Promise<void> => {
     if (!isAvailable) throw new Error('Voice streaming not available');
-    if (isListeningRef.current) return;
+    if (isListeningRef.current || isStartingRef.current) return;
 
+    // Tear down any orphaned session from a previous attempt
+    cleanup();
+
+    isStartingRef.current = true;
     lastResultRef.current = null;
     setCurrentTranscript('');
 
-    const token = getToken();
-    if (!token) throw new Error('Authentication required');
+    try {
+      const token = getToken();
+      if (!token) throw new Error('Authentication required');
 
-    const wsUrl = getVoiceStreamUrl(token);
-    if (!wsUrl) throw new Error('Voice streaming not configured');
+      const wsUrl = getVoiceStreamUrl(token);
+      if (!wsUrl) throw new Error('Voice streaming not configured');
 
-    // Get microphone first
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    streamRef.current = stream;
+      // Get microphone first
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
 
-    const mimeType = getPreferredAudioMimeType();
+      const mimeType = getPreferredAudioMimeType();
 
-    // Open WebSocket
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+      // Open WebSocket
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('WebSocket connection timeout'));
-        ws.close();
-      }, 5000);
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('WebSocket connection timeout'));
+          ws.close();
+        }, 5000);
 
-      ws.onopen = () => {
-        clearTimeout(timeout);
-        // Send start message with session metadata
-        ws.send(JSON.stringify({
-          type: 'start',
-          today: toLocalDateString(new Date()),
-          timezone: getUserTimezone(),
-          mimeType,
-        }));
-      };
+        ws.onopen = () => {
+          clearTimeout(timeout);
+          ws.send(JSON.stringify({
+            type: 'start',
+            today: toLocalDateString(new Date()),
+            timezone: getUserTimezone(),
+            mimeType,
+          }));
+        };
 
-      // Wait for 'ready' from server (Gemini session established)
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'ready') {
+              resolve();
+            } else if (msg.type === 'error') {
+              clearTimeout(timeout);
+              reject(new Error(msg.message ?? 'Voice streaming failed'));
+            }
+          } catch { /* ignore parse errors during setup */ }
+        };
+
+        ws.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error('WebSocket connection failed'));
+        };
+      });
+
+      // Set up ongoing message handler (replaces the setup one)
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
-          if (msg.type === 'ready') {
-            resolve();
-          } else if (msg.type === 'error') {
-            clearTimeout(timeout);
-            reject(new Error(msg.message ?? 'Voice streaming failed'));
+
+          if (msg.type === 'transcript') {
+            if (isMountedRef.current) setCurrentTranscript(msg.text ?? '');
           }
-        } catch { /* ignore parse errors during setup */ }
+
+          if (msg.type === 'action') {
+            const intent = msg.action?.intent;
+            if (intent && intent !== 'unknown' && isMountedRef.current) {
+              setCurrentTranscript(`Detected: ${intent.replace(/_/g, ' ')}`);
+            }
+          }
+
+          if (msg.type === 'done') {
+            const result = parseVoiceResult(msg);
+            lastResultRef.current = result;
+            if (isMountedRef.current) setIsProcessing(false);
+            doneResolveRef.current?.(
+              result.actions[0]?.intent !== 'unknown'
+                ? `Processed: ${result.actions[0]?.intent}`
+                : '',
+            );
+            doneResolveRef.current = null;
+            doneRejectRef.current = null;
+          }
+
+          if (msg.type === 'error') {
+            if (isMountedRef.current) setIsProcessing(false);
+            doneRejectRef.current?.(new Error(msg.message ?? 'Voice processing failed'));
+            doneResolveRef.current = null;
+            doneRejectRef.current = null;
+          }
+        } catch { /* ignore parse errors */ }
       };
 
       ws.onerror = () => {
-        clearTimeout(timeout);
-        reject(new Error('WebSocket connection failed'));
+        doneRejectRef.current?.(new Error('WebSocket error during streaming'));
+        cleanup();
+        if (isMountedRef.current) {
+          setIsListening(false);
+          setIsProcessing(false);
+        }
       };
-    });
 
-    // Set up ongoing message handler (replaces the setup one)
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-
-        if (msg.type === 'transcript') {
-          if (isMountedRef.current) setCurrentTranscript(msg.text ?? '');
+      ws.onclose = () => {
+        doneRejectRef.current?.(new Error('Connection closed'));
+        doneResolveRef.current = null;
+        doneRejectRef.current = null;
+        cleanup();
+        if (isMountedRef.current) {
+          setIsListening(false);
+          setIsProcessing(false);
         }
+      };
 
-        if (msg.type === 'action') {
-          // Show intent as feedback during streaming
-          const intent = msg.action?.intent;
-          if (intent && intent !== 'unknown' && isMountedRef.current) {
-            setCurrentTranscript(`Detected: ${intent.replace(/_/g, ' ')}`);
-          }
+      // Start MediaRecorder with 250ms timeslice
+      const recorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e: BlobEvent) => {
+        if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+          ws.send(e.data);
         }
+      };
 
-        if (msg.type === 'done') {
-          const result = parseVoiceResult(msg);
-          lastResultRef.current = result;
-          if (isMountedRef.current) setIsProcessing(false);
-          doneResolveRef.current?.(
-            result.actions[0]?.intent !== 'unknown'
-              ? `Processed: ${result.actions[0]?.intent}`
-              : '',
-          );
-          doneResolveRef.current = null;
-          doneRejectRef.current = null;
-        }
+      recorder.onerror = () => {
+        cleanup();
+        if (isMountedRef.current) setIsListening(false);
+      };
 
-        if (msg.type === 'error') {
-          if (isMountedRef.current) setIsProcessing(false);
-          doneRejectRef.current?.(new Error(msg.message ?? 'Voice processing failed'));
-          doneResolveRef.current = null;
-          doneRejectRef.current = null;
-        }
-      } catch { /* ignore parse errors */ }
-    };
-
-    ws.onerror = () => {
-      doneRejectRef.current?.(new Error('WebSocket error during streaming'));
+      recorder.start(250);
+      isListeningRef.current = true;
+      if (isMountedRef.current) {
+        setIsListening(true);
+        setCurrentTranscript('Streaming...');
+      }
+    } catch (err) {
+      // If anything fails during setup, clean up all resources
       cleanup();
       if (isMountedRef.current) {
         setIsListening(false);
         setIsProcessing(false);
       }
-    };
-
-    ws.onclose = () => {
-      // If closed before done, reject any pending promise
-      doneRejectRef.current?.(new Error('Connection closed'));
-      doneResolveRef.current = null;
-      doneRejectRef.current = null;
-      cleanup();
-      if (isMountedRef.current) {
-        setIsListening(false);
-        setIsProcessing(false);
-      }
-    };
-
-    // Start MediaRecorder with 250ms timeslice — fires ondataavailable every 250ms
-    const recorder = new MediaRecorder(stream, { mimeType });
-    mediaRecorderRef.current = recorder;
-
-    recorder.ondataavailable = (e: BlobEvent) => {
-      if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-        // Send raw binary audio chunk directly over WebSocket
-        ws.send(e.data);
-      }
-    };
-
-    recorder.onerror = () => {
-      cleanup();
-      if (isMountedRef.current) setIsListening(false);
-    };
-
-    recorder.start(250); // Fire ondataavailable every 250ms
-    isListeningRef.current = true;
-    if (isMountedRef.current) {
-      setIsListening(true);
-      setCurrentTranscript('Streaming...');
+      throw err;
+    } finally {
+      isStartingRef.current = false;
     }
   }, [isAvailable, cleanup]);
 
