@@ -85,6 +85,10 @@ vi.mock('./goal.js', () => ({
   list: (...args: unknown[]) => mockGoalList(...args),
 }));
 
+vi.mock('../db/pool.js', () => ({
+  getPool: vi.fn().mockReturnValue({}),
+}));
+
 vi.mock('../db/index.js', () => ({
   isDbConfigured: vi.fn().mockReturnValue(true),
 }));

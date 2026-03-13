@@ -1,6 +1,8 @@
 /**
- * AI Chat Panel — slide-up panel for conversational AI fitness coaching.
+ * AI Chat Panel — slide-up panel for conversational AI agent coaching.
  * Loads chat history from DB, sends messages, displays responses.
+ * The agent can take actions (log food, workouts, etc.) and the UI
+ * refreshes affected data automatically.
  */
 import { useState, useRef, useEffect, type FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -12,7 +14,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { chatApi, type ChatMessage } from '@/core/api/chat';
+import { chatApi, type ChatMessage, type ChatResponse } from '@/core/api/chat';
 import { cn } from '@/lib/utils';
 
 interface AiChatPanelProps {
@@ -36,11 +38,32 @@ export function AiChatPanel({ open, onOpenChange }: AiChatPanelProps) {
 
   const messages = historyData?.messages ?? [];
 
-  // Send message
+  // Send message — when the agent takes actions, invalidate affected queries
   const sendMutation = useMutation({
     mutationFn: chatApi.sendMessage,
-    onSuccess: () => {
+    onSuccess: (data: ChatResponse) => {
       void queryClient.invalidateQueries({ queryKey: ['chat-history'] });
+
+      // If the agent executed any actions, refresh affected data
+      if (data.actions?.length > 0) {
+        const intents = new Set(data.actions.filter((a: { success: boolean }) => a.success).map((a: { intent: string }) => a.intent));
+        if (intents.has('add_workout') || intents.has('edit_workout') || intents.has('delete_workout')) {
+          void queryClient.invalidateQueries({ queryKey: ['workouts'] });
+        }
+        if (intents.has('add_food') || intents.has('edit_food_entry') || intents.has('delete_food_entry')) {
+          void queryClient.invalidateQueries({ queryKey: ['food-entries'] });
+        }
+        if (intents.has('log_sleep') || intents.has('edit_check_in') || intents.has('delete_check_in')) {
+          void queryClient.invalidateQueries({ queryKey: ['daily-check-ins'] });
+          void queryClient.invalidateQueries({ queryKey: ['check-ins'] });
+        }
+        if (intents.has('add_goal') || intents.has('edit_goal') || intents.has('delete_goal')) {
+          void queryClient.invalidateQueries({ queryKey: ['goals'] });
+        }
+        // Refresh insights since data changed
+        void queryClient.invalidateQueries({ queryKey: ['ai-insights'] });
+        void queryClient.invalidateQueries({ queryKey: ['ai-today-recs'] });
+      }
     },
   });
 
@@ -118,15 +141,15 @@ export function AiChatPanel({ open, onOpenChange }: AiChatPanelProps) {
               <div className="w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-3">
                 <MessageCircle className="w-6 h-6 text-violet-600" />
               </div>
-              <h3 className="font-semibold text-sm mb-1">Your AI Fitness Coach</h3>
+              <h3 className="font-semibold text-sm mb-1">Your AI Fitness Agent</h3>
               <p className="text-xs text-muted-foreground max-w-[280px]">
-                Ask me anything about your nutrition, workouts, or goals. I have access to all your data and can give personalized advice.
+                I can coach you, answer questions about your data, AND take actions — log food, workouts, sleep, and manage goals, all through chat.
               </p>
               <div className="mt-4 space-y-2 w-full max-w-[280px]">
                 {[
-                  'Am I eating enough protein?',
-                  'How should I adjust my workouts?',
-                  'What should I eat today?',
+                  'Log 3 eggs and toast for breakfast',
+                  'What did I eat yesterday?',
+                  'Am I hitting my protein goal?',
                 ].map((suggestion) => (
                   <button
                     key={suggestion}

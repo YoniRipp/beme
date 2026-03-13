@@ -12,6 +12,7 @@ import * as cycleModel from '../models/cycle.js';
 import * as profileModel from '../models/profile.js';
 import * as trainerClientModel from '../models/trainerClient.js';
 import { isDbConfigured } from '../db/index.js';
+import { getPool } from '../db/pool.js';
 import { voiceContext } from '../lib/voiceContext.js';
 import type { WorkoutType, GoalType, GoalPeriod } from '../types/domain.js';
 
@@ -24,6 +25,82 @@ export interface ExecuteResult {
 interface VoiceAction {
   intent: string;
   [key: string]: unknown;
+}
+
+// ─── Query user data (read-only tool for agent) ─────────────────────────────
+
+async function queryUserData(userId: string, dataType: string, dateFrom?: string, dateTo?: string): Promise<string> {
+  const pool = getPool();
+  const to = dateTo && /^\d{4}-\d{2}-\d{2}$/.test(dateTo) ? dateTo : new Date().toISOString().slice(0, 10);
+  const from = dateFrom && /^\d{4}-\d{2}-\d{2}$/.test(dateFrom)
+    ? dateFrom
+    : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  switch (dataType) {
+    case 'workouts': {
+      const r = await pool.query(
+        `SELECT date, title, type, duration_minutes, exercises
+         FROM workouts WHERE user_id = $1 AND date >= $2 AND date <= $3
+         ORDER BY date DESC LIMIT 50`,
+        [userId, from, to]
+      );
+      if (r.rows.length === 0) return `No workouts found between ${from} and ${to}.`;
+      return r.rows.map((w: Record<string, unknown>) => {
+        const exercises = w.exercises as Array<{ name: string; sets?: number; reps?: number; weight?: number }> | null;
+        const exList = exercises
+          ? exercises.map(e => `  - ${e.name}${e.sets ? ` ${e.sets}x${e.reps ?? '?'}` : ''}${e.weight ? ` @ ${e.weight}kg` : ''}`).join('\n')
+          : '';
+        return `${(w.date as Date).toISOString?.().slice(0, 10) ?? w.date}: ${w.title} (${w.type}, ${w.duration_minutes}min)${exList ? '\n' + exList : ''}`;
+      }).join('\n');
+    }
+    case 'food': {
+      const r = await pool.query(
+        `SELECT date, name, calories, protein, carbs, fats, portion_amount, portion_unit
+         FROM food_entries WHERE user_id = $1 AND date >= $2 AND date <= $3
+         ORDER BY date DESC, created_at DESC LIMIT 100`,
+        [userId, from, to]
+      );
+      if (r.rows.length === 0) return `No food entries found between ${from} and ${to}.`;
+      return r.rows.map((f: Record<string, unknown>) => {
+        const portion = f.portion_amount ? ` (${f.portion_amount}${f.portion_unit || 'g'})` : '';
+        return `${(f.date as Date).toISOString?.().slice(0, 10) ?? f.date}: ${f.name}${portion} — ${f.calories} kcal, ${f.protein}g P, ${f.carbs}g C, ${f.fats}g F`;
+      }).join('\n');
+    }
+    case 'sleep': {
+      const r = await pool.query(
+        `SELECT date, sleep_hours FROM daily_check_ins
+         WHERE user_id = $1 AND date >= $2 AND date <= $3 AND sleep_hours IS NOT NULL
+         ORDER BY date DESC LIMIT 60`,
+        [userId, from, to]
+      );
+      if (r.rows.length === 0) return `No sleep data found between ${from} and ${to}.`;
+      return r.rows.map((s: Record<string, unknown>) =>
+        `${(s.date as Date).toISOString?.().slice(0, 10) ?? s.date}: ${s.sleep_hours} hours`
+      ).join('\n');
+    }
+    case 'goals': {
+      const r = await pool.query(
+        `SELECT type, target, period FROM goals WHERE user_id = $1`,
+        [userId]
+      );
+      if (r.rows.length === 0) return 'No goals set.';
+      return r.rows.map((g: Record<string, unknown>) => `${g.type}: ${g.target} ${g.period}`).join('\n');
+    }
+    case 'weight': {
+      const r = await pool.query(
+        `SELECT date, weight FROM weight_entries
+         WHERE user_id = $1 AND date >= $2 AND date <= $3
+         ORDER BY date DESC LIMIT 60`,
+        [userId, from, to]
+      );
+      if (r.rows.length === 0) return `No weight entries found between ${from} and ${to}.`;
+      return r.rows.map((w: Record<string, unknown>) =>
+        `${(w.date as Date).toISOString?.().slice(0, 10) ?? w.date}: ${w.weight}kg`
+      ).join('\n');
+    }
+    default:
+      return `Unknown data type: ${dataType}. Supported: workouts, food, sleep, goals, weight.`;
+  }
 }
 
 function parseDate(v: unknown): string {

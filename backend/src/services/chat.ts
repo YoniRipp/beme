@@ -1,11 +1,16 @@
 /**
- * AI Chat service — fitness guru chatbot powered by Gemini.
- * Builds comprehensive user context from all available data and maintains
- * conversation history for personalized, data-driven coaching.
+ * AI Chat service — fitness guru agent powered by Gemini.
+ * Builds comprehensive user context from all available data, maintains
+ * conversation history, and can take actions (log food, workouts, goals, etc.)
+ * via Gemini function calling — making this a true AI agent, not just a chatbot.
  */
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { config } from '../config/index.js';
 import { getPool } from '../db/pool.js';
 import { logger } from '../lib/logger.js';
-import { getGeminiText, fetchUserContext } from './insights.js';
+import { fetchUserContext } from './insights.js';
+import { VOICE_TOOLS } from '../../voice/tools.js';
+import { executeActions, type ExecuteResult } from './voiceExecutor.js';
 
 // ─── DB operations ─────────────────────────────────────────────────────────────
 
@@ -209,9 +214,18 @@ ${detailedFood}
 - Today's date: ${new Date().toISOString().slice(0, 10)}`;
 }
 
-// ─── Send message ──────────────────────────────────────────────────────────────
+// ─── Agent response type ────────────────────────────────────────────────────
 
-export async function sendMessage(userId: string, userMessage: string): Promise<ChatMessage> {
+export interface AgentChatResponse {
+  message: ChatMessage;
+  actions: ExecuteResult[];
+}
+
+// ─── Send message (agent loop with function calling) ────────────────────────
+
+const MAX_TOOL_ROUNDS = 5;
+
+export async function sendMessage(userId: string, userMessage: string): Promise<AgentChatResponse> {
   // 1. Save user message
   await saveChatMessage(userId, 'user', userMessage);
 
@@ -221,12 +235,18 @@ export async function sendMessage(userId: string, userMessage: string): Promise<
     getChatHistory(userId, 20),
   ]);
 
-  // 3. Build Gemini conversation
-  const model = getGeminiText();
+  // 3. Build Gemini model with function-calling tools
+  if (!config.geminiApiKey) throw new Error('GEMINI_API_KEY not configured');
+  const genAI = new GoogleGenerativeAI(config.geminiApiKey);
+  const model = genAI.getGenerativeModel({
+    model: config.geminiModel,
+    tools: VOICE_TOOLS as never,
+  });
+
   const chat = model.startChat({
     history: [
-      { role: 'user', parts: [{ text: 'System instructions: ' + systemPrompt }] },
-      { role: 'model', parts: [{ text: 'Understood. I have full access to your health data and will provide personalized, data-driven coaching. How can I help you today?' }] },
+      { role: 'user', parts: [{ text: 'System instructions: ' + systemPrompt + '\n\nYou are an AI agent — not just a chatbot. You can take actions on behalf of the user using the available tools (log food, workouts, sleep, goals, query data, etc.). When the user asks you to log, add, edit, or delete something, USE the appropriate tool to do it. When the user asks about their data, USE the query_user_data tool to look it up. After taking an action, confirm what you did in a natural, conversational way.' }] },
+      { role: 'model', parts: [{ text: 'Understood. I\'m your fitness coach and assistant. I can both advise you AND take actions — log meals, workouts, sleep, manage goals, and look up your data. What would you like to do?' }] },
       ...history.slice(0, -1).map(msg => ({
         role: msg.role === 'user' ? 'user' as const : 'model' as const,
         parts: [{ text: msg.content }],
@@ -234,17 +254,50 @@ export async function sendMessage(userId: string, userMessage: string): Promise<
     ],
   });
 
-  // 4. Send the user's latest message
+  // 4. Agent loop: send message, handle function calls, repeat until text response
+  const allActions: ExecuteResult[] = [];
   let responseText: string;
+
   try {
-    const result = await chat.sendMessage(userMessage);
-    responseText = result.response.text().trim();
+    let result = await chat.sendMessage(userMessage);
+    let response = result.response;
+    let rounds = 0;
+
+    while (rounds < MAX_TOOL_ROUNDS) {
+      const functionCalls = response.functionCalls?.() ?? [];
+      if (functionCalls.length === 0) break;
+
+      // Execute function calls via voiceExecutor
+      const actions = functionCalls.map(fc => ({
+        intent: fc.name,
+        ...fc.args,
+      }));
+      const results = await executeActions(actions as { intent: string; [key: string]: unknown }[], userId);
+      allActions.push(...results);
+
+      // Send function results back to Gemini so it can generate a natural response
+      const functionResponses = functionCalls.map((fc, i) => ({
+        functionResponse: {
+          name: fc.name,
+          response: {
+            success: results[i]?.success ?? false,
+            message: results[i]?.message ?? 'Unknown result',
+          },
+        },
+      }));
+
+      result = await chat.sendMessage(functionResponses as never);
+      response = result.response;
+      rounds++;
+    }
+
+    responseText = response.text().trim();
   } catch (err) {
-    logger.error({ err }, 'AI chat response generation failed');
-    responseText = 'I apologize, but I encountered an issue generating a response. Please try again.';
+    logger.error({ err }, 'AI agent chat response failed');
+    responseText = 'I apologize, but I encountered an issue. Please try again.';
   }
 
-  // 5. Save and return assistant response
+  // 5. Save and return assistant response with action results
   const saved = await saveChatMessage(userId, 'assistant', responseText);
-  return saved;
+  return { message: saved, actions: allActions };
 }
