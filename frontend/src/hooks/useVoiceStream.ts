@@ -150,7 +150,12 @@ export function useVoiceStream(): UseVoiceStreamReturn {
           }
 
           if (msg.type === 'done') {
-            const result = parseVoiceResult(msg);
+            let result: ReturnType<typeof parseVoiceResult>;
+            try {
+              result = parseVoiceResult(msg);
+            } catch {
+              result = { actions: [{ intent: 'unknown', message: 'Failed to parse voice result' }] };
+            }
             lastResultRef.current = result;
             if (isMountedRef.current) setIsProcessing(false);
             doneResolveRef.current?.(
