@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Mic, Loader2, Lock, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,10 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
     getVoiceResult,
   } = useSpeechRecognition();
 
+  // Use a ref to always have the current isListening value, avoiding stale closures
+  const isListeningRef = useRef(isListening);
+  isListeningRef.current = isListening;
+
   const handleMicClick = useCallback(async () => {
     if (onTogglePanel != null) {
       onTogglePanel();
@@ -41,7 +45,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
       return;
     }
 
-    if (isListening) {
+    if (isListeningRef.current) {
       try {
         await stopListening();
         const result = await getVoiceResult();
@@ -71,7 +75,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
       const msg = e instanceof Error ? e.message : 'Could not start listening. Please check microphone permissions.';
       toast.error('Could not start recording', { description: msg });
     }
-  }, [onTogglePanel, isPro, isListening, isAvailable, startListening, stopListening, getVoiceResult, processVoiceResult, showResultToasts]);
+  }, [onTogglePanel, isPro, isAvailable, startListening, stopListening, getVoiceResult, processVoiceResult, showResultToasts]);
 
   const state = isListening ? 'listening' : isProcessing ? 'processing' : 'idle';
   const isActive = onTogglePanel != null ? panelOpen : state === 'listening' || state === 'processing';

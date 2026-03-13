@@ -31,13 +31,17 @@ export function VoiceMicHero() {
     return () => { clearTimeout(statusTimeoutRef.current); };
   }, []);
 
+  // Use a ref to always have the current isListening value, avoiding stale closures
+  const isListeningRef = useRef(isListening);
+  isListeningRef.current = isListening;
+
   const handleMicClick = useCallback(async () => {
     if (!isPro) {
       subscribe();
       return;
     }
 
-    if (isListening) {
+    if (isListeningRef.current) {
       try {
         setStatusText('Processing...');
         await stopListening();
@@ -78,7 +82,7 @@ export function VoiceMicHero() {
       setStatusText('');
       toast.error('Could not start recording', { description: e instanceof Error ? e.message : 'Check microphone permissions.' });
     }
-  }, [isPro, subscribe, isListening, isAvailable, startListening, stopListening, getVoiceResult, processVoiceResult, showResultToasts]);
+  }, [isPro, subscribe, isAvailable, startListening, stopListening, getVoiceResult, processVoiceResult, showResultToasts]);
 
   const state = isListening ? 'listening' : isProcessing ? 'processing' : 'idle';
 
