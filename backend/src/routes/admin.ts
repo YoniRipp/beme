@@ -221,4 +221,82 @@ router.delete('/api/admin/foods/:id/image', requireAuth, requireAdmin, asyncHand
   sendJson(res, { success: true });
 }));
 
+// ─── Gemini Food Review ──────────────────────────────────────────────────────
+
+router.get('/api/admin/foods/gemini', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  const status = req.query.status === 'verified' ? 'verified'
+    : req.query.status === 'unverified' ? 'unverified' : 'all';
+  const limit = Math.min(Math.max(1, parseInt(String(req.query.limit ?? 50), 10) || 50), 200);
+  const offset = Math.max(0, parseInt(String(req.query.offset ?? 0), 10) || 0);
+
+  let whereClause = `source = 'gemini'`;
+  if (status === 'verified') whereClause += ` AND verified = true`;
+  else if (status === 'unverified') whereClause += ` AND verified = false`;
+
+  const countResult = await pool.query(`SELECT COUNT(*) FROM foods WHERE ${whereClause}`);
+
+  const result = await pool.query(
+    `SELECT id, name, calories, protein, carbs, fat, is_liquid, image_url, verified, verified_at, created_at
+     FROM foods WHERE ${whereClause}
+     ORDER BY verified ASC, created_at DESC
+     LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  );
+
+  sendJson(res, {
+    foods: result.rows.map((r: Record<string, any>) => ({
+      id: r.id, name: r.name, calories: Number(r.calories),
+      protein: Number(r.protein), carbs: Number(r.carbs), fat: Number(r.fat),
+      isLiquid: r.is_liquid, imageUrl: r.image_url,
+      verified: r.verified, verifiedAt: r.verified_at, createdAt: r.created_at,
+    })),
+    total: parseInt(countResult.rows[0].count, 10),
+  });
+}));
+
+router.patch('/api/admin/foods/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  const { name, calories, protein, carbs, fat, verified } = req.body ?? {};
+  const sets: string[] = [];
+  const params: any[] = [];
+  let idx = 1;
+
+  if (name !== undefined) { sets.push(`name = $${idx++}`); params.push(name); sets.push(`common_name = $${idx++}`); params.push(name); }
+  if (calories !== undefined) { sets.push(`calories = $${idx++}`); params.push(calories); }
+  if (protein !== undefined) { sets.push(`protein = $${idx++}`); params.push(protein); }
+  if (carbs !== undefined) { sets.push(`carbs = $${idx++}`); params.push(carbs); }
+  if (fat !== undefined) { sets.push(`fat = $${idx++}`); params.push(fat); }
+  if (verified === true) {
+    sets.push(`verified = true`);
+    sets.push(`verified_at = now()`);
+    sets.push(`verified_by = $${idx++}`);
+    params.push(req.user!.id);
+  }
+
+  if (sets.length === 0) return sendError(res, 400, 'No fields to update');
+  params.push(req.params.id);
+
+  const result = await pool.query(
+    `UPDATE foods SET ${sets.join(', ')}
+     WHERE id = $${idx}
+     RETURNING id, name, calories, protein, carbs, fat, is_liquid, image_url, verified, verified_at, created_at`,
+    params,
+  );
+  if (result.rows.length === 0) return sendError(res, 404, 'Food not found');
+  const r = result.rows[0];
+  sendJson(res, {
+    id: r.id, name: r.name, calories: Number(r.calories),
+    protein: Number(r.protein), carbs: Number(r.carbs), fat: Number(r.fat),
+    isLiquid: r.is_liquid, imageUrl: r.image_url,
+    verified: r.verified, verifiedAt: r.verified_at, createdAt: r.created_at,
+  });
+}));
+
+router.delete('/api/admin/foods/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const pool = getPool();
+  await pool.query('DELETE FROM foods WHERE id = $1', [req.params.id]);
+  sendJson(res, { success: true });
+}));
+
 export default router;

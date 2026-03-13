@@ -87,6 +87,25 @@ export interface AdminStatsResponse {
   recentErrors: AdminRecentErrors;
 }
 
+export interface AdminGeminiFood {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  isLiquid: boolean;
+  imageUrl: string | null;
+  verified: boolean;
+  verifiedAt: string | null;
+  createdAt: string;
+}
+
+export interface GeminiFoodsResponse {
+  foods: AdminGeminiFood[];
+  total: number;
+}
+
 export const adminApi = {
   getLogs: (level: 'action' | 'error') =>
     request<LogsResponse>(`/api/admin/logs?level=${level}`).then((r) => r.logs),
@@ -104,4 +123,13 @@ export const adminApi = {
     request<ApiUserSearchItem[]>(`/api/admin/users/search?q=${encodeURIComponent(q)}&limit=${limit}`),
 
   getStats: () => request<AdminStatsResponse>('/api/admin/stats'),
+
+  getGeminiFoods: (status: 'all' | 'verified' | 'unverified' = 'all', limit = 50, offset = 0) =>
+    request<GeminiFoodsResponse>(`/api/admin/foods/gemini?status=${status}&limit=${limit}&offset=${offset}`),
+
+  updateFood: (id: string, data: { name?: string; calories?: number; protein?: number; carbs?: number; fat?: number; verified?: boolean }) =>
+    request<AdminGeminiFood>(`/api/admin/foods/${id}`, { method: 'PATCH', body: data }),
+
+  deleteFood: (id: string) =>
+    request<{ success: boolean }>(`/api/admin/foods/${id}`, { method: 'DELETE' }),
 };

@@ -156,8 +156,8 @@ export async function lookupAndCreateFood(pool: { query: (sql: string, params: u
     : null;
 
   const insertResult = await pool.query(
-    `INSERT INTO foods (name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, default_unit, unit_weight_grams, search_aliases)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12::text[])
+    `INSERT INTO foods (name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, default_unit, unit_weight_grams, search_aliases, source)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12::text[], 'gemini')
      RETURNING id, name, common_name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, default_unit, unit_weight_grams`,
     [
       nameForDb,
