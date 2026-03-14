@@ -1,9 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { ShieldCheck, LayoutDashboard, Users, Activity, Server, Image, UtensilsCrossed } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Users, Activity, Server, Image, UtensilsCrossed, ClipboardList } from 'lucide-react';
 
 const tabs = [
   { to: '/admin', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/admin/users', label: 'Users', icon: Users, end: false },
+  { to: '/admin/user-data', label: 'User Data', icon: ClipboardList, end: false },
   { to: '/admin/activity', label: 'Activity', icon: Activity, end: false },
   { to: '/admin/foods', label: 'Foods', icon: UtensilsCrossed, end: false },
   { to: '/admin/system', label: 'System', icon: Server, end: false },

@@ -34,6 +34,7 @@ export async function initSchema() {
         subscription_status text DEFAULT 'free',
         subscription_id text,
         subscription_current_period_end timestamptz,
+        subscription_source text DEFAULT 'self',
         phone_number text UNIQUE,
         locked_until timestamptz,
         failed_login_attempts int DEFAULT 0,

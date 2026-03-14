@@ -4,6 +4,7 @@
 import crypto from 'crypto';
 import { NotFoundError, ForbiddenError, ConflictError, ValidationError } from '../errors.js';
 import * as trainerClientModel from '../models/trainerClient.js';
+import * as userModel from '../models/user.js';
 import { publishEvent } from '../events/publish.js';
 
 const CLIENT_LIMITS: Record<string, number> = {
@@ -48,6 +49,8 @@ export async function acceptInvitation(clientId: string, inviteCode: string) {
     throw new ConflictError('Cannot accept your own invitation');
   }
   await trainerClientModel.acceptInvitation(invitation.id, clientId);
+  // Grant pro access to the trainee if they are a free user
+  await userModel.grantTrainerSubscription(clientId);
   await publishEvent('trainer.ClientAdded', { trainerId: invitation.trainerId, clientId }, clientId);
   return { trainerId: invitation.trainerId };
 }
@@ -60,6 +63,8 @@ export async function removeClient(trainerId: string, clientId: string) {
   if (!removed) {
     throw new NotFoundError('Client relationship not found');
   }
+  // Revoke trainer-granted pro (only if pro was granted by trainer, not self-purchased)
+  await userModel.revokeTrainerSubscription(clientId);
   await publishEvent('trainer.ClientRemoved', { trainerId, clientId }, trainerId);
 }
 

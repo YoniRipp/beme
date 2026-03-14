@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { trainerApi } from '@/core/api/trainer';
 import { queryKeys } from '@/lib/queryClient';
+import { useAuth } from '@/context/AuthContext';
 
 export function useTrainerClients() {
   return useQuery({
@@ -46,11 +47,14 @@ export function useRemoveClient() {
 
 export function useAcceptInvitation() {
   const queryClient = useQueryClient();
+  const { loadUser } = useAuth();
   return useMutation({
     mutationFn: (inviteCode: string) => trainerApi.acceptInvitation(inviteCode),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingTrainerInvitations });
       queryClient.invalidateQueries({ queryKey: queryKeys.myTrainer });
+      // Refresh user data so subscription status updates (trainee gets pro)
+      loadUser();
     },
   });
 }

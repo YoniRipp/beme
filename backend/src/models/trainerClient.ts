@@ -169,6 +169,15 @@ export async function findTrainerByClientId(clientId: string): Promise<{ trainer
   };
 }
 
+export async function findActiveClientIds(trainerId: string): Promise<string[]> {
+  const db = getPool();
+  const result = await db.query(
+    `SELECT client_id FROM trainer_clients WHERE trainer_id = $1 AND status = 'active'`,
+    [trainerId],
+  );
+  return result.rows.map((row: Record<string, unknown>) => row.client_id as string);
+}
+
 export async function listInvitationsByTrainer(trainerId: string): Promise<TrainerInvitation[]> {
   const db = getPool();
   const result = await db.query(

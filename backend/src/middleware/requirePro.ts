@@ -27,7 +27,7 @@ export async function requirePro(req: Request, res: Response, next: NextFunction
     );
 
     const status = rows[0]?.subscription_status || 'free';
-    if (status === 'pro') {
+    if (['pro', 'trainer', 'trainer_pro'].includes(status)) {
       return next();
     }
 

@@ -34,8 +34,13 @@ export interface ApiUserSearchItem {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'trainer';
   createdAt?: string;
+}
+
+export interface PaginatedResponse<T = Record<string, unknown>> {
+  data: T[];
+  total: number;
 }
 
 function buildActivityQuery(opts: {
@@ -132,4 +137,29 @@ export const adminApi = {
 
   deleteFood: (id: string) =>
     request<{ success: boolean }>(`/api/admin/foods/${id}`, { method: 'DELETE' }),
+
+  // ─── User Data Management ────────────────────────────────
+  getUserWorkouts: (userId: string) =>
+    request<PaginatedResponse>(`/api/admin/users/${userId}/workouts`),
+
+  addUserWorkout: (userId: string, data: Record<string, unknown>) =>
+    request<Record<string, unknown>>(`/api/admin/users/${userId}/workouts`, { method: 'POST', body: data }),
+
+  getUserFoodEntries: (userId: string) =>
+    request<PaginatedResponse>(`/api/admin/users/${userId}/food-entries`),
+
+  addUserFoodEntry: (userId: string, data: Record<string, unknown>) =>
+    request<Record<string, unknown>>(`/api/admin/users/${userId}/food-entries`, { method: 'POST', body: data }),
+
+  getUserCheckIns: (userId: string) =>
+    request<PaginatedResponse>(`/api/admin/users/${userId}/daily-check-ins`),
+
+  addUserCheckIn: (userId: string, data: Record<string, unknown>) =>
+    request<Record<string, unknown>>(`/api/admin/users/${userId}/daily-check-ins`, { method: 'POST', body: data }),
+
+  getUserGoals: (userId: string) =>
+    request<PaginatedResponse>(`/api/admin/users/${userId}/goals`),
+
+  addUserGoal: (userId: string, data: Record<string, unknown>) =>
+    request<Record<string, unknown>>(`/api/admin/users/${userId}/goals`, { method: 'POST', body: data }),
 };

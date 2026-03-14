@@ -8,7 +8,7 @@ export interface UserRow {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'trainer';
   created_at: string;
   password_hash: string | null;
   auth_provider: string | null;
@@ -19,13 +19,14 @@ export interface UserRow {
   reset_token_expires: string | null;
   subscription_status: string | null;
   subscription_current_period_end: string | null;
+  subscription_source: string | null;
 }
 
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'trainer';
   createdAt?: string;
   subscriptionStatus: string;
   subscriptionCurrentPeriodEnd: string | null;
@@ -181,5 +182,25 @@ export async function updatePassword(
   await db.query(
     'UPDATE users SET password_hash = $1, reset_token_hash = NULL, reset_token_expires = NULL WHERE id = $2',
     [passwordHash, userId]
+  );
+}
+
+/** Grant pro subscription from trainer link (only upgrades free users). */
+export async function grantTrainerSubscription(userId: string): Promise<void> {
+  const db = getPool();
+  await db.query(
+    `UPDATE users SET subscription_status = 'pro', subscription_source = 'trainer'
+     WHERE id = $1 AND (subscription_status IS NULL OR subscription_status = 'free')`,
+    [userId],
+  );
+}
+
+/** Revoke trainer-granted pro (only affects users whose pro came from a trainer). */
+export async function revokeTrainerSubscription(userId: string): Promise<void> {
+  const db = getPool();
+  await db.query(
+    `UPDATE users SET subscription_status = 'free', subscription_source = 'self'
+     WHERE id = $1 AND subscription_source = 'trainer'`,
+    [userId],
   );
 }

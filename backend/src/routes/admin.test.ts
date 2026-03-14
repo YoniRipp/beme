@@ -28,6 +28,52 @@ vi.mock('../services/adminStats.js', () => ({
   getAll: vi.fn().mockResolvedValue({}),
 }));
 
+vi.mock('../services/workout.js', () => ({
+  list: vi.fn().mockResolvedValue({ data: [], total: 0 }),
+  create: vi.fn().mockResolvedValue({}),
+  update: vi.fn().mockResolvedValue({}),
+  remove: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../services/foodEntry.js', () => ({
+  list: vi.fn().mockResolvedValue({ data: [], total: 0 }),
+  create: vi.fn().mockResolvedValue({}),
+  update: vi.fn().mockResolvedValue({}),
+  remove: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../services/dailyCheckIn.js', () => ({
+  list: vi.fn().mockResolvedValue({ data: [], total: 0 }),
+  create: vi.fn().mockResolvedValue({}),
+  update: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('../services/goal.js', () => ({
+  list: vi.fn().mockResolvedValue({ data: [], total: 0 }),
+  create: vi.fn().mockResolvedValue({}),
+  update: vi.fn().mockResolvedValue({}),
+  remove: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../schemas/routeSchemas.js', () => {
+  const { z } = require('zod');
+  const passthrough = z.object({}).passthrough();
+  return {
+    paginationSchema: z.object({
+      limit: z.coerce.number().optional().default(20),
+      offset: z.coerce.number().optional().default(0),
+    }),
+    createWorkoutSchema: passthrough,
+    updateWorkoutSchema: passthrough,
+    createFoodEntrySchema: passthrough,
+    updateFoodEntrySchema: passthrough,
+    createCheckInSchema: passthrough,
+    updateCheckInSchema: passthrough,
+    createGoalSchema: passthrough,
+    updateGoalSchema: passthrough,
+  };
+});
+
 import adminRouter from './admin.js';
 
 function createApp() {

@@ -4,6 +4,8 @@
 import { config } from '../config/index.js';
 import { getPool } from '../db/pool.js';
 import { logger } from '../lib/logger.js';
+import * as trainerClientModel from '../models/trainerClient.js';
+import * as userModel from '../models/user.js';
 
 const LS_BASE_URL = 'https://api.lemonsqueezy.com';
 
@@ -132,6 +134,27 @@ export async function updateSubscriptionStatus(
   );
 }
 
+/**
+ * When a trainer's subscription is canceled/expired, revoke pro from all their active trainees.
+ */
+async function cascadeTrainerRevocation(lemonSqueezyCustomerId: string) {
+  const pool = getPool();
+  const { rows } = await pool.query(
+    'SELECT id, role FROM users WHERE lemon_squeezy_customer_id = $1',
+    [lemonSqueezyCustomerId],
+  );
+  if (rows.length === 0 || rows[0].role !== 'trainer') return;
+
+  const trainerId = rows[0].id as string;
+  const clientIds = await trainerClientModel.findActiveClientIds(trainerId);
+  for (const clientId of clientIds) {
+    await userModel.revokeTrainerSubscription(clientId);
+  }
+  if (clientIds.length > 0) {
+    logger.info({ trainerId, clientCount: clientIds.length }, 'Cascaded subscription revocation to trainer clients');
+  }
+}
+
 export async function handleWebhookEvent(payload: LemonSqueezyWebhookPayload) {
   const eventName = payload.meta.event_name;
   const customData = payload.meta.custom_data;
@@ -174,6 +197,10 @@ export async function handleWebhookEvent(payload: LemonSqueezyWebhookPayload) {
         String(payload.data.id),
         attrs.renews_at ? new Date(attrs.renews_at) : null,
       );
+      // Cascade: if a trainer loses their subscription, revoke pro from all their trainees
+      if (['canceled', 'expired', 'free'].includes(mappedStatus)) {
+        await cascadeTrainerRevocation(customerId);
+      }
       logger.info({ customerId, status: mappedStatus }, 'Subscription updated');
       break;
     }

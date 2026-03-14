@@ -1,5 +1,5 @@
 /**
- * Admin routes — logs, activity, user search (require admin).
+ * Admin routes — logs, activity, user search, and user data management (require admin).
  */
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
@@ -7,9 +7,25 @@ import { getPool } from '../db/index.js';
 import * as appLog from '../services/appLog.js';
 import * as userActivityLog from '../models/userActivityLog.js';
 import * as adminStatsService from '../services/adminStats.js';
+import * as workoutService from '../services/workout.js';
+import * as foodEntryService from '../services/foodEntry.js';
+import * as dailyCheckInService from '../services/dailyCheckIn.js';
+import * as goalService from '../services/goal.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { sendJson, sendError } from '../utils/response.js';
+import { validateBody } from '../middleware/validateBody.js';
+import { sendJson, sendError, sendCreated, sendNoContent, sendPaginated } from '../utils/response.js';
 import { escapeLike } from '../utils/escapeLike.js';
+import {
+  paginationSchema,
+  createWorkoutSchema,
+  updateWorkoutSchema,
+  createFoodEntrySchema,
+  updateFoodEntrySchema,
+  createCheckInSchema,
+  updateCheckInSchema,
+  createGoalSchema,
+  updateGoalSchema,
+} from '../schemas/routeSchemas.js';
 
 const router = Router();
 
@@ -298,5 +314,93 @@ router.delete('/api/admin/foods/:id', requireAuth, requireAdmin, asyncHandler(as
   await pool.query('DELETE FROM foods WHERE id = $1', [req.params.id]);
   sendJson(res, { success: true });
 }));
+
+// ─── Admin User Data Management ─────────────────────────────────────────────
+// Allows admin to view and manage any user's data (workouts, food, check-ins, goals)
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const userDataRouter = Router({ mergeParams: true });
+userDataRouter.use(requireAuth, requireAdmin, (req, res, next) => {
+  const { userId } = req.params;
+  if (!userId || !UUID_REGEX.test(userId)) {
+    return sendError(res, 400, 'Invalid user ID format');
+  }
+  next();
+});
+
+// Workouts
+userDataRouter.get('/workouts', asyncHandler(async (req, res) => {
+  const { limit, offset } = paginationSchema.parse(req.query ?? {});
+  const { data, total } = await workoutService.list(req.params.userId, { limit, offset });
+  sendPaginated(res, data, total, limit, offset);
+}));
+userDataRouter.post('/workouts', validateBody(createWorkoutSchema), asyncHandler(async (req, res) => {
+  const item = await workoutService.create(req.params.userId, req.body);
+  sendCreated(res, item);
+}));
+userDataRouter.patch('/workouts/:id', validateBody(updateWorkoutSchema), asyncHandler(async (req, res) => {
+  const item = await workoutService.update(req.params.userId, req.params.id, req.body);
+  sendJson(res, item);
+}));
+userDataRouter.delete('/workouts/:id', asyncHandler(async (req, res) => {
+  await workoutService.remove(req.params.userId, req.params.id);
+  sendNoContent(res);
+}));
+
+// Food entries
+userDataRouter.get('/food-entries', asyncHandler(async (req, res) => {
+  const { limit, offset } = paginationSchema.parse(req.query ?? {});
+  const { data, total } = await foodEntryService.list(req.params.userId, { limit, offset });
+  sendPaginated(res, data, total, limit, offset);
+}));
+userDataRouter.post('/food-entries', validateBody(createFoodEntrySchema), asyncHandler(async (req, res) => {
+  const item = await foodEntryService.create(req.params.userId, req.body);
+  sendCreated(res, item);
+}));
+userDataRouter.patch('/food-entries/:id', validateBody(updateFoodEntrySchema), asyncHandler(async (req, res) => {
+  const item = await foodEntryService.update(req.params.userId, req.params.id, req.body);
+  sendJson(res, item);
+}));
+userDataRouter.delete('/food-entries/:id', asyncHandler(async (req, res) => {
+  await foodEntryService.remove(req.params.userId, req.params.id);
+  sendNoContent(res);
+}));
+
+// Daily check-ins
+userDataRouter.get('/daily-check-ins', asyncHandler(async (req, res) => {
+  const { limit, offset } = paginationSchema.parse(req.query ?? {});
+  const { data, total } = await dailyCheckInService.list(req.params.userId, { limit, offset });
+  sendPaginated(res, data, total, limit, offset);
+}));
+userDataRouter.post('/daily-check-ins', validateBody(createCheckInSchema), asyncHandler(async (req, res) => {
+  const item = await dailyCheckInService.create(req.params.userId, req.body);
+  sendCreated(res, item);
+}));
+userDataRouter.patch('/daily-check-ins/:id', validateBody(updateCheckInSchema), asyncHandler(async (req, res) => {
+  const item = await dailyCheckInService.update(req.params.userId, req.params.id, req.body);
+  sendJson(res, item);
+}));
+
+// Goals
+userDataRouter.get('/goals', asyncHandler(async (req, res) => {
+  const { limit, offset } = paginationSchema.parse(req.query ?? {});
+  const { data, total } = await goalService.list(req.params.userId, { limit, offset });
+  sendPaginated(res, data, total, limit, offset);
+}));
+userDataRouter.post('/goals', validateBody(createGoalSchema), asyncHandler(async (req, res) => {
+  const item = await goalService.create(req.params.userId, req.body);
+  sendCreated(res, item);
+}));
+userDataRouter.patch('/goals/:id', validateBody(updateGoalSchema), asyncHandler(async (req, res) => {
+  const item = await goalService.update(req.params.userId, req.params.id, req.body);
+  sendJson(res, item);
+}));
+userDataRouter.delete('/goals/:id', asyncHandler(async (req, res) => {
+  await goalService.remove(req.params.userId, req.params.id);
+  sendNoContent(res);
+}));
+
+router.use('/api/admin/users/:userId', userDataRouter);
 
 export default router;

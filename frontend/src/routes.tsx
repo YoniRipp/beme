@@ -19,6 +19,7 @@ const AdminActivityPage = lazy(() => import('./pages/admin/AdminActivityPage'));
 const AdminSystemPage = lazy(() => import('./pages/admin/AdminSystemPage'));
 const AdminImagesPage = lazy(() => import('./pages/admin/AdminImagesPage'));
 const AdminFoodsPage = lazy(() => import('./pages/admin/AdminFoodsPage'));
+const AdminUserDataPage = lazy(() => import('./pages/admin/AdminUserDataPage'));
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 const Insights = lazy(() => import('./pages/Insights').then((m) => ({ default: m.Insights })));
 const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })));
@@ -87,7 +88,7 @@ function AdminRouteGuard({ children }: { children: React.ReactNode }) {
 
 function TrainerRouteGuard({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const isTrainer = user?.role === 'trainer';
+  const isTrainer = user?.role === 'trainer' || user?.role === 'admin';
   if (!isTrainer) {
     return <Navigate to="/" replace />;
   }
@@ -194,6 +195,14 @@ function ProtectedAppRoutes() {
             element={
               <Suspense fallback={<LoadingSpinner text="Loading users..." />}>
                 <AdminUsersPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="user-data"
+            element={
+              <Suspense fallback={<LoadingSpinner text="Loading user data..." />}>
+                <AdminUserDataPage />
               </Suspense>
             }
           />
