@@ -18,7 +18,7 @@ export async function create(userId: string, body: CreateCheckInBody): Promise<D
     date: body.date,
     sleepHours: body.sleepHours,
   });
-  await publishEvent('energy.CheckInCreated', checkIn as unknown as Record<string, unknown>, userId);
+  await publishEvent('energy.CheckInCreated', checkIn , userId);
   return checkIn;
 }
 
@@ -30,7 +30,7 @@ export async function update(userId: string, id: string, body: UpdateCheckInBody
 
   const updated = await dailyCheckInModel.update(id, userId, updates);
   if (!updated) throw new NotFoundError('Daily check-in not found');
-  await publishEvent('energy.CheckInUpdated', updated as unknown as Record<string, unknown>, userId);
+  await publishEvent('energy.CheckInUpdated', updated , userId);
   return updated;
 }
 

@@ -3,7 +3,6 @@
     "beme": {
       "command": "node",
       "args": ["backend/mcp-server/index.js"],
-      "cwd": "d:/Downloads/Git/BMe",
       "env": {
         "BEME_API_URL": "http://localhost:3000"
       }

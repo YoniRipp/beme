@@ -47,6 +47,18 @@ export async function findByUserId(userId: string, startDate?: string, endDate?:
   return result.rows.map(rowToEntry);
 }
 
+export async function findById(userId: string, id: string, client?: pg.Pool | pg.PoolClient): Promise<WeightEntry | null> {
+  const db = client ?? getPool();
+  const result = await db.query('SELECT ' + RETURNING + ' FROM weight_entries WHERE id = $1 AND user_id = $2', [id, userId]);
+  return result.rows.length > 0 ? rowToEntry(result.rows[0]) : null;
+}
+
+export async function findByDate(userId: string, date: string, client?: pg.Pool | pg.PoolClient): Promise<WeightEntry | null> {
+  const db = client ?? getPool();
+  const result = await db.query('SELECT ' + RETURNING + ' FROM weight_entries WHERE user_id = $1 AND date = $2::date', [userId, date]);
+  return result.rows.length > 0 ? rowToEntry(result.rows[0]) : null;
+}
+
 export async function create(input: CreateWeightEntryInput, client?: pg.Pool | pg.PoolClient): Promise<WeightEntry> {
   const db = client ?? getPool();
   const result = await db.query(

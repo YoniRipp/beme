@@ -92,7 +92,7 @@ export async function initSchema() {
         type text NOT NULL,
         target numeric NOT NULL,
         period text NOT NULL,
-        user_id uuid REFERENCES users(id),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         created_at timestamptz DEFAULT now(),
         updated_at timestamptz DEFAULT now()
       );

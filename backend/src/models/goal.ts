@@ -43,6 +43,18 @@ export async function findByUserId(userId: string, pagination?: PaginationParams
   return { data: result.rows.map(rowToGoal), total };
 }
 
+export async function findById(userId: string, id: string, client?: pg.Pool | pg.PoolClient): Promise<Goal | null> {
+  const db = client ?? getPool('goals');
+  const result = await db.query('SELECT ' + RETURNING + ' FROM goals WHERE id = $1 AND user_id = $2', [id, userId]);
+  return result.rows.length > 0 ? rowToGoal(result.rows[0]) : null;
+}
+
+export async function findByType(userId: string, type: string, client?: pg.Pool | pg.PoolClient): Promise<Goal | null> {
+  const db = client ?? getPool('goals');
+  const result = await db.query('SELECT ' + RETURNING + ' FROM goals WHERE user_id = $1 AND type = $2 LIMIT 1', [userId, type]);
+  return result.rows.length > 0 ? rowToGoal(result.rows[0]) : null;
+}
+
 export async function create(input: CreateGoalInput, client?: pg.Pool | pg.PoolClient): Promise<Goal> {
   const db = client ?? getPool('goals');
   const result = await db.query(

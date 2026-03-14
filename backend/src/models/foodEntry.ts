@@ -58,6 +58,18 @@ export async function findByUserId(userId: string, pagination?: PaginationParams
   return { data: result.rows.map(rowToEntry), total };
 }
 
+export async function findById(userId: string, id: string, client?: pg.Pool | pg.PoolClient): Promise<FoodEntry | null> {
+  const db = client ?? getPool('energy');
+  const result = await db.query('SELECT ' + RETURNING + ' FROM food_entries WHERE id = $1 AND user_id = $2', [id, userId]);
+  return result.rows.length > 0 ? rowToEntry(result.rows[0]) : null;
+}
+
+export async function findByName(userId: string, name: string, client?: pg.Pool | pg.PoolClient): Promise<FoodEntry | null> {
+  const db = client ?? getPool('energy');
+  const result = await db.query('SELECT ' + RETURNING + ' FROM food_entries WHERE user_id = $1 AND LOWER(name) LIKE $2 ORDER BY date DESC LIMIT 1', [userId, `%${name.toLowerCase()}%`]);
+  return result.rows.length > 0 ? rowToEntry(result.rows[0]) : null;
+}
+
 export async function create(input: CreateFoodEntryInput, client?: pg.Pool | pg.PoolClient): Promise<FoodEntry> {
   const db = client ?? getPool('energy');
   const result = await db.query(

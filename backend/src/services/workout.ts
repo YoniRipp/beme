@@ -23,8 +23,8 @@ export async function create(userId: string, body: CreateWorkoutBody): Promise<W
     exercises: body.exercises,
     notes: body.notes ?? undefined,
   });
-  await publishEvent('body.WorkoutCreated', workout as unknown as Record<string, unknown>, userId);
-  upsertEmbedding(userId, 'workout', workout.id, buildEmbeddingText('workout', workout as unknown as Record<string, unknown>));
+  await publishEvent('body.WorkoutCreated', workout , userId);
+  upsertEmbedding(userId, 'workout', workout.id, buildEmbeddingText('workout', workout ));
   return workout;
 }
 
@@ -40,8 +40,8 @@ export async function update(userId: string, id: string, body: UpdateWorkoutBody
 
   const updated = await workoutModel.update(id, userId, updates);
   if (!updated) throw new NotFoundError('Workout not found');
-  await publishEvent('body.WorkoutUpdated', updated as unknown as Record<string, unknown>, userId);
-  upsertEmbedding(userId, 'workout', updated.id, buildEmbeddingText('workout', updated as unknown as Record<string, unknown>));
+  await publishEvent('body.WorkoutUpdated', updated , userId);
+  upsertEmbedding(userId, 'workout', updated.id, buildEmbeddingText('workout', updated ));
   return updated;
 }
 

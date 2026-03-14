@@ -19,7 +19,7 @@ export async function create(userId: string, body: CreateGoalBody): Promise<Goal
     target: body.target,
     period: body.period,
   });
-  await publishEvent('goals.GoalCreated', goal as unknown as Record<string, unknown>, userId);
+  await publishEvent('goals.GoalCreated', goal , userId);
   return goal;
 }
 
@@ -32,7 +32,7 @@ export async function update(userId: string, id: string, body: UpdateGoalBody): 
 
   const updated = await goalModel.update(id, userId, updates);
   if (!updated) throw new NotFoundError('Goal not found');
-  await publishEvent('goals.GoalUpdated', updated as unknown as Record<string, unknown>, userId);
+  await publishEvent('goals.GoalUpdated', updated , userId);
   return updated;
 }
 

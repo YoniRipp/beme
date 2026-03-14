@@ -27,32 +27,33 @@ export async function embed(text: string) {
  * @param {'workout'|'food_entry'} type
  * @param {object} record
  */
-export function buildEmbeddingText(type: string, record: Record<string, unknown>) {
+export function buildEmbeddingText(type: string, record: Record<string, unknown> | object) {
+  const rec = record as Record<string, unknown>;
   switch (type) {
     case 'workout':
       return [
-        `Workout: ${record.title}`,
-        `type: ${record.type}`,
-        `duration: ${record.durationMinutes} minutes`,
-        `on ${record.date}`,
-        record.notes ?? '',
-        Array.isArray(record.exercises)
-          ? (record.exercises as Array<Record<string, unknown>>).map((e: Record<string, unknown>) => `${e.name} ${e.sets}x${e.reps}${e.weight ? ` @${e.weight}kg` : ''}`).join(', ')
+        `Workout: ${rec.title}`,
+        `type: ${rec.type}`,
+        `duration: ${rec.durationMinutes} minutes`,
+        `on ${rec.date}`,
+        rec.notes ?? '',
+        Array.isArray(rec.exercises)
+          ? (rec.exercises as Array<Record<string, unknown>>).map((e: Record<string, unknown>) => `${e.name} ${e.sets}x${e.reps}${e.weight ? ` @${e.weight}kg` : ''}`).join(', ')
           : '',
       ].filter(Boolean).join('. ');
 
     case 'food_entry':
       return [
-        `Food: ${record.name}`,
-        `${record.calories} kcal`,
-        `protein ${record.protein}g`,
-        `carbs ${record.carbs}g`,
-        `fat ${record.fats}g`,
-        `on ${record.date}`,
+        `Food: ${rec.name}`,
+        `${rec.calories} kcal`,
+        `protein ${rec.protein}g`,
+        `carbs ${rec.carbs}g`,
+        `fat ${rec.fats}g`,
+        `on ${rec.date}`,
       ].filter(Boolean).join(', ');
 
     default:
-      return JSON.stringify(record);
+      return JSON.stringify(rec);
   }
 }
 

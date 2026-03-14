@@ -3,6 +3,7 @@
  * Validated at startup with Zod.
  */
 
+import crypto from 'node:crypto';
 import dotenv from 'dotenv';
 import { logger } from '../lib/logger.js';
 import path from 'path';
@@ -75,9 +76,9 @@ const configSchema = z.object({
 
 const PORT = process.env.PORT;
 const DATABASE_URL = process.env.DATABASE_URL;
-const JWT_SECRET = process.env.JWT_SECRET || (isProduction ? null : 'dev-secret-change-in-production');
-if (JWT_SECRET === 'dev-secret-change-in-production') {
-  logger.warn('JWT_SECRET is using development default; set a real secret for production');
+const JWT_SECRET = process.env.JWT_SECRET || (isProduction ? null : crypto.randomUUID());
+if (!process.env.JWT_SECRET && !isProduction) {
+  logger.warn('JWT_SECRET not set; using ephemeral random secret (sessions will not survive restarts)');
 }
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || process.env.CORS_ORIGIN;
 const CORS_ORIGIN = process.env.CORS_ORIGIN != null && process.env.CORS_ORIGIN !== ''
@@ -134,7 +135,7 @@ const rawConfig = {
   lemonSqueezyVariantIdYearly: process.env.LEMONSQUEEZY_VARIANT_ID_YEARLY,
   whatsappAccessToken: process.env.WHATSAPP_ACCESS_TOKEN,
   whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
-  whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'beme-whatsapp-verify',
+  whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN || (isProduction ? undefined : 'beme-whatsapp-verify'),
   whatsappBusinessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
 };
 

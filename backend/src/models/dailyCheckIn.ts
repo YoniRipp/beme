@@ -40,6 +40,12 @@ export async function findByUserId(userId: string, pagination?: PaginationParams
   return { data: result.rows.map(rowToCheckIn), total };
 }
 
+export async function findByDate(userId: string, date: string, client?: pg.Pool | pg.PoolClient): Promise<DailyCheckIn | null> {
+  const db = client ?? getPool('energy');
+  const result = await db.query('SELECT ' + RETURNING + ' FROM daily_check_ins WHERE user_id = $1 AND date = $2::date', [userId, date]);
+  return result.rows.length > 0 ? rowToCheckIn(result.rows[0]) : null;
+}
+
 export async function create(input: CreateCheckInInput, client?: pg.Pool | pg.PoolClient): Promise<DailyCheckIn> {
   const db = client ?? getPool('energy');
   const result = await db.query(

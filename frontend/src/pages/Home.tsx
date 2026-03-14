@@ -59,6 +59,7 @@ export function Home() {
 
   const todayCheckIn = useMemo(
     () => getCheckInByDate(new Date()),
+    // checkIns triggers recalculation when underlying data changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [getCheckInByDate, checkIns]
   );

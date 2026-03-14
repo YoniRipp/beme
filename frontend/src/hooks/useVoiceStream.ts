@@ -46,11 +46,13 @@ export function useVoiceStream(): UseVoiceStreamReturn {
   // Promise that resolves when the 'done' message arrives
   const doneResolveRef = useRef<((transcript: string) => void) | null>(null);
   const doneRejectRef = useRef<((err: Error) => void) | null>(null);
+  const doneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      if (doneTimeoutRef.current) { clearTimeout(doneTimeoutRef.current); doneTimeoutRef.current = null; }
       cleanup();
     };
   }, []);
@@ -192,6 +194,7 @@ export function useVoiceStream(): UseVoiceStreamReturn {
             }
             lastResultRef.current = result;
             if (isMountedRef.current) setIsProcessing(false);
+            if (doneTimeoutRef.current) { clearTimeout(doneTimeoutRef.current); doneTimeoutRef.current = null; }
             doneResolveRef.current?.(
               result.actions[0]?.intent !== 'unknown'
                 ? `Processed: ${result.actions[0]?.intent}`
@@ -204,6 +207,7 @@ export function useVoiceStream(): UseVoiceStreamReturn {
           if (msg.type === 'error') {
             console.error(TAG, 'ws error message:', msg.message);
             if (isMountedRef.current) setIsProcessing(false);
+            if (doneTimeoutRef.current) { clearTimeout(doneTimeoutRef.current); doneTimeoutRef.current = null; }
             doneRejectRef.current?.(new Error(msg.message ?? 'Voice processing failed'));
             doneResolveRef.current = null;
             doneRejectRef.current = null;
@@ -215,6 +219,7 @@ export function useVoiceStream(): UseVoiceStreamReturn {
 
       ws.onerror = (ev) => {
         console.error(TAG, 'WebSocket ERROR during streaming', ev);
+        if (doneTimeoutRef.current) { clearTimeout(doneTimeoutRef.current); doneTimeoutRef.current = null; }
         doneRejectRef.current?.(new Error('WebSocket error during streaming'));
         cleanup();
         if (isMountedRef.current) {
@@ -225,6 +230,7 @@ export function useVoiceStream(): UseVoiceStreamReturn {
 
       ws.onclose = (ev) => {
         console.log(TAG, 'WebSocket CLOSED — code:', ev.code, 'reason:', ev.reason);
+        if (doneTimeoutRef.current) { clearTimeout(doneTimeoutRef.current); doneTimeoutRef.current = null; }
         doneRejectRef.current?.(new Error('Connection closed'));
         doneResolveRef.current = null;
         doneRejectRef.current = null;
@@ -311,12 +317,13 @@ export function useVoiceStream(): UseVoiceStreamReturn {
       doneRejectRef.current = reject;
 
       // Timeout fallback
-      setTimeout(() => {
+      doneTimeoutRef.current = setTimeout(() => {
         if (doneResolveRef.current) {
           console.error(TAG, 'stopListening TIMEOUT (15s) — server never sent done');
           doneRejectRef.current?.(new Error('Voice streaming timed out'));
           doneResolveRef.current = null;
           doneRejectRef.current = null;
+          doneTimeoutRef.current = null;
           cleanup();
           if (isMountedRef.current) setIsProcessing(false);
         }

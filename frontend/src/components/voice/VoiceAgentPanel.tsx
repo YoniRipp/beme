@@ -13,7 +13,8 @@ import { useWorkouts } from '@/hooks/useWorkouts';
 import { useGoals } from '@/hooks/useGoals';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { executeVoiceAction, type VoiceExecutorContext } from '@/lib/voiceActionExecutor';
-import { queryKeys } from '@/lib/queryClient';
+import { invalidateAllData } from '@/lib/invalidateAllData';
+import { extractErrorMessage } from '@/lib/errorMessage';
 import { toast } from '@/components/shared/ToastProvider';
 import { LocalErrorBoundary } from '@/components/shared/LocalErrorBoundary';
 
@@ -76,7 +77,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
     try {
       await startListening();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Could not start recording. Please check microphone permissions.';
+      const msg = extractErrorMessage(e, 'Could not start recording. Please check microphone permissions.');
       setError(msg);
       toast.error('Microphone', { description: msg });
     }
@@ -100,10 +101,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
           if (r.success) succeeded.push(r.message ?? r.intent);
           else failed.push(r.message ?? 'Could not complete action. Please try again.');
         }
-        await queryClient.invalidateQueries({ queryKey: queryKeys.workouts });
-        await queryClient.invalidateQueries({ queryKey: queryKeys.foodEntries });
-        await queryClient.invalidateQueries({ queryKey: queryKeys.checkIns });
-        await queryClient.invalidateQueries({ queryKey: queryKeys.goals });
+        await invalidateAllData(queryClient);
       } else {
         for (const action of result.actions) {
           if (action.intent === 'unknown') {
@@ -115,7 +113,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
             if (r.success) succeeded.push(r.message ?? action.intent);
             else failed.push(r.message ?? 'Could not complete action. Please try again.');
           } catch (e) {
-            failed.push(e instanceof Error ? e.message : 'Could not complete action. Please try again.');
+            failed.push(extractErrorMessage(e, 'Could not complete action. Please try again.'));
           }
         }
       }
@@ -130,7 +128,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
         setError(failed[0]);
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Network or server error. Please try again.';
+      const msg = extractErrorMessage(e, 'Network or server error. Please try again.');
       setError(msg);
       toast.error('Voice processing failed', { description: msg });
     }

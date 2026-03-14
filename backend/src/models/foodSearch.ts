@@ -5,6 +5,7 @@
 import { Pool } from 'pg';
 import { getPool } from '../db/pool.js';
 import { escapeLike } from '../utils/escapeLike.js';
+import { logger } from '../lib/logger.js';
 
 const REFERENCE_GRAMS = 100;
 
@@ -304,8 +305,8 @@ export async function search(q: string, limit = 10) {
       LIMIT $3`;
     const result = await pool.query(sql, allValues);
     return result.rows.map(rowToResult);
-  } catch {
-    // Fallback tier 1: no pg_trgm / name_tsv / common_name / search_aliases
+  } catch (err) {
+    logger.debug({ err, query }, 'Food search: falling back to tier 1 (no pg_trgm/tsv/common_name)');
     const fbNm = wordSplitLike('lower(name)', words, 4);
     const fbValues = [query, escapeLike(query) + '%', limit, ...fbNm.values];
 
@@ -323,8 +324,8 @@ export async function search(q: string, limit = 10) {
         LIMIT $3`;
       const result = await pool.query(sql, fbValues);
       return result.rows.map(rowToResult);
-    } catch {
-      // Fallback tier 2: only baseline columns
+    } catch (err2) {
+      logger.debug({ err: err2, query }, 'Food search: falling back to tier 2 (baseline columns only)');
       const sql = `
         SELECT id, name, calories, protein, carbs, fat, is_liquid, serving_sizes_ml, preparation, image_url
         FROM foods

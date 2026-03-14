@@ -48,6 +48,18 @@ export async function findByUserId(userId: string, pagination?: PaginationParams
   return { data: result.rows.map(rowToWorkout), total };
 }
 
+export async function findById(userId: string, id: string, client?: pg.Pool | pg.PoolClient): Promise<Workout | null> {
+  const db = client ?? getPool('body');
+  const result = await db.query('SELECT ' + RETURNING + ' FROM workouts WHERE id = $1 AND user_id = $2', [id, userId]);
+  return result.rows.length > 0 ? rowToWorkout(result.rows[0]) : null;
+}
+
+export async function findByTitle(userId: string, title: string, client?: pg.Pool | pg.PoolClient): Promise<Workout | null> {
+  const db = client ?? getPool('body');
+  const result = await db.query('SELECT ' + RETURNING + ' FROM workouts WHERE user_id = $1 AND LOWER(title) LIKE $2 ORDER BY date DESC LIMIT 1', [userId, `%${title.toLowerCase()}%`]);
+  return result.rows.length > 0 ? rowToWorkout(result.rows[0]) : null;
+}
+
 export async function create(input: CreateWorkoutInput, client?: pg.Pool | pg.PoolClient): Promise<Workout> {
   const db = client ?? getPool('body');
   const result = await db.query(

@@ -6,6 +6,7 @@ import { NotFoundError, ValidationError } from '../errors.js';
 import * as foodEntryModel from '../models/foodEntry.js';
 import { publishEvent } from '../events/publish.js';
 import { upsertEmbedding, buildEmbeddingText, deleteEmbedding } from './embeddings.js';
+import { logger } from '../lib/logger.js';
 import type { FoodEntry, UpdateFoodEntryInput, PaginationParams } from '../types/domain.js';
 import type { CreateFoodEntryBody, UpdateFoodEntryBody } from '../schemas/routeSchemas.js';
 
@@ -28,8 +29,9 @@ export async function create(userId: string, body: CreateFoodEntryBody): Promise
     startTime: body.startTime ?? undefined,
     endTime: body.endTime ?? undefined,
   });
-  await publishEvent('energy.FoodEntryCreated', entry as unknown as Record<string, unknown>, userId);
-  upsertEmbedding(userId, 'food_entry', entry.id, buildEmbeddingText('food_entry', entry as unknown as Record<string, unknown>));
+  await publishEvent('energy.FoodEntryCreated', entry , userId);
+  upsertEmbedding(userId, 'food_entry', entry.id, buildEmbeddingText('food_entry', entry ))
+    .catch((err) => logger.warn({ err, entryId: entry.id }, 'Failed to upsert food entry embedding'));
   return entry;
 }
 
@@ -50,8 +52,9 @@ export async function update(userId: string, id: string, body: UpdateFoodEntryBo
 
   const updated = await foodEntryModel.update(id, userId, updates);
   if (!updated) throw new NotFoundError('Food entry not found');
-  await publishEvent('energy.FoodEntryUpdated', updated as unknown as Record<string, unknown>, userId);
-  upsertEmbedding(userId, 'food_entry', updated.id, buildEmbeddingText('food_entry', updated as unknown as Record<string, unknown>));
+  await publishEvent('energy.FoodEntryUpdated', updated , userId);
+  upsertEmbedding(userId, 'food_entry', updated.id, buildEmbeddingText('food_entry', updated ))
+    .catch((err) => logger.warn({ err, entryId: updated.id }, 'Failed to upsert food entry embedding'));
   return updated;
 }
 
@@ -60,5 +63,6 @@ export async function remove(userId: string, id: string): Promise<void> {
   const deleted = await foodEntryModel.deleteById(id, userId);
   if (!deleted) throw new NotFoundError('Food entry not found');
   await publishEvent('energy.FoodEntryDeleted', { id }, userId);
-  deleteEmbedding(id, 'food_entry');
+  deleteEmbedding(id, 'food_entry')
+    .catch((err) => logger.warn({ err, entryId: id }, 'Failed to delete food entry embedding'));
 }
