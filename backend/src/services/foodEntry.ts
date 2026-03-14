@@ -7,7 +7,8 @@ import * as foodEntryModel from '../models/foodEntry.js';
 import { publishEvent } from '../events/publish.js';
 import { upsertEmbedding, buildEmbeddingText, deleteEmbedding } from './embeddings.js';
 import type { FoodEntry, UpdateFoodEntryInput, PaginationParams } from '../types/domain.js';
-import type { CreateFoodEntryBody, UpdateFoodEntryBody } from '../schemas/routeSchemas.js';
+import { getPool } from '../db/pool.js';
+import type { CreateFoodEntryBody, UpdateFoodEntryBody, CreateFoodEntriesBatchBody } from '../schemas/routeSchemas.js';
 
 export async function list(userId: string, pagination?: PaginationParams) {
   return foodEntryModel.findByUserId(userId, pagination);
@@ -53,6 +54,67 @@ export async function update(userId: string, id: string, body: UpdateFoodEntryBo
   await publishEvent('energy.FoodEntryUpdated', updated as unknown as Record<string, unknown>, userId);
   upsertEmbedding(userId, 'food_entry', updated.id, buildEmbeddingText('food_entry', updated as unknown as Record<string, unknown>));
   return updated;
+}
+
+export async function createBatch(userId: string, body: CreateFoodEntriesBatchBody): Promise<FoodEntry[]> {
+  const pool = getPool('energy');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const created: FoodEntry[] = [];
+    for (const item of body.entries) {
+      const entry = await foodEntryModel.create({
+        userId,
+        date: body.date,
+        name: item.name,
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fats: item.fats,
+        portionAmount: item.portionAmount ?? undefined,
+        portionUnit: item.portionUnit ?? undefined,
+        servingType: item.servingType ?? undefined,
+        startTime: item.startTime ?? undefined,
+        endTime: item.endTime ?? undefined,
+      }, client);
+      created.push(entry);
+    }
+    await client.query('COMMIT');
+    // Fire-and-forget: publish events and upsert embeddings after commit
+    for (const entry of created) {
+      publishEvent('energy.FoodEntryCreated', entry as unknown as Record<string, unknown>, userId);
+      upsertEmbedding(userId, 'food_entry', entry.id, buildEmbeddingText('food_entry', entry as unknown as Record<string, unknown>));
+    }
+    return created;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function duplicateDay(userId: string, sourceDate: string, targetDate: string): Promise<FoodEntry[]> {
+  const { data: sourceEntries } = await foodEntryModel.findByUserId(userId, undefined, undefined);
+  const dayEntries = sourceEntries.filter((e) => e.date === sourceDate);
+  if (dayEntries.length === 0) {
+    throw new ValidationError('No food entries found for the source date');
+  }
+  return createBatch(userId, {
+    date: targetDate,
+    entries: dayEntries.map((e) => ({
+      name: e.name,
+      calories: e.calories,
+      protein: e.protein,
+      carbs: e.carbs,
+      fats: e.fats,
+      portionAmount: e.portionAmount,
+      portionUnit: e.portionUnit,
+      servingType: e.servingType,
+      startTime: e.startTime,
+      endTime: e.endTime,
+    })),
+  });
 }
 
 export async function remove(userId: string, id: string): Promise<void> {

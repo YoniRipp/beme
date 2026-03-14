@@ -5,6 +5,8 @@ import { FoodEntry, type DailyCheckIn } from '@/types/energy';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { SleepEditModal } from '@/components/energy/SleepEditModal';
 import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
+import { BulkFoodEntryModal } from '@/components/energy/BulkFoodEntryModal';
+import { DuplicateDayDialog } from '@/components/energy/DuplicateDayDialog';
 import { FoodCard } from '@/components/energy/FoodCard';
 import { MacroCircles } from '@/components/home/MacroCircles';
 import { MacroGoalModal } from '@/components/home/MacroGoalModal';
@@ -14,7 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import { PeriodSelector } from '@/components/shared/PeriodSelector';
-import { Moon, Trash2, Pencil, ChevronDown, Plus } from 'lucide-react';
+import { Moon, Trash2, Pencil, ChevronDown, Plus, ClipboardList, Copy } from 'lucide-react';
 import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
 
@@ -213,7 +215,7 @@ function MealSection({
 }
 
 export function Energy() {
-  const { checkIns, foodEntries, energyLoading, addCheckIn, updateCheckIn, deleteCheckIn, addFoodEntry, updateFoodEntry, deleteFoodEntry } = useEnergy();
+  const { checkIns, foodEntries, energyLoading, addCheckIn, updateCheckIn, deleteCheckIn, addFoodEntry, updateFoodEntry, deleteFoodEntry, addFoodEntriesBatch, duplicateDay } = useEnergy();
   const { macroGoals, setMacroGoals, calorieGoal } = useMacroGoals();
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<DailyCheckIn | undefined>(undefined);
@@ -224,6 +226,8 @@ export function Energy() {
   const [sleepPeriod, setSleepPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
 
   const today = useMemo(() => new Date(), []);
 
@@ -460,6 +464,30 @@ export function Energy() {
 
       {/* Food entries */}
       <div className="space-y-3">
+        {/* Action buttons */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setBulkModalOpen(true)}
+          >
+            <ClipboardList className="w-4 h-4" />
+            Add Menu
+          </Button>
+          {caloriePeriod === 'daily' && periodFoodEntries.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setDuplicateDialogOpen(true)}
+            >
+              <Copy className="w-4 h-4" />
+              Copy Day
+            </Button>
+          )}
+        </div>
+
         {periodFoodEntries.length === 0 ? (
           <EmptyStateCard
             onClick={handleAddFood}
@@ -618,6 +646,22 @@ export function Energy() {
         goals={macroGoals}
         onSave={setMacroGoals}
       />
+
+      <BulkFoodEntryModal
+        open={bulkModalOpen}
+        onOpenChange={setBulkModalOpen}
+        onSave={addFoodEntriesBatch}
+      />
+
+      {caloriePeriod === 'daily' && (
+        <DuplicateDayDialog
+          open={duplicateDialogOpen}
+          onOpenChange={setDuplicateDialogOpen}
+          sourceDate={today}
+          entryCount={periodFoodEntries.length}
+          onDuplicate={duplicateDay}
+        />
+      )}
     </div>
   );
 }

@@ -130,6 +130,40 @@ export function useEnergy() {
     },
   });
 
+  const addFoodEntriesBatchMutation = useMutation({
+    mutationFn: (body: { date: string; entries: Array<Omit<FoodEntry, 'id' | 'date'> & { startTime?: string; endTime?: string }> }) =>
+      foodEntriesApi.addBatch({
+        date: body.date,
+        entries: body.entries.map((e) => ({
+          name: e.name,
+          calories: e.calories,
+          protein: e.protein,
+          carbs: e.carbs,
+          fats: e.fats,
+          ...(e.portionAmount != null && { portionAmount: e.portionAmount }),
+          ...(e.portionUnit && { portionUnit: e.portionUnit }),
+          ...(e.servingType && { servingType: e.servingType }),
+          ...(e.startTime && { startTime: e.startTime }),
+          ...(e.endTime && { endTime: e.endTime }),
+        })),
+      }),
+    onSuccess: (created) => {
+      queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
+        prev ? [...prev, ...created.map(apiFoodEntryToFoodEntry)] : created.map(apiFoodEntryToFoodEntry)
+      );
+    },
+  });
+
+  const duplicateDayMutation = useMutation({
+    mutationFn: ({ sourceDate, targetDate }: { sourceDate: string; targetDate: string }) =>
+      foodEntriesApi.duplicateDay(sourceDate, targetDate),
+    onSuccess: (created) => {
+      queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
+        prev ? [...prev, ...created.map(apiFoodEntryToFoodEntry)] : created.map(apiFoodEntryToFoodEntry)
+      );
+    },
+  });
+
   const addCheckIn = useCallback(
     (checkIn: Omit<DailyCheckIn, 'id'>): Promise<void> =>
       addCheckInMutation.mutateAsync(checkIn).then(() => undefined),
@@ -161,6 +195,17 @@ export function useEnergy() {
     [deleteFoodEntryMutation]
   );
 
+  const addFoodEntriesBatch = useCallback(
+    (body: { date: string; entries: Array<Omit<FoodEntry, 'id' | 'date'> & { startTime?: string; endTime?: string }> }): Promise<void> =>
+      addFoodEntriesBatchMutation.mutateAsync(body).then(() => undefined),
+    [addFoodEntriesBatchMutation]
+  );
+  const duplicateDay = useCallback(
+    (sourceDate: string, targetDate: string): Promise<void> =>
+      duplicateDayMutation.mutateAsync({ sourceDate, targetDate }).then(() => undefined),
+    [duplicateDayMutation]
+  );
+
   const getCheckInById = useCallback((id: string) => checkIns.find((c) => c.id === id), [checkIns]);
   const getCheckInByDate = useCallback(
     (date: Date) => checkIns.find((c) => c.date.toDateString() === date.toDateString()),
@@ -186,5 +231,7 @@ export function useEnergy() {
     updateFoodEntry,
     deleteFoodEntry,
     getFoodEntryById,
+    addFoodEntriesBatch,
+    duplicateDay,
   };
 }

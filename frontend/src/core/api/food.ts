@@ -30,6 +30,28 @@ export const foodEntriesApi = {
   update: (id: string, updates: Partial<Omit<ApiFoodEntry, 'id'>>) =>
     request<ApiFoodEntry>(`/api/food-entries/${id}`, { method: 'PATCH', body: updates }),
   delete: (id: string) => request<void>(`/api/food-entries/${id}`, { method: 'DELETE' }),
+
+  addBatch: (body: {
+    date: string;
+    entries: Array<{
+      name: string;
+      calories: number;
+      protein: number;
+      carbs: number;
+      fats: number;
+      portionAmount?: number;
+      portionUnit?: string;
+      servingType?: string;
+      startTime?: string;
+      endTime?: string;
+    }>;
+  }) => request<ApiFoodEntry[]>('/api/food-entries/batch', { method: 'POST', body }),
+
+  duplicateDay: (sourceDate: string, targetDate: string) =>
+    request<ApiFoodEntry[]>('/api/food-entries/duplicate-day', {
+      method: 'POST',
+      body: { sourceDate, targetDate },
+    }),
 };
 
 export interface ApiDailyCheckIn {

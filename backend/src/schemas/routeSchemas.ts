@@ -80,6 +80,30 @@ export const updateFoodEntrySchema = z.object({
   endTime: timeString,
 }).strict().refine((obj) => Object.keys(obj).length > 0, 'At least one field required');
 
+// ─── Food entry batch schemas ─────────────────────────────
+const batchFoodEntryItem = z.object({
+  name: z.string().min(1).max(500).transform((s) => s.trim()),
+  calories: z.number().min(0).max(99999).default(0),
+  protein: z.number().min(0).max(99999).default(0),
+  carbs: z.number().min(0).max(99999).default(0),
+  fats: z.number().min(0).max(99999).default(0),
+  portionAmount: z.number().min(0).max(99999).optional().nullable(),
+  portionUnit: z.string().max(50).optional().nullable(),
+  servingType: z.string().max(50).optional().nullable(),
+  startTime: timeString,
+  endTime: timeString,
+});
+
+export const createFoodEntriesBatchSchema = z.object({
+  date: dateString,
+  entries: z.array(batchFoodEntryItem).min(1).max(50),
+});
+
+export const duplicateDaySchema = z.object({
+  sourceDate: dateString,
+  targetDate: dateString,
+});
+
 // ─── Daily check-in schemas ────────────────────────────────
 export const createCheckInSchema = z.object({
   date: dateString,
@@ -178,3 +202,5 @@ export type UpdateWeightEntryBody = z.infer<typeof updateWeightEntrySchema>;
 export type UpsertWaterEntryBody = z.infer<typeof upsertWaterEntrySchema>;
 export type CreateCycleEntryBody = z.infer<typeof createCycleEntrySchema>;
 export type UpdateCycleEntryBody = z.infer<typeof updateCycleEntrySchema>;
+export type CreateFoodEntriesBatchBody = z.infer<typeof createFoodEntriesBatchSchema>;
+export type DuplicateDayBody = z.infer<typeof duplicateDaySchema>;

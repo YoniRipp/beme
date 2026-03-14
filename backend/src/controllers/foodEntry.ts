@@ -27,6 +27,18 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
   sendJson(res, item);
 });
 
+export const addBatch = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getEffectiveUserId(req);
+  const items = await foodEntryService.createBatch(userId, req.body);
+  sendCreated(res, items);
+});
+
+export const duplicateDay = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getEffectiveUserId(req);
+  const items = await foodEntryService.duplicateDay(userId, req.body.sourceDate, req.body.targetDate);
+  sendCreated(res, items);
+});
+
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   const userId = getEffectiveUserId(req);
   await foodEntryService.remove(userId, req.params.id as string);
