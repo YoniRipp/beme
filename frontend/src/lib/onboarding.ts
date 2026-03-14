@@ -1,7 +1,6 @@
 import { storage } from './storage';
 
 const ONBOARDING_KEY = 'beme_onboarding_completed';
-const WELCOME_KEY = 'beme_welcome_completed';
 
 export interface OnboardingStep {
   target: string; // CSS selector or element ID
@@ -70,16 +69,3 @@ export function resetOnboarding(): void {
   storage.remove(ONBOARDING_KEY);
 }
 
-/**
- * Check if welcome slides have been completed
- */
-export function isWelcomeCompleted(): boolean {
-  return storage.get<boolean>(WELCOME_KEY) || false;
-}
-
-/**
- * Mark welcome slides as completed
- */
-export function completeWelcome(): void {
-  storage.set(WELCOME_KEY, true);
-}

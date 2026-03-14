@@ -18,9 +18,8 @@ import { WaterTracker } from '@/components/home/WaterTracker';
 import { WeightProgress } from '@/components/home/WeightProgress';
 import { CycleTracker } from '@/components/home/CycleTracker';
 import { SetupWizard } from '@/components/onboarding/SetupWizard';
-import { WelcomeSlides } from '@/components/onboarding/WelcomeSlides';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
-import { isOnboardingCompleted, isWelcomeCompleted, completeWelcome } from '@/lib/onboarding';
+import { isOnboardingCompleted } from '@/lib/onboarding';
 import { useProfile } from '@/hooks/useProfile';
 import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
@@ -43,7 +42,6 @@ export function Home() {
   const [workoutModalOpen, setWorkoutModalOpen] = useState(false);
   const [foodModalOpen, setFoodModalOpen] = useState(false);
   const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
-  const [welcomeDone, setWelcomeDone] = useState(() => isWelcomeCompleted());
   const [showTour] = useState(() => !isOnboardingCompleted());
 
   const handleGoalSave = (goal: Omit<Goal, 'id' | 'createdAt'>) => {
@@ -126,11 +124,8 @@ export function Home() {
 
   const calPct = calGoalTarget > 0 ? Math.min(todaySummary.totalCal / calGoalTarget, 1) : 0;
 
-  // Onboarding flow: WelcomeSlides → SetupWizard → OnboardingTour → Dashboard
+  // Onboarding flow: SetupWizard → OnboardingTour → Dashboard
   if (!profileLoading && !profile.setupCompleted) {
-    if (!welcomeDone) {
-      return <WelcomeSlides onComplete={() => { completeWelcome(); setWelcomeDone(true); }} />;
-    }
     return <SetupWizard onComplete={() => window.location.reload()} />;
   }
 
