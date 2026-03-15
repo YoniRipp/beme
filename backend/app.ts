@@ -67,7 +67,7 @@ export async function createApp() {
   const corsOrigin = config.corsOrigin;
   const corsOptions = { origin: corsOrigin, credentials: true };
   app.use(cors(corsOptions));
-  logger.info({ corsOrigin: config.corsOrigin, nodeEnv: process.env.NODE_ENV }, 'CORS configured');
+  logger.info({ corsOrigin: config.corsOrigin, frontendOrigin: config.frontendOrigin, nodeEnv: process.env.NODE_ENV }, 'CORS configured');
   app.use(helmet({ crossOriginOpenerPolicy: false }));
   app.use(compression());
   app.use(cookieParser());
