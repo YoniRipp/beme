@@ -79,14 +79,23 @@ const JWT_SECRET = process.env.JWT_SECRET || (isProduction ? null : 'dev-secret-
 if (JWT_SECRET === 'dev-secret-change-in-production') {
   logger.warn('JWT_SECRET is using development default; set a real secret for production');
 }
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || process.env.CORS_ORIGIN;
-const CORS_ORIGIN = process.env.CORS_ORIGIN != null && process.env.CORS_ORIGIN !== ''
-  ? process.env.CORS_ORIGIN
-  : (isProduction ? FRONTEND_ORIGIN : true);
+// Clean up CORS origins — trim whitespace and trailing slashes to prevent subtle mismatches
+const rawCorsOrigin = process.env.CORS_ORIGIN?.trim().replace(/\/+$/, '');
+const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN?.trim().replace(/\/+$/, '')) || rawCorsOrigin;
+const CORS_ORIGIN: string | string[] | boolean = (() => {
+  if (rawCorsOrigin != null && rawCorsOrigin !== '') {
+    // Support comma-separated origins (e.g. "https://app.example.com,https://staging.example.com")
+    if (rawCorsOrigin.includes(',')) {
+      return rawCorsOrigin.split(',').map(o => o.trim().replace(/\/+$/, ''));
+    }
+    return rawCorsOrigin;
+  }
+  return isProduction ? (FRONTEND_ORIGIN ?? true) : true;
+})();
 if (isProduction && (CORS_ORIGIN === true || CORS_ORIGIN === 'true')) {
   throw new Error('CORS_ORIGIN must be an explicit origin in production, not true');
 }
-if (isProduction && !process.env.CORS_ORIGIN) {
+if (isProduction && !rawCorsOrigin) {
   throw new Error('CORS_ORIGIN must be explicitly set in production for security.');
 }
 
