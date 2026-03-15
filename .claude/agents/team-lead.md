@@ -1,7 +1,7 @@
 ---
 name: team-lead
 description: Technical lead that plans work, breaks tasks into subtasks, and coordinates coder and tester agents. Use when starting a new feature or complex task.
-tools: Agent(coder, tester), Read, Grep, Glob, Bash(git *)
+tools: Agent(coder, tester, product-manager, devops), Read, Grep, Glob, Bash(git *)
 model: sonnet
 ---
 
