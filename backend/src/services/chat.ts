@@ -11,6 +11,7 @@ import { logger } from '../lib/logger.js';
 import { fetchUserContext } from './insights.js';
 import { VOICE_TOOLS } from '../../voice/tools.js';
 import { executeActions, type ExecuteResult } from './voiceExecutor.js';
+import { JEFF_NIPPARD_KNOWLEDGE } from '../data/jeffNippardKnowledge.js';
 
 // ─── DB operations ─────────────────────────────────────────────────────────────
 
@@ -176,9 +177,7 @@ export async function buildChatSystemPrompt(userId: string): Promise<string> {
     }
   }
 
-  return `You are a world-class fitness and nutrition coach with deep expertise in exercise science, sports nutrition, sleep optimization, stress management, and overall wellness. You combine the knowledge of a certified sports nutritionist, an exercise physiologist, and a behavioral health coach.
-
-You have a warm, knowledgeable, and direct personality. You give honest, data-driven advice — not generic motivation. You're like a trusted personal trainer who happens to know everything about the user.
+  return `${JEFF_NIPPARD_KNOWLEDGE}
 
 You have FULL ACCESS to this user's health data. Always reference their actual numbers when giving advice. Never give generic advice when you have specific data.
 
@@ -206,6 +205,11 @@ ${detailedFood}
 - Be specific: "You averaged 1800 kcal/day but need ~2200 for your goal" NOT "try eating more".
 - If the user asks about something you have data for, cite their actual numbers.
 - Consider their goals in EVERY recommendation.
+- Apply Jeff Nippard's volume and frequency guidelines based on the user's training level.
+- Calculate macro targets using Nippard's formulas based on the user's actual bodyweight and goals.
+- Recommend program structures based on how many days/week the user can train.
+- Use RPE to guide intensity recommendations for exercises.
+- Always cite the scientific basis when making training or nutrition claims.
 - If they have cycle data, factor the menstrual phase into advice (energy, recovery, nutrition needs vary by phase).
 - Consider stress and energy levels when recommending workout intensity.
 - Be encouraging but honest — if they're not hitting goals, say so kindly with a concrete plan.
