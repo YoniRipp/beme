@@ -1,5 +1,5 @@
 /**
- * Subscription service — Lemon Squeezy integration for BeMe Pro.
+ * Subscription service — Lemon Squeezy integration for TrackVibe Pro.
  */
 import { config } from '../config/index.js';
 import { getPool } from '../db/pool.js';

@@ -36,7 +36,7 @@ export function Footer() {
                 <Leaf className="h-4 w-4 text-primary-foreground" />
               </div>
               <div>
-                <p className="text-sm font-bold text-foreground">BeMe</p>
+                <p className="text-sm font-bold text-foreground">TrackVibe</p>
                 <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
                   Life Balance
                 </p>
@@ -70,7 +70,7 @@ export function Footer() {
 
         <div className="flex flex-col items-center justify-between gap-4 border-t border-border pt-8 sm:flex-row">
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} BeMe. All rights reserved.
+            &copy; {new Date().getFullYear()} TrackVibe. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <a

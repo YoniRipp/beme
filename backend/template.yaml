@@ -1,14 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: BMe backend - Event and Voice Lambda handlers
+Description: TrackVibe backend - Event and Voice Lambda handlers
 
 Parameters:
   EventQueueName:
     Type: String
-    Default: beme-event-queue
+    Default: trackvibe-event-queue
   VoiceQueueName:
     Type: String
-    Default: beme-voice-queue
+    Default: trackvibe-voice-queue
   DatabaseUrl:
     Type: String
     NoEcho: true

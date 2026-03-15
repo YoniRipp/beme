@@ -1,6 +1,6 @@
-# BeMe Backend
+# TrackVibe Backend
 
-Node.js + Express + TypeScript REST API for the BeMe wellness application. Handles authentication, domain CRUD (workouts, food entries, check-ins, goals), intelligent food search, voice intent parsing (Google Gemini), vector embeddings, file uploads (S3), and an event-driven architecture with optional Redis and extracted microservices.
+Node.js + Express + TypeScript REST API for the TrackVibe wellness application. Handles authentication, domain CRUD (workouts, food entries, check-ins, goals), intelligent food search, voice intent parsing (Google Gemini), vector embeddings, file uploads (S3), and an event-driven architecture with optional Redis and extracted microservices.
 
 ---
 
@@ -170,7 +170,7 @@ backend/
 
 ## LLM / Gemini Integration
 
-BeMe uses Google Gemini (`@google/generative-ai`) in two distinct roles. Both are configured in `src/config/index.ts`:
+TrackVibe uses Google Gemini (`@google/generative-ai`) in two distinct roles. Both are configured in `src/config/index.ts`:
 
 ```
 Model: gemini-2.5-flash (configurable via GEMINI_MODEL env var)
@@ -1130,8 +1130,8 @@ Test coverage:
 ### Docker
 
 ```bash
-docker build -t beme-backend ./backend
-docker run -p 3000:3000 --env-file backend/.env beme-backend
+docker build -t trackvibe-backend ./backend
+docker run -p 3000:3000 --env-file backend/.env trackvibe-backend
 ```
 
 Multi-stage Dockerfile: Node 20-alpine builder → production stage (no devDependencies, non-root `node` user).

@@ -8,7 +8,7 @@ interface BarcodeScannerProps {
   onClose: () => void;
 }
 
-const SCANNER_ELEMENT_ID = 'beme-barcode-scanner';
+const SCANNER_ELEMENT_ID = 'trackvibe-barcode-scanner';
 
 export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);

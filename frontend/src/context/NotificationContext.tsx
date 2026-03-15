@@ -38,7 +38,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [preferences, setPreferences] = useLocalStorage<NotificationPreferences>(
-    STORAGE_KEYS.NOTIFICATION_PREFERENCES || 'beme_notification_preferences',
+    STORAGE_KEYS.NOTIFICATION_PREFERENCES || 'trackvibe_notification_preferences',
     defaultPreferences
   );
   const [permission, setPermission] = useState<'default' | 'granted' | 'denied'>(

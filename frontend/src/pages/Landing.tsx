@@ -30,7 +30,7 @@ const FEATURES = [
   {
     icon: Mic,
     title: 'Voice-First Tracking',
-    description: 'Just speak naturally. "I had oatmeal for breakfast" or "30 minute run" — BeMe handles the rest.',
+    description: 'Just speak naturally. "I had oatmeal for breakfast" or "30 minute run" — TrackVibe handles the rest.',
   },
   {
     icon: Sparkles,
@@ -88,13 +88,13 @@ const HOW_IT_WORKS = [
     icon: Sparkles,
     step: 3,
     title: 'Get AI insights',
-    description: 'BeMe connects the dots and shows you patterns across your fitness, nutrition, and habits.',
+    description: 'TrackVibe connects the dots and shows you patterns across your fitness, nutrition, and habits.',
   },
 ];
 
 const TESTIMONIALS = [
   {
-    quote: 'I used to track my food in one app, workouts in another, and sleep in a third. BeMe replaced all of them.',
+    quote: 'I used to track my food in one app, workouts in another, and sleep in a third. TrackVibe replaced all of them.',
     name: 'Sarah M.',
     role: 'Fitness Enthusiast',
   },
@@ -130,16 +130,16 @@ const FAQ = [
     a: 'You get full access to all Pro features for 7 days. Your card is charged only after the trial ends. Cancel anytime during the trial and you won\'t be charged.',
   },
   {
-    q: 'How is BeMe different from MyFitnessPal or YNAB?',
-    a: 'Those are great single-purpose tools. BeMe combines fitness, nutrition, sleep, and goals in one app with AI that connects insights across all areas.',
+    q: 'How is TrackVibe different from MyFitnessPal or YNAB?',
+    a: 'Those are great single-purpose tools. TrackVibe combines fitness, nutrition, sleep, and goals in one app with AI that connects insights across all areas.',
   },
   {
-    q: 'Can I use BeMe without the AI features?',
+    q: 'Can I use TrackVibe without the AI features?',
     a: 'Yes. The Free plan includes full manual tracking for workouts, food, sleep, and goals. AI features are Pro-only.',
   },
   {
-    q: 'Does BeMe work offline?',
-    a: 'BeMe requires an internet connection. Your data syncs in real-time so it\'s always up to date.',
+    q: 'Does TrackVibe work offline?',
+    a: 'TrackVibe requires an internet connection. Your data syncs in real-time so it\'s always up to date.',
   },
 ];
 
@@ -234,7 +234,7 @@ export function Landing() {
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
           Track your body, energy, and goals — all in one place.
-          Just speak and BeMe takes care of the rest.
+          Just speak and TrackVibe takes care of the rest.
         </p>
         <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link to="/signup">
@@ -256,7 +256,7 @@ export function Landing() {
           <div className="mx-auto max-w-5xl px-6">
             <div className="text-center mb-10">
               <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                See BeMe in action
+                See TrackVibe in action
               </h2>
               <p className="mt-2 text-muted-foreground">
                 A single dashboard for your body, energy, and goals.
@@ -305,7 +305,7 @@ export function Landing() {
               Everything you need, nothing you don't
             </h2>
             <p className="mt-2 text-muted-foreground">
-              BeMe consolidates your daily tracking into a single, intelligent app.
+              TrackVibe consolidates your daily tracking into a single, intelligent app.
             </p>
           </div>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
@@ -334,7 +334,7 @@ export function Landing() {
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
               Say things like "I had a chicken salad for lunch", "bench press 3 sets of 10 at 135",
-              or "I slept 7 hours last night" — BeMe understands and logs it instantly.
+              or "I slept 7 hours last night" — TrackVibe understands and logs it instantly.
             </p>
           </div>
         </RevealSection>
@@ -536,8 +536,8 @@ export function Landing() {
                 <Mail className="mt-1 h-5 w-5 text-primary" aria-hidden="true" />
                 <div>
                   <p className="font-medium">Email us</p>
-                  <a href="mailto:support@beme.app" className="text-sm text-primary hover:underline">
-                    support@beme.app
+                  <a href="mailto:support@trackvibe.app" className="text-sm text-primary hover:underline">
+                    support@trackvibe.app
                   </a>
                 </div>
               </div>
@@ -578,9 +578,9 @@ export function Landing() {
                     const name = (document.getElementById('contact-name') as HTMLInputElement)?.value || '';
                     const email = (document.getElementById('contact-email') as HTMLInputElement)?.value || '';
                     const message = (document.getElementById('contact-message') as HTMLTextAreaElement)?.value || '';
-                    const subject = encodeURIComponent(`BeMe Contact: Message from ${name || 'Website Visitor'}`);
+                    const subject = encodeURIComponent(`TrackVibe Contact: Message from ${name || 'Website Visitor'}`);
                     const body = encodeURIComponent(`From: ${name}\nEmail: ${email}\n\n${message}`);
-                    window.location.href = `mailto:support@beme.app?subject=${subject}&body=${body}`;
+                    window.location.href = `mailto:support@trackvibe.app?subject=${subject}&body=${body}`;
                   }}
                 >
                   Send Message

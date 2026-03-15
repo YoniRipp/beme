@@ -27,7 +27,7 @@ export function SubscriptionSection() {
           <CreditCard className="h-5 w-5 text-muted-foreground" />
           <CardTitle className="text-base">Subscription</CardTitle>
         </div>
-        <CardDescription>Manage your BeMe subscription</CardDescription>
+        <CardDescription>Manage your TrackVibe subscription</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">

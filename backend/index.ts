@@ -41,7 +41,7 @@ async function start() {
   }
   const app = await createApp();
   const server = app.listen(config.port, config.host || '0.0.0.0', () => {
-    logger.info({ port: config.port, host: config.host || '0.0.0.0' }, 'BMe backend listening');
+    logger.info({ port: config.port, host: config.host || '0.0.0.0' }, 'TrackVibe backend listening');
   });
   server.setTimeout(300000); // 5 min timeout for voice processing
 

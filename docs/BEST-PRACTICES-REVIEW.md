@@ -1,4 +1,4 @@
-# Best Practices Review — BeMe Wellness Application
+# Best Practices Review — TrackVibe Wellness Application
 
 > Comprehensive code review benchmarked against best practices from 20+ industry sources including Google, Netflix, Meta, Airbnb, Uber, Shopify, Microsoft, OWASP, PayPal, LinkedIn, OpenTelemetry, and PostgreSQL experts.
 >

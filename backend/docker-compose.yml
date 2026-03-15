@@ -4,15 +4,15 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: beme
-      POSTGRES_PASSWORD: beme_dev_password
-      POSTGRES_DB: beme_dev
+      POSTGRES_USER: trackvibe
+      POSTGRES_PASSWORD: trackvibe_dev_password
+      POSTGRES_DB: trackvibe_dev
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U beme"]
+      test: ["CMD-SHELL", "pg_isready -U trackvibe"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,7 +22,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://beme:beme_dev_password@postgres:5432/beme_dev
+      DATABASE_URL: postgresql://trackvibe:trackvibe_dev_password@postgres:5432/trackvibe_dev
       JWT_SECRET: dev-secret-key-minimum-32-characters-long
       JWT_REFRESH_SECRET: dev-refresh-secret-key-minimum-32-characters
       CORS_ORIGIN: http://localhost:5173

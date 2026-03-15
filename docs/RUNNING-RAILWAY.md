@@ -1,6 +1,6 @@
-# Running BeMe on Railway
+# Running TrackVibe on Railway
 
-How to deploy BeMe on [Railway](https://railway.app) with managed Postgres and Redis.
+How to deploy TrackVibe on [Railway](https://railway.app) with managed Postgres and Redis.
 
 ## Overview
 
@@ -30,7 +30,7 @@ Railway is a good fit for quick deploys with add-ons for Postgres and Redis.
 |----------|-------|
 | `DATABASE_URL` | Add PostgreSQL service → use connection variable |
 | `JWT_SECRET` | Generate a strong secret (e.g. `openssl rand -base64 32`) |
-| `CORS_ORIGIN` | Frontend URL (e.g. `https://beme-frontend.up.railway.app`) |
+| `CORS_ORIGIN` | Frontend URL (e.g. `https://trackvibe-frontend.up.railway.app`) |
 
 **Optional:**
 
@@ -53,7 +53,7 @@ Railway is a good fit for quick deploys with add-ons for Postgres and Redis.
 
 | Variable | Value |
 |----------|-------|
-| `VITE_API_URL` | Backend public URL (e.g. `https://beme-backend.up.railway.app`) |
+| `VITE_API_URL` | Backend public URL (e.g. `https://trackvibe-backend.up.railway.app`) |
 | `VITE_GOOGLE_CLIENT_ID` | Same as backend `GOOGLE_CLIENT_ID` |
 
 These must be set at build time (Vite embeds them).

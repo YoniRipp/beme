@@ -11,7 +11,7 @@ if (config.resendApiKey) {
   resend = new Resend(config.resendApiKey);
 }
 
-const FROM = process.env.RESEND_FROM || 'BeMe <onboarding@resend.dev>';
+const FROM = process.env.RESEND_FROM || 'TrackVibe <onboarding@resend.dev>';
 
 /**
  * Send an email. No-op if Resend is not configured.

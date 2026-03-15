@@ -1,4 +1,4 @@
-# BeMe Codebase Review
+# TrackVibe Codebase Review
 
 Deep review of the website, backend, mobile app, and overall architecture — with prioritized, actionable suggestions.
 

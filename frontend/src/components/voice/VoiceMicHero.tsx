@@ -7,7 +7,7 @@ import { toast } from '@/components/shared/ToastProvider';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn } from '@/lib/utils';
 
-const VOICE_USED_KEY = 'beme_voice_used';
+const VOICE_USED_KEY = 'trackvibe_voice_used';
 const TAG = '[VoiceMicHero]';
 
 export function VoiceMicHero() {

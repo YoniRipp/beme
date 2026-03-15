@@ -43,10 +43,10 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: 'BMe', body: event.data.text() };
+    payload = { title: 'TrackVibe', body: event.data.text() };
   }
 
-  const { title = 'BMe', body = '', icon = '/icons/icon-192x192.png', badge = '/icons/icon-72x72.png', url = '/', tag } = payload;
+  const { title = 'TrackVibe', body = '', icon = '/icons/icon-192x192.png', badge = '/icons/icon-72x72.png', url = '/', tag } = payload;
 
   event.waitUntil(
     self.registration.showNotification(title, {

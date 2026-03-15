@@ -1,6 +1,6 @@
-# Running BeMe Locally
+# Running TrackVibe Locally
 
-How to run BeMe on your machine for development and testing.
+How to run TrackVibe on your machine for development and testing.
 
 ## Prerequisites
 
@@ -69,16 +69,16 @@ Compose sets `REDIS_URL=redis://redis:6379` and `CORS_ORIGIN=http://localhost:51
 
 ```bash
 # Start Postgres
-docker run -d --name beme-db -e POSTGRES_USER=beme -e POSTGRES_PASSWORD=beme -e POSTGRES_DB=beme -p 5432:5432 postgres:16-alpine
+docker run -d --name trackvibe-db -e POSTGRES_USER=trackvibe -e POSTGRES_PASSWORD=trackvibe -e POSTGRES_DB=trackvibe -p 5432:5432 postgres:16-alpine
 
 # Redis
-docker run -d --name beme-redis -p 6379:6379 redis:7-alpine
+docker run -d --name trackvibe-redis -p 6379:6379 redis:7-alpine
 ```
 
 Then in `backend/.env`:
 
 ```
-DATABASE_URL=postgresql://beme:beme@localhost:5432/beme
+DATABASE_URL=postgresql://trackvibe:trackvibe@localhost:5432/trackvibe
 JWT_SECRET=your-secret
 REDIS_URL=redis://localhost:6379
 ```

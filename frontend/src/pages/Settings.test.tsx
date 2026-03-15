@@ -62,7 +62,7 @@ vi.mock('@/components/trainer/PendingInvitations', () => ({
 
 vi.mock('@/lib/storage', () => ({
   storage: { get: vi.fn(() => null), set: vi.fn(), remove: vi.fn(), clear: vi.fn() },
-  STORAGE_KEYS: { SETTINGS: 'beme_settings' },
+  STORAGE_KEYS: { SETTINGS: 'trackvibe_settings' },
 }));
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (

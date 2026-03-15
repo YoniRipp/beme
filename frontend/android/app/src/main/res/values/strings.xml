@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">BMe</string>
-    <string name="title_activity_main">BMe</string>
-    <string name="package_name">com.bme.app</string>
-    <string name="custom_url_scheme">com.bme.app</string>
+    <string name="app_name">TrackVibe</string>
+    <string name="title_activity_main">TrackVibe</string>
+    <string name="package_name">com.trackvibe.app</string>
+    <string name="custom_url_scheme">com.trackvibe.app</string>
 </resources>

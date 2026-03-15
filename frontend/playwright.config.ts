@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright E2E test configuration for BMe.
+ * Playwright E2E test configuration for TrackVibe.
  *
  * @see https://playwright.dev/docs/test-configuration
  */

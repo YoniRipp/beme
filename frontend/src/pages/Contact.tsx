@@ -12,19 +12,19 @@ const CONTACT_METHODS = [
     icon: Mail,
     title: 'General Support',
     description: 'Questions about your account, features, or billing.',
-    email: 'support@beme.app',
+    email: 'support@trackvibe.app',
   },
   {
     icon: Bug,
     title: 'Bug Reports',
     description: 'Found something broken? Let us know and we\'ll fix it.',
-    email: 'support@beme.app',
+    email: 'support@trackvibe.app',
   },
   {
     icon: MessageSquare,
     title: 'Partnerships',
     description: 'Interested in working together? We\'d love to hear from you.',
-    email: 'hello@beme.app',
+    email: 'hello@trackvibe.app',
   },
 ];
 
@@ -35,9 +35,9 @@ export function Contact() {
   const [message, setMessage] = useState('');
 
   function handleSend() {
-    const mailSubject = encodeURIComponent(subject || `BeMe Contact: Message from ${name || 'Website Visitor'}`);
+    const mailSubject = encodeURIComponent(subject || `TrackVibe Contact: Message from ${name || 'Website Visitor'}`);
     const mailBody = encodeURIComponent(`From: ${name}\nEmail: ${email}\n\n${message}`);
-    window.location.href = `mailto:support@beme.app?subject=${mailSubject}&body=${mailBody}`;
+    window.location.href = `mailto:support@trackvibe.app?subject=${mailSubject}&body=${mailBody}`;
   }
 
   return (
@@ -148,10 +148,10 @@ export function Contact() {
                     <div>
                       <p className="font-medium">Email Us Directly</p>
                       <a
-                        href="mailto:support@beme.app"
+                        href="mailto:support@trackvibe.app"
                         className="text-sm text-primary hover:underline"
                       >
-                        support@beme.app
+                        support@trackvibe.app
                       </a>
                     </div>
                   </div>

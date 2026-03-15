@@ -1,6 +1,6 @@
 import { storage } from './storage';
 
-const ONBOARDING_KEY = 'beme_onboarding_completed';
+const ONBOARDING_KEY = 'trackvibe_onboarding_completed';
 
 export interface OnboardingStep {
   target: string; // CSS selector or element ID

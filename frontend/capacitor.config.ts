@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.beme.app',
-  appName: 'BeMe',
+  appId: 'com.trackvibe.app',
+  appName: 'TrackVibe',
   webDir: 'dist',
   ios: {
     contentInset: 'automatic',

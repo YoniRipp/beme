@@ -15,10 +15,10 @@ export function Privacy() {
       <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
 
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        BeMe ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy
+        TrackVibe ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy
         explains how we collect, use, disclose, and safeguard your information when you use our
         life management application, including our website, mobile applications, and related
-        services (collectively, the "Service"). Please read this policy carefully. By using BeMe,
+        services (collectively, the "Service"). Please read this policy carefully. By using TrackVibe,
         you agree to the collection and use of information in accordance with this policy.
       </p>
 
@@ -61,7 +61,7 @@ export function Privacy() {
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
         <li>
           <strong>Provide and maintain the Service:</strong> To operate your account, store your
-          data, and deliver the core functionality of BeMe including tracking and
+          data, and deliver the core functionality of TrackVibe including tracking and
           goal management.
         </li>
         <li>
@@ -110,7 +110,7 @@ export function Privacy() {
       {/* 4. Voice & AI Processing */}
       <h2 className="text-xl font-semibold mt-8 mb-3">4. Voice & AI Processing</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        BeMe offers a voice assistant feature powered by Google Gemini AI. When you use this
+        TrackVibe offers a voice assistant feature powered by Google Gemini AI. When you use this
         feature, your input is processed as follows:
       </p>
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
@@ -137,7 +137,7 @@ export function Privacy() {
         </li>
       </ul>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        You can use BeMe without the voice feature. All actions available through voice input
+        You can use TrackVibe without the voice feature. All actions available through voice input
         can also be performed manually through the application interface.
       </p>
 
@@ -165,7 +165,7 @@ export function Privacy() {
         <li>
           <strong>Legal requirements:</strong> We may disclose your information if required by
           law, regulation, legal process, or governmental request, or to protect the rights,
-          safety, or property of BeMe, our users, or others.
+          safety, or property of TrackVibe, our users, or others.
         </li>
       </ul>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
@@ -269,7 +269,7 @@ export function Privacy() {
           data in a structured, commonly used, and machine-readable format.
         </li>
         <li>
-          <strong>Opt-out of AI features:</strong> You can use BeMe without the voice assistant
+          <strong>Opt-out of AI features:</strong> You can use TrackVibe without the voice assistant
           or AI-powered insights. All core functionality is available without AI processing.
         </li>
       </ul>
@@ -293,7 +293,7 @@ export function Privacy() {
       {/* 9. Cookies */}
       <h2 className="text-xl font-semibold mt-8 mb-3">9. Cookies</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        BeMe uses a minimal set of cookies and local storage necessary for the Service to
+        TrackVibe uses a minimal set of cookies and local storage necessary for the Service to
         function:
       </p>
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
@@ -316,7 +316,7 @@ export function Privacy() {
       {/* 10. Children's Privacy */}
       <h2 className="text-xl font-semibold mt-8 mb-3">10. Children's Privacy</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        BeMe is not directed at children under the age of 13 (or the applicable minimum age
+        TrackVibe is not directed at children under the age of 13 (or the applicable minimum age
         in your jurisdiction). We do not knowingly collect personal information from children
         under 13. If we become aware that we have collected personal data from a child under
         13 without parental consent, we will take steps to delete that information as quickly
@@ -345,10 +345,10 @@ export function Privacy() {
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         <strong>Email:</strong>{" "}
         <a
-          href="mailto:privacy@beme.app"
+          href="mailto:privacy@trackvibe.app"
           className="text-primary underline hover:no-underline"
         >
-          privacy@beme.app
+          privacy@trackvibe.app
         </a>
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">

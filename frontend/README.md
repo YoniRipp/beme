@@ -1,6 +1,6 @@
-# BeMe Frontend
+# TrackVibe Frontend
 
-React single-page application for the BeMe wellness app: dashboard, body, energy, goals, settings, and insights. When `VITE_API_URL` is set and the user is authenticated, all domain data is loaded and saved via the backend API.
+React single-page application for the TrackVibe wellness app: dashboard, body, energy, goals, settings, and insights. When `VITE_API_URL` is set and the user is authenticated, all domain data is loaded and saved via the backend API.
 
 When the backend is deployed as a gateway with extracted services, set `VITE_API_URL` to the gateway URL; the client still talks to a single origin. No frontend code changes are required for gateway vs monolith.
 

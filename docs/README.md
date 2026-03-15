@@ -1,4 +1,4 @@
-# BeMe Documentation
+# TrackVibe Documentation
 
 | Doc | Description |
 |-----|-------------|

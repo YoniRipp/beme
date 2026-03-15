@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 
 /**
  * Helper to mock an authenticated user session.
- * BMe uses Supabase auth with tokens stored in localStorage. We inject a fake
+ * TrackVibe uses Supabase auth with tokens stored in localStorage. We inject a fake
  * session so the frontend AuthContext treats the user as authenticated.
  *
  * NOTE: The mock session will satisfy the auth guard (redirect check), but API

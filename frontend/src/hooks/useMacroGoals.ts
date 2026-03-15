@@ -6,7 +6,7 @@ export interface MacroGoals {
   protein: number;
 }
 
-const STORAGE_KEY = 'beme-macro-goals';
+const STORAGE_KEY = 'trackvibe-macro-goals';
 const DEFAULTS: MacroGoals = { carbs: 300, fat: 80, protein: 120 };
 
 function loadGoals(): MacroGoals {

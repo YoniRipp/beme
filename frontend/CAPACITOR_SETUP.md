@@ -25,9 +25,9 @@ After adding the iOS platform, add these entries to `ios/App/App/Info.plist`:
 
 ```xml
 <key>NSSpeechRecognitionUsageDescription</key>
-<string>BMe uses speech recognition to understand your voice commands for logging activities.</string>
+<string>TrackVibe uses speech recognition to understand your voice commands for logging activities.</string>
 <key>NSMicrophoneUsageDescription</key>
-<string>BMe needs microphone access to capture your voice commands.</string>
+<string>TrackVibe needs microphone access to capture your voice commands.</string>
 ```
 
 ## Step 3: Open in Xcode
@@ -42,7 +42,7 @@ This builds the web app and opens Xcode.
 
 1. **Select your Team**: In Xcode, go to the project settings (click on "App" in the navigator), select the "Signing & Capabilities" tab, and choose your Apple Developer Team.
 
-2. **Set Bundle ID**: Change to your unique bundle ID if needed (default: `com.bme.app`).
+2. **Set Bundle ID**: Change to your unique bundle ID if needed (default: `com.trackvibe.app`).
 
 3. **Set Deployment Target**: iOS 14.0 or higher recommended.
 

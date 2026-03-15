@@ -1,12 +1,12 @@
 {
-  "name": "bme",
+  "name": "trackvibe",
   "version": "1.0.0",
   "private": true,
-  "description": "BeMe monorepo: frontend (React/Vite) and backend (Node/Express)",
+  "description": "TrackVibe monorepo: frontend (React/Vite) and backend (Node/Express)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/beme/BMe.git"
+    "url": "https://github.com/trackvibe/TrackVibe.git"
   },
   "keywords": [
     "life-management",

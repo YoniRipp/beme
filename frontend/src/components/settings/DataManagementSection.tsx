@@ -29,7 +29,7 @@ export function DataManagementSection({ onResetClick, onClearClick }: DataManage
         checkIns,
         settings: storage.get(STORAGE_KEYS.SETTINGS) || DEFAULT_SETTINGS,
       });
-      downloadFile(dataStr, `beme-backup-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+      downloadFile(dataStr, `trackvibe-backup-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
       toast.success('Data exported successfully');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not export data. Please try again.');

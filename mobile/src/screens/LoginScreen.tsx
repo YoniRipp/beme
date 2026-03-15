@@ -42,7 +42,7 @@ export function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.form}>
-        <Text style={styles.title}>BeMe</Text>
+        <Text style={styles.title}>TrackVibe</Text>
         <Text style={styles.subtitle}>Sign in</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <TextInput

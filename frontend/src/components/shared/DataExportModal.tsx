@@ -37,7 +37,7 @@ export function DataExportModal({ open, onOpenChange }: DataExportModalProps) {
         foodEntries,
         checkIns,
       });
-      downloadFile(data, `beme-export-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+      downloadFile(data, `trackvibe-export-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
       toast.success('Data exported successfully!');
       onOpenChange(false);
     } catch (error) {
@@ -53,7 +53,7 @@ export function DataExportModal({ open, onOpenChange }: DataExportModalProps) {
         units: settings.units,
       };
       const csv = exportToCSV(type, csvData);
-      downloadFile(csv, `beme-${type}-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+      downloadFile(csv, `trackvibe-${type}-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
       toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} exported successfully!`);
       onOpenChange(false);
     } catch (error) {

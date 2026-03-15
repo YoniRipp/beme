@@ -1,6 +1,6 @@
-# BeMe -- Wellness & Fitness Tracking Application
+# TrackVibe -- Wellness & Fitness Tracking Application
 
-**BeMe** is a full-stack, mobile-first wellness application for tracking **body** (workouts, exercises), **energy** (food, calories, macros, sleep), and **goals**. It features a **voice agent** powered by Google Gemini that understands natural language, an **intelligent food lookup pipeline** that combines a curated database with LLM-generated nutrition data, **vector embeddings** for semantic search, and **Redis-backed caching** for performance.
+**TrackVibe** is a full-stack, mobile-first wellness application for tracking **body** (workouts, exercises), **energy** (food, calories, macros, sleep), and **goals**. It features a **voice agent** powered by Google Gemini that understands natural language, an **intelligent food lookup pipeline** that combines a curated database with LLM-generated nutrition data, **vector embeddings** for semantic search, and **Redis-backed caching** for performance.
 
 Built with **React + TypeScript + Vite** (frontend), **Node.js + Express + TypeScript** (backend), **PostgreSQL + pgvector** (database), and optional **Redis** (caching, queues, event bus).
 
@@ -158,7 +158,7 @@ flowchart TB
 
 ## LLM / Gemini Integration
 
-BeMe uses Google Gemini in two distinct roles:
+TrackVibe uses Google Gemini in two distinct roles:
 
 ### 1. Voice Intent Parsing
 
@@ -316,7 +316,7 @@ The public `GET /api/food/search?q=<query>` endpoint uses a sophisticated multi-
 
 ### Vector Embeddings (Semantic Search)
 
-BeMe also supports **semantic search** using vector embeddings for personalized content discovery:
+TrackVibe also supports **semantic search** using vector embeddings for personalized content discovery:
 
 | Property | Value |
 |----------|-------|
@@ -491,7 +491,7 @@ PostgreSQL with pgvector and pg_trgm extensions. Schema managed by node-pg-migra
 
 ## Image & Video Handling
 
-BeMe uses **AWS S3 with pre-signed URLs** for file uploads. The client never sends file data through the backend -- it uploads directly to S3.
+TrackVibe uses **AWS S3 with pre-signed URLs** for file uploads. The client never sends file data through the backend -- it uploads directly to S3.
 
 ### Upload Flow
 
@@ -647,7 +647,7 @@ Today, users can achieve basic meal repetition using the `copy_food_entries` voi
 ```bash
 # Clone and install
 git clone <repo-url>
-cd BeMe
+cd TrackVibe
 
 # Backend
 cd backend
@@ -682,12 +682,12 @@ docker compose up --build
 
 ```bash
 # Backend
-docker build -t beme-backend ./backend
-docker run -p 3000:3000 --env-file backend/.env beme-backend
+docker build -t trackvibe-backend ./backend
+docker run -p 3000:3000 --env-file backend/.env trackvibe-backend
 
 # Frontend
-docker build -t beme-frontend --build-arg VITE_API_URL=http://localhost:3000 ./frontend
-docker run -p 5173:3000 beme-frontend
+docker build -t trackvibe-frontend --build-arg VITE_API_URL=http://localhost:3000 ./frontend
+docker run -p 5173:3000 trackvibe-frontend
 ```
 
 ---
@@ -709,7 +709,7 @@ docker run -p 5173:3000 beme-frontend
 
 ## Railway Architecture Deep Dive
 
-On Railway, BeMe runs as a **single backend process** that contains both the Express API and the BullMQ Voice Worker in the same Node.js process. Redis connects the synchronous API layer to asynchronous background processing.
+On Railway, TrackVibe runs as a **single backend process** that contains both the Express API and the BullMQ Voice Worker in the same Node.js process. Redis connects the synchronous API layer to asynchronous background processing.
 
 ### Railway Service Topology
 
@@ -898,7 +898,7 @@ flowchart LR
 ## Project Structure
 
 ```
-BeMe/
+TrackVibe/
 ├── backend/
 │   ├── app.ts                 # Express app, CORS, rate limit, gateway proxy
 │   ├── index.ts               # Server entry, DB init, voice worker

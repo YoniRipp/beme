@@ -1,4 +1,4 @@
-# Backend: Node 20, TypeScript build. Build context: backend/ (e.g. docker build -t beme-backend ./backend)
+# Backend: Node 20, TypeScript build. Build context: backend/ (e.g. docker build -t trackvibe-backend ./backend)
 FROM node:20-alpine AS builder
 
 WORKDIR /app

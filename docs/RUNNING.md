@@ -1,6 +1,6 @@
-# Running BeMe
+# Running TrackVibe
 
-How to run BeMe locally, on Railway, and on AWS.
+How to run TrackVibe locally, on Railway, and on AWS.
 
 | Environment | Guide |
 |-------------|-------|

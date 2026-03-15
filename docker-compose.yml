@@ -1,4 +1,4 @@
-# BeMe – backend + frontend with Docker Compose
+# TrackVibe – backend + frontend with Docker Compose
 #
 # Usage:
 #   docker compose up --build
@@ -39,7 +39,7 @@ services:
     # depends_on:
     #   - db
     # environment:
-    #   DATABASE_URL: postgresql://user:pass@db:5432/beme
+    #   DATABASE_URL: postgresql://user:pass@db:5432/trackvibe
 
   frontend:
     build:
@@ -53,13 +53,13 @@ services:
     environment:
       - PORT=3000
 
-  # Optional: local Postgres. Uncomment and set backend DATABASE_URL to postgresql://beme:beme@db:5432/beme
+  # Optional: local Postgres. Uncomment and set backend DATABASE_URL to postgresql://trackvibe:trackvibe@db:5432/trackvibe
   # db:
   #   image: postgres:16-alpine
   #   environment:
-  #     POSTGRES_USER: beme
-  #     POSTGRES_PASSWORD: beme
-  #     POSTGRES_DB: beme
+  #     POSTGRES_USER: trackvibe
+  #     POSTGRES_PASSWORD: trackvibe
+  #     POSTGRES_DB: trackvibe
   #   volumes:
   #     - postgres_data:/var/lib/postgresql/data
   #   ports:

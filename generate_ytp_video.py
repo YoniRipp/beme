@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-BeMe YouTube Poop Marketing Video Generator
+TrackVibe YouTube Poop Marketing Video Generator
 ============================================
 Generates a ~35s vertical (1080x1920) YTP-style video expressing
-what it's like to be a BeMe fitness tracker user.
+what it's like to be a TrackVibe fitness tracker user.
 
 Usage: python generate_ytp_video.py
-Output: beme_ytp.mp4
+Output: trackvibe_ytp.mp4
 """
 
 import os
@@ -29,9 +29,9 @@ W, H = 1080, 1920
 FPS = 24
 SCRIPT_DIR = Path(__file__).parent
 LOGO_PATH = SCRIPT_DIR / "frontend" / "public" / "logo.png"
-OUTPUT_PATH = SCRIPT_DIR / "beme_ytp.mp4"
+OUTPUT_PATH = SCRIPT_DIR / "trackvibe_ytp.mp4"
 
-# BeMe brand colors
+# TrackVibe brand colors
 SAGE = (107, 142, 107)
 SAGE_DARK = (78, 110, 78)
 SAGE_LIGHT = (160, 195, 160)
@@ -351,7 +351,7 @@ def make_phone_frame(bg_color=MIST):
 # ─── LOGO ────────────────────────────────────────────────────────────────────
 
 def load_logo(size=400):
-    """Load and resize the BeMe logo."""
+    """Load and resize the TrackVibe logo."""
     if LOGO_PATH.exists():
         logo = Image.open(LOGO_PATH).convert('RGBA')
         logo.thumbnail((size, size), Image.LANCZOS)
@@ -360,7 +360,7 @@ def load_logo(size=400):
     img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     font = get_impact_font(size // 3)
-    draw.text((size//6, size//3), "BeMe", font=font, fill=SAGE)
+    draw.text((size//6, size//3), "TrackVibe", font=font, fill=SAGE)
     return img
 
 
@@ -398,8 +398,8 @@ def scene_logo_slam():
             py = (H - logo.size[1]) // 2
             img.paste(logo, (px, py), logo)
             img = scanlines(img)
-            # Add "BeME" text below
-            img = draw_meme_text(img, "BeME", y=H//2 + 200, size=120, color=SAGE)
+            # Add "TrackVibe" text below
+            img = draw_meme_text(img, "TrackVibe", y=H//2 + 200, size=120, color=SAGE)
         elif i < 24:
             # Flash white
             bright = int(255 * (1.0 - (i - 20) / 4))
@@ -413,7 +413,7 @@ def scene_logo_slam():
             px = (W - logo.size[0]) // 2
             py = (H - logo.size[1]) // 2
             img.paste(logo, (px, py), logo)
-            img = draw_meme_text(img, "BeME", y=H//2 + 200, size=120, color=SAGE)
+            img = draw_meme_text(img, "TrackVibe", y=H//2 + 200, size=120, color=SAGE)
             if i % 3 == 0:
                 img = glitch_slice(img, num_slices=3, max_offset=30)
             img = vhs_noise(img, 15)
@@ -462,7 +462,7 @@ def scene_today_is_the_day():
         if i > 32:
             draw = ImageDraw.Draw(img)
             sub_font = get_font(28)
-            draw_centered_text(draw, H//2 + 80, "* opens BeMe with determination *",
+            draw_centered_text(draw, H//2 + 80, "* opens TrackVibe with determination *",
                              sub_font, fill=GOLD)
 
         # Zoom pulse
@@ -1115,7 +1115,7 @@ def scene_finale():
             tag_color = (tag_alpha, tag_alpha, tag_alpha)
             font1 = get_font(44, bold=True)
             draw = ImageDraw.Draw(img)
-            draw_centered_text(draw, H//2 + 20, "BeMe", font1, fill=tag_color)
+            draw_centered_text(draw, H//2 + 20, "TrackVibe", font1, fill=tag_color)
 
             if i > 30:
                 font2 = get_font(28)
@@ -1296,12 +1296,12 @@ def generate_audio(total_frames, fps, output_path):
 # ─── MAIN ────────────────────────────────────────────────────────────────────
 
 def main():
-    print("=== BeMe YouTube Poop Video Generator ===")
+    print("=== TrackVibe YouTube Poop Video Generator ===")
     print(f"Resolution: {W}x{H} @ {FPS}fps")
     print()
 
     # Create temp directory for frames
-    frame_dir = Path(tempfile.mkdtemp(prefix="beme_ytp_"))
+    frame_dir = Path(tempfile.mkdtemp(prefix="trackvibe_ytp_"))
     audio_path = frame_dir / "audio.wav"
 
     try:

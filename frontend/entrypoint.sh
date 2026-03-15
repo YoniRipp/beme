@@ -3,5 +3,5 @@
 # "Unknown --listen endpoint scheme (protocol): undefined").
 export PORT="${PORT:-3000}"
 LISTEN="tcp://0.0.0.0:${PORT}"
-echo "BMe frontend: listening on ${LISTEN}"
+echo "TrackVibe frontend: listening on ${LISTEN}"
 exec npx serve dist -s -l "${LISTEN}"

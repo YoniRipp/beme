@@ -8,7 +8,7 @@ import { logger } from '../lib/logger.js';
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || `mailto:admin@${config.frontendOrigin || 'beme.app'}`;
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || `mailto:admin@${config.frontendOrigin || 'trackvibe.app'}`;
 
 export const isWebPushConfigured = !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
 

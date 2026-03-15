@@ -1,4 +1,4 @@
-# Bounded contexts (BMe)
+# Bounded contexts (TrackVibe)
 
 Bounded contexts define ownership of data and behavior. Each context will eventually own its own API, data store (or schema), and publish events when its state changes. Cross-context communication is via events (and optional read APIs), not direct DB access or sync HTTP writes.
 

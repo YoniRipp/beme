@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-BeMe Fitness App - Demo Video Generator
+TrackVibe Fitness App - Demo Video Generator
 Generates a polished, Facebook-style instructional demo video.
 Output: 1080x1920 vertical, 24fps, ~68 seconds.
 """
@@ -41,7 +41,7 @@ SLEEP_CLR   = (99, 102, 241)
 
 # ── Paths ─────────────────────────────────────────────────────────────
 LOGO_PATH  = "/home/user/BeMe/frontend/public/logo.png"
-OUTPUT_PATH = "/home/user/BeMe/beme_demo.mp4"
+OUTPUT_PATH = "/home/user/BeMe/trackvibe_demo.mp4"
 FONT_PATH  = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 FONT_BOLD  = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
@@ -813,7 +813,7 @@ def scene_6_voice_input():
 
         draw_bottom_nav(ImageDraw.Draw(img), active_idx=1)
         img = draw_caption_top(img, "USE YOUR VOICE", step_num=4)
-        img = draw_caption_bottom(img, "Just say what you ate. BeMe handles the rest.")
+        img = draw_caption_bottom(img, "Just say what you ate. TrackVibe handles the rest.")
         frames.append(img)
     return frames
 
@@ -946,7 +946,7 @@ def scene_8_outro():
             btn_y = H // 2 + 110
             rounded_rect(draw, (btn_x, btn_y, btn_x + btn_w, btn_y + btn_h),
                          30, fill=SAGE_DARK)
-            draw.text((W // 2, btn_y + btn_h // 2), "Download BeMe",
+            draw.text((W // 2, btn_y + btn_h // 2), "Download TrackVibe",
                       font=get_font(26, bold=True), fill=WHITE, anchor="mm")
 
         # Fade to white at end
@@ -1089,7 +1089,7 @@ def iter_all_frames(scene_generators, fade_n=FADE_FRAMES):
 # ── Main ──────────────────────────────────────────────────────────────
 
 def main():
-    print("Generating BeMe demo video...")
+    print("Generating TrackVibe demo video...")
     print(f"Resolution: {W}x{H}, FPS: {FPS}")
     print()
 

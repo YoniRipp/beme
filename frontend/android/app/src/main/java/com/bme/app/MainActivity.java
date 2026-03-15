@@ -1,4 +1,4 @@
-package com.bme.app;
+package com.trackvibe.app;
 
 import com.getcapacitor.BridgeActivity;
 

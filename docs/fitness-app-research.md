@@ -1,6 +1,6 @@
 # Fitness App UI Research — Styling & Theme Inspiration
 
-Research of leading fitness apps to inform BeMe's visual design. Covers color palettes, typography, card patterns, dashboard layouts, data visualization, and what makes each app feel polished.
+Research of leading fitness apps to inform TrackVibe's visual design. Covers color palettes, typography, card patterns, dashboard layouts, data visualization, and what makes each app feel polished.
 
 ---
 
@@ -337,11 +337,11 @@ What separates polished fitness apps from basic ones:
 
 ---
 
-## Recommendations for BeMe
+## Recommendations for TrackVibe
 
 ### Color Palette Enhancements
 
-BeMe's current sage/cream palette is warm and wellness-focused. Enhance it with domain-specific semantic colors:
+TrackVibe's current sage/cream palette is warm and wellness-focused. Enhance it with domain-specific semantic colors:
 
 | Domain | Current | Recommended | Reasoning |
 |--------|---------|-------------|-----------|

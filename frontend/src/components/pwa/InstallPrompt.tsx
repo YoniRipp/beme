@@ -30,11 +30,11 @@ export function InstallPrompt() {
 
       <div className="flex items-start gap-3 pr-6">
         <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <img src="/logo.png" alt="BMe" className="w-6 h-6" />
+          <img src="/logo.png" alt="TrackVibe" className="w-6 h-6" />
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm">Install BMe App</h3>
+          <h3 className="font-semibold text-sm">Install TrackVibe App</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             {isIOS
               ? 'Tap Share then "Add to Home Screen"'

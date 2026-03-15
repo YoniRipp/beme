@@ -1,12 +1,12 @@
-# BMe — Trusted Web Activity (TWA) for Google Play
+# TrackVibe — Trusted Web Activity (TWA) for Google Play
 
-This directory documents how to package the BMe PWA as an Android app using a Trusted Web Activity (TWA) and publish it to the Google Play Store.
+This directory documents how to package the TrackVibe PWA as an Android app using a Trusted Web Activity (TWA) and publish it to the Google Play Store.
 
 ## Prerequisites
 
 - Node.js 18+
 - Java JDK 11+ (for signing)
-- A deployed BMe PWA (e.g. `https://beme.app`) with valid HTTPS and manifest
+- A deployed TrackVibe PWA (e.g. `https://trackvibe.app`) with valid HTTPS and manifest
 - Google Play Developer account ($25 one-time fee)
 
 ## Steps
@@ -25,8 +25,8 @@ bubblewrap init --manifest https://your-deployed-url.com/manifest.webmanifest
 ```
 
 This generates an Android project. Follow the prompts to configure:
-- **Package name**: `com.beme.app`
-- **App name**: `BMe`
+- **Package name**: `com.trackvibe.app`
+- **App name**: `TrackVibe`
 - **Signing key**: Create a new keystore or use an existing one
 
 ### 3. Build the APK/AAB

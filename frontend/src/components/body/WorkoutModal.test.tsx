@@ -6,7 +6,7 @@ import { Workout } from '@/types/workout';
 
 vi.mock('@/lib/storage', () => ({
   storage: { get: vi.fn(() => []), set: vi.fn(), remove: vi.fn(), clear: vi.fn() },
-  STORAGE_KEYS: { WORKOUT_TEMPLATES: 'beme_workout_templates' },
+  STORAGE_KEYS: { WORKOUT_TEMPLATES: 'trackvibe_workout_templates' },
 }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));

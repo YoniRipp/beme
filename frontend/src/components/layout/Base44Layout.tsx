@@ -131,13 +131,13 @@ export function Base44Layout() {
             <Link
               to="/"
               className="flex items-center gap-3"
-              aria-label="BeMe home"
+              aria-label="TrackVibe home"
             >
               <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shadow-md">
                 <Leaf className="w-5 h-5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight">BeMe</h1>
+                <h1 className="text-xl font-bold tracking-tight">TrackVibe</h1>
                 <p className="text-xs uppercase tracking-[0.2em] text-primary font-medium">Life Balance</p>
               </div>
             </Link>

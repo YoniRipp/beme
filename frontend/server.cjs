@@ -26,5 +26,5 @@ app.use(express.static(dist));
 app.use((_req, res) => res.sendFile(path.join(dist, 'index.html')));
 
 app.listen(port, () => {
-  console.log(`BMe frontend: listening on port ${port}`);
+  console.log(`TrackVibe frontend: listening on port ${port}`);
 });

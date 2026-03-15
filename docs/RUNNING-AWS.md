@@ -1,6 +1,6 @@
-# Running BeMe on AWS
+# Running TrackVibe on AWS
 
-How to deploy BeMe on Amazon Web Services for production and high scale.
+How to deploy TrackVibe on Amazon Web Services for production and high scale.
 
 ## Overview
 

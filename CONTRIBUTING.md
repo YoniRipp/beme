@@ -1,6 +1,6 @@
-# Contributing to BeMe
+# Contributing to TrackVibe
 
-Thank you for your interest in contributing to BeMe. This document describes how to report bugs, request features, and submit pull requests.
+Thank you for your interest in contributing to TrackVibe. This document describes how to report bugs, request features, and submit pull requests.
 
 ## Code of Conduct
 

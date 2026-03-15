@@ -36,7 +36,7 @@ export function MainTabs() {
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: 'Home', headerTitle: 'BeMe' }}
+        options={{ tabBarLabel: 'Home', headerTitle: 'TrackVibe' }}
       />
       <Tab.Screen name="Body" component={BodyScreen} options={{ tabBarLabel: 'Body' }} />
       <Tab.Screen name="Energy" component={EnergyScreen} options={{ tabBarLabel: 'Energy' }} />

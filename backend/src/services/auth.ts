@@ -536,7 +536,7 @@ export async function forgotPassword(
     const { sendMail } = await import('../lib/email.js');
     await sendMail({
       to: row.email,
-      subject: 'Reset your BeMe password',
+      subject: 'Reset your TrackVibe password',
       html: `<p>Click the link below to reset your password. This link expires in 1 hour.</p><p><a href="${resetLink}">Reset Password</a></p><p>If you didn't request this, you can safely ignore this email.</p>`,
     });
   } catch (emailErr) {

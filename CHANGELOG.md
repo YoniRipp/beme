@@ -72,7 +72,7 @@ Documentation overhaul and repo conventions to support contributors and deployme
 
 ### Professional repo conventions
 
-- **LICENSE** — MIT License (BeMe contributors).
+- **LICENSE** — MIT License (TrackVibe contributors).
 - **CONTRIBUTING.md** — Contribution flow, dev setup (link to RUNNING-LOCAL), code style, PR process.
 - **CODE_OF_CONDUCT.md** — Contributor Covenant 2.1.
 - **SECURITY.md** — Security vulnerability reporting (GitHub Security Advisories).
@@ -113,7 +113,7 @@ Planned changes:
 - **API Service**: HTTP handlers only, enqueues heavy work
 - **Workers Service**: Queue consumers (voice, email, food)
 - **Scheduler Service**: Cron jobs
-- Full TypeScript migration with shared types via `@beme/core`
+- Full TypeScript migration with shared types via `@trackvibe/core`
 - Queue abstraction (BullMQ for dev, AWS SQS for prod)
 - Async voice API with job polling (partially implemented: `POST /api/voice/understand` returns jobId for audio, `GET /api/jobs/:id` for result)
 - New packages: `packages/core`, `packages/api`, `packages/workers`, `packages/scheduler`

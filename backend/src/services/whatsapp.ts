@@ -125,7 +125,7 @@ export async function findOrCreateUserByPhone(phoneNumber: string, profileName?:
     `INSERT INTO users (email, name, auth_provider, phone_number)
      VALUES ($1, $2, 'whatsapp', $3)
      RETURNING id, name, phone_number`,
-    [`whatsapp_${phoneNumber}@beme.app`, name, phoneNumber]
+    [`whatsapp_${phoneNumber}@trackvibe.app`, name, phoneNumber]
   );
 
   logger.info({ phoneNumber, userId: result.rows[0].id }, 'New WhatsApp user created');
@@ -238,7 +238,7 @@ const COMMAND_MAP: Record<string, string> = {
 async function handleCommand(command: string, userId: string): Promise<string> {
   switch (command) {
     case 'help':
-      return `🏋️ *BeMe WhatsApp Bot*
+      return `🏋️ *TrackVibe WhatsApp Bot*
 
 You can send me messages to track your fitness:
 

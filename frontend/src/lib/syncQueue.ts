@@ -15,7 +15,7 @@ export interface PendingRequest {
   retries: number;
 }
 
-const DB_NAME = 'beme-offline';
+const DB_NAME = 'trackvibe-offline';
 const STORE_NAME = 'pendingRequests';
 const DB_VERSION = 1;
 const MAX_RETRIES = 5;

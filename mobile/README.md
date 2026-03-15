@@ -1,6 +1,6 @@
-# BeMe Mobile
+# TrackVibe Mobile
 
-Expo (React Native) app for BeMe. Uses the same backend API as the web app.
+Expo (React Native) app for TrackVibe. Uses the same backend API as the web app.
 
 ## Setup
 

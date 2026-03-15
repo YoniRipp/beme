@@ -26,7 +26,7 @@ export function About() {
     <>
       {/* Hero */}
       <section className="mx-auto max-w-3xl px-6 pt-24 pb-20 text-center">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">About BeMe</h1>
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">About TrackVibe</h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
           We believe managing your life shouldn't require five different apps.
         </p>
@@ -36,14 +36,14 @@ export function About() {
       <section className="mx-auto max-w-3xl px-6 pb-16">
         <h2 className="text-2xl font-bold tracking-tight">Our Mission</h2>
         <p className="mt-4 text-muted-foreground leading-relaxed">
-          BeMe was born from a simple frustration: tracking health and goals meant juggling
-          multiple apps that never talked to each other. We built BeMe to be the single place where all
+          TrackVibe was born from a simple frustration: tracking health and goals meant juggling
+          multiple apps that never talked to each other. We built TrackVibe to be the single place where all
           your wellness data lives — and where AI connects the dots to give you insights no single-purpose
           app ever could.
         </p>
         <p className="mt-4 text-muted-foreground leading-relaxed">
           Whether you're logging workouts, counting macros, tracking sleep, or setting goals,
-          BeMe brings it all together. And with voice-first input, tracking takes seconds
+          TrackVibe brings it all together. And with voice-first input, tracking takes seconds
           instead of minutes.
         </p>
       </section>
@@ -70,7 +70,7 @@ export function About() {
       <section className="mx-auto max-w-3xl px-6 py-16">
         <h2 className="text-2xl font-bold tracking-tight">The Product</h2>
         <p className="mt-4 text-muted-foreground leading-relaxed">
-          BeMe covers three wellness domains: <strong>Body</strong> (workouts & exercise logging),{' '}
+          TrackVibe covers three wellness domains: <strong>Body</strong> (workouts & exercise logging),{' '}
           <strong>Energy</strong> (nutrition, sleep & wellness), and <strong>Goals</strong>{' '}
           (measurable targets). Every domain supports voice input powered by Google Gemini AI.
         </p>

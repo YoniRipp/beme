@@ -1,4 +1,4 @@
-# BMe: Two Plans — Short-Term and AWS
+# TrackVibe: Two Plans — Short-Term and AWS
 
 This document splits the scale-and-harden work into **two plans**:
 
@@ -158,7 +158,7 @@ flowchart LR
 
 # Plan 2: AWS plan
 
-**Goal:** Run BMe on **Amazon Web Services** with a scalable, FAANG-style architecture: managed auth (Cognito), managed DB (RDS/Aurora + RDS Proxy), managed queue (SQS), managed compute (ECS Fargate), CDN (CloudFront), and WAF.
+**Goal:** Run TrackVibe on **Amazon Web Services** with a scalable, FAANG-style architecture: managed auth (Cognito), managed DB (RDS/Aurora + RDS Proxy), managed queue (SQS), managed compute (ECS Fargate), CDN (CloudFront), and WAF.
 
 **Outcome:** Production-grade scalability, security, and ops on AWS; no custom OAuth or in-app secrets; horizontal scaling and global delivery.
 

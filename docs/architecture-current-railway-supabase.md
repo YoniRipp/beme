@@ -1,6 +1,6 @@
 # Current architecture: Railway + Supabase
 
-BeMe today runs on **Railway** (frontend, backend, Redis) and **Supabase** (PostgreSQL).
+TrackVibe today runs on **Railway** (frontend, backend, Redis) and **Supabase** (PostgreSQL).
 
 ```mermaid
 flowchart TB

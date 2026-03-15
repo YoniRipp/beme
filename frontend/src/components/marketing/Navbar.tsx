@@ -40,7 +40,7 @@ export function Navbar() {
               <span
                 className="text-base font-bold tracking-tight text-foreground"
               >
-                BeMe
+                TrackVibe
               </span>
               <p
                 className="text-[10px] font-medium uppercase leading-none tracking-widest text-muted-foreground"

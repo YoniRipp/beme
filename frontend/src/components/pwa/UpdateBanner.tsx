@@ -19,7 +19,7 @@ export function UpdateBanner() {
       <RefreshCw className="h-5 w-5 flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium">Update available</p>
-        <p className="text-xs opacity-80">A new version of BMe is ready.</p>
+        <p className="text-xs opacity-80">A new version of TrackVibe is ready.</p>
       </div>
       <Button
         onClick={() => applyUpdate()}

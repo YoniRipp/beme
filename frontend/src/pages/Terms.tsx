@@ -16,21 +16,21 @@ export function Terms() {
 
       <h2 className="text-xl font-semibold mt-8 mb-3">1. Acceptance of Terms</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        By accessing or using BeMe ("the Service"), including our website, mobile applications,
+        By accessing or using TrackVibe ("the Service"), including our website, mobile applications,
         and any associated services, you agree to be bound by these Terms of Service ("Terms").
         If you do not agree to these Terms, you may not access or use the Service.
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        You must be at least 13 years of age to use BeMe. If you are between 13 and 18 years
+        You must be at least 13 years of age to use TrackVibe. If you are between 13 and 18 years
         old, you must have the consent of a parent or legal guardian to use the Service. By
-        using BeMe, you represent and warrant that you meet these age requirements. We reserve
+        using TrackVibe, you represent and warrant that you meet these age requirements. We reserve
         the right to terminate accounts that we discover are operated by users under the
         minimum age.
       </p>
 
       <h2 className="text-xl font-semibold mt-8 mb-3">2. Description of Service</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        BeMe is a life management platform designed to help you track and manage multiple
+        TrackVibe is a life management platform designed to help you track and manage multiple
         aspects of your daily life. The Service provides tools for:
       </p>
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
@@ -41,13 +41,13 @@ export function Terms() {
       </ul>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         The Service may evolve over time. We reserve the right to modify, suspend, or
-        discontinue any feature or aspect of BeMe at our discretion, with reasonable notice
+        discontinue any feature or aspect of TrackVibe at our discretion, with reasonable notice
         provided to users when possible.
       </p>
 
       <h2 className="text-xl font-semibold mt-8 mb-3">3. Account Registration</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        To use most features of BeMe, you must create an account. When registering, you agree to:
+        To use most features of TrackVibe, you must create an account. When registering, you agree to:
       </p>
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
         <li>Provide accurate, current, and complete information during registration</li>
@@ -65,7 +65,7 @@ export function Terms() {
 
       <h2 className="text-xl font-semibold mt-8 mb-3">4. Free and Pro Plans</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        BeMe offers two service tiers:
+        TrackVibe offers two service tiers:
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         <strong>Free Plan:</strong> Includes manual tracking for workouts, nutrition,
@@ -118,21 +118,21 @@ export function Terms() {
         <li>
           <strong>Payment management:</strong> All billing, invoices, payment method updates,
           and subscription management are handled through the Lemon Squeezy customer portal.
-          BeMe does not directly store your credit card or payment information.
+          TrackVibe does not directly store your credit card or payment information.
         </li>
       </ul>
 
       <h2 className="text-xl font-semibold mt-8 mb-3">6. User Content and Data</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        You retain full ownership of all data you enter into BeMe, including your
+        You retain full ownership of all data you enter into TrackVibe, including your
         workout logs, food entries, goals, and any other personal
-        information ("User Content"). By using the Service, you grant BeMe a limited,
+        information ("User Content"). By using the Service, you grant TrackVibe a limited,
         non-exclusive, worldwide license to process, store, and display your User Content
         solely for the purpose of providing and improving the Service.
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         You are solely responsible for the accuracy, completeness, and legality of the data
-        you enter. BeMe does not verify the accuracy of user-entered data such as
+        you enter. TrackVibe does not verify the accuracy of user-entered data such as
         calorie counts or workout metrics. If you use voice input or AI
         features to enter data, you should review the parsed results for accuracy before
         relying on them.
@@ -145,7 +145,7 @@ export function Terms() {
 
       <h2 className="text-xl font-semibold mt-8 mb-3">7. Prohibited Conduct</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        When using BeMe, you agree not to:
+        When using TrackVibe, you agree not to:
       </p>
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
         <li>Use the Service for any illegal or unauthorized purpose</li>
@@ -165,14 +165,14 @@ export function Terms() {
 
       <h2 className="text-xl font-semibold mt-8 mb-3">8. Health Disclaimer</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        BeMe is a personal tracking and organizational tool. It is <strong>not</strong> a
+        TrackVibe is a personal tracking and organizational tool. It is <strong>not</strong> a
         medical device, and the Service does <strong>not</strong> provide medical advice,
-        diagnosis, or treatment. The health, nutrition, and fitness features of BeMe are
+        diagnosis, or treatment. The health, nutrition, and fitness features of TrackVibe are
         intended for general informational and self-tracking purposes only.
       </p>
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
         <li>
-          Calorie counts, macronutrient breakdowns, and nutrition data displayed in BeMe are
+          Calorie counts, macronutrient breakdowns, and nutrition data displayed in TrackVibe are
           estimates based on available food databases and user input. They may not be perfectly
           accurate and should not be relied upon for medical dietary planning.
         </li>
@@ -186,27 +186,27 @@ export function Terms() {
           program, or making significant changes to your health routine.
         </li>
         <li>
-          BeMe is not a substitute for professional medical or nutritional advice.
+          TrackVibe is not a substitute for professional medical or nutritional advice.
           You should consult qualified professionals for decisions related to your health
           and dietary needs.
         </li>
       </ul>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         If you experience a medical emergency, contact emergency services immediately. Do not
-        rely on BeMe for any urgent health or safety decisions.
+        rely on TrackVibe for any urgent health or safety decisions.
       </p>
 
       <h2 className="text-xl font-semibold mt-8 mb-3">9. Intellectual Property</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        The BeMe name, logo, brand identity, visual design, user interface, software code, and
-        all related intellectual property are owned by BeMe and are protected by copyright,
+        The TrackVibe name, logo, brand identity, visual design, user interface, software code, and
+        all related intellectual property are owned by TrackVibe and are protected by copyright,
         trademark, and other intellectual property laws. You may not copy, modify, distribute,
-        or create derivative works based on BeMe's intellectual property without our express
+        or create derivative works based on TrackVibe's intellectual property without our express
         written consent.
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         As stated in Section 6, you retain ownership of all User Content you create within the
-        Service. Nothing in these Terms transfers ownership of your personal data to BeMe. You
+        Service. Nothing in these Terms transfers ownership of your personal data to TrackVibe. You
         may export or delete your data at any time through the Service.
       </p>
 
@@ -217,7 +217,7 @@ export function Terms() {
         of merchantability, fitness for a particular purpose, and non-infringement.
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        BeMe does not warrant that:
+        TrackVibe does not warrant that:
       </p>
       <ul className="list-disc pl-5 text-sm text-muted-foreground mb-4 space-y-1">
         <li>The Service will be uninterrupted, timely, secure, or error-free</li>
@@ -226,18 +226,18 @@ export function Terms() {
         <li>The results obtained from using the Service will meet your specific requirements</li>
       </ul>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        To the maximum extent permitted by applicable law, BeMe and its officers, directors,
+        To the maximum extent permitted by applicable law, TrackVibe and its officers, directors,
         employees, and agents shall not be liable for any indirect, incidental, special,
         consequential, or punitive damages, including but not limited to loss of profits, data,
         or goodwill, arising out of or in connection with your use of the Service. You
-        acknowledge that decisions you make based on data displayed in BeMe -- including
+        acknowledge that decisions you make based on data displayed in TrackVibe -- including
         dietary choices and exercise routines -- are made at your own
         risk.
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        In no event shall BeMe's total aggregate liability to you for all claims arising out of
+        In no event shall TrackVibe's total aggregate liability to you for all claims arising out of
         or relating to the Service exceed the total amount of subscription fees you have paid
-        to BeMe in the twelve (12) months preceding the event giving rise to the claim, or
+        to TrackVibe in the twelve (12) months preceding the event giving rise to the claim, or
         fifty US dollars ($50), whichever is greater.
       </p>
 
@@ -280,7 +280,7 @@ export function Terms() {
         revised Terms take effect.
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-        Your continued use of BeMe after the revised Terms take effect constitutes your
+        Your continued use of TrackVibe after the revised Terms take effect constitutes your
         acceptance of the changes. If you do not agree with the updated Terms, you should stop
         using the Service and delete your account before the changes take effect. The "Last
         updated" date at the top of this page indicates when these Terms were most recently
@@ -290,14 +290,14 @@ export function Terms() {
       <h2 className="text-xl font-semibold mt-8 mb-3">14. Contact Us</h2>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         If you have any questions, concerns, or feedback about these Terms of Service or the
-        BeMe platform, please contact us at:
+        TrackVibe platform, please contact us at:
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         <a
-          href="mailto:legal@beme.app"
+          href="mailto:legal@trackvibe.app"
           className="text-primary underline hover:no-underline"
         >
-          legal@beme.app
+          legal@trackvibe.app
         </a>
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">

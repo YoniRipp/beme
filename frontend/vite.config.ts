@@ -14,8 +14,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
-        name: 'BeMe - Wellness Tracker',
-        short_name: 'BeMe',
+        name: 'TrackVibe - Wellness Tracker',
+        short_name: 'TrackVibe',
         description: 'Track your body, energy, and goals in one place',
         theme_color: '#7a9a7e',
         background_color: '#f4f4f5',

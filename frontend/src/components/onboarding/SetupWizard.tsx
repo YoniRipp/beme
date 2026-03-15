@@ -88,7 +88,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                 <Heart className="w-8 h-8 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold">Welcome to BeMe</h2>
+              <h2 className="text-2xl font-bold">Welcome to TrackVibe</h2>
               <p className="text-muted-foreground">
                 Let's set up your profile to personalize your fitness experience.
                 This only takes a minute.

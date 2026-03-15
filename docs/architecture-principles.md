@@ -1,4 +1,4 @@
-# Architecture principles (BMe event-driven)
+# Architecture principles (TrackVibe event-driven)
 
 These rules guide the migration to event-driven, multi-service design. Follow them in every plan so we don't have to change the core mid-way.
 

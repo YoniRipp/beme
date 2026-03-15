@@ -1,4 +1,4 @@
-# Event schema (BMe)
+# Event schema (TrackVibe)
 
 All events on the bus use a single envelope so producers and consumers can rely on a consistent shape. This works with Redis (BullMQ), SQS, or EventBridge.
 

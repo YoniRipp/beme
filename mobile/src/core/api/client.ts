@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
-const STORAGE_KEY = 'beme_token';
+const STORAGE_KEY = 'trackvibe_token';
 
 const DEFAULT_TIMEOUT_MS = 30000;
 

@@ -1,5 +1,5 @@
 # Frontend: multi-stage. Build with VITE_API_URL and VITE_GOOGLE_CLIENT_ID so the SPA works in production.
-# Build context: frontend/ (e.g. docker build -t beme-frontend --build-arg VITE_API_URL=... --build-arg VITE_GOOGLE_CLIENT_ID=... ./frontend)
+# Build context: frontend/ (e.g. docker build -t trackvibe-frontend --build-arg VITE_API_URL=... --build-arg VITE_GOOGLE_CLIENT_ID=... ./frontend)
 
 # Stage 1: build
 FROM node:20-alpine AS build

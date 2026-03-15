@@ -1,6 +1,6 @@
 /**
  * Drop Money (transactions) and Schedule features.
- * BeMe is pivoting to a wellness-focused app (Body + Energy + Goals).
+ * TrackVibe is pivoting to a wellness-focused app (Body + Energy + Goals).
  */
 
 export const up = (pgm) => {

@@ -116,7 +116,7 @@ function offProductToFood(product: OFFProduct): FoodRow
 **API Details:**
 - No API key needed
 - Rate limit: ~100 requests/minute (respectful usage)
-- User-Agent header required: `BeMe/1.0 (contact@beme.app)`
+- User-Agent header required: `TrackVibe/1.0 (contact@trackvibe.app)`
 - Returns JSON with nutrition per 100g
 - Supports search by name in any language including Hebrew
 - Barcode lookup is instant (direct key lookup)
@@ -212,7 +212,7 @@ async function cacheFromOFF(product: OFFProduct): Promise<FoodRow> {
 **New env vars:**
 ```
 OFF_ENABLED=true                    # Enable Open Food Facts integration (default: true)
-OFF_USER_AGENT=BeMe/1.0            # Required by OFF API
+OFF_USER_AGENT=TrackVibe/1.0            # Required by OFF API
 OFF_CACHE_TTL_SEC=86400             # Redis cache TTL for OFF results (default: 24h)
 ```
 
