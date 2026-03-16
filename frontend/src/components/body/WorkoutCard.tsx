@@ -48,14 +48,24 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
           </span>
         </div>
         {workout.exercises.length > 0 && (
-          <div className="mt-1.5 space-y-0.5">
+          <div className="mt-1.5 space-y-1">
             {workout.exercises.slice(0, 3).map((ex, i) => (
-              <p key={i} className="text-xs text-muted-foreground truncate">
-                <span className="text-foreground/70 font-medium">{ex.name}</span>{' '}
-                <span className="tabular-nums">
+              <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {getImageUrl(ex.name) ? (
+                  <img
+                    src={getImageUrl(ex.name)}
+                    alt={ex.name}
+                    className="w-5 h-5 rounded object-cover shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="w-5 h-5 rounded bg-muted shrink-0" />
+                )}
+                <span className="text-foreground/70 font-medium truncate">{ex.name}</span>
+                <span className="tabular-nums shrink-0">
                   {ex.sets} × {ex.reps}{ex.weight ? ` · ${ex.weight} ${unit}` : ''}
                 </span>
-              </p>
+              </div>
             ))}
             {workout.exercises.length > 3 && (
               <p className="text-xs text-muted-foreground">

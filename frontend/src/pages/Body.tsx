@@ -115,7 +115,7 @@ export function Body() {
                     </div>
                     <div className="space-y-4">
                       {groupedThisWeek.map(({ date: dateStr, label, workouts: dayWorkouts }) => (
-                        <div key={dateStr} className="rounded-lg border bg-muted/20 p-3">
+                        <div key={dateStr} className="rounded-2xl border border-border/30 bg-card shadow-sm p-3">
                           <h4 className="text-xs font-medium text-muted-foreground mb-2 pl-0.5">
                             {label}
                           </h4>

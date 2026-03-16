@@ -16,28 +16,31 @@ import { format, addDays } from 'date-fns';
 interface DuplicateDayDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sourceDate: Date;
-  entryCount: number;
   onDuplicate: (sourceDate: string, targetDate: string) => Promise<void>;
 }
 
 export function DuplicateDayDialog({
   open,
   onOpenChange,
-  sourceDate,
-  entryCount,
   onDuplicate,
 }: DuplicateDayDialogProps) {
+  const [sourceDate, setSourceDate] = useState(() =>
+    toLocalDateString(new Date()),
+  );
   const [targetDate, setTargetDate] = useState(() =>
     toLocalDateString(addDays(new Date(), 1)),
   );
   const [saving, setSaving] = useState(false);
 
   const handleDuplicate = async () => {
+    if (sourceDate === targetDate) {
+      toast.error('Source and target dates must be different.');
+      return;
+    }
     setSaving(true);
     try {
-      await onDuplicate(toLocalDateString(sourceDate), targetDate);
-      toast.success(`Copied ${entryCount} entries to ${format(new Date(targetDate + 'T00:00:00'), 'MMM d')}`);
+      await onDuplicate(sourceDate, targetDate);
+      toast.success(`Copied entries to ${format(new Date(targetDate + 'T00:00:00'), 'MMM d')}`);
       onOpenChange(false);
     } catch {
       toast.error('Failed to duplicate entries. Please try again.');
@@ -50,19 +53,30 @@ export function DuplicateDayDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Copy Day&apos;s Menu</DialogTitle>
+          <DialogTitle>Copy Day&apos;s Food</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <p className="text-sm text-muted-foreground">
-            Copy <span className="font-medium text-foreground">{entryCount} food entries</span> from{' '}
-            <span className="font-medium text-foreground">{format(sourceDate, 'EEEE, MMM d')}</span> to
-            another day.
+            Copy all food entries from one day to another.
           </p>
 
           <div>
+            <label htmlFor="source-date" className="text-sm font-medium">
+              Copy from
+            </label>
+            <Input
+              id="source-date"
+              type="date"
+              value={sourceDate}
+              onChange={(e) => setSourceDate(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+
+          <div>
             <label htmlFor="target-date" className="text-sm font-medium">
-              Target Date
+              Copy to
             </label>
             <Input
               id="target-date"
@@ -78,14 +92,14 @@ export function DuplicateDayDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={handleDuplicate} disabled={saving || !targetDate}>
+          <Button onClick={handleDuplicate} disabled={saving || !sourceDate || !targetDate}>
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Copying...
               </>
             ) : (
-              `Copy ${entryCount} Entries`
+              'Copy Entries'
             )}
           </Button>
         </DialogFooter>
