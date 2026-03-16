@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Pencil } from 'lucide-react';
 
 interface MacroData {
@@ -70,6 +71,7 @@ function MacroRing({
 }
 
 export function MacroCircles({ carbs, fat, protein, onEditGoals }: MacroCirclesProps) {
+  const id = useId();
   return (
     <div>
       {onEditGoals && (
@@ -91,21 +93,21 @@ export function MacroCircles({ carbs, fat, protein, onEditGoals }: MacroCirclesP
           current={carbs.current}
           goal={carbs.goal}
           color="hsl(42, 75%, 50%)"
-          gradientId="carbsGradient"
+          gradientId={`${id}-carbs`}
         />
         <MacroRing
           label="Fat"
           current={fat.current}
           goal={fat.goal}
           color="hsl(14, 65%, 55%)"
-          gradientId="fatGradient"
+          gradientId={`${id}-fat`}
         />
         <MacroRing
           label="Protein"
           current={protein.current}
           goal={protein.goal}
           color="hsl(210, 80%, 50%)"
-          gradientId="proteinGradient"
+          gradientId={`${id}-protein`}
         />
       </div>
     </div>
