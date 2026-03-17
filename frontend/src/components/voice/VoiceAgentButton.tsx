@@ -136,7 +136,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
       <Button
         size="icon"
         className={cn(
-          'fixed bottom-36 right-4 z-50 h-14 w-14 rounded-full shadow-lg transition-all md:right-6 lg:bottom-14',
+          'fixed bottom-36 right-4 z-50 h-14 w-14 rounded-full shadow-lg transition-all md:right-6 lg:bottom-24',
           isActive && 'animate-pulse ring-2 ring-primary ring-offset-2 ring-offset-background'
         )}
         aria-label={
