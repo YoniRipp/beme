@@ -14,22 +14,30 @@ export function getApiBase(): string {
 }
 
 /**
- * In-memory token storage. The JWT is NOT persisted to localStorage to prevent
- * XSS token theft. Auth relies on httpOnly cookies set by the backend;
- * this in-memory copy is kept only for WebSocket connections that cannot
- * send cookies. A lightweight "has session" flag in localStorage tells the
- * app whether to attempt a /me call on page reload.
+ * Token storage. The JWT is persisted to localStorage so the session
+ * survives page refreshes. On load we restore the token from storage
+ * and use it in the Authorization header for all API requests.
  */
-let inMemoryToken: string | null = null;
+let inMemoryToken: string | null = (() => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    // Ignore legacy '1' flag from old session-flag-only storage
+    if (stored && stored !== '1') return stored;
+    return null;
+  } catch {
+    return null;
+  }
+})();
 
 export function getToken(): string | null {
   return inMemoryToken;
 }
 
-/** Returns true if the user previously authenticated (session cookie may still be valid). */
+/** Returns true if the user previously authenticated (token exists in storage). */
 export function hasSession(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEYS.TOKEN) === '1';
+    const stored = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    return stored != null && stored !== '';
   } catch {
     return false;
   }
@@ -39,7 +47,7 @@ export function setToken(token: string | null): void {
   inMemoryToken = token;
   try {
     if (token == null) localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    else localStorage.setItem(STORAGE_KEYS.TOKEN, '1');
+    else localStorage.setItem(STORAGE_KEYS.TOKEN, token);
   } catch {
     // ignore
   }
