@@ -64,6 +64,7 @@ export const createFoodEntrySchema = z.object({
   servingType: z.string().max(50).optional().nullable(),
   startTime: timeString,
   endTime: timeString,
+  mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional().nullable(),
 });
 
 export const updateFoodEntrySchema = z.object({
@@ -78,6 +79,7 @@ export const updateFoodEntrySchema = z.object({
   servingType: z.string().max(50).optional().nullable(),
   startTime: timeString,
   endTime: timeString,
+  mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional().nullable(),
 }).strict().refine((obj) => Object.keys(obj).length > 0, 'At least one field required');
 
 // ─── Food entry batch schemas ─────────────────────────────
@@ -92,6 +94,7 @@ const batchFoodEntryItem = z.object({
   servingType: z.string().max(50).optional().nullable(),
   startTime: timeString,
   endTime: timeString,
+  mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional().nullable(),
 });
 
 export const createFoodEntriesBatchSchema = z.object({

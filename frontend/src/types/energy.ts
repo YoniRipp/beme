@@ -19,4 +19,5 @@ export interface FoodEntry {
   /** Meal time range: HH:MM 24h. When set, Energy page shows time and duration. */
   startTime?: string;
   endTime?: string;
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
 }

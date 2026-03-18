@@ -24,6 +24,9 @@ export function apiFoodEntryToFoodEntry(a: {
   portionAmount?: number;
   portionUnit?: string;
   servingType?: string;
+  startTime?: string;
+  endTime?: string;
+  mealType?: string;
 }): FoodEntry {
   return {
     id: a.id,
@@ -36,5 +39,8 @@ export function apiFoodEntryToFoodEntry(a: {
     portionAmount: a.portionAmount,
     portionUnit: a.portionUnit as FoodEntry['portionUnit'],
     servingType: a.servingType as FoodEntry['servingType'],
+    startTime: a.startTime,
+    endTime: a.endTime,
+    mealType: a.mealType as FoodEntry['mealType'],
   };
 }

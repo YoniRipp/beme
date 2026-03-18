@@ -199,3 +199,57 @@ After improvements the application should feel like:
 - production ready
 - consistent across screens
 Users should feel they are using a real product, not a prototype.
+---
+# Voice-AI First Design
+The primary input method for food logging is **voice AI activation**.
+The flow is:
+1. User taps a mic button inside a meal section (Breakfast, Lunch, Dinner, Snack)
+2. A bottom sheet opens with a large mic button
+3. User speaks naturally (e.g., "2 eggs and toast with butter")
+4. App parses the text, resolves nutrition via search/AI, and shows a review
+5. User confirms and saves — entries go into the correct meal section
+Manual entry (search, barcode, form) is the **secondary** method.
+The global Voice Agent FAB (floating mic button) is available on all pages except Home.
+---
+# Meal Type Support
+Food entries support explicit meal types: `breakfast`, `lunch`, `dinner`, `snack`.
+The `mealType` field is stored in the database (`food_entries.meal_type` column).
+When adding entries via the FoodEntryModal, a meal type selector (pill buttons) is shown.
+When adding via voice in a meal section, the meal type is automatically set.
+Backward compatible: entries without `mealType` fall back to time-based inference.
+---
+# Claude MCP Tools & Skills
+## MCP Server
+The project includes an MCP (Model Context Protocol) server at `backend/mcp-server/`.
+Configuration files: `.mcp.json` (root), `.cursor/mcp.json` (Cursor IDE).
+Available MCP tools:
+- `list_goals` — List all user goals
+- `add_goal` — Add a new goal (type: calories/workouts/sleep, target, period)
+MCP resources:
+- `trackvibe://goals` — Read-only goals resource
+## Claude Agent Profiles
+Custom agent profiles are defined in `.claude/agents/`:
+- `coder.md` — Implementation specialist for writing and editing code
+- `devops.md` — DevOps/infrastructure agent
+- `reviewer.md` — Code review agent (read-only)
+- `team-lead.md` — Task coordination and planning
+- `tester.md` — QA and testing specialist
+- `product-manager.md` — Product strategy and UX analysis
+## Claude Skills (Slash Commands)
+Available in `.claude/commands/`:
+- `/add-feature` — Scaffold a new domain feature (backend API + frontend hook + UI)
+- `/fix-tests` — Run tests and fix failures
+- `/test-e2e` — Run Playwright E2E tests
+- `/typecheck` — Run TypeScript type checking on both backend and frontend
+- `/test-all` — Run all test suites (backend unit, frontend unit, E2E)
+## Settings & Hooks
+Configured in `.claude/settings.json`:
+- **Post-tool hooks**: TypeScript check runs automatically after Write/Edit operations
+- **Pre-tool hooks**: Blocks force-push attempts
+- **Permissions**: Allows dev/build/test commands, denies .env reads and curl
+## When Using Claude with This Project
+1. Use `/add-feature` when scaffolding new domain features
+2. Use `/fix-tests` after making code changes to ensure tests pass
+3. Use `/typecheck` to verify TypeScript correctness on both projects
+4. Leverage MCP tools for goal-related operations when the server is running
+5. Prefer agent profiles matching the task (coder for implementation, tester for QA)

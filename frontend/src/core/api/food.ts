@@ -12,6 +12,9 @@ export interface ApiFoodEntry {
   portionAmount?: number;
   portionUnit?: string;
   servingType?: string;
+  startTime?: string;
+  endTime?: string;
+  mealType?: string;
 }
 
 export const foodEntriesApi = {
@@ -26,6 +29,9 @@ export const foodEntriesApi = {
     portionAmount?: number;
     portionUnit?: string;
     servingType?: string;
+    startTime?: string;
+    endTime?: string;
+    mealType?: string;
   }) => request<ApiFoodEntry>('/api/food-entries', { method: 'POST', body: e }),
   update: (id: string, updates: Partial<Omit<ApiFoodEntry, 'id'>>) =>
     request<ApiFoodEntry>(`/api/food-entries/${id}`, { method: 'PATCH', body: updates }),
@@ -44,6 +50,7 @@ export const foodEntriesApi = {
       servingType?: string;
       startTime?: string;
       endTime?: string;
+      mealType?: string;
     }>;
   }) => request<ApiFoodEntry[]>('/api/food-entries/batch', { method: 'POST', body }),
 
