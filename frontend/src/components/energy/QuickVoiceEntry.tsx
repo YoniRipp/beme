@@ -8,7 +8,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useBrowserSpeech } from '@/hooks/useBrowserSpeech';
-import { parseFoodItems, getMealStartTime } from '@/features/energy/parseFoodText';
+import { parseFoodItems, getMealStartTime, inferMealFromTime, textContainsMealKeyword } from '@/features/energy/parseFoodText';
 import type { MealType } from '@/features/energy/parseFoodText';
 import { searchFoods, lookupOrCreateFood } from '@/features/energy/api';
 import type { FoodSearchResult } from '@/features/energy/api';
@@ -28,7 +28,7 @@ interface ResolvedEntry {
 interface QuickVoiceEntryProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mealType: MealType;
+  mealType?: MealType;
   onSave: (entries: ResolvedEntry[]) => Promise<void>;
 }
 
@@ -89,6 +89,12 @@ export default function QuickVoiceEntry({
         return;
       }
 
+      // Determine how to assign meal types:
+      // If user explicitly mentioned meal keywords, trust the per-item parsed meal
+      // Otherwise fall back to the prop mealType or infer from time of day
+      const hasExplicitMeals = textContainsMealKeyword(text);
+      const fallbackMeal = mealType ?? inferMealFromTime();
+
       setPhase('review');
       setIsResolving(true);
 
@@ -106,6 +112,7 @@ export default function QuickVoiceEntry({
           }
 
           if (nutrition) {
+            const effectiveMeal = hasExplicitMeals ? item.meal : fallbackMeal;
             resolved.push({
               name: nutrition.name || item.name,
               calories: nutrition.calories,
@@ -114,8 +121,8 @@ export default function QuickVoiceEntry({
               fats: nutrition.fat,
               portionAmount: item.amount ?? undefined,
               portionUnit: item.unit ?? undefined,
-              startTime: getMealStartTime(mealType),
-              mealType: mealType.toLowerCase(),
+              startTime: getMealStartTime(effectiveMeal),
+              mealType: effectiveMeal.toLowerCase(),
             });
           }
         } catch {
@@ -187,7 +194,7 @@ export default function QuickVoiceEntry({
       >
         <SheetHeader className="pb-2">
           <SheetTitle className="text-center text-base font-semibold">
-            Add to {mealType}
+            {mealType ? `Add to ${mealType}` : 'What did you eat?'}
           </SheetTitle>
         </SheetHeader>
 
@@ -301,7 +308,14 @@ export default function QuickVoiceEntry({
                       className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3"
                     >
                       <div className="flex-1 min-w-0 pr-3">
-                        <p className="text-sm font-semibold truncate">{item.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold truncate">{item.name}</p>
+                          {item.mealType && (
+                            <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">
+                              {item.mealType}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           P {item.protein}g &middot; C {item.carbs}g &middot; F {item.fats}g
                         </p>

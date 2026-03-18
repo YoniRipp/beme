@@ -131,3 +131,18 @@ export function parseFoodItems(text: string): ParsedFoodItem[] {
 export function getMealStartTime(meal: MealType): string {
   return MEAL_TIMES[meal];
 }
+
+/** Infer the current meal type from the time of day. */
+export function inferMealFromTime(): MealType {
+  const h = new Date().getHours();
+  if (h < 11) return 'Breakfast';
+  if (h < 14) return 'Lunch';
+  if (h < 17) return 'Snack';
+  return 'Dinner';
+}
+
+/** Check whether the input text contains any explicit meal keyword. */
+export function textContainsMealKeyword(text: string): boolean {
+  const lower = text.toLowerCase();
+  return MEAL_KEYWORDS.some((k) => lower.includes(k.toLowerCase()));
+}
