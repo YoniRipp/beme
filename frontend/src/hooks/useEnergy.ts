@@ -92,6 +92,9 @@ export function useEnergy() {
         ...(entry.portionAmount != null && { portionAmount: entry.portionAmount }),
         ...(entry.portionUnit && { portionUnit: entry.portionUnit }),
         ...(entry.servingType && { servingType: entry.servingType }),
+        ...(entry.startTime && { startTime: entry.startTime }),
+        ...(entry.endTime && { endTime: entry.endTime }),
+        ...(entry.mealType && { mealType: entry.mealType }),
       }),
     onSuccess: (created) => {
       queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
@@ -112,6 +115,9 @@ export function useEnergy() {
       if (updates.portionAmount !== undefined) body.portionAmount = updates.portionAmount;
       if (updates.portionUnit !== undefined) body.portionUnit = updates.portionUnit;
       if (updates.servingType !== undefined) body.servingType = updates.servingType;
+      if (updates.startTime !== undefined) body.startTime = updates.startTime;
+      if (updates.endTime !== undefined) body.endTime = updates.endTime;
+      if (updates.mealType !== undefined) body.mealType = updates.mealType;
       return foodEntriesApi.update(id, body);
     },
     onSuccess: (updated) => {
@@ -145,6 +151,7 @@ export function useEnergy() {
           ...(e.servingType && { servingType: e.servingType }),
           ...(e.startTime && { startTime: e.startTime }),
           ...(e.endTime && { endTime: e.endTime }),
+          ...(e.mealType && { mealType: e.mealType }),
         })),
       }),
     onSuccess: (created) => {

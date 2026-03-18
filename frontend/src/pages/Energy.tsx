@@ -16,7 +16,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import { PeriodSelector } from '@/components/shared/PeriodSelector';
-import { Moon, Trash2, Pencil, ChevronDown, Plus, ClipboardList, Copy } from 'lucide-react';
+import QuickVoiceEntry from '@/components/energy/QuickVoiceEntry';
+import { Moon, Trash2, Pencil, ChevronDown, Plus, ClipboardList, Copy, Sun, CloudSun, Sunset, Cookie, Mic } from 'lucide-react';
 import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
 
@@ -32,10 +33,21 @@ interface FoodGroup {
 
 type MealType = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
 
+const MEAL_ICONS: Record<MealType, typeof Sun> = {
+  Breakfast: Sun,
+  Lunch: CloudSun,
+  Dinner: Sunset,
+  Snack: Cookie,
+};
+
 function getMealType(entry: FoodEntry): MealType {
+  // Prefer explicit mealType field
+  if (entry.mealType) {
+    const mt = entry.mealType.charAt(0).toUpperCase() + entry.mealType.slice(1);
+    if (mt === 'Breakfast' || mt === 'Lunch' || mt === 'Dinner' || mt === 'Snack') return mt;
+  }
   const time = entry.startTime ?? entry.endTime;
   if (!time) {
-    // Guess from date hour
     const h = new Date(entry.date).getHours();
     if (h < 11) return 'Breakfast';
     if (h < 14) return 'Lunch';
@@ -49,7 +61,16 @@ function getMealType(entry: FoodEntry): MealType {
   return 'Dinner';
 }
 
-function groupByMeal(entries: FoodEntry[]): { meal: MealType; entries: FoodEntry[]; totalCal: number }[] {
+interface MealGroup {
+  meal: MealType;
+  entries: FoodEntry[];
+  totalCal: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFats: number;
+}
+
+function groupByMeal(entries: FoodEntry[]): MealGroup[] {
   const order: MealType[] = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
   const groups = new Map<MealType, FoodEntry[]>();
   for (const m of order) groups.set(m, []);
@@ -57,16 +78,18 @@ function groupByMeal(entries: FoodEntry[]): { meal: MealType; entries: FoodEntry
     const meal = getMealType(e);
     groups.get(meal)!.push(e);
   }
-  return order
-    .map((meal) => {
-      const mealEntries = groups.get(meal)!;
-      return {
-        meal,
-        entries: mealEntries,
-        totalCal: mealEntries.reduce((s, e) => s + e.calories, 0),
-      };
-    })
-    .filter((g) => g.entries.length > 0);
+  return order.map((meal) => {
+    const mealEntries = groups.get(meal)!;
+    return {
+      meal,
+      entries: mealEntries,
+      totalCal: mealEntries.reduce((s, e) => s + e.calories, 0),
+      totalProtein: mealEntries.reduce((s, e) => s + e.protein, 0),
+      totalCarbs: mealEntries.reduce((s, e) => s + e.carbs, 0),
+      totalFats: mealEntries.reduce((s, e) => s + e.fats, 0),
+    };
+  });
+  // All 4 meals always returned — no filter
 }
 
 function groupFoodEntries(
@@ -180,35 +203,70 @@ function MealSection({
   meal,
   entries,
   totalCal,
+  totalProtein,
+  totalCarbs,
+  totalFats,
   onEdit,
   onDelete,
-  onAdd,
+  onManualAdd,
+  onVoiceAdd,
 }: {
   meal: MealType;
   entries: FoodEntry[];
   totalCal: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFats: number;
   onEdit: (entry: FoodEntry) => void;
   onDelete: (id: string) => void;
-  onAdd: () => void;
+  onManualAdd: () => void;
+  onVoiceAdd: () => void;
 }) {
+  const Icon = MEAL_ICONS[meal];
+  const isEmpty = entries.length === 0;
+
   return (
     <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <h4 className="text-sm font-semibold">{meal}</h4>
-        <span className="text-sm font-medium text-muted-foreground tabular-nums">{totalCal} cal</span>
+        <div className="flex items-center gap-2">
+          <Icon className="w-4 h-4 text-muted-foreground" />
+          <h4 className="text-sm font-semibold">{meal}</h4>
+        </div>
+        <div className="text-right">
+          <span className="text-sm font-medium tabular-nums">{totalCal} cal</span>
+          {!isEmpty && (
+            <p className="text-[10px] text-muted-foreground tabular-nums">
+              P:{totalProtein}g &middot; C:{totalCarbs}g &middot; F:{totalFats}g
+            </p>
+          )}
+        </div>
       </div>
       <div className="px-3 pb-3 space-y-2">
-        {entries.map((entry) => (
-          <FoodCard key={entry.id} entry={entry} onEdit={onEdit} onDelete={onDelete} />
-        ))}
-        <button
-          type="button"
-          onClick={onAdd}
-          className="w-full flex items-center justify-center gap-1.5 py-2 text-sm text-primary font-medium hover:bg-muted/50 rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Food
-        </button>
+        {isEmpty ? (
+          <p className="py-3 text-center text-xs text-muted-foreground">No items yet</p>
+        ) : (
+          entries.map((entry) => (
+            <FoodCard key={entry.id} entry={entry} onEdit={onEdit} onDelete={onDelete} />
+          ))
+        )}
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onVoiceAdd}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <Mic className="w-4 h-4" />
+            Voice
+          </button>
+          <button
+            type="button"
+            onClick={onManualAdd}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-primary hover:bg-muted/50 rounded-lg border border-border/50 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Manually
+          </button>
+        </div>
       </div>
     </Card>
   );
@@ -228,6 +286,8 @@ export function Energy() {
   const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [activeMealType, setActiveMealType] = useState<MealType | undefined>();
+  const [voiceSheetOpen, setVoiceSheetOpen] = useState(false);
 
   const today = useMemo(() => new Date(), []);
 
@@ -366,10 +426,36 @@ export function Energy() {
     setEditingFoodEntry(undefined);
   };
 
-  const handleAddFood = () => {
+  const handleAddFood = useCallback((mealType?: MealType) => {
     setEditingFoodEntry(undefined);
+    setActiveMealType(mealType);
     setFoodModalOpen(true);
-  };
+  }, []);
+
+  const handleVoiceAdd = useCallback((mealType: MealType) => {
+    setActiveMealType(mealType);
+    setVoiceSheetOpen(true);
+  }, []);
+
+  const handleVoiceSave = useCallback(async (entries: Array<{
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+    portionAmount?: number;
+    portionUnit?: string;
+    startTime?: string;
+    mealType?: string;
+  }>) => {
+    await addFoodEntriesBatch({
+      date: toLocalDateString(today),
+      entries: entries.map((e) => ({
+        ...e,
+        mealType: e.mealType as FoodEntry['mealType'],
+      })),
+    });
+  }, [addFoodEntriesBatch, today]);
 
   const handleEditFood = useCallback((entry: FoodEntry) => {
     setEditingFoodEntry(entry);
@@ -488,14 +574,8 @@ export function Energy() {
       <div className="space-y-3">
         <h3 className="text-base font-semibold">Journal</h3>
 
-        {periodFoodEntries.length === 0 ? (
-          <EmptyStateCard
-            onClick={handleAddFood}
-            title="Add your first food entry"
-            description="Tap to log what you ate"
-          />
-        ) : caloriePeriod === 'daily' ? (
-          /* Daily: grouped by meal type (MFP style) */
+        {caloriePeriod === 'daily' ? (
+          /* Daily: grouped by meal type — all 4 always visible */
           <>
             {mealGroups.map((group) => (
               <MealSection
@@ -503,15 +583,22 @@ export function Energy() {
                 meal={group.meal}
                 entries={group.entries}
                 totalCal={group.totalCal}
+                totalProtein={group.totalProtein}
+                totalCarbs={group.totalCarbs}
+                totalFats={group.totalFats}
                 onEdit={handleEditFood}
                 onDelete={handleDeleteFood}
-                onAdd={handleAddFood}
+                onManualAdd={() => handleAddFood(group.meal)}
+                onVoiceAdd={() => handleVoiceAdd(group.meal)}
               />
             ))}
-            {mealGroups.length === 0 && (
-              <AddAnotherCard onClick={handleAddFood} label="Add food entry" />
-            )}
           </>
+        ) : periodFoodEntries.length === 0 ? (
+          <EmptyStateCard
+            onClick={() => handleAddFood()}
+            title="Add your first food entry"
+            description="Tap to log what you ate"
+          />
         ) : (
           /* Weekly/Monthly/Yearly: unified accordion */
           <>
@@ -527,7 +614,7 @@ export function Energy() {
                 />
               ))}
             </Card>
-            <AddAnotherCard onClick={handleAddFood} label="Add food entry" />
+            <AddAnotherCard onClick={() => handleAddFood()} label="Add food entry" />
           </>
         )}
       </div>
@@ -618,6 +705,14 @@ export function Energy() {
         onOpenChange={setFoodModalOpen}
         onSave={handleFoodSave}
         entry={editingFoodEntry}
+        defaultMealType={activeMealType ? activeMealType.toLowerCase() as 'breakfast' | 'lunch' | 'dinner' | 'snack' : undefined}
+      />
+
+      <QuickVoiceEntry
+        open={voiceSheetOpen}
+        onOpenChange={setVoiceSheetOpen}
+        mealType={activeMealType ?? 'Snack'}
+        onSave={handleVoiceSave}
       />
 
       <ConfirmationDialog

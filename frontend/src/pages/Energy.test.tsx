@@ -47,15 +47,17 @@ describe('Energy Page', () => {
     });
   });
 
-  it('opens food modal when add button is clicked', async () => {
+  it('opens food modal when add manually button is clicked', async () => {
     const user = userEvent.setup();
     render(<Energy />, { wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText(/add your first food entry/i)).toBeInTheDocument();
+      // All 4 meal sections always visible (even when empty)
+      expect(screen.getByText('Breakfast')).toBeInTheDocument();
     });
-    const addButton = screen.getByText(/add your first food entry/i);
-    await user.click(addButton);
+    // Click the first "Add Manually" button (in the Breakfast section)
+    const addButtons = screen.getAllByText(/add manually/i);
+    await user.click(addButtons[0]);
 
     await waitFor(() => {
       expect(screen.getByText(/add food entry/i)).toBeInTheDocument();

@@ -28,11 +28,29 @@ import { Loader2, ScanBarcode } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+type MealTypeOption = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+const MEAL_START_TIMES: Record<MealTypeOption, string> = {
+  breakfast: '08:00',
+  lunch: '12:30',
+  dinner: '18:00',
+  snack: '15:00',
+};
+
+function getCurrentMealType(): MealTypeOption {
+  const h = new Date().getHours();
+  if (h < 11) return 'breakfast';
+  if (h < 14) return 'lunch';
+  if (h < 17) return 'snack';
+  return 'dinner';
+}
+
 interface FoodEntryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (entry: Omit<FoodEntry, 'id'>) => void;
   entry?: FoodEntry;
+  defaultMealType?: MealTypeOption;
 }
 
 const MIN_SEARCH_LENGTH = 2;
@@ -70,7 +88,8 @@ const defaultValues: FoodEntryFormValues = {
   fats: '',
 };
 
-export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryModalProps) {
+export function FoodEntryModal({ open, onOpenChange, onSave, entry, defaultMealType }: FoodEntryModalProps) {
+  const [selectedMealType, setSelectedMealType] = useState<MealTypeOption>(defaultMealType ?? getCurrentMealType());
   const [portionGrams, setPortionGrams] = useState(DEFAULT_REFERENCE_GRAMS);
   const [per100g, setPer100g] = useState<Per100g | null>(null);
   const [isLiquid, setIsLiquid] = useState(false);
@@ -132,7 +151,8 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
     setSearchError(null);
     setDropdownOpen(false);
     setIsLookingUp(false);
-  }, [entry, open, reset]);
+    setSelectedMealType(entry?.mealType as MealTypeOption ?? defaultMealType ?? getCurrentMealType());
+  }, [entry, open, reset, defaultMealType]);
 
   useEffect(() => {
     const q = debouncedSearchQuery.trim();
@@ -324,8 +344,9 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
         portionUnit: defaultUnit ? defaultUnit : (isLiquid ? ('ml' as const) : ('g' as const)),
         ...(isLiquid && !defaultUnit && servingType && servingType !== 'other' && { servingType }),
       }),
-      ...(entry?.startTime != null && { startTime: entry.startTime }),
+      startTime: entry?.startTime ?? MEAL_START_TIMES[selectedMealType],
       ...(entry?.endTime != null && { endTime: entry.endTime }),
+      mealType: selectedMealType,
     });
     onOpenChange(false);
   };
@@ -351,6 +372,25 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry }: FoodEntryM
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
+            {/* Meal type selector */}
+            <div className="flex gap-1 p-1 bg-muted rounded-lg">
+              {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((meal) => (
+                <button
+                  key={meal}
+                  type="button"
+                  onClick={() => setSelectedMealType(meal)}
+                  className={cn(
+                    'flex-1 py-1.5 text-xs font-medium rounded-md transition-colors capitalize',
+                    selectedMealType === meal
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {meal}
+                </button>
+              ))}
+            </div>
+
             <div ref={searchContainerRef} className="relative">
               <Label htmlFor="food-search">Search food (optional)</Label>
               <div className="flex gap-2">

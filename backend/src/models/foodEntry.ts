@@ -6,7 +6,7 @@ import { getPool } from '../db/pool.js';
 import { buildUpdateQuery, type UpdateBuilder } from '../db/queryBuilder.js';
 import type { FoodEntry, CreateFoodEntryInput, UpdateFoodEntryInput, PaginationParams } from '../types/domain.js';
 
-const RETURNING = 'id, date, name, calories, protein, carbs, fats, portion_amount, portion_unit, serving_type, start_time, end_time';
+const RETURNING = 'id, date, name, calories, protein, carbs, fats, portion_amount, portion_unit, serving_type, start_time, end_time, meal_type';
 
 function rowToEntry(row: Record<string, unknown>): FoodEntry {
   return {
@@ -22,6 +22,7 @@ function rowToEntry(row: Record<string, unknown>): FoodEntry {
     servingType: (row.serving_type as string) ?? undefined,
     startTime: (row.start_time as string) ?? undefined,
     endTime: (row.end_time as string) ?? undefined,
+    mealType: (row.meal_type as FoodEntry['mealType']) ?? undefined,
   };
 }
 
@@ -38,6 +39,7 @@ const UPDATE_SPEC: UpdateBuilder<UpdateFoodEntryInput> = {
     servingType: { column: 'serving_type' },
     startTime: { column: 'start_time' },
     endTime: { column: 'end_time' },
+    mealType: { column: 'meal_type' },
   },
 };
 
@@ -61,10 +63,10 @@ export async function findByUserId(userId: string, pagination?: PaginationParams
 export async function create(input: CreateFoodEntryInput, client?: pg.Pool | pg.PoolClient): Promise<FoodEntry> {
   const db = client ?? getPool('energy');
   const result = await db.query(
-    `INSERT INTO food_entries (user_id, date, name, calories, protein, carbs, fats, portion_amount, portion_unit, serving_type, start_time, end_time)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `INSERT INTO food_entries (user_id, date, name, calories, protein, carbs, fats, portion_amount, portion_unit, serving_type, start_time, end_time, meal_type)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      RETURNING ${RETURNING}`,
-    [input.userId, input.date, input.name.trim(), input.calories, input.protein, input.carbs, input.fats, input.portionAmount ?? null, input.portionUnit ?? null, input.servingType ?? null, input.startTime ?? null, input.endTime ?? null],
+    [input.userId, input.date, input.name.trim(), input.calories, input.protein, input.carbs, input.fats, input.portionAmount ?? null, input.portionUnit ?? null, input.servingType ?? null, input.startTime ?? null, input.endTime ?? null, input.mealType ?? null],
   );
   return rowToEntry(result.rows[0]);
 }

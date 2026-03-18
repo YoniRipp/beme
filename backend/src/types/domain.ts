@@ -74,6 +74,7 @@ export interface FoodEntry {
   servingType?: string;
   startTime?: string;
   endTime?: string;
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
 }
 
 export interface CreateFoodEntryInput {
@@ -89,6 +90,7 @@ export interface CreateFoodEntryInput {
   servingType?: string;
   startTime?: string;
   endTime?: string;
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
 }
 
 export interface UpdateFoodEntryInput {
@@ -103,6 +105,7 @@ export interface UpdateFoodEntryInput {
   servingType?: string;
   startTime?: string;
   endTime?: string;
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
 }
 
 // ─── Daily Check-In ─────────────────────────────────────────
