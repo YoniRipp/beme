@@ -156,6 +156,7 @@ const handleAddWorkout: Handler = async (action, ctx) => {
     durationMinutes,
     exercises,
     notes,
+    completed: false,
   });
   return { success: true, message: `Logged workout: ${title} (${type}, ${durationMinutes} min)` };
 };
