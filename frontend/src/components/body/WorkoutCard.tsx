@@ -3,7 +3,7 @@ import { Workout } from '@/types/workout';
 import { formatDate, getWeightUnit } from '@/lib/utils';
 import { useSettings } from '@/hooks/useSettings';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImagePlaceholder } from '@/components/shared/ImagePlaceholder';
 import { useExercises } from '@/hooks/useExercises';
@@ -12,16 +12,17 @@ interface WorkoutCardProps {
   workout: Workout;
   onEdit?: (workout: Workout) => void;
   onDelete?: (id: string) => void;
+  onToggleCompleted?: (id: string, completed: boolean) => void;
 }
 
-export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete }: WorkoutCardProps) {
+export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete, onToggleCompleted }: WorkoutCardProps) {
   const { settings } = useSettings();
   const unit = getWeightUnit(settings.units);
   const { getImageUrl } = useExercises();
   const cardImageUrl = workout.exercises.map(ex => getImageUrl(ex.name)).find(Boolean);
   return (
     <div
-      className="group flex items-start gap-3 p-4 bg-card border-l-[3px] border-l-info/50 border border-border/30 rounded-xl cursor-pointer hover:bg-sage-50/50 transition-colors tap-target"
+      className={`group flex items-start gap-3 p-4 bg-card border-l-[3px] ${workout.completed ? 'border-l-green-400/60' : 'border-l-info/50 border-dashed'} border border-border/30 rounded-xl cursor-pointer hover:bg-sage-50/50 transition-colors tap-target`}
       onClick={() => onEdit && onEdit(workout)}
       role="button"
       tabIndex={0}
@@ -33,6 +34,21 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
         }
       }}
     >
+      {onToggleCompleted && (
+        <button
+          className="shrink-0 p-1 tap-target flex items-center justify-center"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleCompleted(workout.id, !workout.completed);
+          }}
+          aria-label={workout.completed ? 'Mark as not completed' : 'Mark as completed'}
+        >
+          {workout.completed
+            ? <CheckCircle2 className="w-6 h-6 text-green-500" />
+            : <Circle className="w-6 h-6 text-muted-foreground" />
+          }
+        </button>
+      )}
       <ImagePlaceholder type="exercise" size="md" imageUrl={cardImageUrl} />
 
       <div className="flex-1 min-w-0">

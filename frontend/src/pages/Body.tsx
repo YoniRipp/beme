@@ -12,26 +12,30 @@ import { toast } from 'sonner';
 import { format, isToday, isYesterday, parseISO, isWithinInterval } from 'date-fns';
 import { getPeriodRange } from '@/lib/dateRanges';
 
-function groupWorkoutsByDate(workouts: Workout[]): { date: string; label: string; workouts: Workout[] }[] {
+function groupWorkoutsByDate(workouts: Workout[], ascending = false): { date: string; label: string; workouts: Workout[] }[] {
   const byDate = new Map<string, Workout[]>();
   for (const w of workouts) {
     const d = format(new Date(w.date), 'yyyy-MM-dd');
     if (!byDate.has(d)) byDate.set(d, []);
     byDate.get(d)!.push(w);
   }
-  const sortedDates = Array.from(byDate.keys()).sort((a, b) => b.localeCompare(a));
+  const sortedDates = Array.from(byDate.keys()).sort((a, b) =>
+    ascending ? a.localeCompare(b) : b.localeCompare(a)
+  );
+  const currentYear = new Date().getFullYear();
   return sortedDates.map((dateStr) => {
     const d = parseISO(dateStr);
     let label: string;
     if (isToday(d)) label = 'Today';
     else if (isYesterday(d)) label = 'Yesterday';
+    else if (d.getFullYear() !== currentYear) label = format(d, 'EEEE, MMM d, yyyy');
     else label = format(d, 'EEEE, MMM d');
     return { date: dateStr, label, workouts: byDate.get(dateStr)! };
   });
 }
 
 export function Body() {
-  const { workouts, workoutsLoading, addWorkout, updateWorkout, deleteWorkout } = useWorkouts();
+  const { workouts, workoutsLoading, addWorkout, updateWorkout, deleteWorkout, toggleWorkoutCompleted } = useWorkouts();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<Workout | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,10 +61,17 @@ export function Body() {
       filteredWorkouts.filter((w) => isWithinInterval(new Date(w.date), { start: weekStart, end: weekEnd })),
     [filteredWorkouts, weekStart, weekEnd]
   );
+  const workoutsUpcoming = useMemo(
+    () => filteredWorkouts
+      .filter((w) => new Date(w.date) > weekEnd)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+    [filteredWorkouts, weekEnd]
+  );
   const workoutsOlder = useMemo(
     () => filteredWorkouts.filter((w) => new Date(w.date) < weekStart),
     [filteredWorkouts, weekStart]
   );
+  const groupedUpcoming = useMemo(() => groupWorkoutsByDate(workoutsUpcoming, true), [workoutsUpcoming]);
   const groupedThisWeek = useMemo(() => groupWorkoutsByDate(workoutsThisWeek), [workoutsThisWeek]);
   const groupedOlder = useMemo(() => groupWorkoutsByDate(workoutsOlder), [workoutsOlder]);
 
@@ -108,6 +119,33 @@ export function Body() {
               />
             ) : (
               <>
+                {groupedUpcoming.length > 0 && (
+                  <section>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-sm font-medium text-muted-foreground">Upcoming</h3>
+                    </div>
+                    <div className="space-y-4">
+                      {groupedUpcoming.map(({ date: dateStr, label, workouts: dayWorkouts }) => (
+                        <div key={dateStr} className="rounded-2xl border border-border/30 bg-card shadow-sm p-3">
+                          <h4 className="text-xs font-medium text-muted-foreground mb-2 pl-0.5">
+                            {label}
+                          </h4>
+                          <div className="space-y-2">
+                            {dayWorkouts.map((workout) => (
+                              <WorkoutCard
+                                key={workout.id}
+                                workout={workout}
+                                onEdit={handleEdit}
+                                onDelete={setDeleteConfirmId}
+                                onToggleCompleted={toggleWorkoutCompleted}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
                 {groupedThisWeek.length > 0 && (
                   <section>
                     <div className="flex items-center gap-2 mb-3">
@@ -126,6 +164,7 @@ export function Body() {
                                 workout={workout}
                                 onEdit={handleEdit}
                                 onDelete={setDeleteConfirmId}
+                                onToggleCompleted={toggleWorkoutCompleted}
                               />
                             ))}
                           </div>
@@ -151,6 +190,7 @@ export function Body() {
                               workout={workout}
                               onEdit={handleEdit}
                               onDelete={setDeleteConfirmId}
+                              onToggleCompleted={toggleWorkoutCompleted}
                             />
                           ))}
                         </div>

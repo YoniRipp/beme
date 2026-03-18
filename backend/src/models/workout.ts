@@ -6,7 +6,7 @@ import { getPool } from '../db/pool.js';
 import { buildUpdateQuery, type UpdateBuilder } from '../db/queryBuilder.js';
 import type { Workout, CreateWorkoutInput, UpdateWorkoutInput, Exercise, PaginationParams, WorkoutType } from '../types/domain.js';
 
-const RETURNING = 'id, date, title, type, duration_minutes, exercises, notes';
+const RETURNING = 'id, date, title, type, duration_minutes, exercises, notes, completed';
 
 function rowToWorkout(row: Record<string, unknown>): Workout {
   return {
@@ -17,6 +17,7 @@ function rowToWorkout(row: Record<string, unknown>): Workout {
     durationMinutes: Number(row.duration_minutes),
     exercises: (row.exercises as Exercise[]) ?? [],
     notes: (row.notes as string) ?? undefined,
+    completed: Boolean(row.completed),
   };
 }
 
@@ -28,6 +29,7 @@ const UPDATE_SPEC: UpdateBuilder<UpdateWorkoutInput> = {
     durationMinutes: { column: 'duration_minutes' },
     exercises: { column: 'exercises', cast: '::jsonb', transform: (v) => JSON.stringify(Array.isArray(v) ? v : []) },
     notes: { column: 'notes' },
+    completed: { column: 'completed' },
   },
 };
 
@@ -51,10 +53,10 @@ export async function findByUserId(userId: string, pagination?: PaginationParams
 export async function create(input: CreateWorkoutInput, client?: pg.Pool | pg.PoolClient): Promise<Workout> {
   const db = client ?? getPool('body');
   const result = await db.query(
-    `INSERT INTO workouts (user_id, date, title, type, duration_minutes, exercises, notes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO workouts (user_id, date, title, type, duration_minutes, exercises, notes, completed)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING ${RETURNING}`,
-    [input.userId, input.date, input.title.trim(), input.type, input.durationMinutes, JSON.stringify(input.exercises), input.notes ?? null],
+    [input.userId, input.date, input.title.trim(), input.type, input.durationMinutes, JSON.stringify(input.exercises), input.notes ?? null, input.completed ?? false],
   );
   return rowToWorkout(result.rows[0]);
 }

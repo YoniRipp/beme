@@ -17,6 +17,7 @@ export interface Workout {
   durationMinutes: number;
   exercises: Exercise[];
   notes?: string;
+  completed: boolean;
 }
 
 export const WORKOUT_TYPES: WorkoutType[] = ['strength', 'cardio', 'flexibility', 'sports'];

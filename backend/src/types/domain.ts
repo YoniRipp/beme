@@ -36,6 +36,7 @@ export interface Workout {
   durationMinutes: number;
   exercises: Exercise[];
   notes?: string;
+  completed: boolean;
 }
 
 export interface CreateWorkoutInput {
@@ -46,6 +47,7 @@ export interface CreateWorkoutInput {
   durationMinutes: number;
   exercises: Exercise[];
   notes?: string;
+  completed?: boolean;
 }
 
 export interface UpdateWorkoutInput {
@@ -55,6 +57,7 @@ export interface UpdateWorkoutInput {
   durationMinutes?: number;
   exercises?: Exercise[];
   notes?: string;
+  completed?: boolean;
 }
 
 // ─── Food Entry ─────────────────────────────────────────────

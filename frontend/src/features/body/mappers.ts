@@ -11,6 +11,7 @@ export function apiWorkoutToWorkout(a: {
   durationMinutes: number;
   exercises: ApiExercise[];
   notes?: string;
+  completed?: boolean;
 }): Workout {
   return {
     id: a.id,
@@ -27,5 +28,6 @@ export function apiWorkoutToWorkout(a: {
       notes: e.notes,
     })),
     notes: a.notes,
+    completed: a.completed ?? false,
   };
 }

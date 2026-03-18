@@ -9,6 +9,7 @@ export interface ApiWorkout {
   durationMinutes: number;
   exercises: { name: string; sets: number; reps: number; repsPerSet?: number[]; weight?: number; notes?: string }[];
   notes?: string;
+  completed: boolean;
 }
 
 export const workoutsApi = {
@@ -20,6 +21,7 @@ export const workoutsApi = {
     durationMinutes: number;
     exercises?: ApiWorkout['exercises'];
     notes?: string;
+    completed?: boolean;
   }) => request<ApiWorkout>('/api/workouts', { method: 'POST', body: w }),
   update: (id: string, updates: Partial<Omit<ApiWorkout, 'id'>>) =>
     request<ApiWorkout>(`/api/workouts/${id}`, { method: 'PATCH', body: updates }),

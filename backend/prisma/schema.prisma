@@ -94,6 +94,7 @@ model Workout {
   durationMinutes Int    @map("duration_minutes")
   exercises     Json     // Array of Exercise objects
   notes         String?
+  completed     Boolean  @default(false)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
   

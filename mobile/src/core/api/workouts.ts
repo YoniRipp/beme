@@ -8,6 +8,7 @@ export interface ApiWorkout {
   durationMinutes: number;
   exercises: { name: string; sets: number; reps: number; weight?: number; notes?: string }[];
   notes?: string;
+  completed: boolean;
 }
 
 export const workoutsApi = {

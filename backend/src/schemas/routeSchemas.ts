@@ -40,6 +40,7 @@ export const createWorkoutSchema = z.object({
   durationMinutes: z.number().int().min(1).max(1440),
   exercises: z.array(exerciseSchema).default([]),
   notes: z.string().max(2000).optional().nullable(),
+  completed: z.boolean().optional(),
 });
 
 export const updateWorkoutSchema = z.object({
@@ -49,6 +50,7 @@ export const updateWorkoutSchema = z.object({
   durationMinutes: z.number().int().min(1).max(1440).optional(),
   exercises: z.array(exerciseSchema).optional(),
   notes: z.string().max(2000).optional().nullable(),
+  completed: z.boolean().optional(),
 }).strict().refine((obj) => Object.keys(obj).length > 0, 'At least one field required');
 
 // ─── Food entry schemas ────────────────────────────────────

@@ -325,6 +325,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
       durationMinutes: parseInt(data.durationMinutes, 10),
       notes: data.notes,
       exercises,
+      completed: workout?.completed ?? false,
     });
     onOpenChange(false);
   };

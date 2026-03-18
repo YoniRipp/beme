@@ -40,6 +40,7 @@ export function useWorkouts() {
         durationMinutes: workout.durationMinutes,
         exercises: workout.exercises,
         notes: workout.notes,
+        completed: workout.completed,
       }),
     onSuccess: (created) => {
       queryClient.setQueryData(queryKeys.workouts, (prev: Workout[] | undefined) =>
@@ -57,6 +58,7 @@ export function useWorkouts() {
       if (updates.durationMinutes !== undefined) body.durationMinutes = updates.durationMinutes;
       if (updates.exercises !== undefined) body.exercises = updates.exercises;
       if (updates.notes !== undefined) body.notes = updates.notes;
+      if (updates.completed !== undefined) body.completed = updates.completed;
       return workoutsApi.update(id, body);
     },
     onSuccess: (updated) => {
@@ -92,6 +94,12 @@ export function useWorkouts() {
     [deleteMutation]
   );
 
+  const toggleWorkoutCompleted = useCallback(
+    (id: string, completed: boolean): Promise<void> =>
+      updateMutation.mutateAsync({ id, updates: { completed } }).then(() => undefined),
+    [updateMutation]
+  );
+
   const getWorkoutById = useCallback(
     (id: string) => workouts.find((w) => w.id === id),
     [workouts]
@@ -105,6 +113,7 @@ export function useWorkouts() {
     addWorkout,
     updateWorkout,
     deleteWorkout,
+    toggleWorkoutCompleted,
     getWorkoutById,
   };
 }
