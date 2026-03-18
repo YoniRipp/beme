@@ -73,6 +73,7 @@ export async function initSchema() {
         serving_type text,
         start_time text,
         end_time text,
+        meal_type text,
         created_at timestamptz DEFAULT now(),
         updated_at timestamptz DEFAULT now()
       );
