@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { UtensilsCrossed, Check, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { UtensilsCrossed, Check, Pencil, Trash2, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 type StatusFilter = 'all' | 'unverified' | 'verified';
@@ -154,17 +154,21 @@ export default function AdminFoodsPage() {
           <Card key={food.id}>
             <CardContent className="flex items-center justify-between py-3 px-4">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium truncate">{food.name}</span>
+                  <Badge className="text-xs bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100 gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Gemini AI
+                  </Badge>
                   {food.isLiquid && <Badge variant="outline" className="text-xs">liquid</Badge>}
-                  <Badge variant={food.verified ? 'default' : 'secondary'}>
-                    {food.verified ? 'Verified' : 'Unverified'}
+                  <Badge variant={food.verified ? 'default' : 'secondary'} className={food.verified ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-100' : ''}>
+                    {food.verified ? `✓ Verified${food.verifiedAt ? ` ${new Date(food.verifiedAt).toLocaleDateString()}` : ''}` : '⚠ Needs review'}
                   </Badge>
                 </div>
                 <div className="text-sm text-muted-foreground mt-0.5">
                   {food.calories} kcal | P: {food.protein}g | C: {food.carbs}g | F: {food.fat}g
                   <span className="ml-2 text-xs">
-                    {new Date(food.createdAt).toLocaleDateString()}
+                    Added {new Date(food.createdAt).toLocaleDateString()}
                   </span>
                 </div>
               </div>

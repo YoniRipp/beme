@@ -56,7 +56,13 @@ async function start() {
     voiceWorker = startVoiceWorker();
     logger.info('Voice worker started');
   }
-  // Event bus consumer runs in a separate process (workers/event-consumer.ts)
+  // Start events worker inline when Redis is configured and not using separate workers process
+  if (!config.separateWorkers) {
+    const eventsWorker = startEventsWorker();
+    if (eventsWorker) {
+      logger.info('Events worker started (inline)');
+    }
+  }
 
   async function shutdown() {
     let exitCode = 0;
