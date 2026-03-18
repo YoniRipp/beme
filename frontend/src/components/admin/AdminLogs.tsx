@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FileText, AlertCircle, Activity } from 'lucide-react';
+import { FileText, AlertCircle, Activity, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -64,6 +64,47 @@ function formatTimeUtc(iso: string): string {
   }
 }
 
+/** Render a payload object as a readable key-value list */
+function PayloadDetails({ payload }: { payload: Record<string, unknown> | null }) {
+  if (!payload || Object.keys(payload).length === 0) {
+    return <p className="text-xs text-muted-foreground italic">No payload data</p>;
+  }
+
+  // Highlight top-level human-readable fields
+  const topFields: Record<string, unknown> = {};
+  const HIGHLIGHT_KEYS = ['name', 'title', 'foodName', 'type', 'calories', 'amount', 'unit', 'source', 'intents', 'actionCount', 'method', 'period', 'target', 'date'];
+  for (const k of HIGHLIGHT_KEYS) {
+    if (payload[k] !== undefined && payload[k] !== null && payload[k] !== '') {
+      topFields[k] = payload[k];
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {Object.keys(topFields).length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(topFields).map(([k, v]) => (
+            <span key={k} className="inline-flex items-center gap-1 text-[11px] bg-muted rounded px-2 py-0.5">
+              <span className="text-muted-foreground font-medium">{k}:</span>
+              <span className="font-mono truncate max-w-[140px]" title={String(v)}>
+                {Array.isArray(v) ? v.join(', ') : String(v)}
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
+      <details className="group">
+        <summary className="text-[11px] text-muted-foreground cursor-pointer hover:text-foreground select-none">
+          Raw payload
+        </summary>
+        <pre className="mt-1.5 text-[11px] bg-muted/50 rounded p-2 overflow-x-auto whitespace-pre-wrap break-words text-muted-foreground max-h-48 overflow-y-auto">
+          {JSON.stringify(payload, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
+
 export function AdminLogs() {
   const [logTab, setLogTab] = useState<LogTab>('action');
   const [logs, setLogs] = useState<AppLogEntry[]>([]);
@@ -80,6 +121,7 @@ export function AdminLogs() {
   const [events, setEvents] = useState<UserActivityEvent[]>([]);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [activityLoading, setActivityLoading] = useState(false);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   const { from, to } = useMemo(() => getTimeRange(timePreset), [timePreset]);
 
@@ -144,7 +186,7 @@ export function AdminLogs() {
   }, [logTab, userSearch]);
 
   const handleLoadMore = () => {
-    if (nextCursor) fetchActivity(nextCursor, true);
+    if (nextCursor) fetchActivity(nextCursor, false);
   };
 
   const handleSelectUser = (u: { id: string; email: string; name: string }) => {
@@ -173,7 +215,7 @@ export function AdminLogs() {
         cell: (info) => {
           const r = info.getValue();
           const label = r.userName ? `${r.userName} (${r.userEmail ?? ''})` : r.userEmail ?? '—';
-          return <span className="truncate max-w-[180px] block" title={label}>{label}</span>;
+          return <span className="truncate max-w-[160px] block" title={label}>{label}</span>;
         },
       }),
       columnHelper.accessor('eventType', {
@@ -187,13 +229,36 @@ export function AdminLogs() {
       columnHelper.accessor('summary', {
         header: 'Summary',
         cell: (info) => (
-          <span className="truncate max-w-[200px] block" title={info.getValue()}>
+          <span className="truncate max-w-[180px] block" title={info.getValue()}>
             {info.getValue()}
           </span>
         ),
       }),
+      columnHelper.accessor((r) => r, {
+        id: 'details',
+        header: 'Details',
+        cell: (info) => {
+          const r = info.getValue();
+          const isExpanded = expandedRowId === r.id;
+          const hasPayload = r.payload && Object.keys(r.payload).length > 0;
+          if (!hasPayload) return <span className="text-muted-foreground text-xs">—</span>;
+          return (
+            <button
+              type="button"
+              className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpandedRowId(isExpanded ? null : r.id);
+              }}
+            >
+              {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              {isExpanded ? 'Hide' : 'Show'}
+            </button>
+          );
+        },
+      }),
     ],
-    [columnHelper]
+    [columnHelper, expandedRowId]
   );
 
   const table = useReactTable({
@@ -347,7 +412,7 @@ export function AdminLogs() {
 
       {logTab === 'activity' && (
         <>
-          <div className="rounded-md border overflow-hidden max-h-[450px] overflow-y-auto">
+          <div className="rounded-md border overflow-hidden max-h-[500px] overflow-y-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur z-10">
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -363,26 +428,39 @@ export function AdminLogs() {
               <TableBody>
                 {activityLoading && events.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                       Loading...
                     </TableCell>
                   </TableRow>
                 ) : events.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                       No events in selected time range
                     </TableCell>
                   </TableRow>
                 ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} className="text-[13px]">
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="py-1.5">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
+                  table.getRowModel().rows.map((row) => {
+                    const event = row.original;
+                    const isExpanded = expandedRowId === event.id;
+                    return (
+                      <>
+                        <TableRow key={row.id} className="text-[13px] cursor-pointer hover:bg-muted/30">
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id} className="py-1.5">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        {isExpanded && (
+                          <TableRow key={`${row.id}-expanded`} className="bg-muted/20 hover:bg-muted/20">
+                            <TableCell colSpan={5} className="py-3 px-4">
+                              <PayloadDetails payload={event.payload} />
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
