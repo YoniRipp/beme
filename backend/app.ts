@@ -69,7 +69,15 @@ export async function createApp() {
   app.use(cors(corsOptions));
   logger.info({ corsOrigin: config.corsOrigin, frontendOrigin: config.frontendOrigin, nodeEnv: process.env.NODE_ENV }, 'CORS configured');
   app.use(helmet({ crossOriginOpenerPolicy: false }));
-  app.use(compression());
+  app.use(compression({
+    filter: (req, res) => {
+      // Skip compression for SSE streaming endpoints — compression buffers the response
+      if (req.headers.accept === 'text/event-stream' || req.url?.includes('/stream')) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+  }));
   app.use(cookieParser());
 
   // Lemon Squeezy webhook needs raw body for HMAC signature verification — mount BEFORE express.json()

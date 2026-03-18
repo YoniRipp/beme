@@ -15,6 +15,7 @@ export function useAgent() {
   const [isSending, setIsSending] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+  const [pendingUserMsg, setPendingUserMsg] = useState<AgentMessage | null>(null);
 
   const {
     data: historyData,
@@ -25,13 +26,26 @@ export function useAgent() {
     staleTime: 30_000,
   });
 
-  const messages: AgentMessage[] = (historyData?.messages ?? []).map((m: ChatMessage) => ({
+  const historyMessages: AgentMessage[] = (historyData?.messages ?? []).map((m: ChatMessage) => ({
     ...m,
     actions: undefined,
   }));
 
+  // Append pending user message optimistically (if not already in history)
+  const messages = pendingUserMsg && !historyMessages.some(m => m.id === pendingUserMsg.id)
+    ? [...historyMessages, pendingUserMsg]
+    : historyMessages;
+
   const sendMessage = useCallback(async (text: string): Promise<{ actions: StreamAction[] } | null> => {
     if (!text.trim() || isSending) return null;
+    // Show user message optimistically
+    const optimisticMsg: AgentMessage = {
+      id: `pending-${Date.now()}`,
+      role: 'user',
+      content: text.trim(),
+      created_at: new Date().toISOString(),
+    };
+    setPendingUserMsg(optimisticMsg);
     setIsSending(true);
     setIsThinking(true);
     setStreamingContent('');
@@ -56,6 +70,7 @@ export function useAgent() {
           finalActions = actions;
           setIsSending(false);
           setStreamingContent('');
+          setPendingUserMsg(null);
           // Refresh history and data
           await queryClient.invalidateQueries({ queryKey: ['chat', 'history'] });
           await queryClient.invalidateQueries({ queryKey: ['workouts'] });
@@ -70,6 +85,7 @@ export function useAgent() {
           setIsSending(false);
           setIsThinking(false);
           setStreamingContent('');
+          setPendingUserMsg(null);
           // Refresh history so the user's saved message shows even on error
           await queryClient.invalidateQueries({ queryKey: ['chat', 'history'] });
           resolve(null);
@@ -79,6 +95,7 @@ export function useAgent() {
         setIsSending(false);
         setIsThinking(false);
         setStreamingContent('');
+        setPendingUserMsg(null);
         resolve(null);
       });
     });

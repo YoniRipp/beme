@@ -1,15 +1,21 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, X, Trash2, Loader2, Mic, CheckCircle2, AlertCircle } from 'lucide-react';
-
-function isRTL(text: string): boolean {
-  return /[\u0590-\u05FF\uFB1D-\uFB4F]/.test(text);
-}
+import { Send, X, Loader2, Mic, CheckCircle2, AlertCircle, MoreVertical, Trash2, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAgent } from '@/hooks/useAgent';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { cn } from '@/lib/utils';
 import type { AgentResponse } from '@/core/api/chat';
+
+function isRTL(text: string): boolean {
+  return /[\u0590-\u05FF\uFB1D-\uFB4F]/.test(text);
+}
 
 interface ChatAgentPanelProps {
   open: boolean;
@@ -37,7 +43,7 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isSending, scrollToBottom]);
+  }, [messages, isSending, streamingContent, scrollToBottom]);
 
   useEffect(() => {
     if (open) {
@@ -76,6 +82,13 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
     }
   }, [isListening, voiceAvailable, startListening, stopListening, currentTranscript]);
 
+  const handleClearHistory = useCallback(async () => {
+    if (window.confirm('Clear all chat history? This cannot be undone.')) {
+      await clearHistory();
+      setLastActions(null);
+    }
+  }, [clearHistory]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -83,30 +96,50 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
         showCloseButton={false}
         className="flex h-[85vh] flex-col rounded-t-2xl p-0"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-lg font-semibold">AI Coach</h2>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={clearHistory}
-              aria-label="Clear chat"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => onOpenChange(false)}
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+        {/* Drag handle */}
+        <div className="flex justify-center pt-2 pb-0">
+          <div className="h-1 w-9 rounded-full bg-muted-foreground/30" />
         </div>
+
+        {/* Header: X left, title center, overflow right */}
+        <div className="flex items-center px-4 py-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 shrink-0"
+            onClick={() => onOpenChange(false)}
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+
+          <h2 className="flex-1 text-center text-base font-semibold">AI Coach</h2>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 shrink-0"
+                aria-label="Chat options"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={handleClearHistory}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear history
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Divider */}
+        <div className="border-b" />
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
@@ -120,10 +153,23 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
             <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
               <p className="text-sm">Ask me anything about your fitness data,</p>
               <p className="text-sm">or tell me to take an action.</p>
-              <div className="mt-4 space-y-1 text-xs">
-                <p>"How many workouts did I do this week?"</p>
-                <p>"Copy today's meals for the rest of the week"</p>
-                <p>"Move my workout from today to yesterday"</p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {[
+                  'How many workouts this week?',
+                  'Copy today\'s meals to tomorrow',
+                  'Write me a workout plan',
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    className="rounded-full border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                    onClick={() => {
+                      setInput(suggestion);
+                      inputRef.current?.focus();
+                    }}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -170,14 +216,19 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
             </div>
           )}
 
-          {isSending && isThinking && (
+          {/* Thinking indicator (tool calls in progress) */}
+          {isSending && isThinking && !streamingContent && (
             <div className="mr-auto flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm text-muted-foreground">Thinking...</span>
+              <div className="flex gap-1">
+                <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:0ms]" />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:150ms]" />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:300ms]" />
+              </div>
             </div>
           )}
 
-          {isSending && !isThinking && streamingContent && (
+          {/* Streaming message (real-time text) */}
+          {isSending && streamingContent && (
             <div
               className="mr-auto max-w-[85%] rounded-2xl bg-muted px-4 py-2.5 text-sm leading-relaxed"
               dir={isRTL(streamingContent) ? 'rtl' : 'ltr'}
@@ -193,9 +244,9 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
         </div>
 
         {/* Input */}
-        <div className="border-t px-4 py-3">
+        <div className="border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="flex items-center gap-2">
-            {voiceAvailable && (
+            {voiceAvailable && !isSending && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -216,15 +267,27 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
               onKeyDown={handleKeyDown}
               disabled={isSending}
             />
-            <Button
-              size="icon"
-              className="h-10 w-10 shrink-0 rounded-full"
-              onClick={handleSend}
-              disabled={!input.trim() || isSending}
-              aria-label="Send message"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+            {isSending ? (
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-10 w-10 shrink-0 rounded-full"
+                onClick={() => {/* TODO: abort controller */}}
+                aria-label="Stop generating"
+              >
+                <Square className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                className="h-10 w-10 shrink-0 rounded-full"
+                onClick={handleSend}
+                disabled={!input.trim()}
+                aria-label="Send message"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       </SheetContent>
