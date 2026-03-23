@@ -83,7 +83,7 @@ export function Base44Layout() {
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const { user } = useApp();
   const { logout } = useAuth();
-  const { isPro } = useSubscription();
+  const { hasAiAccess } = useSubscription();
 
   const handleSignOut = () => {
     logout();
@@ -256,7 +256,7 @@ export function Base44Layout() {
       {pathname !== '/' && <VoiceAgentButton />}
 
       {/* AI Chat FAB — bottom-right, below mic button */}
-      {isPro && pathname !== '/insights' && (
+      {hasAiAccess && pathname !== '/insights' && (
         <Button
           size="icon"
           onClick={() => setAiChatOpen(true)}

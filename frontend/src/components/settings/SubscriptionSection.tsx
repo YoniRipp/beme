@@ -5,7 +5,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useNavigate } from 'react-router-dom';
 
 export function SubscriptionSection() {
-  const { isPro, subscriptionStatus, manage } = useSubscription();
+  const { isPro, aiCallsRemaining, subscriptionStatus, manage } = useSubscription();
   const navigate = useNavigate();
 
   const statusLabels: Record<string, string> = {
@@ -47,9 +47,16 @@ export function SubscriptionSection() {
           )}
         </div>
         {!isPro && (
-          <p className="text-xs text-muted-foreground">
-            Pro includes voice input, AI insights, and AI food lookup. Plans start at $7.99/month.
-          </p>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              {aiCallsRemaining > 0
+                ? `You have ${aiCallsRemaining} free AI call${aiCallsRemaining === 1 ? '' : 's'} remaining this month.`
+                : "You've used all your free AI calls this month. Exciting updates coming soon!"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Pro includes unlimited voice input, AI insights, and AI food lookup. Plans start at $7.99/month.
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>

@@ -9,4 +9,5 @@ export interface User {
   createdAt?: string;
   subscriptionStatus?: SubscriptionStatus;
   subscriptionCurrentPeriodEnd?: string;
+  aiCallsRemaining?: number; // -1 = unlimited (pro), 0-10 for free tier
 }

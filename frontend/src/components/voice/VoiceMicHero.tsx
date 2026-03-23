@@ -11,7 +11,7 @@ const VOICE_USED_KEY = 'trackvibe_voice_used';
 const TAG = '[VoiceMicHero]';
 
 export function VoiceMicHero() {
-  const { isPro, subscribe } = useSubscription();
+  const { isPro, hasAiAccess, aiCallsRemaining, subscribe } = useSubscription();
   const [statusText, setStatusText] = useState('');
   const [isStarting, setIsStarting] = useState(false);
   const [hasUsedVoice, setHasUsedVoice] = useState(() => localStorage.getItem(VOICE_USED_KEY) === '1');
@@ -53,10 +53,14 @@ export function VoiceMicHero() {
   }, [isListening, isProcessing]);
 
   const handleMicClick = useCallback(async () => {
-    console.log(TAG, 'handleMicClick — isPro:', isPro, 'busyRef:', busyRef.current, 'isListeningRef:', isListeningRef.current, 'isListening:', isListening, 'isAvailable:', isAvailable);
+    console.log(TAG, 'handleMicClick — hasAiAccess:', hasAiAccess, 'busyRef:', busyRef.current, 'isListeningRef:', isListeningRef.current, 'isListening:', isListening, 'isAvailable:', isAvailable);
 
-    if (!isPro) {
-      subscribe();
+    if (!hasAiAccess) {
+      if (!isPro && aiCallsRemaining <= 0) {
+        toast("You've used all your free AI calls this month. Exciting updates coming soon!");
+      } else {
+        subscribe();
+      }
       return;
     }
 
@@ -152,7 +156,7 @@ export function VoiceMicHero() {
       busyRef.current = false;
       console.log(TAG, 'busyRef released');
     }
-  }, [isPro, subscribe, isAvailable, hasUsedVoice, startListening, stopListening, getVoiceResult, processVoiceResult, showResultToasts]);
+  }, [isPro, hasAiAccess, aiCallsRemaining, subscribe, isAvailable, hasUsedVoice, startListening, stopListening, getVoiceResult, processVoiceResult, showResultToasts]);
 
   const state = isStarting ? 'starting' : isListening ? 'listening' : isProcessing ? 'processing' : 'idle';
 
@@ -168,13 +172,13 @@ export function VoiceMicHero() {
             state === 'listening' && 'animate-pulse ring-4 ring-primary/30 scale-110',
             state === 'starting' && 'animate-pulse opacity-70',
             state === 'processing' && 'opacity-70',
-            !isPro && 'bg-muted text-muted-foreground hover:bg-muted/80',
+            !hasAiAccess && 'bg-muted text-muted-foreground hover:bg-muted/80',
           )}
-          aria-label={isPro ? (state === 'listening' ? 'Stop recording' : 'Start voice input') : 'Upgrade to Pro for voice input'}
+          aria-label={hasAiAccess ? (state === 'listening' ? 'Stop recording' : 'Start voice input') : 'Voice input unavailable'}
         >
           {(state === 'processing' || state === 'starting') ? (
             <Loader2 className="h-10 w-10 animate-spin" />
-          ) : !isPro ? (
+          ) : !hasAiAccess ? (
             <div className="relative">
               <Mic className="h-10 w-10" />
               <Lock className="absolute -bottom-1 -right-1 h-4 w-4 text-amber-500" />
@@ -186,8 +190,8 @@ export function VoiceMicHero() {
 
         <div className="text-center">
           <p className="text-sm font-medium text-foreground">
-            {!isPro
-              ? 'Upgrade to Pro to track by voice'
+            {!hasAiAccess
+              ? "You've used all free calls this month. Updates coming soon!"
               : state === 'starting'
                 ? 'Starting... Tap to cancel'
                 : state === 'listening'
@@ -196,7 +200,7 @@ export function VoiceMicHero() {
                     ? 'Processing your voice...'
                     : 'Tap to log by voice'}
           </p>
-          {isPro && state === 'idle' && !statusText && !hasUsedVoice && (
+          {hasAiAccess && state === 'idle' && !statusText && !hasUsedVoice && (
             <p className="mt-1 text-xs text-muted-foreground">
               Try: "I had oatmeal for breakfast" or "30 min run"
             </p>

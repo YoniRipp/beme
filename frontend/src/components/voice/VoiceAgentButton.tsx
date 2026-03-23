@@ -16,7 +16,7 @@ interface VoiceAgentButtonProps {
 
 export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonProps = {}) {
   const { pathname } = useLocation();
-  const { isPro } = useSubscription();
+  const { hasAiAccess } = useSubscription();
   const { processVoiceResult, showResultToasts } = useVoiceActions();
   const [isStarting, setIsStarting] = useState(false);
   const busyRef = useRef(false);
@@ -52,8 +52,8 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
       return;
     }
 
-    if (!isPro) {
-      toast.error('Pro subscription required', { description: 'Upgrade to Pro to use voice input.' });
+    if (!hasAiAccess) {
+      toast.error('Free calls used up', { description: "You've used all your free AI calls this month. Exciting updates coming soon!" });
       return;
     }
 
@@ -122,7 +122,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
     } finally {
       busyRef.current = false;
     }
-  }, [onTogglePanel, isPro, isAvailable, startListening, stopListening, getVoiceResult, processVoiceResult, showResultToasts]);
+  }, [onTogglePanel, hasAiAccess, isAvailable, startListening, stopListening, getVoiceResult, processVoiceResult, showResultToasts]);
 
   const state = isStarting ? 'starting' : isListening ? 'listening' : isProcessing ? 'processing' : 'idle';
   const isActive = onTogglePanel != null ? panelOpen : state === 'listening' || state === 'processing';
@@ -155,7 +155,7 @@ export function VoiceAgentButton({ panelOpen, onTogglePanel }: VoiceAgentButtonP
       >
         {onTogglePanel == null && state === 'processing' ? (
           <Loader2 className="h-6 w-6 animate-spin" />
-        ) : !isPro ? (
+        ) : !hasAiAccess ? (
           <div className="relative">
             <Mic className="h-6 w-6" />
             <Lock className="absolute -bottom-1 -right-1 h-3 w-3 text-amber-400" />

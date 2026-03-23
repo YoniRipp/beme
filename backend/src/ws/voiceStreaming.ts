@@ -11,7 +11,6 @@ import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { IncomingMessage } from 'http';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
-import { getPool } from '../db/pool.js';
 import { HANDLERS, VOICE_PROMPT } from '../services/voice.js';
 import { VOICE_TOOLS } from '../../voice/tools.js';
 import { executeActions } from '../services/voiceExecutor.js';
@@ -34,15 +33,18 @@ async function authenticateWs(req: IncomingMessage): Promise<{ id: string; email
   }
 }
 
-/** Check Pro subscription (same logic as requirePro middleware). */
-async function checkPro(userId: string): Promise<boolean> {
-  if (!config.lemonSqueezyApiKey) return true; // Dev mode: allow all
+/** Check Pro subscription or free-tier quota. */
+async function checkProOrQuota(userId: string): Promise<{ allowed: boolean; message?: string }> {
+  const { tryConsumeAiCall } = await import('../services/aiQuota.js');
   try {
-    const pool = getPool();
-    const { rows } = await pool.query('SELECT subscription_status FROM users WHERE id = $1', [userId]);
-    return rows[0]?.subscription_status === 'pro';
+    const result = await tryConsumeAiCall(userId);
+    if (result.allowed) return { allowed: true };
+    return {
+      allowed: false,
+      message: "You've used all your free AI calls this month. Exciting updates coming soon!",
+    };
   } catch {
-    return false;
+    return { allowed: false, message: 'Could not verify subscription status' };
   }
 }
 
@@ -83,10 +85,10 @@ async function handleConnection(clientWs: WebSocket, req: IncomingMessage) {
   }
   const user = maybeUser;
 
-  // 2. Check Pro
-  const isPro = await checkPro(user.id);
-  if (!isPro) {
-    sendToClient(clientWs, { type: 'error', message: 'Pro subscription required' });
+  // 2. Check Pro / free-tier quota
+  const quota = await checkProOrQuota(user.id);
+  if (!quota.allowed) {
+    sendToClient(clientWs, { type: 'error', message: quota.message ?? 'Access denied' });
     clientWs.close(4003, 'Forbidden');
     return;
   }

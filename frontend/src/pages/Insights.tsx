@@ -16,7 +16,7 @@ import { HealthInsightsSection } from '@/components/insights/HealthInsightsSecti
 import { AiInsightsSection } from '@/components/insights/AiInsightsSection';
 
 export function Insights() {
-  const { isPro } = useSubscription();
+  const { hasAiAccess } = useSubscription();
   const { workouts } = useWorkouts();
   const { foodEntries, checkIns } = useEnergy();
 
@@ -47,10 +47,10 @@ export function Insights() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {isPro ? (
+      {hasAiAccess ? (
         <AiInsightsSection />
       ) : (
-        <UpgradePrompt feature="AI Insights" description="Get personalized AI-powered analytics and daily recommendations about your health, fitness, and habits." />
+        <UpgradePrompt feature="AI Insights" description="You've used all your free AI calls this month. Exciting updates coming soon!" quotaExhausted />
       )}
       <FitnessInsightsSection
         workoutFrequency={workoutFrequency}

@@ -1,4 +1,4 @@
-import { Lock, Sparkles } from 'lucide-react';
+import { Clock, Lock, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -7,9 +7,10 @@ interface UpgradePromptProps {
   feature: string;
   description?: string;
   compact?: boolean;
+  quotaExhausted?: boolean;
 }
 
-export function UpgradePrompt({ feature, description, compact }: UpgradePromptProps) {
+export function UpgradePrompt({ feature, description, compact, quotaExhausted }: UpgradePromptProps) {
   const { subscribe } = useSubscription();
 
   if (compact) {
@@ -28,6 +29,27 @@ export function UpgradePrompt({ feature, description, compact }: UpgradePromptPr
           Upgrade
         </Button>
       </div>
+    );
+  }
+
+  if (quotaExhausted) {
+    return (
+      <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 dark:border-blue-800 dark:from-blue-950 dark:to-indigo-950">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+            <Clock className="h-6 w-6 text-blue-600" />
+          </div>
+          <CardTitle className="text-lg">{feature}</CardTitle>
+          <CardDescription>
+            {description || "You've used all your free AI calls this month. Exciting updates coming soon!"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center">
+          <Button variant="outline" onClick={subscribe} className="px-8">
+            Upgrade to Pro for unlimited access
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 

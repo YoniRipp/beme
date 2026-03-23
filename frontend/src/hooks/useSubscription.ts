@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 export function useSubscription() {
   const { user } = useAuth();
   const isPro = user?.subscriptionStatus === 'pro';
+  const aiCallsRemaining = user?.aiCallsRemaining ?? 0;
+  const hasAiAccess = isPro || aiCallsRemaining > 0;
 
   const subscribe = useCallback(async () => {
     try {
@@ -57,6 +59,8 @@ export function useSubscription() {
 
   return {
     isPro,
+    hasAiAccess,
+    aiCallsRemaining,
     subscriptionStatus: user?.subscriptionStatus || 'free',
     subscribe,
     subscribeYearly,

@@ -20,6 +20,8 @@ export interface UserRow {
   subscription_status: string | null;
   subscription_current_period_end: string | null;
   subscription_source: string | null;
+  ai_calls_used: number | null;
+  ai_calls_reset_month: string | null;
 }
 
 export interface User {
@@ -30,21 +32,35 @@ export interface User {
   createdAt?: string;
   subscriptionStatus: string;
   subscriptionCurrentPeriodEnd: string | null;
+  aiCallsRemaining: number;
 }
 
-const USER_COLS = 'id, email, name, role, created_at, subscription_status, subscription_current_period_end';
+const USER_COLS = 'id, email, name, role, created_at, subscription_status, subscription_current_period_end, ai_calls_used, ai_calls_reset_month';
 const FULL_USER_COLS = USER_COLS + ', password_hash, auth_provider, provider_id, failed_login_attempts, locked_until';
 
 export function rowToUser(row: UserRow): User {
+  const status = row.subscription_status || 'free';
+  const remaining = getAiCallsRemainingSync(status, row.ai_calls_used, row.ai_calls_reset_month);
   return {
     id: row.id,
     email: row.email,
     name: row.name,
     role: row.role,
     createdAt: row.created_at,
-    subscriptionStatus: row.subscription_status || 'free',
+    subscriptionStatus: status,
     subscriptionCurrentPeriodEnd: row.subscription_current_period_end || null,
+    aiCallsRemaining: remaining,
   };
+}
+
+/** Compute remaining AI calls synchronously from row data (no DB query needed). */
+function getAiCallsRemainingSync(status: string, used: number | null, resetMonth: string | null): number {
+  if (['pro', 'trainer', 'trainer_pro'].includes(status)) return -1;
+  const FREE_TIER_LIMIT = 10;
+  const d = new Date();
+  const currentMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  if (resetMonth !== currentMonth) return FREE_TIER_LIMIT;
+  return Math.max(0, FREE_TIER_LIMIT - (used || 0));
 }
 
 export async function findByEmail(email: string, client?: pg.Pool | pg.PoolClient): Promise<UserRow | null> {
