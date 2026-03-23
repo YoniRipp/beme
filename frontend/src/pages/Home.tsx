@@ -141,7 +141,8 @@ export function Home() {
           <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
             <CardContent className="p-5">
               <p className="text-sm font-semibold text-center mb-4 text-muted-foreground">{progressMessage}</p>
-              <div className="flex justify-center mb-3">
+              <div className="flex flex-col items-center gap-1.5 mb-3">
+                <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Calories</p>
                 <div className="relative w-48 h-48">
                   <svg viewBox="0 0 100 100" className="w-48 h-48 -rotate-90">
                     <defs>
@@ -178,20 +179,23 @@ export function Home() {
           <CardContent className="p-5">
             <p className="text-sm font-semibold text-center mb-4 text-muted-foreground">{progressMessage}</p>
             <div className="flex items-center justify-center gap-8">
-              <div className="relative w-48 h-48 shrink-0">
-                <svg viewBox="0 0 100 100" className="w-48 h-48 -rotate-90">
-                  <defs>
-                    <linearGradient id="calRingGradDesktop" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="hsl(var(--sage-light))" />
-                      <stop offset="100%" stopColor="hsl(var(--sage-dark))" />
-                    </linearGradient>
-                  </defs>
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" className="text-mist" />
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="url(#calRingGradDesktop)" strokeWidth="6" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" style={{ filter: calPct >= 0.9 ? 'drop-shadow(0 0 6px hsl(var(--sage) / 0.4))' : undefined }} />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-4xl font-bold tabular-nums leading-none tracking-tight animate-count-up">{Math.round(todaySummary.totalCal)}</span>
-                  <span className="text-xs text-muted-foreground leading-none mt-1.5">of {calGoalTarget} kcal</span>
+              <div className="flex flex-col items-center gap-1.5 shrink-0">
+                <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Calories</p>
+                <div className="relative w-48 h-48">
+                  <svg viewBox="0 0 100 100" className="w-48 h-48 -rotate-90">
+                    <defs>
+                      <linearGradient id="calRingGradDesktop" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="hsl(var(--sage-light))" />
+                        <stop offset="100%" stopColor="hsl(var(--sage-dark))" />
+                      </linearGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" className="text-mist" />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="url(#calRingGradDesktop)" strokeWidth="6" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" style={{ filter: calPct >= 0.9 ? 'drop-shadow(0 0 6px hsl(var(--sage) / 0.4))' : undefined }} />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-4xl font-bold tabular-nums leading-none tracking-tight animate-count-up">{Math.round(todaySummary.totalCal)}</span>
+                    <span className="text-xs text-muted-foreground leading-none mt-1.5">of {calGoalTarget} kcal</span>
+                  </div>
                 </div>
               </div>
               <div className="flex-1">

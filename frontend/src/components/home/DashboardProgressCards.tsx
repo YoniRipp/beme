@@ -85,7 +85,7 @@ function ProgressCard({
 
   return (
     <Card
-      className={`flex flex-col items-center p-5 relative border border-border/30 shadow-sm ${isClickable ? 'cursor-pointer hover:bg-sage-50/50 transition-colors tap-target' : ''}`}
+      className={`rounded-2xl overflow-hidden flex flex-col items-center p-5 relative border border-border/30 shadow-sm ${isClickable ? 'cursor-pointer hover:bg-sage-50/50 transition-colors tap-target' : ''}`}
       onClick={cardAction}
       role={isClickable ? 'button' : undefined}
     >
