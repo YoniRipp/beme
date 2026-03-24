@@ -208,9 +208,27 @@ function rowToResult(row: Record<string, unknown>) {
 const PORTION_GRAMS: Record<string, number> = {
   egg: 50, eggs: 50, banana: 120, bananas: 120, apple: 180, apples: 180,
   slice: 30, slices: 30, piece: 50, pieces: 50, serving: 100, servings: 100,
+  // Meat cuts — average cooked weight per piece
+  drumstick: 130, drumsticks: 130,
+  thigh: 180, thighs: 180,
+  breast: 175, breasts: 175,
+  wing: 80, wings: 80,
+  // Other common countable items
+  sausage: 75, sausages: 75,
+  meatball: 30, meatballs: 30,
+  tortilla: 45, tortillas: 45,
+  pancake: 75, pancakes: 75,
+  waffle: 75, waffles: 75,
+  cookie: 30, cookies: 30,
+  falafel: 25, falafels: 25,
 };
 
-export function unitToGrams(amount: number | string, unit: string | null | undefined): number {
+/**
+ * Convert an amount + unit pair to grams.
+ * @param unitWeightGrams Optional per-unit weight from the food's DB record (e.g. 130g for a drumstick).
+ *   When the unit is not recognised in PORTION_GRAMS, this value is used as a per-unit weight.
+ */
+export function unitToGrams(amount: number | string, unit: string | null | undefined, unitWeightGrams?: number | null): number {
   const u = (unit || 'g').toLowerCase().replace(/\s+/g, '');
   const n = Number(amount);
   const num = Number.isFinite(n) && n > 0 ? n : 100;
@@ -219,6 +237,8 @@ export function unitToGrams(amount: number | string, unit: string | null | undef
   if (u === 'ml' || u === 'l') return num * (u === 'l' ? 1000 : 1);
   if (['cup', 'tbsp', 'tsp'].includes(u)) return (u === 'cup' ? 240 : u === 'tbsp' ? 15 : 5) * num;
   if (PORTION_GRAMS[u] != null) return PORTION_GRAMS[u] * num;
+  // Use per-unit weight from the food's DB record when available
+  if (unitWeightGrams != null && unitWeightGrams > 0) return unitWeightGrams * num;
   return num;
 }
 
@@ -366,7 +386,7 @@ export async function getNutritionForFoodName(pool: Pool, foodName: string, amou
   let result;
   try {
     result = await pool.query(
-      `SELECT id, name, common_name, calories, protein, carbs, fat, is_liquid, preparation
+      `SELECT id, name, common_name, calories, protein, carbs, fat, is_liquid, preparation, default_unit, unit_weight_grams
        FROM foods
        WHERE ${cnWord.sql} OR ${nmWord.sql}
           OR similarity(lower(COALESCE(common_name, name)), $1) > 0.6
@@ -395,7 +415,8 @@ export async function getNutritionForFoodName(pool: Pool, foodName: string, amou
 
   if (result.rows.length === 0) return null;
   const row = result.rows[0];
-  const grams = unitToGrams(amount, unit);
+  const foodUnitWeight = row.unit_weight_grams != null ? Number(row.unit_weight_grams) : null;
+  const grams = unitToGrams(amount, unit, foodUnitWeight);
   const scale = grams / REFERENCE_GRAMS;
   const rawDisplayName = (row.common_name as string) || (row.name as string);
   const displayName = normalizePreparationName(rawDisplayName, row.preparation);

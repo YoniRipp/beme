@@ -86,8 +86,16 @@ type Handler = (action: VoiceAction, ctx: VoiceExecutorContext) => Promise<Voice
 
 function findWorkoutByTitle(workouts: Workout[], title: string): Workout | undefined {
   const lower = title.toLowerCase().trim();
-  const matches = workouts.filter((w) => w.title.toLowerCase().includes(lower) || lower.includes(w.title.toLowerCase()));
+  if (!lower || lower.length <= 2) return undefined; // Reject empty or too-short titles
+  // Require a strong match: exact match or substantial overlap (not just a single common word)
+  const matches = workouts.filter((w) => {
+    const wLower = w.title.toLowerCase();
+    return wLower === lower || wLower.includes(lower) || lower.includes(wLower);
+  });
   if (matches.length === 0) return undefined;
+  // Prefer exact matches, then most recent
+  const exact = matches.find((w) => w.title.toLowerCase() === lower);
+  if (exact) return exact;
   return matches.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 }
 

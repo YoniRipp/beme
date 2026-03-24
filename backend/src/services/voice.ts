@@ -38,7 +38,10 @@ Call all relevant functions; the user may combine multiple actions in one messag
 
 function transcriptLooksLikeFood(text: string): boolean {
   const t = (text || '').trim();
+  if (t.length === 0) return false;
   if (t.length > 80) return false;
+  // Reject workout-related phrases
+  if (/\b(sets?|reps?|workout|exercise|squat|deadlift|bench|press|run|ran|jog|swim)\b/i.test(t)) return false;
   return !/\d{1,2}:\d{2}|\d+\s*hours?|woke|slept|sleep|עד|מ-|שעות|השכמתי|ישנתי|שינה/i.test(t) && !/\d+\s*to\s*\d|\d+\s*-\s*\d/.test(t.toLowerCase());
 }
 

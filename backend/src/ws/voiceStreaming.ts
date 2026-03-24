@@ -244,6 +244,21 @@ async function handleConnection(clientWs: WebSocket, req: IncomingMessage) {
 
   /** Execute actions server-side and send final 'done' message. */
   async function finishSession() {
+    // Filter out likely-hallucinated actions from background noise.
+    // A workout with no exercises and a very short/generic title is suspicious.
+    allActions = allActions.filter((a) => {
+      if (a.intent === 'add_workout') {
+        const exercises = Array.isArray(a.exercises) ? a.exercises : [];
+        const title = String(a.title ?? '').trim();
+        // If no exercises and title is default or very short, treat as hallucination
+        if (exercises.length === 0 && (title === 'Workout' || title.length <= 2)) {
+          logger.info({ userId: user.id, title }, 'Voice stream: filtered likely-hallucinated workout');
+          return false;
+        }
+      }
+      return true;
+    });
+
     if (allActions.length === 0) {
       allActions.push({ intent: 'unknown' });
     }
