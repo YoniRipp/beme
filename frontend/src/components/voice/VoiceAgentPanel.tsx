@@ -85,15 +85,15 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
   const handleStopRecording = useCallback(async () => {
     try {
       await stopListening();
-      const result = await getVoiceResult();
+      const rawResult = await getVoiceResult();
 
-      if (!result || result.actions.length === 0) {
+      if (!rawResult || rawResult.actions.length === 0) {
         setError('Could not understand your recording. Please try again.');
         return;
       }
 
       // Filter out likely-hallucinated actions (e.g. add_workout from background noise)
-      const validActions = result.actions.filter((a) => {
+      const validActions = rawResult.actions.filter((a) => {
         if (a.intent === 'add_workout') {
           const exercises = Array.isArray(a.exercises) ? a.exercises : [];
           const title = String(a.title ?? '').trim();
@@ -106,7 +106,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
         setError('Could not understand your recording. Please try again.');
         return;
       }
-      result = { ...result, actions: validActions };
+      const result = { ...rawResult, actions: validActions };
 
       const succeeded: string[] = [];
       const failed: string[] = [];
