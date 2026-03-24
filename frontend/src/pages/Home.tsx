@@ -13,7 +13,7 @@ import { GoalModal } from '@/components/goals/GoalModal';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { VoiceMicHero } from '@/components/voice/VoiceMicHero';
 import { WaterTracker } from '@/components/home/WaterTracker';
 import { WeightProgress } from '@/components/home/WeightProgress';
 import { CycleTracker } from '@/components/home/CycleTracker';
@@ -25,7 +25,7 @@ import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
 import { StreakCard } from '@/components/home/StreakCard';
-import { Dumbbell, Plus, UtensilsCrossed } from 'lucide-react';
+import { Dumbbell, UtensilsCrossed } from 'lucide-react';
 import { isSameDay, format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -210,17 +210,9 @@ export function Home() {
           </CardContent>
         </Card>
 
-        {/* Quick Add */}
+        {/* Voice Input */}
         <div data-onboarding="voice">
-          <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
-            <CardContent className="flex items-center justify-between p-4">
-              <span className="text-sm font-medium text-muted-foreground">Log a meal</span>
-              <Button size="sm" variant="outline" onClick={() => setFoodModalOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Manually
-              </Button>
-            </CardContent>
-          </Card>
+          <VoiceMicHero />
         </div>
 
         {/* Goals Progress */}

@@ -377,7 +377,7 @@ export function AiInsightsSection() {
             <div className="flex gap-6 items-start flex-wrap">
               <ScoreRing score={data.score} />
               <div className="flex-1 min-w-0 space-y-1">
-                <p className="text-sm text-muted-foreground">{data.summary}</p>
+                <p className="text-sm text-muted-foreground">{data.summary.replace(/\*\*(.*?)\*\*/g, '$1')}</p>
               </div>
             </div>
           ) : null}
@@ -388,7 +388,7 @@ export function AiInsightsSection() {
       {data && !isLoading && !refreshMutation.isPending && (
         <div className="grid sm:grid-cols-2 gap-4">
           {data.highlights.length > 0 && (
-            <Card>
+            <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <TrendingUp className="w-4 h-4 text-green-500" />
@@ -396,11 +396,11 @@ export function AiInsightsSection() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {data.highlights.map((h, i) => (
-                    <li key={i} className="text-sm flex gap-2">
-                      <span className="text-green-500 mt-0.5">✓</span>
-                      <span>{h}</span>
+                    <li key={i} className="text-sm flex gap-2.5 leading-relaxed">
+                      <span className="text-green-500 mt-0.5 shrink-0">✓</span>
+                      <span>{h.replace(/\*\*(.*?)\*\*/g, '$1')}</span>
                     </li>
                   ))}
                 </ul>
@@ -409,7 +409,7 @@ export function AiInsightsSection() {
           )}
 
           {data.suggestions.length > 0 && (
-            <Card>
+            <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Lightbulb className="w-4 h-4 text-amber-500" />
@@ -417,11 +417,11 @@ export function AiInsightsSection() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {data.suggestions.map((s, i) => (
-                    <li key={i} className="text-sm flex gap-2">
-                      <span className="text-amber-500 mt-0.5">→</span>
-                      <span>{s}</span>
+                    <li key={i} className="text-sm flex gap-2.5 leading-relaxed">
+                      <span className="text-amber-500 mt-0.5 shrink-0">→</span>
+                      <span>{s.replace(/\*\*(.*?)\*\*/g, '$1')}</span>
                     </li>
                   ))}
                 </ul>

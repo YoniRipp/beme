@@ -47,16 +47,15 @@ describe('Energy Page', () => {
     });
   });
 
-  it('opens food modal when add manually button is clicked', async () => {
+  it('opens food modal when add food button is clicked', async () => {
     const user = userEvent.setup();
     render(<Energy />, { wrapper });
 
     await waitFor(() => {
-      // Empty state shows unified voice CTA
       expect(screen.getByText('What did you eat today?')).toBeInTheDocument();
     });
-    // Click the "Add Manually" button in the empty state
-    const addButton = screen.getByText(/add manually/i);
+    // Click the "Add Food" button in the empty state
+    const addButton = screen.getByText(/add food/i);
     await user.click(addButton);
 
     await waitFor(() => {
