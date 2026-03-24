@@ -43,6 +43,11 @@ export function useVoiceStream(): UseVoiceStreamReturn {
   const isListeningRef = useRef(false);
   const isStartingRef = useRef(false);
 
+  // VAD: track whether any speech-level audio energy was detected
+  const speechDetectedRef = useRef(false);
+  const vadIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
   // Promise that resolves when the 'done' message arrives
   const doneResolveRef = useRef<((transcript: string) => void) | null>(null);
   const doneRejectRef = useRef<((err: Error) => void) | null>(null);
@@ -56,6 +61,10 @@ export function useVoiceStream(): UseVoiceStreamReturn {
   }, []);
 
   const cleanup = useCallback(() => {
+    // Clean up VAD
+    if (vadIntervalRef.current) { clearInterval(vadIntervalRef.current); vadIntervalRef.current = null; }
+    if (audioCtxRef.current) { audioCtxRef.current.close().catch(() => {}); audioCtxRef.current = null; }
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
     }
@@ -254,6 +263,30 @@ export function useVoiceStream(): UseVoiceStreamReturn {
       recorder.start(250);
       console.log(TAG, 'MediaRecorder started — now LISTENING');
       isListeningRef.current = true;
+
+      // VAD: monitor audio energy to detect speech vs silence
+      speechDetectedRef.current = false;
+      try {
+        const audioCtx = new AudioContext();
+        audioCtxRef.current = audioCtx;
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+        const dataArray = new Float32Array(analyser.fftSize);
+        vadIntervalRef.current = setInterval(() => {
+          analyser.getFloatTimeDomainData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i] * dataArray[i];
+          const rms = Math.sqrt(sum / dataArray.length);
+          if (rms > 0.01) speechDetectedRef.current = true;
+        }, 250);
+        console.log(TAG, 'VAD started (RMS energy detection)');
+      } catch (e) {
+        console.warn(TAG, 'VAD setup failed (non-fatal):', e);
+        // If VAD fails, assume speech is present to avoid blocking legitimate input
+        speechDetectedRef.current = true;
+      }
       if (isMountedRef.current) {
         setIsListening(true);
         setCurrentTranscript('Streaming...');
@@ -274,6 +307,13 @@ export function useVoiceStream(): UseVoiceStreamReturn {
 
   const stopListening = useCallback(async (): Promise<string> => {
     console.log(TAG, 'stopListening called');
+
+    // Stop VAD monitoring
+    if (vadIntervalRef.current) { clearInterval(vadIntervalRef.current); vadIntervalRef.current = null; }
+    if (audioCtxRef.current) { audioCtxRef.current.close().catch(() => {}); audioCtxRef.current = null; }
+    const hadSpeech = speechDetectedRef.current;
+    console.log(TAG, 'VAD result: speechDetected =', hadSpeech);
+
     // Stop MediaRecorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
@@ -288,6 +328,18 @@ export function useVoiceStream(): UseVoiceStreamReturn {
     isListeningRef.current = false;
     if (isMountedRef.current) {
       setIsListening(false);
+    }
+
+    // If no speech was detected, skip Gemini entirely
+    if (!hadSpeech) {
+      console.log(TAG, 'No speech detected — skipping Gemini, returning unknown');
+      lastResultRef.current = { actions: [{ intent: 'unknown', message: 'No speech detected' }] };
+      cleanup();
+      if (isMountedRef.current) setIsProcessing(false);
+      return '';
+    }
+
+    if (isMountedRef.current) {
       setIsProcessing(true);
     }
 

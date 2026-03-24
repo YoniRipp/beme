@@ -37,10 +37,19 @@ export function useWebSpeech(options: UseWebSpeechOptions = {}): UseWebSpeechRet
   const isMountedRef = useRef(true);
   const isListeningRef = useRef(false);
 
+  // VAD: track whether any speech-level audio energy was detected
+  const speechDetectedRef = useRef(false);
+  const vadIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
   const isAvailable = isMediaRecorderSupported();
 
   // Cleanup helper to stop stream and recorder
   const cleanup = useCallback(() => {
+    // Clean up VAD
+    if (vadIntervalRef.current) { clearInterval(vadIntervalRef.current); vadIntervalRef.current = null; }
+    if (audioCtxRef.current) { audioCtxRef.current.close().catch(() => {}); audioCtxRef.current = null; }
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
         mediaRecorderRef.current.stop();
@@ -105,6 +114,28 @@ export function useWebSpeech(options: UseWebSpeechOptions = {}): UseWebSpeechRet
       isListeningRef.current = true;
       setIsListening(true);
 
+      // VAD: monitor audio energy to detect speech vs silence
+      speechDetectedRef.current = false;
+      try {
+        const audioCtx = new AudioContext();
+        audioCtxRef.current = audioCtx;
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+        const dataArray = new Float32Array(analyser.fftSize);
+        vadIntervalRef.current = setInterval(() => {
+          analyser.getFloatTimeDomainData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i] * dataArray[i];
+          const rms = Math.sqrt(sum / dataArray.length);
+          if (rms > 0.01) speechDetectedRef.current = true;
+        }, 250);
+      } catch {
+        // If VAD fails, assume speech is present to avoid blocking legitimate input
+        speechDetectedRef.current = true;
+      }
+
       // Signal that we're recording (no real-time transcript for MediaRecorder)
       onPartialResult?.('Recording...');
     } catch (e) {
@@ -146,6 +177,11 @@ export function useWebSpeech(options: UseWebSpeechOptions = {}): UseWebSpeechRet
       }
 
       recorder.onstop = async () => {
+        // Stop VAD monitoring
+        if (vadIntervalRef.current) { clearInterval(vadIntervalRef.current); vadIntervalRef.current = null; }
+        if (audioCtxRef.current) { audioCtxRef.current.close().catch(() => {}); audioCtxRef.current = null; }
+        const hadSpeech = speechDetectedRef.current;
+
         // Stop all tracks
         stream?.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
@@ -159,7 +195,9 @@ export function useWebSpeech(options: UseWebSpeechOptions = {}): UseWebSpeechRet
         const mimeType = recorder.mimeType || 'audio/webm';
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
 
-        if (blob.size === 0) {
+        if (blob.size === 0 || !hadSpeech) {
+          // No audio data or no speech detected — skip Gemini
+          lastResultRef.current = { actions: [{ intent: 'unknown', message: 'No speech detected' }] };
           resolve('');
           return;
         }

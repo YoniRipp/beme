@@ -51,9 +51,23 @@ export async function processGeminiResponse(response: GeminiResponse, ctx: Build
     if (!isEmptyItems) actions.push(action);
   }
 
-  if (actions.length === 0) {
-    actions.push({ intent: 'unknown' });
+  // Filter out likely-hallucinated actions (e.g. add_workout from background noise).
+  // A workout with no exercises and a very short or default title is suspicious.
+  const filtered = actions.filter((a) => {
+    if (a.intent === 'add_workout') {
+      const exercises = Array.isArray(a.exercises) ? a.exercises : [];
+      const title = String(a.title ?? '').trim();
+      if (exercises.length === 0 && (title === 'Workout' || title.length <= 3)) {
+        logger.info({ title }, 'Voice: filtered likely-hallucinated workout');
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    filtered.push({ intent: 'unknown' });
   }
 
-  return { actions };
+  return { actions: filtered };
 }

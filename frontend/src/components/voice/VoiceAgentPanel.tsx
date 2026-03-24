@@ -97,7 +97,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
         if (a.intent === 'add_workout') {
           const exercises = Array.isArray(a.exercises) ? a.exercises : [];
           const title = String(a.title ?? '').trim();
-          if (exercises.length === 0 && (title === 'Workout' || title.length <= 2)) return false;
+          if (exercises.length === 0 && (title === 'Workout' || title.length <= 3)) return false;
         }
         return true;
       });

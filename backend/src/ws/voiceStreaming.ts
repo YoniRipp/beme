@@ -251,7 +251,7 @@ async function handleConnection(clientWs: WebSocket, req: IncomingMessage) {
         const exercises = Array.isArray(a.exercises) ? a.exercises : [];
         const title = String(a.title ?? '').trim();
         // If no exercises and title is default or very short, treat as hallucination
-        if (exercises.length === 0 && (title === 'Workout' || title.length <= 2)) {
+        if (exercises.length === 0 && (title === 'Workout' || title.length <= 3)) {
           logger.info({ userId: user.id, title }, 'Voice stream: filtered likely-hallucinated workout');
           return false;
         }

@@ -86,7 +86,7 @@ type Handler = (action: VoiceAction, ctx: VoiceExecutorContext) => Promise<Voice
 
 function findWorkoutByTitle(workouts: Workout[], title: string): Workout | undefined {
   const lower = title.toLowerCase().trim();
-  if (!lower || lower.length <= 2) return undefined; // Reject empty or too-short titles
+  if (!lower || lower.length <= 3) return undefined; // Reject empty or too-short titles
   // Require a strong match: exact match or substantial overlap (not just a single common word)
   const matches = workouts.filter((w) => {
     const wLower = w.title.toLowerCase();
