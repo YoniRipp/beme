@@ -63,7 +63,8 @@ export async function lookupNutrition(foodName: string, amount: number, unit: st
       const geminiRow = await lookupAndCreateFood(pool, name);
       if (geminiRow) {
         recordFoodLookup('gemini');
-        const grams = unitToGrams(amount, unit);
+        const geminiUnitWeight = geminiRow.unit_weight_grams != null ? Number(geminiRow.unit_weight_grams) : null;
+        const grams = unitToGrams(amount, unit, geminiUnitWeight);
         const scale = grams / 100;
         const displayName = (geminiRow.name || '').replace(/\braw\b/gi, 'uncooked');
         return {

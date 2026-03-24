@@ -92,6 +92,22 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
         return;
       }
 
+      // Filter out likely-hallucinated actions (e.g. add_workout from background noise)
+      const validActions = result.actions.filter((a) => {
+        if (a.intent === 'add_workout') {
+          const exercises = Array.isArray(a.exercises) ? a.exercises : [];
+          const title = String(a.title ?? '').trim();
+          if (exercises.length === 0 && (title === 'Workout' || title.length <= 2)) return false;
+        }
+        return true;
+      });
+
+      if (validActions.length === 0) {
+        setError('Could not understand your recording. Please try again.');
+        return;
+      }
+      result = { ...result, actions: validActions };
+
       const succeeded: string[] = [];
       const failed: string[] = [];
 
