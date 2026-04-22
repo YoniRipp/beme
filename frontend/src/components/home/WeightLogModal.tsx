@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { isSameDay } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,14 +13,28 @@ interface WeightLogModalProps {
 }
 
 export function WeightLogModal({ open, onOpenChange }: WeightLogModalProps) {
-  const { addWeight, latestWeight } = useWeight();
-  const [weight, setWeight] = useState(latestWeight?.weight?.toString() ?? '');
+  const { addWeight, weightEntries, latestWeight } = useWeight();
+  const [weight, setWeight] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Prefill on open: prefer today's entry (so the user can actually edit it),
+  // otherwise fall back to the most recent weight as a sensible starting value.
+  useEffect(() => {
+    if (!open) return;
+    const today = new Date();
+    const todaysEntry = weightEntries.find((e) => {
+      try { return isSameDay(new Date(e.date), today); } catch { return false; }
+    });
+    const prefill = todaysEntry ?? latestWeight;
+    setWeight(prefill?.weight?.toString() ?? '');
+    setNotes(todaysEntry?.notes ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const handleSave = async () => {
     const w = Number(weight);
-    if (!w || w < 10 || w > 500) {
+    if (!Number.isFinite(w) || w < 10 || w > 500) {
       toast.error('Please enter a valid weight');
       return;
     }
@@ -27,10 +42,8 @@ export function WeightLogModal({ open, onOpenChange }: WeightLogModalProps) {
     try {
       const today = new Date().toISOString().split('T')[0];
       await addWeight({ date: today, weight: w, notes: notes || undefined });
-      toast.success('Weight logged');
+      toast.success('Weight saved');
       onOpenChange(false);
-      setWeight('');
-      setNotes('');
     } catch {
       toast.error('Could not save weight');
     } finally {

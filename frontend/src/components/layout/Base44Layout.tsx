@@ -59,7 +59,7 @@ const SIDEBAR_NAV_BASE = [
 const BOTTOM_NAV_ITEMS = [
   { name: 'Dashboard', path: '/', icon: Home },
   { name: 'Journal', path: '/energy', icon: BookOpen },
-  { name: 'Goals', path: '/goals', icon: Target },
+  { name: 'Workouts', path: '/body', icon: Dumbbell },
   { name: 'More', path: '/settings', icon: MoreHorizontal },
 ];
 

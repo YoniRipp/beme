@@ -392,6 +392,7 @@ export function Energy() {
 
   const handleEditFood = useCallback((entry: FoodEntry) => {
     setEditingFoodEntry(entry);
+    setActiveMealType(undefined);
     setFoodModalOpen(true);
   }, []);
 

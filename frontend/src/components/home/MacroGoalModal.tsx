@@ -23,13 +23,16 @@ export function MacroGoalModal({ open, onOpenChange, goals, onSave }: MacroGoalM
   const [fat, setFat] = useState(goals.fat);
   const [protein, setProtein] = useState(goals.protein);
 
+  // Only reset local state when the modal transitions to open, not every
+  // time `goals` reference changes (which happens on each profile render).
   useEffect(() => {
     if (open) {
       setCarbs(goals.carbs);
       setFat(goals.fat);
       setProtein(goals.protein);
     }
-  }, [open, goals]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleSave = () => {
     onSave({

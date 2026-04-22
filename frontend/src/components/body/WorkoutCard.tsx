@@ -71,21 +71,21 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
           </span>
         </div>
         {workout.exercises.length > 0 && (
-          <div className="space-y-1">
+          <ul className="space-y-1.5">
             {workout.exercises.slice(0, 3).map((ex, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs">
-                <span className="text-foreground/80 font-medium truncate">{ex.name}</span>
-                <span className="tabular-nums text-muted-foreground shrink-0 ml-auto">
-                  {ex.sets} × {ex.reps}{ex.weight ? ` · ${ex.weight} ${unit}` : ''}
+              <li key={i} className="text-xs leading-snug">
+                <span className="text-foreground/85 font-medium break-words">{ex.name}</span>
+                <span className="tabular-nums text-muted-foreground whitespace-nowrap ml-1.5">
+                  · {ex.sets} × {ex.reps}{ex.weight ? ` · ${ex.weight} ${unit}` : ''}
                 </span>
-              </div>
+              </li>
             ))}
             {workout.exercises.length > 3 && (
-              <p className="text-xs text-muted-foreground/80">
+              <li className="text-xs text-muted-foreground/80">
                 +{workout.exercises.length - 3} more
-              </p>
+              </li>
             )}
-          </div>
+          </ul>
         )}
       </div>
       {onDelete && (
