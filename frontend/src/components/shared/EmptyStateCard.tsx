@@ -1,6 +1,5 @@
 import { type LucideIcon, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 
 interface EmptyStateCardProps {
   onClick: () => void;
@@ -12,18 +11,26 @@ interface EmptyStateCardProps {
 export function EmptyStateCard({ onClick, icon: Icon = Plus, title, description }: EmptyStateCardProps) {
   return (
     <Card
-      className="p-8 bg-sage-50/50 border border-sage-100 cursor-pointer hover:bg-sage-50 transition-colors text-center"
+      className="p-8 text-center cursor-pointer hover:border-primary/40 hover:bg-muted/40 transition-colors press"
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
     >
-      <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-sage-100 flex items-center justify-center">
-        <Icon className="w-7 h-7 text-sage" />
+      <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
+        <Icon className="w-6 h-6 text-primary" />
       </div>
-      <p className="text-[15px] font-semibold mb-1">{title}</p>
-      {description && <p className="text-sm text-muted-foreground">{description}</p>}
-      <Button size="sm" className="mt-4" variant="default">
-        <Plus className="w-4 h-4 mr-1" />
+      <p className="font-display text-lg font-medium text-foreground tracking-tight">{title}</p>
+      {description && <p className="text-sm text-muted-foreground mt-1.5 max-w-xs mx-auto leading-relaxed">{description}</p>}
+      <div className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary">
+        <Plus className="w-4 h-4" />
         Get started
-      </Button>
+      </div>
     </Card>
   );
 }

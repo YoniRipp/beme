@@ -129,41 +129,46 @@ export function Home() {
     return <SetupWizard onComplete={() => window.location.reload()} />;
   }
 
+  const todayDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
   return (
     <div className="max-w-lg md:max-w-6xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Today</h1>
+      <div>
+        <p className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">{todayDate}</p>
+        <h1 className="font-display text-[32px] md:text-[40px] font-medium tracking-tight leading-tight mt-1">Today</h1>
+        <p className="text-sm text-muted-foreground mt-1.5">{progressMessage}</p>
+      </div>
 
       <ContentWithLoading loading={workoutsLoading || energyLoading || goalsLoading} loadingText="Loading dashboard...">
       <div className="space-y-5">
 
         {/* Mobile: two stacked cards */}
         <div className="md:hidden space-y-4" data-onboarding="dashboard">
-          <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
-            <CardContent className="p-5">
-              <p className="text-sm font-semibold text-center mb-4 text-muted-foreground">{progressMessage}</p>
-              <div className="flex flex-col items-center gap-1.5 mb-3">
-                <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Calories</p>
-                <div className="relative w-48 h-48">
-                  <svg viewBox="0 0 100 100" className="w-48 h-48 -rotate-90">
+          <Card className="overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-muted-foreground">Calories</p>
+                <div className="relative w-52 h-52 my-1">
+                  <svg viewBox="0 0 100 100" className="w-52 h-52 -rotate-90">
                     <defs>
                       <linearGradient id="calRingGradMobile" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="hsl(var(--sage-light))" />
+                        <stop offset="0%" stopColor="hsl(var(--sage))" />
                         <stop offset="100%" stopColor="hsl(var(--sage-dark))" />
                       </linearGradient>
                     </defs>
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" className="text-mist" />
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="url(#calRingGradMobile)" strokeWidth="6" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" style={{ filter: calPct >= 0.9 ? 'drop-shadow(0 0 6px hsl(var(--sage) / 0.4))' : undefined }} />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="url(#calRingGradMobile)" strokeWidth="5" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" style={{ filter: calPct >= 0.9 ? 'drop-shadow(0 0 6px hsl(var(--sage) / 0.4))' : undefined }} />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-4xl font-bold tabular-nums leading-none tracking-tight animate-count-up">{Math.round(todaySummary.totalCal)}</span>
-                    <span className="text-xs text-muted-foreground leading-none mt-1.5">of {calGoalTarget} kcal</span>
+                    <span className="font-display text-5xl font-medium tabular-nums leading-none tracking-tight animate-count-up">{Math.round(todaySummary.totalCal)}</span>
+                    <span className="text-xs text-muted-foreground leading-none mt-2">of {calGoalTarget} kcal</span>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
-            <CardContent className="p-5">
+          <Card className="overflow-hidden">
+            <CardContent className="p-6">
               <MacroCircles
                 carbs={{ current: todaySummary.totalCarbs, goal: macroGoals.carbs }}
                 fat={{ current: todaySummary.totalFats, goal: macroGoals.fat }}
@@ -175,26 +180,25 @@ export function Home() {
         </div>
 
         {/* Desktop: all circles in one row */}
-        <Card className="hidden md:block rounded-2xl overflow-hidden border border-border/30 shadow-sm">
-          <CardContent className="p-5">
-            <p className="text-sm font-semibold text-center mb-4 text-muted-foreground">{progressMessage}</p>
-            <div className="flex items-center justify-center gap-8">
-              <div className="flex flex-col items-center gap-1.5 shrink-0">
-                <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Calories</p>
+        <Card className="hidden md:block overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center gap-10">
+              <div className="flex flex-col items-center gap-2 shrink-0">
+                <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-muted-foreground">Calories</p>
                 <div className="relative w-48 h-48">
                   <svg viewBox="0 0 100 100" className="w-48 h-48 -rotate-90">
                     <defs>
                       <linearGradient id="calRingGradDesktop" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="hsl(var(--sage-light))" />
+                        <stop offset="0%" stopColor="hsl(var(--sage))" />
                         <stop offset="100%" stopColor="hsl(var(--sage-dark))" />
                       </linearGradient>
                     </defs>
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" className="text-mist" />
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="url(#calRingGradDesktop)" strokeWidth="6" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" style={{ filter: calPct >= 0.9 ? 'drop-shadow(0 0 6px hsl(var(--sage) / 0.4))' : undefined }} />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="url(#calRingGradDesktop)" strokeWidth="5" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" style={{ filter: calPct >= 0.9 ? 'drop-shadow(0 0 6px hsl(var(--sage) / 0.4))' : undefined }} />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-4xl font-bold tabular-nums leading-none tracking-tight animate-count-up">{Math.round(todaySummary.totalCal)}</span>
-                    <span className="text-xs text-muted-foreground leading-none mt-1.5">of {calGoalTarget} kcal</span>
+                    <span className="font-display text-5xl font-medium tabular-nums leading-none tracking-tight animate-count-up">{Math.round(todaySummary.totalCal)}</span>
+                    <span className="text-xs text-muted-foreground leading-none mt-2">of {calGoalTarget} kcal</span>
                   </div>
                 </div>
               </div>
@@ -216,9 +220,9 @@ export function Home() {
         </div>
 
         {/* Goals Progress */}
-        <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm" data-onboarding="goals">
-          <CardContent className="p-5">
-            <SectionHeader title="Goals" subtitle="Your progress" />
+        <Card className="overflow-hidden" data-onboarding="goals">
+          <CardContent className="p-6">
+            <SectionHeader title="Goals" subtitle="Your progress this week" />
             <DashboardProgressCards
               onAddGoal={() => {
                 setEditingGoal(undefined);
@@ -244,19 +248,19 @@ export function Home() {
 
         {/* Recent Activity */}
         {recentActivity.length > 0 && (
-          <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
-            <CardContent className="p-5">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Recent Activity</h3>
+          <Card className="overflow-hidden">
+            <CardContent className="p-6">
+              <h3 className="font-display text-lg font-medium tracking-tight mb-4">Recent activity</h3>
               <div className="space-y-1">
                 {recentActivity.map((item) => (
                   <div
                     key={`${item.type}-${item.id}`}
                     className="flex items-center gap-3 py-2.5"
                   >
-                    <div className={`p-1.5 rounded-lg ${item.type === 'food' ? 'bg-terracotta/10 text-terracotta' : 'bg-info/10 text-info'}`}>
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${item.type === 'food' ? 'bg-terracotta/10 text-terracotta' : 'bg-info/10 text-info'}`}>
                       {item.type === 'food'
-                        ? <UtensilsCrossed className="w-3.5 h-3.5" />
-                        : <Dumbbell className="w-3.5 h-3.5" />}
+                        ? <UtensilsCrossed className="w-4 h-4" />
+                        : <Dumbbell className="w-4 h-4" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{item.name}</p>

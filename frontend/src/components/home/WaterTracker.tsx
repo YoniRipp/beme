@@ -29,7 +29,7 @@ export function WaterTracker() {
   };
 
   return (
-    <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
+    <Card className="overflow-hidden">
       <CardContent className="p-5">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">

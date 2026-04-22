@@ -9,113 +9,161 @@
 
 @layer base {
   :root {
-    /* Brand palette — "Natural Vitality" — enriched earth-inspired tones */
-    --sage: 145 20% 52%;
-    --sage-light: 145 25% 72%;
-    --sage-dark: 148 24% 38%;
-    --sage-50: 145 20% 96%;
-    --sage-100: 145 20% 90%;
-    --cream: 0 0% 100%;
-    --cream-warm: 220 16% 97%;
-    --terracotta: 14 55% 58%;
-    --terracotta-light: 14 60% 80%;
-    --gold: 42 55% 55%;
-    --charcoal: 220 15% 15%;
-    --stone: 220 10% 52%;
-    --mist: 220 12% 94%;
-    --border-base44: 220 13% 91%;
-    /* Semantic status colors */
-    --success: 145 60% 42%;
-    --info: 210 70% 55%;
-    --warning: 38 90% 55%;
-    /* Semantic tokens — clean MFP-inspired with sage accent */
-    --background: 0 0% 100%;
-    --foreground: var(--charcoal);
+    /* ──────────────────────────────────────────────────────────────
+       "Claude" palette — paper-warm neutrals, single sage accent,
+       terracotta reserved for food/energy, gold/info for status.
+       Typography pair: Fraunces (display) + Inter (body).
+       ────────────────────────────────────────────────────────────── */
+
+    /* Brand — sage (kept as primary identity, deepened for contrast) */
+    --sage: 148 24% 42%;
+    --sage-light: 148 22% 68%;
+    --sage-dark: 150 28% 30%;
+    --sage-50: 145 28% 95%;
+    --sage-100: 145 24% 88%;
+
+    /* Paper-warm neutrals (Anthropic-inspired) */
+    --paper: 36 40% 97%;          /* app background */
+    --paper-2: 34 32% 94%;        /* muted sections */
+    --ink: 30 14% 14%;            /* primary text */
+    --ink-2: 28 10% 32%;          /* secondary text */
+    --ink-3: 24 8% 52%;           /* tertiary / captions */
+    --hairline: 32 14% 86%;       /* borders (fully opaque) */
+
+    /* Accents */
+    --terracotta: 14 58% 54%;
+    --terracotta-light: 14 60% 92%;
+    --gold: 38 70% 50%;
+    --cream: 36 40% 97%;
+    --cream-warm: 34 32% 94%;
+    --charcoal: var(--ink);
+    --stone: var(--ink-3);
+    --mist: var(--paper-2);
+    --border-base44: var(--hairline);
+
+    /* Semantic status */
+    --success: 150 45% 38%;
+    --info: 212 58% 48%;
+    --warning: 32 80% 48%;
+
+    /* shadcn semantic tokens */
+    --background: var(--paper);
+    --foreground: var(--ink);
     --card: 0 0% 100%;
-    --card-foreground: var(--charcoal);
+    --card-foreground: var(--ink);
     --popover: 0 0% 100%;
-    --popover-foreground: var(--charcoal);
+    --popover-foreground: var(--ink);
     --primary: var(--sage-dark);
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: var(--charcoal);
-    --muted: 220 14% 96%;
-    --muted-foreground: var(--stone);
-    --accent: 220 14% 96%;
-    --accent-foreground: var(--charcoal);
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: var(--charcoal);
-    --radius: 0.5rem;
+    --primary-foreground: 36 40% 98%;
+    --secondary: 34 24% 92%;
+    --secondary-foreground: var(--ink);
+    --muted: 32 18% 93%;
+    --muted-foreground: var(--ink-3);
+    --accent: 34 24% 92%;
+    --accent-foreground: var(--ink);
+    --destructive: 6 72% 50%;
+    --destructive-foreground: 36 40% 98%;
+    --border: var(--hairline);
+    --input: var(--hairline);
+    --ring: 150 28% 30%;
+    --radius: 0.875rem;
+
     /* Sidebar */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: var(--charcoal);
+    --sidebar-background: 36 40% 98%;
+    --sidebar-foreground: var(--ink);
     --sidebar-primary: var(--sage-dark);
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: var(--charcoal);
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: var(--charcoal);
+    --sidebar-primary-foreground: 36 40% 98%;
+    --sidebar-accent: 34 24% 92%;
+    --sidebar-accent-foreground: var(--ink);
+    --sidebar-border: var(--hairline);
+    --sidebar-ring: 150 28% 30%;
+
     /* Chart */
-    --chart-1: 145 20% 52%;
-    --chart-2: 14 55% 58%;
-    --chart-3: 42 55% 55%;
-    --chart-4: 220 10% 52%;
-    --chart-5: 220 12% 94%;
+    --chart-1: 148 24% 42%;
+    --chart-2: 14 58% 54%;
+    --chart-3: 38 70% 50%;
+    --chart-4: 212 58% 48%;
+    --chart-5: 28 10% 32%;
+
+    /* Typography */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-serif: 'Fraunces', 'Georgia', 'Times New Roman', serif;
+
+    /* Elevation */
+    --shadow-xs: 0 1px 2px 0 hsl(28 20% 20% / 0.04);
+    --shadow-sm: 0 1px 2px 0 hsl(28 20% 20% / 0.04), 0 1px 3px 0 hsl(28 20% 20% / 0.06);
+    --shadow-md: 0 2px 4px -1px hsl(28 20% 20% / 0.05), 0 4px 8px -2px hsl(28 20% 20% / 0.06);
+    --shadow-lg: 0 6px 16px -4px hsl(28 20% 20% / 0.08), 0 12px 32px -8px hsl(28 20% 20% / 0.08);
   }
 
-  /* Dark mode — deep blue-gray (not pure black, per Apple HIG) */
+  /* Dark mode — warm near-black (not pure black) */
   .dark {
-    --sage: 145 22% 55%;
-    --sage-light: 145 20% 40%;
-    --sage-dark: 148 28% 50%;
-    --sage-50: 145 15% 14%;
-    --sage-100: 145 15% 20%;
-    --cream: 220 16% 10%;
-    --cream-warm: 220 14% 12%;
-    --terracotta: 14 50% 62%;
-    --terracotta-light: 14 40% 30%;
-    --gold: 42 50% 58%;
-    --charcoal: 220 10% 90%;
-    --stone: 220 8% 60%;
-    --mist: 220 14% 18%;
-    --success: 145 55% 48%;
-    --info: 210 65% 60%;
-    --warning: 38 85% 58%;
-    --background: 220 16% 10%;
-    --foreground: 220 10% 90%;
-    --card: 220 14% 14%;
-    --card-foreground: 220 10% 90%;
-    --popover: 220 14% 14%;
-    --popover-foreground: 220 10% 90%;
-    --primary: 148 28% 50%;
-    --primary-foreground: 220 16% 10%;
-    --secondary: 220 14% 18%;
-    --secondary-foreground: 220 10% 85%;
-    --muted: 220 14% 18%;
-    --muted-foreground: 220 8% 60%;
-    --accent: 220 14% 18%;
-    --accent-foreground: 220 10% 85%;
-    --destructive: 0 70% 55%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 220 12% 22%;
-    --input: 220 12% 22%;
-    --ring: 220 10% 70%;
-    --sidebar-background: 220 14% 12%;
-    --sidebar-foreground: 220 10% 90%;
-    --sidebar-primary: 148 28% 50%;
-    --sidebar-primary-foreground: 220 16% 10%;
-    --sidebar-accent: 220 14% 18%;
-    --sidebar-accent-foreground: 220 10% 85%;
-    --sidebar-border: 220 12% 22%;
-    --sidebar-ring: 220 10% 70%;
-    --chart-1: 145 22% 55%;
-    --chart-2: 14 50% 62%;
-    --chart-3: 42 50% 58%;
-    --chart-4: 220 8% 60%;
-    --chart-5: 220 14% 18%;
+    --sage: 148 28% 58%;
+    --sage-light: 148 22% 42%;
+    --sage-dark: 148 32% 52%;
+    --sage-50: 148 20% 14%;
+    --sage-100: 148 20% 20%;
+
+    --paper: 30 8% 9%;
+    --paper-2: 30 8% 13%;
+    --ink: 30 14% 92%;
+    --ink-2: 28 10% 76%;
+    --ink-3: 24 8% 60%;
+    --hairline: 30 8% 20%;
+
+    --terracotta: 14 52% 64%;
+    --terracotta-light: 14 30% 22%;
+    --gold: 38 62% 60%;
+    --cream: var(--paper);
+    --cream-warm: var(--paper-2);
+    --charcoal: var(--ink);
+    --stone: var(--ink-3);
+    --mist: var(--paper-2);
+    --border-base44: var(--hairline);
+
+    --success: 150 40% 54%;
+    --info: 212 52% 62%;
+    --warning: 32 72% 60%;
+
+    --background: var(--paper);
+    --foreground: var(--ink);
+    --card: 30 8% 12%;
+    --card-foreground: var(--ink);
+    --popover: 30 8% 12%;
+    --popover-foreground: var(--ink);
+    --primary: 148 32% 52%;
+    --primary-foreground: 30 8% 9%;
+    --secondary: 30 8% 16%;
+    --secondary-foreground: var(--ink);
+    --muted: 30 8% 16%;
+    --muted-foreground: var(--ink-3);
+    --accent: 30 8% 16%;
+    --accent-foreground: var(--ink);
+    --destructive: 6 64% 54%;
+    --destructive-foreground: 30 14% 95%;
+    --border: var(--hairline);
+    --input: var(--hairline);
+    --ring: 148 32% 52%;
+
+    --sidebar-background: 30 8% 11%;
+    --sidebar-foreground: var(--ink);
+    --sidebar-primary: 148 32% 52%;
+    --sidebar-primary-foreground: 30 8% 9%;
+    --sidebar-accent: 30 8% 16%;
+    --sidebar-accent-foreground: var(--ink);
+    --sidebar-border: var(--hairline);
+    --sidebar-ring: 148 32% 52%;
+
+    --chart-1: 148 28% 58%;
+    --chart-2: 14 52% 64%;
+    --chart-3: 38 62% 60%;
+    --chart-4: 212 52% 62%;
+    --chart-5: 28 10% 76%;
+
+    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.2);
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.22), 0 1px 3px 0 hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 2px 4px -1px hsl(0 0% 0% / 0.25), 0 4px 8px -2px hsl(0 0% 0% / 0.3);
+    --shadow-lg: 0 6px 16px -4px hsl(0 0% 0% / 0.35), 0 12px 32px -8px hsl(0 0% 0% / 0.4);
   }
 }
 
@@ -127,208 +175,143 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Typography scale — mobile-first, generous line heights */
+  h1, .h-display {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  h2, .h-title {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+  }
+  h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
   }
 }
 
-/* Tabular nums for stats alignment */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
-
-/* Micro-interactions and animations */
 @layer utilities {
-  .animate-in {
-    animation: fadeIn 0.2s ease-in;
+  /* Typography helpers */
+  .font-display { font-family: var(--font-serif); font-feature-settings: "ss01" 1, "ss02" 1; }
+  .font-sans { font-family: var(--font-sans); }
+  .text-display-lg { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.025em; line-height: 1.05; }
+  .text-display-md { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; }
+  .text-display-sm { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.015em; line-height: 1.15; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+
+  /* Elevation helpers */
+  .shadow-card { box-shadow: var(--shadow-sm); }
+  .shadow-card-md { box-shadow: var(--shadow-md); }
+  .shadow-card-lg { box-shadow: var(--shadow-lg); }
+
+  /* Safe-area insets for mobile */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+
+  /* Tap feedback */
+  .tap-target { @apply active:scale-[0.98] transition-transform duration-150; }
+  .press { @apply active:scale-[0.97] transition-transform duration-150; }
+
+  /* Glass */
+  .glass {
+    background-color: hsl(var(--paper) / 0.82);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+  }
+  .dark .glass {
+    background-color: hsl(var(--paper) / 0.78);
   }
 
-  .fade-in {
-    animation: fadeIn 0.3s ease-in;
-  }
-
-  .slide-in {
-    animation: slideIn 0.3s ease-out;
-  }
-
-  .animate-fade-up {
-    animation: fadeUp 0.4s ease-out;
-  }
-
-  .animate-card-entrance {
-    animation: cardEntrance 0.4s ease-out both;
-  }
-
-  .animate-ring-fill {
-    animation: ringFill 0.8s ease-out both;
-  }
-
-  .animate-flame-pulse {
-    animation: flamePulse 2s ease-in-out infinite;
-  }
-
-  .animate-celebrate {
-    animation: celebrate 0.5s ease-out;
-  }
-
-  .animate-count-up {
-    animation: countUp 0.4s ease-out both;
-  }
+  /* Animations */
+  .animate-in { animation: fadeIn 0.2s ease-in; }
+  .fade-in { animation: fadeIn 0.3s ease-in; }
+  .slide-in { animation: slideIn 0.3s ease-out; }
+  .animate-fade-up { animation: fadeUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .animate-card-entrance { animation: cardEntrance 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .animate-ring-fill { animation: ringFill 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .animate-flame-pulse { animation: flamePulse 2s ease-in-out infinite; }
+  .animate-celebrate { animation: celebrate 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .animate-count-up { animation: countUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-
 @keyframes slideIn {
-  from {
-    transform: translateY(-10px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
-
 @keyframes fadeUp {
-  from {
-    transform: translateY(8px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
-
 @keyframes cardEntrance {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes ringFill {
-  from {
-    stroke-dashoffset: var(--ring-circumference, 100);
-  }
-  to {
-    stroke-dashoffset: var(--ring-offset, 0);
-  }
+  from { stroke-dashoffset: var(--ring-circumference, 100); }
+  to { stroke-dashoffset: var(--ring-offset, 0); }
 }
-
 @keyframes flamePulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
-
 @keyframes celebrate {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
-
 @keyframes countUp {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes thinkingDots {
-  0%, 20% {
-    opacity: 0.3;
-  }
-  40%, 100% {
-    opacity: 1;
-  }
+  0%, 20% { opacity: 0.3; }
+  40%, 100% { opacity: 1; }
 }
-
 @keyframes thinkingShimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
+.animate-thinking-dots span { animation: thinkingDots 1.4s ease-in-out infinite; }
+.animate-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.animate-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
 
-.animate-thinking-dots span {
-  animation: thinkingDots 1.4s ease-in-out infinite;
-}
-.animate-thinking-dots span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.animate-thinking-dots span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-/* Focus visible styles for accessibility */
+/* Focus ring */
 *:focus-visible {
-  @apply outline-none ring-1 ring-ring ring-offset-2 ring-offset-background;
+  @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
 }
 
-/* Smooth transitions */
+/* Smooth transitions — color & shadow only, not transforms (avoids jank) */
 * {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
 
-/* Tap feedback for mobile — active press scale */
-.tap-target {
-  @apply active:scale-[0.97] transition-transform;
-}
-
-/* Glassmorphism utility */
-.glass {
-  @apply bg-white/95 backdrop-blur-lg;
-}
-.dark .glass {
-  @apply bg-card/95 backdrop-blur-lg;
-}
-
-/* Pricing card reveal animation */
+/* Pricing card reveal */
 @keyframes fadeUpReveal {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.animate-reveal {
-  animation: fadeUpReveal 0.5s ease-out both;
-}
-.animate-reveal-delay {
-  animation: fadeUpReveal 0.5s ease-out 0.15s both;
-}
-.animate-reveal-delay-2 {
-  animation: fadeUpReveal 0.5s ease-out 0.3s both;
-}
+.animate-reveal { animation: fadeUpReveal 0.5s ease-out both; }
+.animate-reveal-delay { animation: fadeUpReveal 0.5s ease-out 0.15s both; }
+.animate-reveal-delay-2 { animation: fadeUpReveal 0.5s ease-out 0.3s both; }
 
-/* Staggered card entrances */
+/* Staggered entrances */
 .stagger-1 { animation-delay: 0ms; }
 .stagger-2 { animation-delay: 50ms; }
 .stagger-3 { animation-delay: 100ms; }
@@ -336,7 +319,7 @@
 .stagger-5 { animation-delay: 200ms; }
 .stagger-6 { animation-delay: 250ms; }
 
-/* Respect reduced motion preference */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

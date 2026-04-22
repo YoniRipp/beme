@@ -22,7 +22,7 @@ export function StreakCard() {
   if (isLoading || !hasAnyStreak) return null;
 
   return (
-    <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
+    <Card className="overflow-hidden">
       <CardContent className="p-5">
         <div className="flex items-center gap-2 mb-4">
           <Flame className="h-4 w-4 text-gold animate-flame-pulse" />

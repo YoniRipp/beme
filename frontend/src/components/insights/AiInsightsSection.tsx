@@ -388,7 +388,7 @@ export function AiInsightsSection() {
       {data && !isLoading && !refreshMutation.isPending && (
         <div className="grid sm:grid-cols-2 gap-4">
           {data.highlights.length > 0 && (
-            <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
+            <Card className="overflow-hidden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <TrendingUp className="w-4 h-4 text-green-500" />
@@ -409,7 +409,7 @@ export function AiInsightsSection() {
           )}
 
           {data.suggestions.length > 0 && (
-            <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
+            <Card className="overflow-hidden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Lightbulb className="w-4 h-4 text-amber-500" />

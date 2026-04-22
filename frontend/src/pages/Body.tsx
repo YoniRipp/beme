@@ -96,11 +96,37 @@ export function Body() {
     setModalOpen(true);
   };
 
+  const renderSection = (label: string, groups: ReturnType<typeof groupWorkoutsByDate>) => (
+    <section>
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground mb-3">{label}</h3>
+      <div className="space-y-4">
+        {groups.map(({ date: dateStr, label: dayLabel, workouts: dayWorkouts }) => (
+          <div key={dateStr}>
+            <h4 className="text-xs font-semibold text-foreground/80 mb-2 pl-1">
+              {dayLabel}
+            </h4>
+            <div className="rounded-2xl border border-border bg-card shadow-card p-2 space-y-1">
+              {dayWorkouts.map((workout) => (
+                <WorkoutCard
+                  key={workout.id}
+                  workout={workout}
+                  onEdit={handleEdit}
+                  onDelete={setDeleteConfirmId}
+                  onToggleCompleted={toggleWorkoutCompleted}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-          <h2 className="text-xl font-semibold sm:flex-1">Workouts</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+          <h2 className="font-display text-[28px] md:text-[32px] font-medium tracking-tight leading-tight sm:flex-1">Workouts</h2>
           <div className="w-full sm:max-w-64">
             <SearchBar
               value={searchQuery}
@@ -110,7 +136,7 @@ export function Body() {
           </div>
         </div>
         <ContentWithLoading loading={workoutsLoading} loadingText="Loading workouts...">
-          <div className="space-y-6">
+          <div className="space-y-8">
             {filteredWorkouts.length === 0 ? (
               <EmptyStateCard
                 onClick={handleAddNew}
@@ -119,85 +145,9 @@ export function Body() {
               />
             ) : (
               <>
-                {groupedUpcoming.length > 0 && (
-                  <section>
-                    <div className="flex items-center gap-2 mb-3">
-                      <h3 className="text-sm font-medium text-muted-foreground">Upcoming</h3>
-                    </div>
-                    <div className="space-y-4">
-                      {groupedUpcoming.map(({ date: dateStr, label, workouts: dayWorkouts }) => (
-                        <div key={dateStr} className="rounded-2xl border border-border/30 bg-card shadow-sm p-3">
-                          <h4 className="text-xs font-medium text-muted-foreground mb-2 pl-0.5">
-                            {label}
-                          </h4>
-                          <div className="space-y-2">
-                            {dayWorkouts.map((workout) => (
-                              <WorkoutCard
-                                key={workout.id}
-                                workout={workout}
-                                onEdit={handleEdit}
-                                onDelete={setDeleteConfirmId}
-                                onToggleCompleted={toggleWorkoutCompleted}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-                {groupedThisWeek.length > 0 && (
-                  <section>
-                    <div className="flex items-center gap-2 mb-3">
-                      <h3 className="text-sm font-medium text-muted-foreground">This week</h3>
-                    </div>
-                    <div className="space-y-4">
-                      {groupedThisWeek.map(({ date: dateStr, label, workouts: dayWorkouts }) => (
-                        <div key={dateStr} className="rounded-2xl border border-border/30 bg-card shadow-sm p-3">
-                          <h4 className="text-xs font-medium text-muted-foreground mb-2 pl-0.5">
-                            {label}
-                          </h4>
-                          <div className="space-y-2">
-                            {dayWorkouts.map((workout) => (
-                              <WorkoutCard
-                                key={workout.id}
-                                workout={workout}
-                                onEdit={handleEdit}
-                                onDelete={setDeleteConfirmId}
-                                onToggleCompleted={toggleWorkoutCompleted}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-                {groupedOlder.length > 0 && (
-                  <>
-                    <h3 className="text-sm font-medium text-muted-foreground sticky top-0 bg-background/95 py-1">
-                      Older
-                    </h3>
-                    {groupedOlder.map(({ date: dateStr, label, workouts: dayWorkouts }) => (
-                      <section key={dateStr}>
-                        <h4 className="text-xs font-medium text-muted-foreground mb-1.5 pl-0.5">
-                          {label}
-                        </h4>
-                        <div className="space-y-2">
-                          {dayWorkouts.map((workout) => (
-                            <WorkoutCard
-                              key={workout.id}
-                              workout={workout}
-                              onEdit={handleEdit}
-                              onDelete={setDeleteConfirmId}
-                              onToggleCompleted={toggleWorkoutCompleted}
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    ))}
-                  </>
-                )}
+                {groupedUpcoming.length > 0 && renderSection('Upcoming', groupedUpcoming)}
+                {groupedThisWeek.length > 0 && renderSection('This week', groupedThisWeek)}
+                {groupedOlder.length > 0 && renderSection('Older', groupedOlder)}
                 <AddAnotherCard onClick={handleAddNew} label="Add another workout" />
               </>
             )}

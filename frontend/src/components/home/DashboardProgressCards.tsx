@@ -47,7 +47,7 @@ function ProgressRing({ value, color }: { value: number; color: string }) {
         fill="none"
         stroke="currentColor"
         strokeWidth="4"
-        className="text-mist"
+        className="text-muted"
       />
       <circle
         cx="24"
@@ -85,36 +85,36 @@ function ProgressCard({
 
   return (
     <Card
-      className={`rounded-2xl overflow-hidden flex flex-col items-center p-5 relative border border-border/30 shadow-sm ${isClickable ? 'cursor-pointer hover:bg-sage-50/50 transition-colors tap-target' : ''}`}
+      className={`flex flex-col items-center p-5 relative ${isClickable ? 'cursor-pointer hover:border-primary/30 hover:bg-muted/40 transition-colors press' : ''}`}
       onClick={cardAction}
       role={isClickable ? 'button' : undefined}
     >
       <CardContent className="flex flex-col items-center p-0 w-full">
-        <div className="relative flex items-center justify-center mb-2">
+        <div className="relative flex items-center justify-center mb-3">
           <ProgressRing value={percentage} color={data.ringColor} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-sm font-bold tabular-nums">
+            <span className="font-display text-base font-medium tabular-nums leading-none">
               {data.formatValue(data.current)}
             </span>
             {hasGoal && (
-              <span className="text-xs text-muted-foreground tabular-nums">
-                /{data.formatValue(data.target)}
+              <span className="text-[10px] text-muted-foreground tabular-nums mt-1">
+                / {data.formatValue(data.target)}
               </span>
             )}
           </div>
         </div>
         <div className="flex items-center gap-1.5">
           {data.icon}
-          <span className="text-xs font-medium text-muted-foreground capitalize">
+          <span className="text-xs font-semibold text-foreground">
             {data.label}
           </span>
         </div>
-        <span className="text-[10px] text-muted-foreground/70">{data.period}</span>
+        <span className="text-[10px] text-muted-foreground mt-0.5">{data.period}</span>
         {!hasGoal && onAddGoal && (
-          <p className="text-xs text-muted-foreground mt-1">Tap to set goal</p>
+          <p className="text-[11px] text-primary font-medium mt-2">Tap to set goal</p>
         )}
         {hasGoal && onAdd && (
-          <span className="text-xs text-primary font-medium mt-1.5">+ {data.addLabel}</span>
+          <span className="text-[11px] text-primary font-medium mt-2">+ {data.addLabel}</span>
         )}
       </CardContent>
     </Card>
@@ -172,8 +172,8 @@ export function DashboardProgressCards({
         period: workoutsGoal?.period === 'monthly' ? 'this month' : 'this week',
         cardType: 'workouts' as CardType,
         formatValue: (v) => Math.round(v).toString(),
-        icon: <Dumbbell className="h-4 w-4 text-blue-600" />,
-        ringColor: '#2563eb',
+        icon: <Dumbbell className="h-3.5 w-3.5 text-info" />,
+        ringColor: 'hsl(212 58% 48%)',
         goal: workoutsGoal,
       },
       {
@@ -184,8 +184,8 @@ export function DashboardProgressCards({
         period: 'today',
         cardType: 'calories' as CardType,
         formatValue: (v) => Math.round(v).toLocaleString(),
-        icon: <Flame className="h-4 w-4 text-orange-600" />,
-        ringColor: '#22c55e',
+        icon: <Flame className="h-3.5 w-3.5 text-terracotta" />,
+        ringColor: 'hsl(148 24% 42%)',
       },
       {
         current: sleepCurrent,
@@ -195,8 +195,8 @@ export function DashboardProgressCards({
         period: sleepGoal?.period === 'monthly' ? 'avg this month' : 'avg this week',
         cardType: 'sleep' as CardType,
         formatValue: (v) => (v > 0 ? `${v.toFixed(1)}h` : '0h'),
-        icon: <Moon className="h-4 w-4 text-indigo-600" />,
-        ringColor: '#6366f1',
+        icon: <Moon className="h-3.5 w-3.5 text-gold" />,
+        ringColor: 'hsl(38 70% 50%)',
         goal: sleepGoal,
       },
     ];

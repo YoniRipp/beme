@@ -22,7 +22,7 @@ export function WeightProgress() {
 
   return (
     <>
-      <Card className="rounded-2xl overflow-hidden cursor-pointer hover:bg-sage-50/50 transition-colors border border-border/30 shadow-sm tap-target" onClick={() => setModalOpen(true)} role="button">
+      <Card className="overflow-hidden cursor-pointer hover:border-primary/30 hover:bg-muted/40 transition-colors press" onClick={() => setModalOpen(true)} role="button">
         <CardContent className="p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">

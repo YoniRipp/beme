@@ -27,70 +27,48 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
     return undefined;
   };
 
+  const renderItem = (item: NavItem) => {
+    const isActive = currentPath === item.path;
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        data-onboarding={onboardingKey(item.path)}
+        className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 transition-colors press min-h-[48px]
+          ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+        aria-current={isActive ? 'page' : undefined}
+      >
+        <Icon className="w-[22px] h-[22px]" strokeWidth={isActive ? 2.25 : 1.75} />
+        <span className={`text-[11px] leading-none ${isActive ? 'font-semibold' : 'font-medium'}`}>
+          {item.name}
+        </span>
+      </Link>
+    );
+  };
+
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border/50 z-30 lg:hidden"
+      className="fixed bottom-0 left-0 right-0 glass border-t border-border/60 z-30 lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       aria-label="Main navigation"
     >
-      <div className="flex items-end px-2 pb-2 pt-1.5" style={{ minHeight: '68px' }}>
-        {/* Left nav items */}
-        {leftItems.map((item) => {
-          const isActive = currentPath === item.path;
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              data-onboarding={onboardingKey(item.path)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-colors tap-target
-                ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
-            >
-              <div className="relative">
-                <Icon className="w-5 h-5" />
-                {isActive && (
-                  <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
-                )}
-              </div>
-              <span className={`text-xs ${isActive ? 'font-semibold' : 'font-medium'}`}>{item.name}</span>
-            </Link>
-          );
-        })}
+      <div className="flex items-end px-2 pb-2 pt-2" style={{ minHeight: '72px' }}>
+        {leftItems.map(renderItem)}
 
-        {/* Center "+" button */}
-        <div className="flex-1 flex flex-col items-center -mt-4">
+        {/* Elevated center FAB */}
+        <div className="flex-1 flex flex-col items-center -mt-5">
           <button
             type="button"
             onClick={onCenterPress}
-            className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/25 active:scale-95 transition-transform"
+            className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-card-lg ring-[3px] ring-background active:scale-95 transition-transform"
             aria-label="Quick add"
           >
             <Plus className="w-7 h-7 text-primary-foreground" strokeWidth={2.5} />
           </button>
         </div>
 
-        {/* Right nav items */}
-        {rightItems.map((item) => {
-          const isActive = currentPath === item.path;
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              data-onboarding={onboardingKey(item.path)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-colors tap-target
-                ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
-            >
-              <div className="relative">
-                <Icon className="w-5 h-5" />
-                {isActive && (
-                  <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
-                )}
-              </div>
-              <span className={`text-xs ${isActive ? 'font-semibold' : 'font-medium'}`}>{item.name}</span>
-            </Link>
-          );
-        })}
+        {rightItems.map(renderItem)}
       </div>
     </nav>
   );

@@ -122,29 +122,29 @@ export function Base44Layout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-72 bg-card border-r border-border z-50
+        className={`fixed top-0 left-0 h-full w-72 bg-sidebar border-r border-sidebar-border z-50
           transform transition-transform duration-300 ease-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
       >
         <div className="flex flex-col h-full">
-          <div className="p-6 pb-4">
+          <div className="px-6 pt-7 pb-5">
             <Link
               to="/"
               className="flex items-center gap-3"
               aria-label="TrackVibe home"
             >
-              <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-card">
                 <Leaf className="w-5 h-5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight">TrackVibe</h1>
-                <p className="text-xs uppercase tracking-[0.2em] text-primary font-medium">Life Balance</p>
+                <h1 className="font-display text-2xl font-medium tracking-tight leading-none">TrackVibe</h1>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-medium mt-1.5">Life Balance</p>
               </div>
             </Link>
           </div>
 
           <nav className="flex-1 px-3 py-2">
-            <p className="px-3 mb-2 text-xs uppercase tracking-[0.15em] text-muted-foreground font-semibold">Navigate</p>
+            <p className="px-3 mb-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">Navigate</p>
             <div className="space-y-0.5">
               {sidebarNav.map((item) => {
                 const isActive = pathname === item.path;
@@ -153,32 +153,24 @@ export function Base44Layout() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 active:scale-[0.98]
+                    className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors
                       ${isActive
                         ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground hover:scale-[1.01]'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                       }`}
                   >
-                    <div
-                      className={`p-1.5 rounded-lg transition-all duration-200
-                        ${isActive
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'bg-muted group-hover:bg-primary/15 group-hover:text-primary'
-                        }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                    </div>
+                    <Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={isActive ? 2.25 : 1.75} />
                     <span className="text-sm font-medium">{item.name}</span>
-                    {isActive && <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-50" />}
+                    {isActive && <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-60" />}
                   </Link>
                 );
               })}
             </div>
           </nav>
 
-          <div className="p-4 mx-3 mb-3 rounded-2xl bg-muted border border-border">
-            <p className="text-xs font-medium text-muted-foreground">Your wellness journey</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Every step counts</p>
+          <div className="p-4 mx-3 mb-4 rounded-2xl bg-muted">
+            <p className="text-sm font-display font-medium text-foreground">Your journey</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Every step counts — keep showing up.</p>
           </div>
         </div>
       </aside>
@@ -187,33 +179,36 @@ export function Base44Layout() {
       <div className="lg:ml-72 min-h-screen">
         <header
           className={`sticky top-0 z-30 transition-all duration-300
-            ${scrolled ? 'bg-card/80 backdrop-blur-xl shadow-sm border-b border-border/50' : 'bg-transparent'}`}
+            ${scrolled ? 'glass border-b border-border/70' : 'bg-transparent'}`}
         >
-          <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3 min-h-[4rem]">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between px-5 sm:px-6 lg:px-8 py-3 min-h-[60px]">
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => setSidebarOpen((o) => !o)}
-                className="lg:hidden p-2 rounded-xl hover:bg-muted transition-colors"
+                className="lg:hidden -ml-2 p-2 rounded-xl hover:bg-muted transition-colors press"
                 aria-label="Toggle menu"
               >
                 {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
-              <h2 className="text-lg font-semibold">{pageTitle}</h2>
+              <h2 className="font-display text-[22px] font-medium tracking-tight leading-none">{pageTitle}</h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-muted-foreground">
+                <Sun className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">{dateStr}</span>
+              </div>
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 shrink-0"
+                  className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
                   aria-label="Open user menu"
                 >
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                     <User className="w-4 h-4 text-primary" />
                   </div>
-                  <span className="hidden sm:inline text-sm font-medium">{user?.name ?? 'Account'}</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground rotate-90" />
+                  <span className="hidden sm:inline text-sm font-medium pr-1">{user?.name ?? 'Account'}</span>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[10rem]">
+                <DropdownMenuContent align="end" className="min-w-[11rem]">
                   <DropdownMenuItem asChild>
                     <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
                       <Settings className="h-4 w-4" />
@@ -230,17 +225,11 @@ export function Base44Layout() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <div className="hidden sm:flex flex-col items-end gap-2">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary">
-                  <Sun className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium">{dateStr}</span>
-                </div>
-              </div>
             </div>
           </div>
         </header>
 
-        <main className="px-4 sm:px-6 lg:px-8 pb-28 lg:pb-8 pt-2 animate-fade-up">
+        <main className="px-5 sm:px-6 lg:px-8 pb-28 lg:pb-10 pt-3 animate-fade-up">
           <Outlet />
         </main>
       </div>
@@ -255,15 +244,16 @@ export function Base44Layout() {
       <QuickAddMenu open={quickAddOpen} onOpenChange={setQuickAddOpen} />
       {pathname !== '/' && <VoiceAgentButton />}
 
-      {/* AI Chat FAB — bottom-right, below mic button */}
+      {/* AI Chat FAB — bottom-right, above mobile nav */}
       {hasAiAccess && pathname !== '/insights' && (
         <Button
           size="icon"
           onClick={() => setAiChatOpen(true)}
-          className="fixed bottom-20 right-4 z-50 h-14 w-14 rounded-full bg-violet-600 hover:bg-violet-700 text-white shadow-lg transition-all md:right-6 lg:bottom-6"
+          className="fixed right-4 z-40 h-12 w-12 rounded-full bg-foreground text-background hover:bg-foreground/90 shadow-card-lg md:right-6 lg:bottom-6"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)' }}
           aria-label="Open AI Coach"
         >
-          <Sparkles className="h-6 w-6" />
+          <Sparkles className="h-5 w-5" />
         </Button>
       )}
       <AiChatPanel open={aiChatOpen} onOpenChange={setAiChatOpen} />

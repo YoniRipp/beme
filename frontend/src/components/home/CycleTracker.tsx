@@ -30,7 +30,7 @@ export function CycleTracker() {
   };
 
   return (
-    <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
+    <Card className="overflow-hidden">
       <CardContent className="p-5">
         <div className="flex items-center gap-2 mb-3">
           <Heart className="w-4 h-4 text-pink-500" />

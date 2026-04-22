@@ -22,7 +22,7 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
   const cardImageUrl = workout.exercises.map(ex => getImageUrl(ex.name)).find(Boolean);
   return (
     <div
-      className={`group flex items-start gap-3 p-4 bg-card border-l-[3px] ${workout.completed ? 'border-l-green-400/60' : 'border-l-info/50 border-dashed'} border border-border/30 rounded-xl cursor-pointer hover:bg-sage-50/50 transition-colors tap-target`}
+      className={`group flex items-start gap-3.5 p-4 rounded-xl bg-card hover:bg-muted/60 transition-colors cursor-pointer tap-target ${workout.completed ? 'opacity-75' : ''}`}
       onClick={() => onEdit && onEdit(workout)}
       role="button"
       tabIndex={0}
@@ -36,7 +36,8 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
     >
       {onToggleCompleted && (
         <button
-          className="shrink-0 p-1 tap-target flex items-center justify-center"
+          type="button"
+          className="shrink-0 mt-0.5 flex items-center justify-center rounded-full press"
           onClick={(e) => {
             e.stopPropagation();
             onToggleCompleted(workout.id, !workout.completed);
@@ -44,47 +45,43 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
           aria-label={workout.completed ? 'Mark as not completed' : 'Mark as completed'}
         >
           {workout.completed
-            ? <CheckCircle2 className="w-6 h-6 text-green-500" />
-            : <Circle className="w-6 h-6 text-muted-foreground" />
+            ? <CheckCircle2 className="w-6 h-6 text-success" />
+            : <Circle className="w-6 h-6 text-muted-foreground/50 hover:text-primary transition-colors" />
           }
         </button>
       )}
-      <ImagePlaceholder type="exercise" size="md" imageUrl={cardImageUrl} />
+      <div className="shrink-0">
+        <ImagePlaceholder type="exercise" size="md" imageUrl={cardImageUrl} />
+      </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <p className="text-[15px] font-semibold truncate">{workout.title}</p>
-          <Badge variant="secondary" className="bg-info/10 text-info border-0 text-[10px]">{workout.type}</Badge>
+          <p className={`text-[15px] font-semibold truncate leading-tight ${workout.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+            {workout.title}
+          </p>
+          <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 text-[10px] px-1.5 py-0 h-4 font-medium uppercase tracking-wider">
+            {workout.type}
+          </Badge>
         </div>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-1.5">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
           <span>{formatDate(workout.date)}</span>
-          <span className="flex items-center gap-1">
+          <span className="inline-flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {workout.durationMinutes} min
           </span>
         </div>
         {workout.exercises.length > 0 && (
-          <div className="mt-1.5 space-y-1">
+          <div className="space-y-1">
             {workout.exercises.slice(0, 3).map((ex, i) => (
-              <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                {getImageUrl(ex.name) ? (
-                  <img
-                    src={getImageUrl(ex.name)}
-                    alt={ex.name}
-                    className="w-5 h-5 rounded object-cover shrink-0"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                ) : (
-                  <div className="w-5 h-5 rounded bg-muted shrink-0" />
-                )}
-                <span className="text-foreground/70 font-medium truncate">{ex.name}</span>
-                <span className="tabular-nums shrink-0">
+              <div key={i} className="flex items-center gap-2 text-xs">
+                <span className="text-foreground/80 font-medium truncate">{ex.name}</span>
+                <span className="tabular-nums text-muted-foreground shrink-0 ml-auto">
                   {ex.sets} × {ex.reps}{ex.weight ? ` · ${ex.weight} ${unit}` : ''}
                 </span>
               </div>
             ))}
             {workout.exercises.length > 3 && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground/80">
                 +{workout.exercises.length - 3} more
               </p>
             )}
@@ -95,7 +92,7 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
         <Button
           variant="ghost"
           size="icon"
-          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
           onClick={(e) => {
             e.stopPropagation();
             onDelete(workout.id);

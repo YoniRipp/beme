@@ -161,7 +161,7 @@ export function VoiceMicHero() {
   const state = isStarting ? 'starting' : isListening ? 'listening' : isProcessing ? 'processing' : 'idle';
 
   return (
-    <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
+    <Card className="overflow-hidden">
       <CardContent className="flex flex-col items-center gap-4 py-8">
         <button
           onClick={handleMicClick}

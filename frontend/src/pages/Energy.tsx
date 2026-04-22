@@ -169,26 +169,26 @@ function CollapsibleGroup({
     <div className="bg-card overflow-hidden">
       <button
         type="button"
-        className="w-full flex items-center justify-between p-3 hover:bg-muted/40 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/40 transition-colors"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
         <div className="text-left">
-          <p className="text-sm font-medium">{group.label}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm font-semibold">{group.label}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             {group.entries.length} {group.entries.length === 1 ? 'item' : 'items'}
-            {isAvg && uniqueDays > 1 && ` • ${uniqueDays} days`}
+            {isAvg && uniqueDays > 1 && ` · ${uniqueDays} days`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold tabular-nums">{calLabel}</span>
+        <div className="flex items-center gap-3">
+          <span className="font-display text-base font-medium tabular-nums">{calLabel}</span>
           <ChevronDown
             className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
           />
         </div>
       </button>
       {open && (
-        <div className="px-3 pb-3 space-y-2">
+        <div className="px-2 pb-2 space-y-1">
           {group.entries.map((entry) => (
             <FoodCard key={entry.id} entry={entry} onEdit={onEdit} onDelete={onDelete} />
           ))}
@@ -213,15 +213,17 @@ function MealGroupHeader({
 }) {
   const Icon = MEAL_ICONS[meal];
   return (
-    <div className="flex items-center justify-between px-1 pt-1 pb-1.5">
+    <div className="flex items-end justify-between px-1 pt-1 pb-2">
       <div className="flex items-center gap-2">
-        <Icon className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm font-semibold">{meal}</span>
+        <div className="h-7 w-7 rounded-lg bg-terracotta/10 text-terracotta flex items-center justify-center">
+          <Icon className="w-4 h-4" />
+        </div>
+        <span className="font-display text-base font-medium tracking-tight">{meal}</span>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium tabular-nums">{totalCal} cal</span>
-        <span className="text-[10px] text-muted-foreground tabular-nums">
-          P:{totalProtein}g &middot; C:{totalCarbs}g &middot; F:{totalFats}g
+      <div className="flex items-baseline gap-2">
+        <span className="font-display text-sm font-medium tabular-nums">{totalCal}<span className="text-[10px] uppercase tracking-wider text-muted-foreground ml-1 font-sans">kcal</span></span>
+        <span className="text-[10px] text-muted-foreground tabular-nums hidden sm:inline">
+          P {totalProtein}g · C {totalCarbs}g · F {totalFats}g
         </span>
       </div>
     </div>
@@ -453,12 +455,12 @@ export function Energy() {
         const calorieRingEl = (
           <div className="relative w-44 h-44">
             <svg viewBox="0 0 100 100" className="w-44 h-44 -rotate-90">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="7" className="text-muted" />
-              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="7" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold tabular-nums leading-none">{Math.round(periodTotals.calories)}</span>
-              <span className="text-xs text-muted-foreground leading-none mt-1">/{calGoalTarget}{caloriePeriod !== 'daily' ? ' cal/day' : ''}</span>
+              <span className="font-display text-[40px] font-medium tabular-nums leading-none tracking-tight">{Math.round(periodTotals.calories)}</span>
+              <span className="text-[11px] text-muted-foreground leading-none mt-2">of {calGoalTarget}{caloriePeriod !== 'daily' ? ' / day' : ''} kcal</span>
             </div>
           </div>
         );
@@ -475,23 +477,23 @@ export function Energy() {
         return (
           <>
             {/* Mobile: stacked cards */}
-            <div className="md:hidden space-y-5">
-              <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
+            <div className="md:hidden space-y-4">
+              <Card className="overflow-hidden">
                 <CardContent className="p-5">
                   {periodSelectorEl}
-                  <div className="flex justify-center my-4">{calorieRingEl}</div>
+                  <div className="flex justify-center mt-4">{calorieRingEl}</div>
                 </CardContent>
               </Card>
-              <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
+              <Card className="overflow-hidden">
                 <CardContent className="p-5">{macroCirclesEl}</CardContent>
               </Card>
             </div>
 
             {/* Desktop: single card, all circles in one row */}
-            <Card className="hidden md:block rounded-2xl overflow-hidden border border-border/30 shadow-sm">
-              <CardContent className="p-5">
+            <Card className="hidden md:block overflow-hidden">
+              <CardContent className="p-6">
                 {periodSelectorEl}
-                <div className="flex items-center justify-center gap-8 my-4">
+                <div className="flex items-center justify-center gap-10 mt-5">
                   <div className="shrink-0">{calorieRingEl}</div>
                   <div className="flex-1">{macroCirclesEl}</div>
                 </div>
@@ -502,32 +504,32 @@ export function Energy() {
       })()}
 
       {/* Food entries */}
-      <div className="space-y-3">
-        <h3 className="text-base font-semibold">Journal</h3>
+      <div className="space-y-4">
+        <h3 className="font-display text-xl font-medium tracking-tight">Journal</h3>
 
         {caloriePeriod === 'daily' ? (
           /* Daily: unified input + compact meal-grouped timeline */
           <>
             {periodFoodEntries.length === 0 ? (
               /* Empty state */
-              <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
+              <Card>
                 <div className="flex flex-col items-center gap-4 p-8 text-center">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <UtensilsCrossed className="w-7 h-7 text-primary" />
+                  <div className="w-16 h-16 rounded-2xl bg-terracotta/10 flex items-center justify-center">
+                    <UtensilsCrossed className="w-7 h-7 text-terracotta" />
                   </div>
                   <div>
-                    <p className="text-[15px] font-semibold">What did you eat today?</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Log your meals to track your nutrition
+                    <p className="font-display text-lg font-medium tracking-tight">What did you eat today?</p>
+                    <p className="text-sm text-muted-foreground mt-1.5 max-w-xs leading-relaxed">
+                      Log your meals to track your nutrition and stay on top of your goals.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleAddFood()}
-                    className="flex items-center justify-center gap-1.5 py-3 px-6 text-sm font-medium text-primary-foreground bg-primary rounded-xl hover:bg-primary/90 transition-colors"
+                    className="inline-flex items-center justify-center gap-1.5 h-11 px-6 text-sm font-medium text-primary-foreground bg-primary rounded-full hover:bg-primary/90 transition-colors press"
                   >
                     <Plus className="w-4 h-4" />
-                    Add Food
+                    Add food
                   </button>
                 </div>
               </Card>
@@ -537,14 +539,14 @@ export function Energy() {
                 <button
                   type="button"
                   onClick={() => handleAddFood()}
-                  className="w-full flex items-center justify-center gap-1.5 py-3 text-sm font-medium text-primary-foreground bg-primary rounded-xl hover:bg-primary/90 transition-colors"
+                  className="w-full flex items-center justify-center gap-1.5 h-11 text-sm font-medium text-primary-foreground bg-primary rounded-full hover:bg-primary/90 transition-colors press"
                 >
                   <Plus className="w-4 h-4" />
-                  Add Food
+                  Add food
                 </button>
 
                 {/* Compact meal-grouped timeline */}
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {mealGroups
                     .filter((group) => group.entries.length > 0)
                     .map((group) => (
@@ -556,8 +558,8 @@ export function Energy() {
                           totalCarbs={group.totalCarbs}
                           totalFats={group.totalFats}
                         />
-                        <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
-                          <div className="px-3 py-2 space-y-2">
+                        <Card>
+                          <div className="p-2 space-y-1">
                             {group.entries.map((entry) => (
                               <FoodCard
                                 key={entry.id}
@@ -583,7 +585,7 @@ export function Energy() {
         ) : (
           /* Weekly/Monthly/Yearly: unified accordion */
           <>
-            <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm divide-y">
+            <Card className="overflow-hidden divide-y divide-border">
               {foodGroups.map((group, i) => (
                 <CollapsibleGroup
                   key={group.key}
@@ -601,8 +603,8 @@ export function Energy() {
       </div>
 
       {/* Sleep Hours Card */}
-      <Card className="p-4 sm:p-5 rounded-2xl border border-border/30 shadow-sm">
-        <h3 className="text-lg font-semibold mb-3">Hours Slept</h3>
+      <Card className="p-5 sm:p-6">
+        <h3 className="font-display text-xl font-medium tracking-tight mb-4">Sleep</h3>
 
         <PeriodSelector
           options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
@@ -613,16 +615,16 @@ export function Energy() {
           onChange={setSleepPeriod}
         />
 
-        <div className="mb-4">
-          <p className="text-2xl font-bold tabular-nums">
+        <div className="my-5">
+          <p className="font-display text-4xl font-medium tabular-nums tracking-tight leading-none">
             {sleepPeriod === 'daily'
-              ? (selectedSleep.count > 0 ? `${selectedSleep.hours.toFixed(1)}h` : 'Not logged')
+              ? (selectedSleep.count > 0 ? <>{selectedSleep.hours.toFixed(1)}<span className="text-xl font-sans font-normal text-muted-foreground ml-1.5">h</span></> : <span className="text-base font-sans text-muted-foreground">Not logged</span>)
               : selectedSleep.count > 0
-                ? `${selectedSleep.hours.toFixed(1)}h avg`
-                : 'No data'}
+                ? <>{selectedSleep.hours.toFixed(1)}<span className="text-xl font-sans font-normal text-muted-foreground ml-1.5">h avg</span></>
+                : <span className="text-base font-sans text-muted-foreground">No data</span>}
           </p>
           {sleepPeriod !== 'daily' && selectedSleep.count > 0 && (
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1.5">
               {selectedSleep.count} {selectedSleep.count === 1 ? 'day' : 'days'} logged
             </p>
           )}
@@ -630,17 +632,17 @@ export function Energy() {
 
         {recentCheckIns.length > 0 && (
           <div className="space-y-2 mb-4">
-            <h4 className="text-sm font-medium text-muted-foreground">Sleep log</h4>
+            <h4 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2">Sleep log</h4>
             {recentCheckIns.map((c) => {
               const dateStr = toLocalDateString(new Date(c.date));
               return (
                 <div
                   key={c.id}
-                  className="flex items-center justify-between p-3 bg-muted rounded-xl"
+                  className="flex items-center justify-between p-3 bg-muted/60 rounded-xl"
                 >
                   <div>
                     <p className="font-medium text-sm">{format(new Date(c.date), 'EEE, MMM d, yyyy')}</p>
-                    <p className="text-xs text-muted-foreground">{c.sleepHours ?? 0}h slept</p>
+                    <p className="text-xs text-muted-foreground tabular-nums">{c.sleepHours ?? 0}h slept</p>
                   </div>
                   <div className="flex gap-1">
                     <Button

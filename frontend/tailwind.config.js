@@ -9,6 +9,17 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        serif: ['Fraunces', 'Georgia', 'Times New Roman', 'serif'],
+        display: ['Fraunces', 'Georgia', 'serif'],
+      },
+      boxShadow: {
+        xs: 'var(--shadow-xs)',
+        card: 'var(--shadow-sm)',
+        'card-md': 'var(--shadow-md)',
+        'card-lg': 'var(--shadow-lg)',
+      },
       keyframes: {
         "slide-in-from-left": {
           from: { transform: "translateX(-100%)" },
@@ -109,6 +120,8 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        '2xl': "calc(var(--radius) + 8px)",
+        '3xl': "calc(var(--radius) + 16px)",
       },
     },
   },
