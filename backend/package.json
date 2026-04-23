@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "prestart": "test -f dist/index.js || npm run build",
+    "prestart": "(test -f dist/index.js || npm run build) && node-pg-migrate up --no-check-order",
     "start": "node dist/index.js",
     "start:cluster": "node dist/cluster.js",
     "start:consumer": "node dist/workers/event-consumer.js",
