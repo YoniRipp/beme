@@ -16,7 +16,6 @@ import {
   User,
   Users,
   BookOpen,
-  MoreHorizontal,
   Sparkles,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
@@ -31,7 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { AiChatPanel } from '../insights/AiChatPanel';
-import { VoiceAgentButton } from '../voice/VoiceAgentButton';
+import { VoiceAgentPanel } from '../voice/VoiceAgentPanel';
 import { QuickAddMenu } from '../shared/QuickAddMenu';
 import { BottomNavigation } from './BottomNavigation';
 
@@ -55,12 +54,11 @@ const SIDEBAR_NAV_BASE = [
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
-/** MFP-style bottom nav: 4 items split around a center "+" button */
 const BOTTOM_NAV_ITEMS = [
-  { name: 'Dashboard', path: '/', icon: Home },
-  { name: 'Journal', path: '/energy', icon: BookOpen },
-  { name: 'Workouts', path: '/body', icon: Dumbbell },
-  { name: 'More', path: '/settings', icon: MoreHorizontal },
+  { name: 'Home', path: '/', icon: Home },
+  { name: 'Body', path: '/body', icon: Dumbbell },
+  { name: 'Energy', path: '/energy', icon: BookOpen },
+  { name: 'Goals', path: '/goals', icon: Target },
 ];
 
 function getSidebarNav(isAdmin: boolean, isTrainer: boolean) {
@@ -81,6 +79,7 @@ export function Base44Layout() {
   const [scrolled, setScrolled] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [voicePanelOpen, setVoicePanelOpen] = useState(false);
   const { user } = useApp();
   const { logout } = useAuth();
   const { hasAiAccess } = useSubscription();
@@ -111,7 +110,6 @@ export function Base44Layout() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-charcoal/40 backdrop-blur-sm z-40 lg:hidden"
@@ -120,7 +118,6 @@ export function Base44Layout() {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-full w-72 bg-sidebar border-r border-sidebar-border z-50
           transform transition-transform duration-300 ease-out
@@ -128,11 +125,7 @@ export function Base44Layout() {
       >
         <div className="flex flex-col h-full">
           <div className="px-6 pt-7 pb-5">
-            <Link
-              to="/"
-              className="flex items-center gap-3"
-              aria-label="TrackVibe home"
-            >
+            <Link to="/" className="flex items-center gap-3" aria-label="TrackVibe home">
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-card">
                 <Leaf className="w-5 h-5 text-primary-foreground" />
               </div>
@@ -175,7 +168,6 @@ export function Base44Layout() {
         </div>
       </aside>
 
-      {/* Main content */}
       <div className="lg:ml-72 min-h-screen">
         <header
           className={`sticky top-0 z-30 transition-all duration-300
@@ -234,17 +226,15 @@ export function Base44Layout() {
         </main>
       </div>
 
-      {/* Mobile bottom nav with center "+" */}
       <BottomNavigation
         items={BOTTOM_NAV_ITEMS}
         currentPath={pathname}
-        onCenterPress={() => setQuickAddOpen(true)}
+        onCenterPress={() => setVoicePanelOpen(true)}
       />
 
       <QuickAddMenu open={quickAddOpen} onOpenChange={setQuickAddOpen} />
-      {pathname !== '/' && <VoiceAgentButton />}
+      <VoiceAgentPanel open={voicePanelOpen} onOpenChange={setVoicePanelOpen} />
 
-      {/* AI Chat FAB — bottom-right, above mobile nav */}
       {hasAiAccess && pathname !== '/insights' && (
         <Button
           size="icon"
