@@ -46,7 +46,12 @@ export function Insights() {
   }, [workouts]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-8">
+      <div>
+        <h2 className="font-display text-[28px] md:text-[32px] font-medium tracking-tight leading-tight">Insights</h2>
+        <p className="text-sm text-muted-foreground mt-1.5">Patterns and trends from your recent activity.</p>
+      </div>
+
       {hasAiAccess ? (
         <AiInsightsSection />
       ) : (

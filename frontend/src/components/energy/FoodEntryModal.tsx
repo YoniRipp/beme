@@ -45,6 +45,24 @@ function getCurrentMealType(): MealTypeOption {
   return 'dinner';
 }
 
+function inferMealTypeFromEntry(entry: FoodEntry): MealTypeOption | undefined {
+  if (entry.mealType) {
+    const mt = entry.mealType.toLowerCase();
+    if (mt === 'breakfast' || mt === 'lunch' || mt === 'dinner' || mt === 'snack') return mt;
+  }
+  const time = entry.startTime ?? entry.endTime;
+  if (time) {
+    const hour = parseInt(time.split(':')[0], 10);
+    if (Number.isFinite(hour)) {
+      if (hour < 11) return 'breakfast';
+      if (hour < 14) return 'lunch';
+      if (hour < 17) return 'snack';
+      return 'dinner';
+    }
+  }
+  return undefined;
+}
+
 interface FoodEntryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -151,7 +169,15 @@ export function FoodEntryModal({ open, onOpenChange, onSave, entry, defaultMealT
     setSearchError(null);
     setDropdownOpen(false);
     setIsLookingUp(false);
-    setSelectedMealType(entry?.mealType as MealTypeOption ?? defaultMealType ?? getCurrentMealType());
+    // When editing an entry, prefer its stored mealType; fall back to time-based
+    // inference from the entry itself (matching the display logic) so the selector
+    // shows the same meal the user sees in the journal. Only when there's no entry
+    // do we honor defaultMealType (from the meal section the user tapped Add in).
+    setSelectedMealType(
+      entry
+        ? (inferMealTypeFromEntry(entry) ?? defaultMealType ?? getCurrentMealType())
+        : (defaultMealType ?? getCurrentMealType())
+    );
   }, [entry, open, reset, defaultMealType]);
 
   useEffect(() => {

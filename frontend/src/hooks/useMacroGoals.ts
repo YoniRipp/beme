@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useProfile } from './useProfile';
 
 export interface MacroGoals {
@@ -12,11 +12,14 @@ const DEFAULTS: MacroGoals = { carbs: 300, fat: 80, protein: 120 };
 export function useMacroGoals() {
   const { profile, updateProfile } = useProfile();
 
-  const macroGoals: MacroGoals = {
-    carbs: profile.macroCarbs ?? DEFAULTS.carbs,
-    fat: profile.macroFat ?? DEFAULTS.fat,
-    protein: profile.macroProtein ?? DEFAULTS.protein,
-  };
+  const macroGoals: MacroGoals = useMemo(
+    () => ({
+      carbs: profile.macroCarbs ?? DEFAULTS.carbs,
+      fat: profile.macroFat ?? DEFAULTS.fat,
+      protein: profile.macroProtein ?? DEFAULTS.protein,
+    }),
+    [profile.macroCarbs, profile.macroFat, profile.macroProtein],
+  );
 
   const setMacroGoals = useCallback(
     (next: MacroGoals) =>

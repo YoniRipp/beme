@@ -1,5 +1,4 @@
 import { type LucideIcon, Plus } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 
 interface AddAnotherCardProps {
   onClick: () => void;
@@ -9,12 +8,13 @@ interface AddAnotherCardProps {
 
 export function AddAnotherCard({ onClick, icon: Icon = Plus, label }: AddAnotherCardProps) {
   return (
-    <Card
-      className="p-6 border-2 border-dashed cursor-pointer hover:border-primary transition-colors text-center bg-muted/50"
+    <button
+      type="button"
       onClick={onClick}
+      className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border border-dashed border-border bg-transparent text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/[0.03] transition-colors press"
     >
-      <Icon className="w-8 h-8 mx-auto text-primary" />
-      <p className="text-sm font-medium mt-2 text-muted-foreground">{label}</p>
-    </Card>
+      <Icon className="w-4 h-4" />
+      <span className="text-sm font-medium">{label}</span>
+    </button>
   );
 }

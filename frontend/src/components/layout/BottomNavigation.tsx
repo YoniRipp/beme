@@ -26,6 +26,26 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
     return undefined;
   };
 
+  const renderItem = (item: NavItem) => {
+    const isActive = currentPath === item.path;
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        data-onboarding={onboardingKey(item.path)}
+        className={`flex-1 flex flex-col items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-[0.06em] py-2 transition-colors press min-h-[48px]
+          ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+        aria-current={isActive ? 'page' : undefined}
+      >
+        <Icon className="w-5 h-5" strokeWidth={isActive ? 2.25 : 1.9} />
+        <span className="leading-none">
+          {item.name}
+        </span>
+      </Link>
+    );
+  };
+
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-30 lg:hidden pointer-events-none"

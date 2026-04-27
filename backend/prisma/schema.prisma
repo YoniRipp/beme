@@ -314,6 +314,9 @@ model UserProfile {
   cycleTrackingEnabled Boolean  @default(false) @map("cycle_tracking_enabled")
   averageCycleLength   Int?     @default(28) @map("average_cycle_length")
   setupCompleted       Boolean  @default(false) @map("setup_completed")
+  macroCarbs           Float?   @map("macro_carbs")
+  macroFat             Float?   @map("macro_fat")
+  macroProtein         Float?   @map("macro_protein")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 

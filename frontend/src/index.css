@@ -32,7 +32,7 @@
     --background: 40 33% 93%;
     --foreground: var(--charcoal);
     --card: 0 0% 100%;
-    --card-foreground: var(--charcoal);
+    --card-foreground: var(--ink);
     --popover: 0 0% 100%;
     --popover-foreground: var(--charcoal);
     --primary: 131 46% 34%;
@@ -128,208 +128,144 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Typography scale — mobile-first, generous line heights */
+  h1, .h-display {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  h2, .h-title {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+  }
+  h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
   }
 }
 
-/* Tabular nums for stats alignment */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
-
-/* Micro-interactions and animations */
 @layer utilities {
-  .animate-in {
-    animation: fadeIn 0.2s ease-in;
-  }
+  /* Typography helpers */
+  .font-display { font-family: var(--font-serif); font-feature-settings: "ss01" 1, "ss02" 1; }
+  .font-sans { font-family: var(--font-sans); }
+  .text-display-lg { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.025em; line-height: 1.05; }
+  .text-display-md { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; }
+  .text-display-sm { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.015em; line-height: 1.15; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
 
-  .fade-in {
-    animation: fadeIn 0.3s ease-in;
-  }
+  /* Elevation helpers */
+  .shadow-card { box-shadow: var(--shadow-sm); }
+  .shadow-card-md { box-shadow: var(--shadow-md); }
+  .shadow-card-lg { box-shadow: var(--shadow-lg); }
 
-  .slide-in {
-    animation: slideIn 0.3s ease-out;
-  }
+  /* Safe-area insets for mobile */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
 
-  .animate-fade-up {
-    animation: fadeUp 0.4s ease-out;
-  }
+  /* Tap feedback */
+  .tap-target { @apply active:scale-[0.98] transition-transform duration-150; }
+  .press { @apply active:scale-[0.97] transition-transform duration-150; }
 
-  .animate-card-entrance {
-    animation: cardEntrance 0.4s ease-out both;
+  /* Glass */
+  .glass {
+    background-color: hsl(var(--paper) / 0.82);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
   }
+  .dark .glass {
+    background-color: hsl(var(--paper) / 0.78);
+  }
+  .dark .primary-glow { box-shadow: 0 0 24px hsl(83 83% 64% / 0.35); }
 
-  .animate-ring-fill {
-    animation: ringFill 0.8s ease-out both;
-  }
-
-  .animate-flame-pulse {
-    animation: flamePulse 2s ease-in-out infinite;
-  }
-
-  .animate-celebrate {
-    animation: celebrate 0.5s ease-out;
-  }
-
-  .animate-count-up {
-    animation: countUp 0.4s ease-out both;
-  }
+  /* Animations */
+  .animate-in { animation: fadeIn 0.2s ease-in; }
+  .fade-in { animation: fadeIn 0.3s ease-in; }
+  .slide-in { animation: slideIn 0.3s ease-out; }
+  .animate-fade-up { animation: fadeUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .animate-card-entrance { animation: cardEntrance 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .animate-ring-fill { animation: ringFill 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .animate-flame-pulse { animation: flamePulse 2s ease-in-out infinite; }
+  .animate-celebrate { animation: celebrate 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .animate-count-up { animation: countUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-
 @keyframes slideIn {
-  from {
-    transform: translateY(-10px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
-
 @keyframes fadeUp {
-  from {
-    transform: translateY(8px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
-
 @keyframes cardEntrance {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes ringFill {
-  from {
-    stroke-dashoffset: var(--ring-circumference, 100);
-  }
-  to {
-    stroke-dashoffset: var(--ring-offset, 0);
-  }
+  from { stroke-dashoffset: var(--ring-circumference, 100); }
+  to { stroke-dashoffset: var(--ring-offset, 0); }
 }
-
 @keyframes flamePulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
-
 @keyframes celebrate {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
-
 @keyframes countUp {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes thinkingDots {
-  0%, 20% {
-    opacity: 0.3;
-  }
-  40%, 100% {
-    opacity: 1;
-  }
+  0%, 20% { opacity: 0.3; }
+  40%, 100% { opacity: 1; }
 }
-
 @keyframes thinkingShimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
+.animate-thinking-dots span { animation: thinkingDots 1.4s ease-in-out infinite; }
+.animate-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.animate-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
 
-.animate-thinking-dots span {
-  animation: thinkingDots 1.4s ease-in-out infinite;
-}
-.animate-thinking-dots span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.animate-thinking-dots span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-/* Focus visible styles for accessibility */
+/* Focus ring */
 *:focus-visible {
-  @apply outline-none ring-1 ring-ring ring-offset-2 ring-offset-background;
+  @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
 }
 
-/* Smooth transitions */
+/* Smooth transitions — color & shadow only, not transforms (avoids jank) */
 * {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
 
-/* Tap feedback for mobile — active press scale */
-.tap-target {
-  @apply active:scale-[0.97] transition-transform;
-}
-
-/* Glassmorphism utility */
-.glass {
-  @apply bg-white/95 backdrop-blur-lg;
-}
-.dark .glass {
-  @apply bg-card/95 backdrop-blur-lg;
-}
-
-/* Pricing card reveal animation */
+/* Pricing card reveal */
 @keyframes fadeUpReveal {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.animate-reveal {
-  animation: fadeUpReveal 0.5s ease-out both;
-}
-.animate-reveal-delay {
-  animation: fadeUpReveal 0.5s ease-out 0.15s both;
-}
-.animate-reveal-delay-2 {
-  animation: fadeUpReveal 0.5s ease-out 0.3s both;
-}
+.animate-reveal { animation: fadeUpReveal 0.5s ease-out both; }
+.animate-reveal-delay { animation: fadeUpReveal 0.5s ease-out 0.15s both; }
+.animate-reveal-delay-2 { animation: fadeUpReveal 0.5s ease-out 0.3s both; }
 
-/* Staggered card entrances */
+/* Staggered entrances */
 .stagger-1 { animation-delay: 0ms; }
 .stagger-2 { animation-delay: 50ms; }
 .stagger-3 { animation-delay: 100ms; }
@@ -337,7 +273,7 @@
 .stagger-5 { animation-delay: 200ms; }
 .stagger-6 { animation-delay: 250ms; }
 
-/* Respect reduced motion preference */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

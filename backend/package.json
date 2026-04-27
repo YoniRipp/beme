@@ -25,7 +25,7 @@
     "test:coverage": "vitest run --coverage",
     "seed:foods": "node scripts/seedPopularFoods.js",
     "import:foundation-foods": "node scripts/importFoundationFoods.js",
-    "migrate:up": "node-pg-migrate up --envPath .env.development --no-check-order",
+    "migrate:up": "node scripts/migrate-up.cjs",
     "migrate:create": "node-pg-migrate create --envPath .env.development"
   },
   "dependencies": {

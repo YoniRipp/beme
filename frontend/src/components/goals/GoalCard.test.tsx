@@ -83,19 +83,19 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 describe('GoalCard', () => {
   it('renders goal card with title', () => {
     render(<GoalCard goal={mockGoal} />, { wrapper });
-    expect(screen.getByText(/calories goal/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /calories goal/i })).toBeInTheDocument();
   });
 
   it('displays goal progress', () => {
     render(<GoalCard goal={mockGoal} />, { wrapper });
-    expect(screen.getByText(/calories goal/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /calories goal/i })).toBeInTheDocument();
     expect(document.body.textContent).toMatch(/0\s*\/\s*2,?000/);
   });
 
   it('shows edit button when onEdit is provided', () => {
     const onEdit = vi.fn();
     render(<GoalCard goal={mockGoal} onEdit={onEdit} />, { wrapper });
-    expect(screen.getByText(/edit/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /edit goal/i })).toBeInTheDocument();
   });
 
   it('calls onEdit when edit button is clicked', async () => {
@@ -103,7 +103,7 @@ describe('GoalCard', () => {
     const user = userEvent.setup();
     render(<GoalCard goal={mockGoal} onEdit={onEdit} />, { wrapper });
 
-    const editButton = screen.getByText(/edit/i);
+    const editButton = screen.getByRole('button', { name: /edit goal/i });
     await user.click(editButton);
 
     expect(onEdit).toHaveBeenCalledWith(mockGoal);
@@ -112,8 +112,7 @@ describe('GoalCard', () => {
   it('opens delete confirmation dialog when delete button is clicked', async () => {
     const user = userEvent.setup();
     render(<GoalCard goal={mockGoal} />, { wrapper });
-    const buttons = screen.getAllByRole('button');
-    const deleteButton = buttons.find((b) => b.classList.contains('text-destructive')) ?? buttons[buttons.length - 1];
+    const deleteButton = screen.getByRole('button', { name: /delete goal/i });
     await act(async () => {
       await user.click(deleteButton);
     });
@@ -128,7 +127,7 @@ describe('GoalCard', () => {
       id: 'achieved-goal',
     };
     render(<GoalCard goal={achievedGoal} />, { wrapper });
-    expect(screen.getByText(/calories goal/i)).toBeInTheDocument();
-    expect(screen.getByText(/Achieved!/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /calories goal/i })).toBeInTheDocument();
+    expect(screen.getByText(/100% complete/i)).toBeInTheDocument();
   });
 });

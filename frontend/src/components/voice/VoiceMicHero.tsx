@@ -161,15 +161,15 @@ export function VoiceMicHero() {
   const state = isStarting ? 'starting' : isListening ? 'listening' : isProcessing ? 'processing' : 'idle';
 
   return (
-    <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
+    <Card className="overflow-hidden">
       <CardContent className="flex flex-col items-center gap-4 py-8">
         <button
           onClick={handleMicClick}
           disabled={state === 'processing'}
           className={cn(
             'relative flex h-24 w-24 items-center justify-center rounded-full transition-all',
-            'bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:scale-105',
-            state === 'listening' && 'animate-pulse ring-4 ring-primary/30 scale-110',
+            'bg-primary text-primary-foreground shadow-card-lg hover:shadow-card-lg hover:scale-105',
+            state === 'listening' && 'animate-pulse ring-[6px] ring-primary/20 scale-110',
             state === 'starting' && 'animate-pulse opacity-70',
             state === 'processing' && 'opacity-70',
             !hasAiAccess && 'bg-muted text-muted-foreground hover:bg-muted/80',
@@ -181,28 +181,28 @@ export function VoiceMicHero() {
           ) : !hasAiAccess ? (
             <div className="relative">
               <Mic className="h-10 w-10" />
-              <Lock className="absolute -bottom-1 -right-1 h-4 w-4 text-amber-500" />
+              <Lock className="absolute -bottom-1 -right-1 h-4 w-4 text-gold" />
             </div>
           ) : (
             <Mic className="h-10 w-10" />
           )}
         </button>
 
-        <div className="text-center">
-          <p className="text-sm font-medium text-foreground">
+        <div className="text-center max-w-sm">
+          <p className="font-display text-lg font-medium tracking-tight text-foreground">
             {!hasAiAccess
-              ? "You've used all free calls this month. Updates coming soon!"
+              ? "You've used all free calls this month"
               : state === 'starting'
-                ? 'Starting... Tap to cancel'
+                ? 'Starting… tap to cancel'
                 : state === 'listening'
-                  ? 'Listening... Tap to stop'
+                  ? 'Listening… tap to stop'
                   : state === 'processing'
-                    ? 'Processing your voice...'
+                    ? 'Processing your voice…'
                     : 'Tap to log by voice'}
           </p>
           {hasAiAccess && state === 'idle' && !statusText && !hasUsedVoice && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Try: "I had oatmeal for breakfast" or "30 min run"
+            <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+              Try "I had oatmeal for breakfast" or "30 min run"
             </p>
           )}
         </div>

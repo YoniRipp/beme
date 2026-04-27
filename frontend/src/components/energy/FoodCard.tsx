@@ -18,7 +18,7 @@ export const FoodCard = memo(function FoodCard({ entry, onEdit, onDelete }: Food
 
   return (
     <div
-      className="group flex items-center gap-3 p-3.5 rounded-xl bg-card border-l-[3px] border-l-terracotta/50 border border-border/30 cursor-pointer hover:bg-sage-50/50 transition-colors tap-target"
+      className="group flex items-center gap-3.5 p-3 rounded-xl bg-card hover:bg-muted/60 transition-colors cursor-pointer tap-target"
       role="button"
       tabIndex={0}
       aria-label={`Food entry: ${entry.name}, ${entry.calories} calories`}
@@ -31,29 +31,32 @@ export const FoodCard = memo(function FoodCard({ entry, onEdit, onDelete }: Food
       }}
     >
       <div className="shrink-0">
-        <ImagePlaceholder type="food" size="md" imageUrl={getFoodImageUrl(entry.name)} className="rounded-full" />
+        <ImagePlaceholder type="food" size="md" imageUrl={getFoodImageUrl(entry.name)} className="rounded-xl" />
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-[15px] font-semibold truncate">{entry.name}</p>
+        <p className="text-[15px] font-semibold text-foreground truncate leading-tight">{entry.name}</p>
         {portionText && (
-          <p className="text-xs text-muted-foreground truncate">{portionText}</p>
+          <p className="text-xs text-muted-foreground truncate mt-0.5">{portionText}</p>
         )}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="text-base font-bold tabular-nums text-terracotta">{entry.calories} <span className="text-xs font-medium">cal</span></span>
+      <div className="flex items-center gap-1 shrink-0">
+        <div className="text-right pr-1">
+          <p className="font-display text-lg font-medium leading-none tabular-nums text-foreground">{entry.calories}</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">kcal</p>
+        </div>
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
           onClick={(e) => {
             e.stopPropagation();
             onDelete(entry.id);
           }}
           aria-label={`Delete food entry: ${entry.name}`}
         >
-          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+          <Trash2 className="w-4 h-4" aria-hidden="true" />
         </Button>
       </div>
     </div>

@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, Trash2, Copy, Save } from 'lucide-react';
 import { STORAGE_KEYS, storage } from '@/lib/storage';
+import { toLocalDateString, parseLocalDateString } from '@/lib/dateRanges';
 import { toast } from 'sonner';
 import { useSettings } from '@/hooks/useSettings';
 import { getWeightUnit } from '@/lib/utils';
@@ -50,7 +51,7 @@ const defaultExercise: WorkoutFormValues['exercises'][0] = {
 const defaultValues: WorkoutFormValues = {
   title: 'Workout',
   type: 'strength',
-  date: new Date().toISOString().split('T')[0],
+  date: toLocalDateString(new Date()),
   durationMinutes: '',
   notes: '',
   exercises: [defaultExercise],
@@ -221,7 +222,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
       reset({
         title: workout.title,
         type: workout.type,
-        date: new Date(workout.date).toISOString().split('T')[0],
+        date: toLocalDateString(new Date(workout.date)),
         durationMinutes: workout.durationMinutes.toString(),
         notes: workout.notes ?? '',
         exercises: workout.exercises.length
@@ -235,7 +236,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
           : [defaultExercise],
       });
     } else {
-      reset({ ...defaultValues, title: 'Workout', date: new Date().toISOString().split('T')[0] });
+      reset({ ...defaultValues, title: 'Workout', date: toLocalDateString(new Date()) });
     }
   }, [open, workout, reset]);
 
@@ -249,7 +250,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
     reset({
       title: template.title,
       type: template.type,
-      date: new Date().toISOString().split('T')[0],
+      date: toLocalDateString(new Date()),
       durationMinutes: template.durationMinutes.toString(),
       notes: template.notes ?? '',
       exercises: template.exercises.length
@@ -322,7 +323,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
     onSave({
       title: data.title,
       type: data.type,
-      date: new Date(data.date),
+      date: parseLocalDateString(data.date),
       durationMinutes: parseInt(data.durationMinutes, 10),
       notes: data.notes,
       exercises,

@@ -29,63 +29,52 @@ export function WaterTracker() {
   };
 
   return (
-    <Card className="rounded-2xl overflow-hidden border border-border/30 shadow-sm">
+    <Card className="overflow-hidden">
       <CardContent className="p-5">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Droplets className="w-4 h-4 text-info" />
-            <h3 className="text-sm font-semibold">Water</h3>
+            <div className="h-7 w-7 rounded-lg bg-info/10 flex items-center justify-center">
+              <Droplets className="w-4 h-4 text-info" />
+            </div>
+            <h3 className="font-display text-base font-medium tracking-tight">Water</h3>
           </div>
           <span className="text-xs text-muted-foreground tabular-nums">{mlTotal} ml</span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            {/* Glass indicators */}
-            <div className="flex gap-1 mb-2">
-              {Array.from({ length: goal }, (_, i) => (
-                <div
-                  key={i}
-                  className={`h-6 flex-1 rounded-sm transition-colors duration-300 ${
-                    i < glasses ? 'bg-info' : 'bg-mist'
-                  }`}
-                />
-              ))}
-            </div>
-            <p className="text-sm">
-              <span className="font-bold tabular-nums">{glasses}</span>
-              <span className="text-muted-foreground">/{goal} glasses</span>
-            </p>
-          </div>
-
-          <div className="flex gap-1.5">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={handleRemove}
-              disabled={glasses <= 0 || waterLoading}
-            >
-              <Minus className="w-3.5 h-3.5" />
-            </Button>
-            <Button
-              variant="default"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={handleAdd}
-              disabled={waterLoading}
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </Button>
-          </div>
+        <div className="flex items-baseline gap-1.5 mb-3">
+          <span className="font-display text-3xl font-medium tabular-nums leading-none">{glasses}</span>
+          <span className="text-sm text-muted-foreground">/ {goal} glasses</span>
         </div>
 
         {/* Progress bar */}
-        <div className="mt-3 h-2 bg-mist rounded-full overflow-hidden">
+        <div className="h-1.5 bg-muted rounded-full overflow-hidden mb-4">
           <div
             className="h-full bg-info rounded-full transition-all duration-500"
             style={{ width: `${pct * 100}%` }}
           />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-full"
+            onClick={handleRemove}
+            disabled={glasses <= 0 || waterLoading}
+            aria-label="Remove a glass"
+          >
+            <Minus className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1 rounded-full h-9"
+            onClick={handleAdd}
+            disabled={waterLoading}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add glass
+          </Button>
         </div>
       </CardContent>
     </Card>
