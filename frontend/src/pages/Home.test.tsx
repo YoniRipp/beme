@@ -127,49 +127,48 @@ describe('Home Page', () => {
     queryClient.clear();
   });
 
-  it('renders home page with progress cards', () => {
+  it('renders home page with core sections', () => {
     render(<Home />, { wrapper });
     expect(screen.getAllByText(/workouts/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/today's fuel/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /log food/i })).toBeInTheDocument();
   });
 
 it('displays dashboard stats section', () => {
     render(<Home />, { wrapper });
     expect(screen.getAllByText(/workouts/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/last night/i)).toBeInTheDocument();
   });
 
-  it('displays calories and avg sleep in progress cards', () => {
+  it('displays calories and sleep stats', () => {
     render(<Home />, { wrapper });
-    expect(screen.getAllByText(/calories/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/avg sleep/i)).toBeInTheDocument();
+    expect(screen.getByText(/today's fuel/i)).toBeInTheDocument();
+    expect(screen.getByText(/sleep/i)).toBeInTheDocument();
   });
 
-  it('displays goals section', () => {
+  it('keeps voice section visible', () => {
     render(<Home />, { wrapper });
-    expect(screen.getByText(/^goals$/i)).toBeInTheDocument();
+    expect(screen.getByText(/voice/i)).toBeInTheDocument();
   });
 
-it('opens goal modal when a progress card without a goal is clicked', async () => {
+it('opens food modal from quick log button', async () => {
     const user = userEvent.setup();
     render(<Home />, { wrapper });
 
-    await waitFor(() => {
-      expect(screen.getAllByText(/tap to set goal/i).length).toBeGreaterThanOrEqual(1);
-    });
-    const tapToSetGoal = screen.getAllByText(/tap to set goal/i)[0];
-    // Click the card (parent element with role="button")
-    const card = tapToSetGoal.closest('[role="button"]')!;
-    await user.click(card);
+    await user.click(screen.getByRole('button', { name: /log food/i }));
 
     await waitFor(() => {
-      const createGoalElements = screen.getAllByText(/add goal/i);
-      expect(createGoalElements.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText(/add food entry/i)).toBeInTheDocument();
     });
   });
 
-it('shows tap to set goal when no goals exist', async () => {
+it('opens workout modal from quick log button', async () => {
+    const user = userEvent.setup();
     render(<Home />, { wrapper });
+
+    await user.click(screen.getByRole('button', { name: /log workout/i }));
     await waitFor(() => {
-      expect(screen.getAllByText(/tap to set goal/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText(/add workout/i)).toBeInTheDocument();
     });
   });
 });
