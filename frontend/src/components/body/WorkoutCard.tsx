@@ -17,7 +17,6 @@ interface WorkoutCardProps {
 
 export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete, onToggleCompleted }: WorkoutCardProps) {
   const { settings } = useSettings();
-  const unit = getWeightUnit(settings.units);
   const { getImageUrl } = useExercises();
   const cardImageUrl = workout.exercises.map(ex => getImageUrl(ex.name)).find(Boolean);
   return (
@@ -76,7 +75,7 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
               <li key={i} className="text-xs leading-snug">
                 <span className="text-foreground/85 font-medium break-words">{ex.name}</span>
                 <span className="tabular-nums text-muted-foreground whitespace-nowrap ml-1.5">
-                  · {ex.sets} × {ex.reps}{ex.weight ? ` · ${ex.weight} ${unit}` : ''}
+                  · {ex.sets} × {ex.reps}{ex.weight ? ` · ${ex.weight} ${getWeightUnit(settings.units)}` : ''}
                 </span>
               </li>
             ))}
