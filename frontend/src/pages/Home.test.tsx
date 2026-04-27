@@ -129,14 +129,14 @@ describe('Home Page', () => {
 
   it('renders home page with core sections', () => {
     render(<Home />, { wrapper });
-    expect(screen.getAllByText(/workouts/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('button', { name: /log workout/i })).toBeInTheDocument();
     expect(screen.getByText(/today's fuel/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /log food/i })).toBeInTheDocument();
   });
 
 it('displays dashboard stats section', () => {
     render(<Home />, { wrapper });
-    expect(screen.getAllByText(/workouts/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/this week/i)).toBeInTheDocument();
     expect(screen.getByText(/last night/i)).toBeInTheDocument();
   });
 
