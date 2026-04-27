@@ -65,8 +65,7 @@ export function Body() {
 
   const { start: weekStart, end: weekEnd } = useMemo(() => getPeriodRange('weekly', new Date()), []);
   const workoutsThisWeek = useMemo(
-    () =>
-      filteredWorkouts.filter((w) => isWithinInterval(new Date(w.date), { start: weekStart, end: weekEnd })),
+    () => filteredWorkouts.filter((w) => isWithinInterval(new Date(w.date), { start: weekStart, end: weekEnd })),
     [filteredWorkouts, weekStart, weekEnd]
   );
   const workoutsUpcoming = useMemo(
@@ -82,25 +81,22 @@ export function Body() {
   const groupedUpcoming = useMemo(() => groupWorkoutsByDate(workoutsUpcoming, true), [workoutsUpcoming]);
   const groupedThisWeek = useMemo(() => groupWorkoutsByDate(workoutsThisWeek), [workoutsThisWeek]);
   const groupedOlder = useMemo(() => groupWorkoutsByDate(workoutsOlder), [workoutsOlder]);
-  const weeklyGoal = 4;
-  const weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  const hasWorkoutByDay = useMemo(() => {
-    const flags = [false, false, false, false, false, false, false];
-    workouts.forEach((w) => {
-      const d = new Date(w.date);
-      if (d >= weekStart && d <= weekEnd) {
-        const idx = d.getDay();
-        flags[idx === 0 ? 6 : idx - 1] = true;
-      }
-    });
-    return flags;
-  }, [workouts, weekStart, weekEnd]);
-  const todayIdx = (() => {
-    const day = new Date().getDay();
-    return day === 0 ? 6 : day - 1;
-  })();
-  const weekPct = Math.min(workoutsThisWeek.length / weeklyGoal, 1);
-  const weekCircumference = 2 * Math.PI * 28;
+
+  // Weekly goal ring data
+  const workoutsGoal = goals.find((g) => g.type === 'workouts');
+  const weekGoalTarget = workoutsGoal?.target ?? 4;
+  const weekDone = workoutsThisWeek.length;
+  const weekPct = Math.min(weekDone / weekGoalTarget, 1);
+
+  // Week calendar dots (Mon–Sun)
+  const calWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(calWeekStart, i);
+    const dateStr = format(day, 'yyyy-MM-dd');
+    const hasWorkout = workouts.some((w) => format(new Date(w.date), 'yyyy-MM-dd') === dateStr);
+    const isCurrentDay = isToday(day);
+    return { label: format(day, 'EEEEE'), hasWorkout, isCurrentDay };
+  });
 
   const handleSave = (workout: Omit<Workout, 'id'>) => {
     if (editingWorkout) {
@@ -123,21 +119,29 @@ export function Body() {
     setModalOpen(true);
   };
 
-  // Weekly goal ring data
-  const workoutsGoal = goals.find((g) => g.type === 'workouts');
-  const weekGoalTarget = workoutsGoal?.target ?? 4;
-  const weekDone = workoutsThisWeek.length;
-  const weekPct = Math.min(weekDone / weekGoalTarget, 1);
-
-  // Week calendar dots (Mon–Sun)
-  const calWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const day = addDays(calWeekStart, i);
-    const dateStr = format(day, 'yyyy-MM-dd');
-    const hasWorkout = workouts.some((w) => format(new Date(w.date), 'yyyy-MM-dd') === dateStr);
-    const isCurrentDay = isToday(day);
-    return { label: format(day, 'EEEEE'), hasWorkout, isCurrentDay };
-  });
+  const renderSection = (title: string, groups: { date: string; label: string; workouts: Workout[] }[]) => (
+    <section>
+      <h3 className="text-sm font-medium text-muted-foreground mb-3">{title}</h3>
+      <div className="space-y-4">
+        {groups.map(({ date: dateStr, label, workouts: dayWorkouts }) => (
+          <div key={dateStr} className="rounded-2xl border border-border/30 bg-card shadow-sm p-3">
+            <h4 className="text-xs font-medium text-muted-foreground mb-2 pl-0.5">{label}</h4>
+            <div className="space-y-2">
+              {dayWorkouts.map((workout) => (
+                <WorkoutCard
+                  key={workout.id}
+                  workout={workout}
+                  onEdit={handleEdit}
+                  onDelete={setDeleteConfirmId}
+                  onToggleCompleted={toggleWorkoutCompleted}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 
   return (
     <div className="max-w-6xl mx-auto space-y-5">
@@ -197,8 +201,8 @@ export function Body() {
       </Card>
 
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
-          <h2 className="font-display text-[28px] md:text-[32px] font-medium tracking-tight leading-tight sm:flex-1">Workouts</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+          <h2 className="text-xl font-semibold sm:flex-1">Workouts</h2>
           <div className="w-full sm:max-w-64">
             <SearchBar
               value={searchQuery}
@@ -207,47 +211,26 @@ export function Body() {
             />
           </div>
         </div>
-        <ContentWithLoading loading={workoutsLoading} loadingText="Loading workouts...">
-          <div className="space-y-8">
-            <Card className="p-4">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Goal · {weeklyGoal}/week</p>
-                  <p className="font-display text-3xl font-medium mt-1">
-                    <span className="text-primary">{workoutsThisWeek.length}</span>
-                    <span className="text-muted-foreground">/{weeklyGoal}</span>
-                  </p>
-                </div>
-                <div className="relative h-[72px] w-[72px]">
-                  <svg viewBox="0 0 72 72" className="-rotate-90">
-                    <circle cx="36" cy="36" r="28" fill="none" stroke="hsl(var(--muted))" strokeWidth="7" />
-                    <circle cx="36" cy="36" r="28" fill="none" stroke="hsl(var(--primary))" strokeWidth="7" strokeLinecap="round" strokeDasharray={weekCircumference} strokeDashoffset={weekCircumference * (1 - weekPct)} />
-                  </svg>
-                </div>
-              </div>
-              <div className="flex justify-between gap-1">
-                {weekDays.map((day, i) => (
-                  <div key={`${day}-${i}`} className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-muted-foreground">{day}</span>
-                    <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center ${hasWorkoutByDay[i] ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'} ${todayIdx === i ? 'ring-2 ring-foreground ring-offset-1 ring-offset-background' : ''}`}>
-                      {hasWorkoutByDay[i] && <Check className="w-4 h-4" strokeWidth={2.6} />}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
 
-            <div className="flex gap-2 overflow-x-auto no-scrollbar">
-              {(['All', 'Strength', 'Cardio', 'Flexibility'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap press border transition-colors ${filter === f ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/40'}`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
+        {/* Filter pills */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
+          {(['All', 'Strength', 'Cardio', 'Flexibility'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap border transition-colors ${
+                filter === f
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-border text-muted-foreground hover:border-primary/40'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <ContentWithLoading loading={workoutsLoading} loadingText="Loading workouts...">
+          <div className="space-y-6">
             {filteredWorkouts.length === 0 ? (
               <EmptyStateCard
                 onClick={handleAddNew}

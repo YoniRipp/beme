@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
 import { useGoals } from '@/hooks/useGoals';
@@ -31,7 +30,6 @@ import { Dumbbell, Moon, Scale, Apple, ChevronRight, Droplets } from 'lucide-rea
 import { isSameDay, format, isWithinInterval } from 'date-fns';
 import { getPeriodRange } from '@/lib/dateRanges';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 /* ── Circular progress ring ───────────────────────────────── */
 function Ring({
@@ -145,7 +143,6 @@ function QuickButton({
 }
 
 export function Home() {
-  const navigate = useNavigate();
   const { workouts, workoutsLoading, addWorkout } = useWorkouts();
   const { checkIns, foodEntries, addCheckIn, updateCheckIn, addFoodEntry, getCheckInByDate, energyLoading } = useEnergy();
   const { addGoal, updateGoal, goalsLoading } = useGoals();
