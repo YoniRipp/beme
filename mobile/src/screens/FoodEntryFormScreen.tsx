@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, FlatList } from 'react-native';
-import { TextInput, Button, Text, Card, Chip } from 'react-native-paper';
+import { TextInput, Button, Text, Card, Chip, SegmentedButtons } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEnergy } from '../hooks/useEnergy';
 import { useDebounce } from '../hooks/useDebounce';
@@ -8,11 +8,29 @@ import { searchFoods, FoodSearchResult } from '../core/api/food';
 import Toast from 'react-native-toast-message';
 
 const PORTION_PRESETS = [50, 100, 150, 200];
+const MEAL_OPTIONS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+type MealType = typeof MEAL_OPTIONS[number];
+
+const MEAL_START_TIMES: Record<MealType, string> = {
+  breakfast: '08:00',
+  lunch: '12:30',
+  dinner: '18:00',
+  snack: '15:00',
+};
+
+function inferMealType(): MealType {
+  const hour = new Date().getHours();
+  if (hour < 11) return 'breakfast';
+  if (hour < 14) return 'lunch';
+  if (hour < 17) return 'snack';
+  return 'dinner';
+}
 
 export function FoodEntryFormScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const entryId = route.params?.entryId;
+  const routeMealType = route.params?.mealType as MealType | undefined;
   const { getFoodEntryById, addFoodEntry, updateFoodEntry } = useEnergy();
   const existing = entryId ? getFoodEntryById(entryId) : undefined;
 
@@ -27,6 +45,7 @@ export function FoodEntryFormScreen() {
   const [carbs, setCarbs] = useState(existing?.carbs?.toString() || '');
   const [fats, setFats] = useState(existing?.fats?.toString() || '');
   const [portionAmount, setPortionAmount] = useState(existing?.portionAmount?.toString() || '100');
+  const [mealType, setMealType] = useState<MealType>(existing?.mealType || routeMealType || inferMealType());
   const [basePer100g, setBasePer100g] = useState<FoodSearchResult | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -86,6 +105,8 @@ export function FoodEntryFormScreen() {
         fats: parseFloat(fats) || 0,
         portionAmount: parseFloat(portionAmount) || undefined,
         portionUnit: 'g' as const,
+        mealType,
+        startTime: existing?.startTime || MEAL_START_TIMES[mealType],
       };
       if (existing) {
         await updateFoodEntry(existing.id, data);
@@ -128,6 +149,17 @@ export function FoodEntryFormScreen() {
         )}
 
         <TextInput mode="outlined" label="Food name" value={name} onChangeText={setName} style={styles.input} />
+
+        <Text variant="titleSmall" style={styles.label}>Meal</Text>
+        <SegmentedButtons
+          value={mealType}
+          onValueChange={(value) => setMealType(value as MealType)}
+          buttons={MEAL_OPTIONS.map((meal) => ({
+            value: meal,
+            label: meal.charAt(0).toUpperCase() + meal.slice(1),
+          }))}
+          style={styles.segment}
+        />
 
         <Text variant="titleSmall" style={styles.label}>Portion</Text>
         <View style={styles.portionRow}>
@@ -172,6 +204,7 @@ const styles = StyleSheet.create({
   searchSection: { marginBottom: 8 },
   input: { marginBottom: 12 },
   label: { marginTop: 8, marginBottom: 8, fontWeight: '600' },
+  segment: { marginBottom: 12 },
   resultsCard: { marginTop: -8, marginBottom: 12 },
   resultItem: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   resultMeta: { color: '#6b7280' },

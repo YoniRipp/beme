@@ -17,4 +17,5 @@ export interface FoodEntry {
   servingType?: 'bottle' | 'can' | 'glass' | 'bottle_1L' | 'bottle_1_5L' | 'bottle_2L' | 'other';
   startTime?: string;
   endTime?: string;
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
 }

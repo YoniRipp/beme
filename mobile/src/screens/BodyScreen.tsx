@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { View, SectionList, StyleSheet, TouchableOpacity } from 'react-native';
-import { Card, Text, Chip, IconButton, FAB, Divider } from 'react-native-paper';
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Button, SegmentedButtons, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { useWorkouts } from '../hooks/useWorkouts';
@@ -9,88 +9,90 @@ import { SearchBar } from '../components/shared/SearchBar';
 import { LoadingView } from '../components/shared/LoadingView';
 import { EmptyState } from '../components/shared/EmptyState';
 import { ConfirmDialog } from '../components/shared/ConfirmDialog';
+import { MobileScreen } from '../components/shared/MobileScreen';
+import { MobileWorkoutCard } from '../components/shared/MobileWorkoutCard';
+import { MetricCard } from '../components/shared/MetricCard';
+import { colors, spacing } from '../theme';
+
+function groupWorkouts(workouts: Workout[]) {
+  const sorted = [...workouts].sort((a, b) => b.date.getTime() - a.date.getTime());
+  const now = new Date();
+  const weekStart = startOfWeek(now, { weekStartsOn: 0 });
+  const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
+
+  return {
+    thisWeek: sorted.filter((w) => w.date >= weekStart && w.date <= weekEnd),
+    older: sorted.filter((w) => w.date < weekStart),
+  };
+}
 
 export function BodyScreen() {
   const navigation = useNavigation<any>();
-  const { workouts, workoutsLoading, refetchWorkouts, deleteWorkout } = useWorkouts();
+  const { workouts, workoutsLoading, deleteWorkout } = useWorkouts();
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [filter, setFilter] = useState('all');
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return workouts;
     const q = search.toLowerCase();
-    return workouts.filter(
-      (w) =>
-        w.title.toLowerCase().includes(q) ||
-        w.type.toLowerCase().includes(q) ||
-        w.notes?.toLowerCase().includes(q) ||
-        w.exercises.some((e) => e.name.toLowerCase().includes(q))
-    );
-  }, [workouts, search]);
+    return workouts.filter((workout) => {
+      const matchesSearch = !q ||
+        workout.title.toLowerCase().includes(q) ||
+        workout.type.toLowerCase().includes(q) ||
+        workout.notes?.toLowerCase().includes(q) ||
+        workout.exercises.some((e) => e.name.toLowerCase().includes(q));
+      const matchesFilter = filter === 'all' || workout.type === filter;
+      return matchesSearch && matchesFilter;
+    });
+  }, [workouts, search, filter]);
 
-  const sections = useMemo(() => {
-    const sorted = [...filtered].sort((a, b) => b.date.getTime() - a.date.getTime());
-    const now = new Date();
-    const weekStart = startOfWeek(now, { weekStartsOn: 0 });
-    const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
-
-    const thisWeek = sorted.filter((w) => w.date >= weekStart && w.date <= weekEnd);
-    const older = sorted.filter((w) => w.date < weekStart);
-
-    const result: { title: string; data: Workout[] }[] = [];
-    if (thisWeek.length > 0) result.push({ title: 'This Week', data: thisWeek });
-    if (older.length > 0) result.push({ title: 'Older', data: older });
-    return result;
-  }, [filtered]);
+  const grouped = useMemo(() => groupWorkouts(filtered), [filtered]);
+  const totalExercises = grouped.thisWeek.reduce((sum, workout) => sum + workout.exercises.length, 0);
+  const totalMinutes = grouped.thisWeek.reduce((sum, workout) => sum + workout.durationMinutes, 0);
 
   if (workoutsLoading) return <LoadingView />;
 
-  const renderWorkout = ({ item }: { item: Workout }) => {
-    const isExpanded = expandedId === item.id;
+  const renderSection = (title: string, items: Workout[]) => {
+    if (items.length === 0) return null;
     return (
-      <Card style={styles.card} mode="outlined">
-        <TouchableOpacity onPress={() => setExpandedId(isExpanded ? null : item.id)} activeOpacity={0.7}>
-          <Card.Content>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardLeft}>
-                <Text variant="titleMedium" style={styles.workoutTitle}>{item.title}</Text>
-                <View style={styles.chipRow}>
-                  <Chip compact style={styles.typeChip} textStyle={styles.chipText}>{item.type}</Chip>
-                  <Text variant="bodySmall" style={styles.meta}>
-                    {item.exercises.length} exercise{item.exercises.length !== 1 ? 's' : ''}
-                    {item.durationMinutes > 0 ? ` · ${item.durationMinutes} min` : ''}
-                  </Text>
-                </View>
-                <Text variant="bodySmall" style={styles.date}>{format(item.date, 'EEE, MMM d')}</Text>
-              </View>
-              <View style={styles.cardActions}>
-                <IconButton icon="pencil" size={18} onPress={() => navigation.navigate('WorkoutForm', { workoutId: item.id })} />
-                <IconButton icon="trash-can-outline" size={18} iconColor="#ef4444" onPress={() => setDeleteId(item.id)} />
-              </View>
-            </View>
-            {isExpanded && item.exercises.length > 0 && (
-              <View style={styles.exercises}>
-                <Divider style={styles.divider} />
-                {item.exercises.map((ex, i) => (
-                  <Text key={i} variant="bodySmall" style={styles.exercise}>
-                    {ex.name}: {ex.sets}×{ex.reps}{ex.weight ? ` @ ${ex.weight}kg` : ''}
-                  </Text>
-                ))}
-              </View>
-            )}
-          </Card.Content>
-        </TouchableOpacity>
-      </Card>
+      <View style={styles.section}>
+        <Text variant="labelLarge" style={styles.sectionTitle}>{title}</Text>
+        <View style={styles.cardStack}>
+          {items.map((workout) => (
+            <MobileWorkoutCard
+              key={workout.id}
+              workout={workout}
+              expanded={expandedId === workout.id}
+              onPress={() => setExpandedId(expandedId === workout.id ? null : workout.id)}
+              onEdit={() => navigation.navigate('WorkoutForm', { workoutId: workout.id })}
+              onDelete={() => setDeleteId(workout.id)}
+            />
+          ))}
+        </View>
+      </View>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.searchWrapper}>
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Search workouts..." />
+    <MobileScreen title="Workouts" subtitle="Plan, log, and review your training.">
+      <View style={styles.metricRow}>
+        <MetricCard icon="dumbbell" label="This week" value={`${grouped.thisWeek.length}`} meta="workouts" tone="workout" />
+        <MetricCard icon="timer-outline" label="Volume" value={`${totalExercises}`} meta={`${totalMinutes} min`} tone="primary" />
       </View>
-      {sections.length === 0 ? (
+
+      <SearchBar value={search} onChangeText={setSearch} placeholder="Search workouts..." />
+      <SegmentedButtons
+        value={filter}
+        onValueChange={setFilter}
+        buttons={[
+          { value: 'all', label: 'All' },
+          { value: 'strength', label: 'Strength' },
+          { value: 'cardio', label: 'Cardio' },
+        ]}
+      />
+
+      {filtered.length === 0 ? (
         <EmptyState
           icon="dumbbell"
           title="No workouts yet"
@@ -99,20 +101,15 @@ export function BodyScreen() {
           onAction={() => navigation.navigate('WorkoutForm')}
         />
       ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => item.id}
-          renderItem={renderWorkout}
-          renderSectionHeader={({ section }) => (
-            <Text variant="titleSmall" style={styles.sectionHeader}>{section.title}</Text>
-          )}
-          contentContainerStyle={styles.list}
-          onRefresh={refetchWorkouts}
-          refreshing={workoutsLoading}
-          stickySectionHeadersEnabled={false}
-        />
+        <>
+          {renderSection('This week', grouped.thisWeek)}
+          {renderSection('Older', grouped.older)}
+          <Button mode="contained" icon="plus" onPress={() => navigation.navigate('WorkoutForm')} style={styles.addButton}>
+            Add Workout
+          </Button>
+        </>
       )}
-      <FAB icon="plus" style={styles.fab} onPress={() => navigation.navigate('WorkoutForm')} />
+
       <ConfirmDialog
         visible={!!deleteId}
         onDismiss={() => setDeleteId(null)}
@@ -122,27 +119,27 @@ export function BodyScreen() {
         destructive
         onConfirm={() => { if (deleteId) deleteWorkout(deleteId); setDeleteId(null); }}
       />
-    </View>
+    </MobileScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  searchWrapper: { paddingHorizontal: 16, paddingTop: 12 },
-  list: { paddingHorizontal: 16, paddingBottom: 80 },
-  sectionHeader: { fontWeight: '700', color: '#374151', marginTop: 16, marginBottom: 8 },
-  card: { marginBottom: 10 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  cardLeft: { flex: 1 },
-  workoutTitle: { fontWeight: '600' },
-  chipRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  typeChip: { marginRight: 8 },
-  chipText: { fontSize: 11 },
-  meta: { color: '#6b7280' },
-  date: { color: '#9ca3af', marginTop: 2 },
-  cardActions: { flexDirection: 'row' },
-  exercises: { marginTop: 8 },
-  divider: { marginBottom: 8 },
-  exercise: { color: '#4b5563', marginBottom: 2 },
-  fab: { position: 'absolute', right: 16, bottom: 16, backgroundColor: '#3b82f6' },
+  metricRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  section: {
+    gap: spacing.sm,
+  },
+  sectionTitle: {
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  cardStack: {
+    gap: spacing.sm,
+  },
+  addButton: {
+    marginTop: spacing.sm,
+  },
 });

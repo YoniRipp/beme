@@ -7,6 +7,7 @@ import { GoalsScreen } from '../screens/GoalsScreen';
 import { InsightsScreen } from '../screens/InsightsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { Icon } from 'react-native-paper';
+import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator();
 
@@ -23,14 +24,22 @@ export function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarLabelStyle: { fontSize: 10 },
-        headerStyle: { backgroundColor: '#f8fafc' },
-        headerTitleStyle: { fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '700' },
+        headerStyle: { backgroundColor: colors.background },
+        headerShadowVisible: false,
+        headerTitleStyle: { fontWeight: '800', color: colors.text },
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          height: 64,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
         tabBarIcon: ({ color, size }) => (
           <Icon source={TAB_ICONS[route.name] || 'circle'} size={size} color={color} />
         ),
-        tabBarActiveTintColor: '#3b82f6',
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
       })}
     >
       <Tab.Screen

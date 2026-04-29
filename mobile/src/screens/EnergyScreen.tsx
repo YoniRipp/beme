@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { View, FlatList, ScrollView, StyleSheet } from 'react-native';
-import { Card, Text, SegmentedButtons, IconButton, FAB, Divider } from 'react-native-paper';
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Button, Card, Icon, IconButton, SegmentedButtons, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { format, isWithinInterval } from 'date-fns';
 import { useEnergy } from '../hooks/useEnergy';
@@ -9,11 +9,34 @@ import { PeriodSelector } from '../components/shared/PeriodSelector';
 import { LoadingView } from '../components/shared/LoadingView';
 import { EmptyState } from '../components/shared/EmptyState';
 import { ConfirmDialog } from '../components/shared/ConfirmDialog';
+import { MobileScreen } from '../components/shared/MobileScreen';
+import { MobileFoodCard } from '../components/shared/MobileFoodCard';
+import { MetricCard } from '../components/shared/MetricCard';
+import { colors, radius, spacing } from '../theme';
 import { getPeriodRange, PeriodKey } from '../lib/dateRanges';
+
+type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+const MEALS: Array<{ key: MealType; label: string; icon: string }> = [
+  { key: 'breakfast', label: 'Breakfast', icon: 'weather-sunny' },
+  { key: 'lunch', label: 'Lunch', icon: 'weather-partly-cloudy' },
+  { key: 'dinner', label: 'Dinner', icon: 'weather-sunset' },
+  { key: 'snack', label: 'Snack', icon: 'cookie-outline' },
+];
+
+function inferMeal(entry: FoodEntry): MealType {
+  if (entry.mealType) return entry.mealType;
+  const time = entry.startTime || entry.endTime;
+  const hour = time ? Number(time.split(':')[0]) : entry.date.getHours();
+  if (hour < 11) return 'breakfast';
+  if (hour < 14) return 'lunch';
+  if (hour < 17) return 'snack';
+  return 'dinner';
+}
 
 export function EnergyScreen() {
   const navigation = useNavigation<any>();
-  const { foodEntries, checkIns, energyLoading, refetchEnergy, deleteFoodEntry, deleteCheckIn } = useEnergy();
+  const { foodEntries, checkIns, energyLoading, deleteFoodEntry, deleteCheckIn } = useEnergy();
   const [tab, setTab] = useState('food');
   const [period, setPeriod] = useState<PeriodKey>('daily');
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'food' | 'sleep'; id: string } | null>(null);
@@ -30,110 +53,140 @@ export function EnergyScreen() {
     [checkIns, start, end]
   );
 
-  const totalCalories = periodEntries.reduce((sum, e) => sum + e.calories, 0);
-  const totalProtein = periodEntries.reduce((sum, e) => sum + e.protein, 0);
-  const totalCarbs = periodEntries.reduce((sum, e) => sum + e.carbs, 0);
-  const totalFats = periodEntries.reduce((sum, e) => sum + e.fats, 0);
+  const totals = useMemo(() => ({
+    calories: periodEntries.reduce((sum, e) => sum + e.calories, 0),
+    protein: periodEntries.reduce((sum, e) => sum + e.protein, 0),
+    carbs: periodEntries.reduce((sum, e) => sum + e.carbs, 0),
+    fats: periodEntries.reduce((sum, e) => sum + e.fats, 0),
+  }), [periodEntries]);
+
   const avgSleep = periodCheckIns.length > 0
     ? periodCheckIns.reduce((sum, c) => sum + (c.sleepHours || 0), 0) / periodCheckIns.length
     : 0;
 
+  const mealGroups = useMemo(() => MEALS.map((meal) => {
+    const entries = periodEntries.filter((entry) => inferMeal(entry) === meal.key);
+    return {
+      ...meal,
+      entries,
+      calories: entries.reduce((sum, entry) => sum + entry.calories, 0),
+    };
+  }), [periodEntries]);
+
   if (energyLoading) return <LoadingView />;
 
-  const renderFoodEntry = ({ item }: { item: FoodEntry }) => (
-    <Card style={styles.entryCard} mode="outlined">
-      <Card.Content style={styles.entryContent}>
-        <View style={styles.entryLeft}>
-          <Text variant="titleSmall" style={styles.entryName}>{item.name}</Text>
-          <Text variant="bodySmall" style={styles.entryMeta}>
-            {item.calories} cal · P:{item.protein}g C:{item.carbs}g F:{item.fats}g
-          </Text>
-          {item.portionAmount && (
-            <Text variant="bodySmall" style={styles.entryPortion}>
-              {item.portionAmount}{item.portionUnit || 'g'}
-            </Text>
-          )}
-          <Text variant="bodySmall" style={styles.entryDate}>{format(item.date, 'EEE, MMM d')}</Text>
-        </View>
-        <View style={styles.entryActions}>
-          <IconButton icon="pencil" size={18} onPress={() => navigation.navigate('FoodEntryForm', { entryId: item.id })} />
-          <IconButton icon="trash-can-outline" size={18} iconColor="#ef4444" onPress={() => setDeleteTarget({ type: 'food', id: item.id })} />
-        </View>
-      </Card.Content>
-    </Card>
-  );
+  const addFood = (mealType?: MealType) => navigation.navigate('FoodEntryForm', mealType ? { mealType } : undefined);
 
-  const renderCheckIn = ({ item }: { item: DailyCheckIn }) => (
-    <Card style={styles.entryCard} mode="outlined">
-      <Card.Content style={styles.entryContent}>
-        <View style={styles.entryLeft}>
-          <Text variant="titleSmall">{item.sleepHours}h sleep</Text>
-          <Text variant="bodySmall" style={styles.entryDate}>{format(item.date, 'EEE, MMM d')}</Text>
+  const renderSleep = (item: DailyCheckIn) => (
+    <Card key={item.id} mode="contained" style={styles.logCard}>
+      <Card.Content style={styles.logRow}>
+        <View>
+          <Text variant="titleMedium" style={styles.logTitle}>{item.sleepHours}h sleep</Text>
+          <Text variant="bodySmall" style={styles.muted}>{format(item.date, 'EEE, MMM d')}</Text>
         </View>
-        <View style={styles.entryActions}>
+        <View style={styles.actionRow}>
           <IconButton icon="pencil" size={18} onPress={() => navigation.navigate('SleepForm', { checkInId: item.id })} />
-          <IconButton icon="trash-can-outline" size={18} iconColor="#ef4444" onPress={() => setDeleteTarget({ type: 'sleep', id: item.id })} />
+          <IconButton icon="trash-can-outline" size={18} iconColor={colors.danger} onPress={() => setDeleteTarget({ type: 'sleep', id: item.id })} />
         </View>
       </Card.Content>
     </Card>
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <SegmentedButtons
-          value={tab}
-          onValueChange={setTab}
-          buttons={[
-            { value: 'food', label: 'Food', icon: 'food-apple' },
-            { value: 'sleep', label: 'Sleep', icon: 'moon-waning-crescent' },
-          ]}
-          style={styles.tabSegment}
-        />
-        <PeriodSelector value={period} onChange={setPeriod} />
-      </View>
+    <MobileScreen title="Journal" subtitle="Food, calories, macros, and sleep.">
+      <SegmentedButtons
+        value={tab}
+        onValueChange={setTab}
+        buttons={[
+          { value: 'food', label: 'Food', icon: 'food-apple' },
+          { value: 'sleep', label: 'Sleep', icon: 'moon-waning-crescent' },
+        ]}
+      />
+      <PeriodSelector value={period} onChange={setPeriod} />
 
       {tab === 'food' ? (
         <>
-          <View style={styles.statsRow}>
-            <View style={styles.statMain}>
-              <Text variant="headlineLarge" style={styles.calorieTotal}>{Math.round(totalCalories)}</Text>
-              <Text variant="bodySmall" style={styles.statLabel}>calories</Text>
+          <Card mode="contained" style={styles.summaryCard}>
+            <Card.Content style={styles.summaryContent}>
+              <Text variant="labelLarge" style={styles.eyebrow}>Calories</Text>
+              <Text variant="displaySmall" style={styles.total}>{Math.round(totals.calories)}</Text>
+              <View style={styles.macroRow}>
+                <Text style={styles.macro}>P {Math.round(totals.protein)}g</Text>
+                <Text style={styles.macro}>C {Math.round(totals.carbs)}g</Text>
+                <Text style={styles.macro}>F {Math.round(totals.fats)}g</Text>
+              </View>
+            </Card.Content>
+          </Card>
+
+          {period === 'daily' ? (
+            <View style={styles.sectionStack}>
+              {mealGroups.map((meal) => (
+                <View key={meal.key} style={styles.mealSection}>
+                  <View style={styles.mealHeader}>
+                    <View style={styles.mealTitleRow}>
+                      <View style={styles.mealIcon}>
+                        <Icon source={meal.icon} size={18} color={colors.primary} />
+                      </View>
+                      <View>
+                        <Text variant="titleMedium" style={styles.sectionTitle}>{meal.label}</Text>
+                        <Text variant="bodySmall" style={styles.muted}>{Math.round(meal.calories)} kcal</Text>
+                      </View>
+                    </View>
+                    <Button mode="contained-tonal" compact icon="plus" onPress={() => addFood(meal.key)}>
+                      Add
+                    </Button>
+                  </View>
+                  {meal.entries.length > 0 ? (
+                    <View style={styles.cardStack}>
+                      {meal.entries.map((entry) => (
+                        <MobileFoodCard
+                          key={entry.id}
+                          entry={entry}
+                          onEdit={() => navigation.navigate('FoodEntryForm', { entryId: entry.id })}
+                          onDelete={() => setDeleteTarget({ type: 'food', id: entry.id })}
+                        />
+                      ))}
+                    </View>
+                  ) : (
+                    <Card mode="contained" style={styles.emptyMealCard} onPress={() => addFood(meal.key)}>
+                      <Card.Content style={styles.emptyMealContent}>
+                        <Text variant="bodyMedium" style={styles.muted}>No {meal.label.toLowerCase()} logged</Text>
+                      </Card.Content>
+                    </Card>
+                  )}
+                </View>
+              ))}
             </View>
-            <View style={styles.macroRow}>
-              <View style={styles.macroItem}><Text variant="titleSmall" style={{ color: '#3b82f6' }}>{Math.round(totalProtein)}g</Text><Text variant="bodySmall">Protein</Text></View>
-              <View style={styles.macroItem}><Text variant="titleSmall" style={{ color: '#f59e0b' }}>{Math.round(totalCarbs)}g</Text><Text variant="bodySmall">Carbs</Text></View>
-              <View style={styles.macroItem}><Text variant="titleSmall" style={{ color: '#ef4444' }}>{Math.round(totalFats)}g</Text><Text variant="bodySmall">Fats</Text></View>
-            </View>
-          </View>
-          {periodEntries.length === 0 ? (
-            <EmptyState icon="food-apple" title="No food entries" subtitle="Log what you eat" actionLabel="Log Food" onAction={() => navigation.navigate('FoodEntryForm')} />
+          ) : periodEntries.length === 0 ? (
+            <EmptyState icon="food-apple" title="No food entries" subtitle="Log what you eat" actionLabel="Log Food" onAction={() => addFood()} />
           ) : (
-            <FlatList data={periodEntries} keyExtractor={(i) => i.id} renderItem={renderFoodEntry} contentContainerStyle={styles.list} onRefresh={refetchEnergy} refreshing={energyLoading} />
+            <View style={styles.cardStack}>
+              {periodEntries.map((entry) => (
+                <MobileFoodCard
+                  key={entry.id}
+                  entry={entry}
+                  onEdit={() => navigation.navigate('FoodEntryForm', { entryId: entry.id })}
+                  onDelete={() => setDeleteTarget({ type: 'food', id: entry.id })}
+                />
+              ))}
+            </View>
           )}
         </>
       ) : (
         <>
-          <View style={styles.statsRow}>
-            <View style={styles.statMain}>
-              <Text variant="headlineLarge" style={styles.calorieTotal}>{avgSleep > 0 ? avgSleep.toFixed(1) : '--'}</Text>
-              <Text variant="bodySmall" style={styles.statLabel}>{period === 'daily' ? 'hours' : 'avg hours'}</Text>
-            </View>
-            <Text variant="bodySmall" style={styles.statSub}>{periodCheckIns.length} day{periodCheckIns.length !== 1 ? 's' : ''} logged</Text>
+          <View style={styles.metricRow}>
+            <MetricCard icon="moon-waning-crescent" label={period === 'daily' ? 'Hours' : 'Avg hours'} value={avgSleep > 0 ? avgSleep.toFixed(1) : '--'} tone="sleep" />
+            <MetricCard icon="calendar-check" label="Logged" value={`${periodCheckIns.length}`} meta="days" tone="primary" />
           </View>
           {periodCheckIns.length === 0 ? (
             <EmptyState icon="moon-waning-crescent" title="No sleep logged" subtitle="Track your sleep" actionLabel="Log Sleep" onAction={() => navigation.navigate('SleepForm')} />
           ) : (
-            <FlatList data={periodCheckIns} keyExtractor={(i) => i.id} renderItem={renderCheckIn} contentContainerStyle={styles.list} onRefresh={refetchEnergy} refreshing={energyLoading} />
+            <View style={styles.cardStack}>
+              {periodCheckIns.map(renderSleep)}
+            </View>
           )}
         </>
       )}
-
-      <FAB
-        icon="plus"
-        style={styles.fab}
-        onPress={() => navigation.navigate(tab === 'food' ? 'FoodEntryForm' : 'SleepForm')}
-      />
 
       <ConfirmDialog
         visible={!!deleteTarget}
@@ -150,29 +203,102 @@ export function EnergyScreen() {
           setDeleteTarget(null);
         }}
       />
-    </View>
+    </MobileScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { paddingHorizontal: 16, paddingTop: 12 },
-  tabSegment: { marginBottom: 8 },
-  statsRow: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  statMain: { alignItems: 'center', marginBottom: 8 },
-  calorieTotal: { fontWeight: '700', color: '#111827' },
-  statLabel: { color: '#6b7280' },
-  statSub: { color: '#9ca3af', textAlign: 'center' },
-  macroRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  macroItem: { alignItems: 'center' },
-  list: { paddingHorizontal: 16, paddingBottom: 80 },
-  entryCard: { marginBottom: 8 },
-  entryContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  entryLeft: { flex: 1 },
-  entryName: { fontWeight: '600' },
-  entryMeta: { color: '#6b7280', marginTop: 2 },
-  entryPortion: { color: '#9ca3af' },
-  entryDate: { color: '#9ca3af', marginTop: 2 },
-  entryActions: { flexDirection: 'row' },
-  fab: { position: 'absolute', right: 16, bottom: 16, backgroundColor: '#3b82f6' },
+  summaryCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  summaryContent: {
+    gap: spacing.sm,
+  },
+  eyebrow: {
+    color: colors.primary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  total: {
+    color: colors.text,
+    fontWeight: '800',
+  },
+  macroRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  macro: {
+    color: colors.textMuted,
+    fontWeight: '700',
+  },
+  metricRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  sectionStack: {
+    gap: spacing.xl,
+  },
+  mealSection: {
+    gap: spacing.sm,
+  },
+  mealHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mealTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  mealIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primarySoft,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontWeight: '800',
+  },
+  muted: {
+    color: colors.textMuted,
+  },
+  cardStack: {
+    gap: spacing.sm,
+  },
+  emptyMealCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+  },
+  emptyMealContent: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  logCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  logRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  logTitle: {
+    color: colors.text,
+    fontWeight: '800',
+  },
+  actionRow: {
+    flexDirection: 'row',
+  },
 });

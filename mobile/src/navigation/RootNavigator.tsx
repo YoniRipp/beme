@@ -10,6 +10,7 @@ import { FoodEntryFormScreen } from '../screens/FoodEntryFormScreen';
 import { SleepFormScreen } from '../screens/SleepFormScreen';
 import { GoalFormScreen } from '../screens/GoalFormScreen';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { colors } from '../theme';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,7 +25,14 @@ function AuthStack() {
 
 function AppStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.background },
+        headerShadowVisible: false,
+        headerTitleStyle: { color: colors.text, fontWeight: '800' },
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
       <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
       <Stack.Screen
         name="WorkoutForm"
@@ -78,11 +86,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
+    color: colors.textMuted,
   },
 });

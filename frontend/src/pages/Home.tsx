@@ -157,7 +157,6 @@ export function Home() {
       <ContentWithLoading loading={workoutsLoading || energyLoading || goalsLoading} loadingText="Loading dashboard...">
       <div className="space-y-5">
         <Card className="overflow-hidden relative" data-onboarding="dashboard">
-          <div className="absolute top-[-60px] right-[-40px] w-[200px] h-[200px] rounded-full bg-primary/[0.12] blur-3xl pointer-events-none" />
           <CardContent className="p-5">
             <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-4">
               <span className="text-primary">Today's fuel</span>

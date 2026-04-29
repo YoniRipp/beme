@@ -3,7 +3,7 @@ import { Workout } from '@/types/workout';
 import { formatDate, getWeightUnit } from '@/lib/utils';
 import { useSettings } from '@/hooks/useSettings';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Circle, Clock, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Trash2, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImagePlaceholder } from '@/components/shared/ImagePlaceholder';
 import { useExercises } from '@/hooks/useExercises';
@@ -70,16 +70,20 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
           </span>
         </div>
         {workout.exercises.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2">
+          <div className="mt-2 space-y-1.5">
             {workout.exercises.slice(0, 3).map((ex, i) => (
-              <span key={i} className="text-[11px] px-2.5 py-1 rounded-lg bg-muted text-muted-foreground font-medium">
-                {ex.name} <span className="text-muted-foreground/60">· {ex.sets}×{ex.reps}{ex.weight ? ` · ${ex.weight}${getWeightUnit(settings.units)}` : ''}</span>
-              </span>
+              <div key={i} className="flex items-center justify-between gap-3 rounded-lg bg-muted/70 px-2.5 py-2">
+                <span className="min-w-0 truncate text-[12px] font-semibold text-foreground/90">{ex.name}</span>
+                <span className="shrink-0 text-[11px] font-medium tabular-nums text-muted-foreground">
+                  {ex.sets} sets × {ex.reps} reps{ex.weight ? ` · ${ex.weight}${getWeightUnit(settings.units)}` : ''}
+                </span>
+              </div>
             ))}
             {workout.exercises.length > 3 && (
-              <span className="text-[11px] text-muted-foreground px-2">
+              <div className="inline-flex items-center gap-1 px-2 text-[11px] font-medium text-muted-foreground">
                 +{workout.exercises.length - 3} more
-              </span>
+                <ChevronRight className="h-3 w-3" />
+              </div>
             )}
           </div>
         )}

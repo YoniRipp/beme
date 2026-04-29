@@ -62,6 +62,7 @@ export function WorkoutFormScreen() {
           notes: e.notes || undefined,
         })),
         notes: notes.trim() || undefined,
+        completed: existing?.completed ?? false,
       };
       if (existing) {
         await updateWorkout(existing.id, data);

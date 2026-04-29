@@ -8,6 +8,7 @@ import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
 import { BulkFoodEntryModal } from '@/components/energy/BulkFoodEntryModal';
 import { DuplicateDayDialog } from '@/components/energy/DuplicateDayDialog';
 import { FoodCard } from '@/components/energy/FoodCard';
+import QuickVoiceEntry from '@/components/energy/QuickVoiceEntry';
 import { MacroCircles } from '@/components/home/MacroCircles';
 import { MacroGoalModal } from '@/components/home/MacroGoalModal';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
@@ -16,7 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import { PeriodSelector } from '@/components/shared/PeriodSelector';
-import { Moon, Trash2, Pencil, ChevronDown, Plus, ClipboardList, Copy, Sun, CloudSun, Sunset, Cookie, UtensilsCrossed } from 'lucide-react';
+import { Moon, Trash2, Pencil, ChevronDown, Plus, ClipboardList, Copy, Sun, CloudSun, Sunset, Cookie, UtensilsCrossed, Mic } from 'lucide-react';
 import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
 
@@ -204,12 +205,14 @@ function MealGroupHeader({
   totalProtein,
   totalCarbs,
   totalFats,
+  onVoiceAdd,
 }: {
   meal: MealType;
   totalCal: number;
   totalProtein: number;
   totalCarbs: number;
   totalFats: number;
+  onVoiceAdd: (meal: MealType) => void;
 }) {
   const Icon = MEAL_ICONS[meal];
   return (
@@ -226,6 +229,14 @@ function MealGroupHeader({
           P {totalProtein}g · C {totalCarbs}g · F {totalFats}g
         </span>
       </div>
+      <button
+        type="button"
+        onClick={() => onVoiceAdd(meal)}
+        className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-card press"
+        aria-label={`Log ${meal.toLowerCase()} by voice`}
+      >
+        <Mic className="h-4 w-4" />
+      </button>
     </div>
   );
 }
@@ -245,6 +256,8 @@ export function Energy() {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [activeMealType, setActiveMealType] = useState<MealType | undefined>();
+  const [quickVoiceOpen, setQuickVoiceOpen] = useState(false);
+  const [quickVoiceMealType, setQuickVoiceMealType] = useState<MealType | undefined>();
 
   const today = useMemo(() => new Date(), []);
 
@@ -389,6 +402,38 @@ export function Energy() {
     setFoodModalOpen(true);
   }, []);
 
+  const handleVoiceFood = useCallback((mealType?: MealType) => {
+    setQuickVoiceMealType(mealType);
+    setQuickVoiceOpen(true);
+  }, []);
+
+  const handleQuickVoiceSave = useCallback(async (entries: Array<{
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+    portionAmount?: number;
+    portionUnit?: string;
+    startTime?: string;
+    mealType?: string;
+  }>) => {
+    await addFoodEntriesBatch({
+      date: toLocalDateString(today),
+      entries: entries.map((entry) => ({
+        name: entry.name,
+        calories: entry.calories,
+        protein: entry.protein,
+        carbs: entry.carbs,
+        fats: entry.fats,
+        ...(entry.portionAmount != null && { portionAmount: entry.portionAmount }),
+        ...(entry.portionUnit && { portionUnit: entry.portionUnit as FoodEntry['portionUnit'] }),
+        ...(entry.startTime && { startTime: entry.startTime }),
+        ...(entry.mealType && { mealType: entry.mealType as FoodEntry['mealType'] }),
+      })),
+    });
+  }, [addFoodEntriesBatch, today]);
+
 
   const handleEditFood = useCallback((entry: FoodEntry) => {
     setEditingFoodEntry(entry);
@@ -528,7 +573,24 @@ export function Energy() {
 
       {/* Food entries */}
       <div className="space-y-4">
-        <h3 className="font-display text-xl font-medium tracking-tight">Journal</h3>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-xl font-medium tracking-tight">Journal</h3>
+            {caloriePeriod === 'daily' && (
+              <p className="mt-1 text-xs text-muted-foreground">Tap a meal mic to log naturally.</p>
+            )}
+          </div>
+          {caloriePeriod === 'daily' && (
+            <button
+              type="button"
+              onClick={() => handleVoiceFood()}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-card press"
+            >
+              <Mic className="h-4 w-4" />
+              Voice
+            </button>
+          )}
+        </div>
 
         {caloriePeriod === 'daily' ? (
           /* Daily: unified input + compact meal-grouped timeline */
@@ -546,28 +608,28 @@ export function Energy() {
                       Log your meals to track your nutrition and stay on top of your goals.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleAddFood()}
-                    className="inline-flex items-center justify-center gap-1.5 h-11 px-6 text-sm font-medium text-primary-foreground bg-primary rounded-full hover:bg-primary/90 transition-colors press"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add food
-                  </button>
+                  <div className="grid w-full max-w-xs grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleVoiceFood()}
+                      className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors press"
+                    >
+                      <Mic className="w-4 h-4" />
+                      Voice
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddFood()}
+                      className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-4 text-sm font-semibold hover:border-primary/40 transition-colors press"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add food
+                    </button>
+                  </div>
                 </div>
               </Card>
             ) : (
               <>
-                {/* Add food button */}
-                <button
-                  type="button"
-                  onClick={() => handleAddFood()}
-                  className="w-full flex items-center justify-center gap-1.5 h-11 text-sm font-medium text-primary-foreground bg-primary rounded-full hover:bg-primary/90 transition-colors press"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add food
-                </button>
-
                 {/* Compact meal-grouped timeline */}
                 <div className="space-y-5">
                   {mealGroups.map((group) => (
@@ -578,6 +640,7 @@ export function Energy() {
                           totalProtein={group.totalProtein}
                           totalCarbs={group.totalCarbs}
                           totalFats={group.totalFats}
+                          onVoiceAdd={handleVoiceFood}
                         />
                         {group.entries.length > 0 ? (
                           <Card>
@@ -590,16 +653,41 @@ export function Energy() {
                                   onDelete={handleDeleteFood}
                                 />
                               ))}
+                              <div className="grid grid-cols-2 gap-2 px-1 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleVoiceFood(group.meal)}
+                                  className="flex h-10 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground press"
+                                >
+                                  <Mic className="h-4 w-4" /> Voice
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddFood(group.meal)}
+                                  className="flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-background text-sm font-semibold press"
+                                >
+                                  <Plus className="h-4 w-4" /> Add
+                                </button>
+                              </div>
                             </div>
                           </Card>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleAddFood(group.meal)}
-                            className="w-full border-[1.5px] border-dashed border-border/80 rounded-2xl py-3.5 text-sm text-muted-foreground flex items-center justify-center gap-2 hover:border-primary/40 hover:text-primary transition-colors press"
-                          >
-                            <Plus className="w-4 h-4" /> Add to {group.meal.toLowerCase()}
-                          </button>
+                          <div className="grid grid-cols-2 gap-2 rounded-2xl border-[1.5px] border-dashed border-border/80 p-2">
+                            <button
+                              type="button"
+                              onClick={() => handleVoiceFood(group.meal)}
+                              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground press"
+                            >
+                              <Mic className="w-4 h-4" /> Voice
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAddFood(group.meal)}
+                              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-card text-sm font-semibold text-muted-foreground hover:text-primary transition-colors press"
+                            >
+                              <Plus className="w-4 h-4" /> Manual
+                            </button>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -720,6 +808,13 @@ export function Energy() {
         onSave={handleFoodSave}
         entry={editingFoodEntry}
         defaultMealType={activeMealType ? activeMealType.toLowerCase() as 'breakfast' | 'lunch' | 'dinner' | 'snack' : undefined}
+      />
+
+      <QuickVoiceEntry
+        open={quickVoiceOpen}
+        onOpenChange={setQuickVoiceOpen}
+        mealType={quickVoiceMealType}
+        onSave={handleQuickVoiceSave}
       />
 
       <ConfirmationDialog

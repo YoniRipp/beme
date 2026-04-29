@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
-import { List, Button, Divider, Text, Switch, RadioButton, Card } from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
+import { Button, Card, List, RadioButton, Switch, Text } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { ConfirmDialog } from '../components/shared/ConfirmDialog';
+import { MobileScreen } from '../components/shared/MobileScreen';
+import { colors, radius, spacing } from '../theme';
 
 export function SettingsScreen() {
   const { user, logout } = useAuth();
@@ -11,52 +13,41 @@ export function SettingsScreen() {
   const [showClearDialog, setShowClearDialog] = useState(false);
 
   return (
-    <ScrollView style={styles.container}>
-      <Card style={styles.section} mode="outlined">
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>Account</Text>
-          <List.Item title="Name" description={user?.name || '--'} left={(props) => <List.Icon {...props} icon="account" />} />
-          <List.Item title="Email" description={user?.email || '--'} left={(props) => <List.Icon {...props} icon="email" />} />
-        </Card.Content>
-      </Card>
+    <MobileScreen title="Settings" subtitle="Manage your account, preferences, and data.">
+      <SettingsCard title="Account">
+        <List.Item title="Name" description={user?.name || '--'} left={(props) => <List.Icon {...props} icon="account" />} />
+        <List.Item title="Email" description={user?.email || '--'} left={(props) => <List.Icon {...props} icon="email" />} />
+      </SettingsCard>
 
-      <Card style={styles.section} mode="outlined">
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>Units</Text>
-          <RadioButton.Group onValueChange={(v) => setWeightUnit(v as 'kg' | 'lbs')} value={weightUnit}>
-            <RadioButton.Item label="Kilograms (kg)" value="kg" />
-            <RadioButton.Item label="Pounds (lbs)" value="lbs" />
-          </RadioButton.Group>
-        </Card.Content>
-      </Card>
+      <SettingsCard title="Units">
+        <RadioButton.Group onValueChange={(v) => setWeightUnit(v as 'kg' | 'lbs')} value={weightUnit}>
+          <RadioButton.Item label="Kilograms (kg)" value="kg" />
+          <RadioButton.Item label="Pounds (lbs)" value="lbs" />
+        </RadioButton.Group>
+      </SettingsCard>
 
-      <Card style={styles.section} mode="outlined">
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>Notifications</Text>
-          <List.Item
-            title="Push Notifications"
-            left={(props) => <List.Icon {...props} icon="bell" />}
-            right={() => <Switch value={notifications} onValueChange={setNotifications} />}
-          />
-        </Card.Content>
-      </Card>
+      <SettingsCard title="Notifications">
+        <List.Item
+          title="Push Notifications"
+          description="Workout, food, and goal reminders"
+          left={(props) => <List.Icon {...props} icon="bell" />}
+          right={() => <Switch value={notifications} onValueChange={setNotifications} />}
+        />
+      </SettingsCard>
 
-      <Card style={styles.section} mode="outlined">
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>Data</Text>
-          <Button
-            mode="outlined"
-            icon="trash-can-outline"
-            textColor="#ef4444"
-            onPress={() => setShowClearDialog(true)}
-            style={styles.dangerButton}
-          >
-            Clear All Data
-          </Button>
-        </Card.Content>
-      </Card>
+      <SettingsCard title="Data">
+        <Button
+          mode="outlined"
+          icon="trash-can-outline"
+          textColor={colors.danger}
+          onPress={() => setShowClearDialog(true)}
+          style={styles.dangerButton}
+        >
+          Clear All Data
+        </Button>
+      </SettingsCard>
 
-      <Button mode="contained" onPress={logout} buttonColor="#ef4444" style={styles.signOutButton}>
+      <Button mode="contained" onPress={logout} buttonColor={colors.danger} style={styles.signOutButton}>
         Sign Out
       </Button>
 
@@ -69,14 +60,41 @@ export function SettingsScreen() {
         destructive
         onConfirm={() => setShowClearDialog(false)}
       />
-    </ScrollView>
+    </MobileScreen>
+  );
+}
+
+function SettingsCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Card mode="contained" style={styles.card}>
+      <Card.Content>
+        <Text variant="titleMedium" style={styles.sectionTitle}>{title}</Text>
+        <View style={styles.sectionBody}>{children}</View>
+      </Card.Content>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 16 },
-  section: { marginBottom: 16 },
-  sectionTitle: { fontWeight: '600', marginBottom: 8 },
-  dangerButton: { borderColor: '#ef4444' },
-  signOutButton: { marginTop: 8, marginBottom: 32 },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontWeight: '800',
+    marginBottom: spacing.sm,
+  },
+  sectionBody: {
+    marginHorizontal: -spacing.sm,
+  },
+  dangerButton: {
+    borderColor: colors.danger,
+    marginHorizontal: spacing.sm,
+  },
+  signOutButton: {
+    marginTop: spacing.sm,
+  },
 });

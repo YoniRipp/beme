@@ -1,14 +1,16 @@
 import React, { useMemo } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { Text, Button, Card } from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
+import { Button, Card, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { format, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
 import { useGoals } from '../hooks/useGoals';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { useEnergy } from '../hooks/useEnergy';
-import { ProgressRing } from '../components/shared/ProgressRing';
 import { LoadingView } from '../components/shared/LoadingView';
+import { MobileScreen } from '../components/shared/MobileScreen';
+import { MetricCard } from '../components/shared/MetricCard';
+import { colors, radius, spacing } from '../theme';
 import { getPeriodRange } from '../lib/dateRanges';
 
 function getGreeting(): string {
@@ -33,120 +35,179 @@ export function HomeScreen() {
     const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
     const { start: dayStart, end: dayEnd } = getPeriodRange('daily');
 
-    // Workouts this week
     const weekWorkouts = workouts.filter((w) =>
       isWithinInterval(w.date, { start: weekStart, end: weekEnd })
     ).length;
     const workoutGoal = goals.find((g) => g.type === 'workouts' && g.period === 'weekly');
-    const workoutTarget = workoutGoal?.target || 0;
-    const workoutPercent = workoutTarget > 0 ? Math.min(100, (weekWorkouts / workoutTarget) * 100) : 0;
+    const workoutTarget = workoutGoal?.target || 4;
 
-    // Calories today
-    const todayCalories = foodEntries
-      .filter((e) => isWithinInterval(e.date, { start: dayStart, end: dayEnd }))
-      .reduce((sum, e) => sum + e.calories, 0);
+    const todayFood = foodEntries.filter((e) => isWithinInterval(e.date, { start: dayStart, end: dayEnd }));
+    const todayCalories = todayFood.reduce((sum, e) => sum + e.calories, 0);
+    const todayProtein = todayFood.reduce((sum, e) => sum + e.protein, 0);
     const calorieGoal = goals.find((g) => g.type === 'calories' && g.period === 'daily');
-    const calorieTarget = calorieGoal?.target || 0;
-    const caloriePercent = calorieTarget > 0 ? Math.min(100, (todayCalories / calorieTarget) * 100) : 0;
+    const calorieTarget = calorieGoal?.target || 2000;
 
-    // Avg sleep this week
     const weekCheckIns = checkIns.filter(
       (c) => c.sleepHours != null && isWithinInterval(c.date, { start: weekStart, end: weekEnd })
     );
     const avgSleep = weekCheckIns.length > 0
       ? weekCheckIns.reduce((sum, c) => sum + (c.sleepHours || 0), 0) / weekCheckIns.length
       : 0;
-    const sleepGoal = goals.find((g) => g.type === 'sleep');
-    const sleepTarget = sleepGoal?.target || 0;
-    const sleepPercent = sleepTarget > 0 ? Math.min(100, (avgSleep / sleepTarget) * 100) : 0;
 
     return {
-      weekWorkouts, workoutTarget, workoutPercent,
-      todayCalories, calorieTarget, caloriePercent,
-      avgSleep, sleepTarget, sleepPercent,
+      weekWorkouts,
+      workoutTarget,
+      todayCalories,
+      calorieTarget,
+      todayProtein,
+      avgSleep,
+      meals: todayFood.length,
     };
   }, [workouts, foodEntries, checkIns, goals]);
 
   if (loading) return <LoadingView />;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text variant="headlineSmall" style={styles.greeting}>
-        {getGreeting()}, {user?.name || 'User'}
-      </Text>
-      <Text variant="bodyMedium" style={styles.date}>{format(new Date(), 'EEEE, MMMM d')}</Text>
-
-      <Card style={styles.progressCard} mode="outlined">
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.sectionTitle}>Today's Progress</Text>
-          <View style={styles.ringsRow}>
-            <TouchableOpacity onPress={() => navigation.navigate('Body')} style={styles.ringItem}>
-              <ProgressRing
-                value={progress.workoutPercent}
-                color="#3b82f6"
-                label="Workouts"
-                displayValue={`${progress.weekWorkouts}/${progress.workoutTarget || '?'}`}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Energy')} style={styles.ringItem}>
-              <ProgressRing
-                value={progress.caloriePercent}
-                color="#ef4444"
-                label="Calories"
-                displayValue={`${Math.round(progress.todayCalories)}`}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Energy')} style={styles.ringItem}>
-              <ProgressRing
-                value={progress.sleepPercent}
-                color="#8b5cf6"
-                label="Sleep"
-                displayValue={progress.avgSleep > 0 ? `${progress.avgSleep.toFixed(1)}h` : '--'}
-              />
-            </TouchableOpacity>
+    <MobileScreen
+      title={`${getGreeting()}, ${user?.name || 'there'}`}
+      subtitle={format(new Date(), 'EEEE, MMMM d')}
+    >
+      <Card mode="contained" style={styles.heroCard}>
+        <Card.Content style={styles.heroContent}>
+          <View>
+            <Text variant="labelLarge" style={styles.eyebrow}>Today's fuel</Text>
+            <Text variant="displaySmall" style={styles.heroValue}>{Math.round(progress.todayCalories)}</Text>
+            <Text variant="bodyMedium" style={styles.heroMeta}>
+              of {progress.calorieTarget} kcal · {progress.meals} meal{progress.meals === 1 ? '' : 's'} logged
+            </Text>
+          </View>
+          <View style={styles.heroBar}>
+            <View style={[styles.heroFill, { width: `${Math.min(progress.todayCalories / progress.calorieTarget, 1) * 100}%` }]} />
           </View>
         </Card.Content>
       </Card>
 
-      <Text variant="titleMedium" style={styles.sectionTitle}>Quick Actions</Text>
-      <View style={styles.actionsRow}>
-        <Button mode="outlined" icon="dumbbell" onPress={() => navigation.navigate('WorkoutForm')} style={styles.actionButton} compact>
-          Add Workout
-        </Button>
-        <Button mode="outlined" icon="food-apple" onPress={() => navigation.navigate('FoodEntryForm')} style={styles.actionButton} compact>
+      <View style={styles.metrics}>
+        <MetricCard
+          icon="dumbbell"
+          label="Workouts"
+          value={`${progress.weekWorkouts}/${progress.workoutTarget}`}
+          meta="this week"
+          tone="workout"
+        />
+        <MetricCard
+          icon="moon-waning-crescent"
+          label="Sleep"
+          value={progress.avgSleep > 0 ? `${progress.avgSleep.toFixed(1)}h` : '--'}
+          meta="weekly avg"
+          tone="sleep"
+        />
+      </View>
+
+      <View style={styles.metrics}>
+        <MetricCard
+          icon="food-steak"
+          label="Protein"
+          value={`${Math.round(progress.todayProtein)}g`}
+          meta="today"
+          tone="food"
+        />
+        <MetricCard
+          icon="target"
+          label="Calories left"
+          value={`${Math.max(progress.calorieTarget - Math.round(progress.todayCalories), 0)}`}
+          meta="kcal"
+        />
+      </View>
+
+      <View style={styles.actions}>
+        <Button mode="contained" icon="food-apple" onPress={() => navigation.navigate('FoodEntryForm')} style={styles.primaryAction}>
           Log Food
         </Button>
-        <Button mode="outlined" icon="moon-waning-crescent" onPress={() => navigation.navigate('SleepForm')} style={styles.actionButton} compact>
-          Log Sleep
+        <Button mode="outlined" icon="dumbbell" onPress={() => navigation.navigate('WorkoutForm')} style={styles.secondaryAction}>
+          Workout
+        </Button>
+        <Button mode="outlined" icon="moon-waning-crescent" onPress={() => navigation.navigate('SleepForm')} style={styles.secondaryAction}>
+          Sleep
         </Button>
       </View>
 
       {goals.length === 0 && (
-        <Card style={styles.goalsPrompt} mode="outlined">
-          <Card.Content style={styles.goalsPromptContent}>
-            <Text variant="bodyMedium">Set your first wellness goal</Text>
-            <Button mode="contained" onPress={() => navigation.navigate('GoalForm')} style={styles.goalButton} compact>
-              Add Goal
-            </Button>
+        <Card mode="contained" style={styles.prompt}>
+          <Card.Content style={styles.promptContent}>
+            <View style={{ flex: 1 }}>
+              <Text variant="titleMedium" style={styles.promptTitle}>Set your first goal</Text>
+              <Text variant="bodySmall" style={styles.promptText}>Choose a target for workouts, calories, or sleep.</Text>
+            </View>
+            <Button mode="contained-tonal" onPress={() => navigation.navigate('GoalForm')}>Add</Button>
           </Card.Content>
         </Card>
       )}
-    </ScrollView>
+    </MobileScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 16 },
-  greeting: { fontWeight: '700', color: '#111827' },
-  date: { color: '#6b7280', marginBottom: 16 },
-  progressCard: { marginBottom: 20 },
-  sectionTitle: { fontWeight: '600', marginBottom: 12 },
-  ringsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8 },
-  ringItem: { alignItems: 'center' },
-  actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  actionButton: { flex: 1, minWidth: 100 },
-  goalsPrompt: { marginTop: 8 },
-  goalsPromptContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  goalButton: { backgroundColor: '#3b82f6' },
+  heroCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  heroContent: {
+    gap: spacing.lg,
+  },
+  eyebrow: {
+    color: colors.primary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  heroValue: {
+    color: colors.text,
+    fontWeight: '800',
+  },
+  heroMeta: {
+    color: colors.textMuted,
+  },
+  heroBar: {
+    height: 10,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceMuted,
+    overflow: 'hidden',
+  },
+  heroFill: {
+    height: '100%',
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary,
+  },
+  metrics: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  actions: {
+    gap: spacing.sm,
+  },
+  primaryAction: {
+    borderRadius: radius.lg,
+  },
+  secondaryAction: {
+    borderRadius: radius.lg,
+    borderColor: colors.border,
+  },
+  prompt: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.lg,
+  },
+  promptContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  promptTitle: {
+    color: colors.text,
+    fontWeight: '800',
+  },
+  promptText: {
+    color: colors.textMuted,
+  },
 });
