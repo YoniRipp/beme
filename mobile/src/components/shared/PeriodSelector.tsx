@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { Chip } from 'react-native-paper';
+import { colors, spacing } from '../../theme';
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -39,8 +40,8 @@ export function PeriodSelector({ value, onChange, labels = DEFAULT_LABELS }: Per
 }
 
 const styles = StyleSheet.create({
-  container: { flexDirection: 'row', marginVertical: 8 },
-  chip: { marginRight: 8 },
-  selectedChip: { backgroundColor: '#3b82f6' },
+  container: { flexDirection: 'row', marginVertical: spacing.sm },
+  chip: { marginRight: spacing.sm },
+  selectedChip: { backgroundColor: colors.primary },
   selectedText: { color: '#fff' },
 });

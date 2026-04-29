@@ -6,6 +6,7 @@ import { useEnergy } from '../hooks/useEnergy';
 import { useDebounce } from '../hooks/useDebounce';
 import { searchFoods, FoodSearchResult } from '../core/api/food';
 import Toast from 'react-native-toast-message';
+import { colors, spacing } from '../theme';
 
 const PORTION_PRESETS = [50, 100, 150, 200];
 const MEAL_OPTIONS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
@@ -199,20 +200,20 @@ export function FoodEntryFormScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 16, paddingBottom: 40 },
-  searchSection: { marginBottom: 8 },
-  input: { marginBottom: 12 },
-  label: { marginTop: 8, marginBottom: 8, fontWeight: '600' },
-  segment: { marginBottom: 12 },
-  resultsCard: { marginTop: -8, marginBottom: 12 },
-  resultItem: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  resultMeta: { color: '#6b7280' },
-  portionRow: { marginBottom: 12 },
-  portionInput: { marginBottom: 8 },
-  presets: { flexDirection: 'row', gap: 8 },
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  searchSection: { marginBottom: spacing.sm },
+  input: { marginBottom: spacing.md },
+  label: { marginTop: spacing.sm, marginBottom: spacing.sm, fontWeight: '600', color: colors.text },
+  segment: { marginBottom: spacing.md },
+  resultsCard: { marginTop: -spacing.sm, marginBottom: spacing.md, backgroundColor: colors.surface },
+  resultItem: { paddingHorizontal: spacing.lg, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  resultMeta: { color: colors.textMuted },
+  portionRow: { marginBottom: spacing.md },
+  portionInput: { marginBottom: spacing.sm },
+  presets: { flexDirection: 'row', gap: spacing.sm },
   presetChip: { marginRight: 4 },
-  nutritionRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  nutritionRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   nutritionInput: { flex: 1 },
-  saveButton: { marginTop: 8, backgroundColor: '#3b82f6' },
+  saveButton: { marginTop: spacing.sm, backgroundColor: colors.primary },
 });

@@ -32,6 +32,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { AiChatPanel } from '../insights/AiChatPanel';
 import { VoiceAgentButton } from '../voice/VoiceAgentButton';
+import { VoiceAgentPanel } from '../voice/VoiceAgentPanel';
 import { QuickAddMenu } from '../shared/QuickAddMenu';
 import { BottomNavigation } from './BottomNavigation';
 
@@ -244,6 +245,7 @@ export function Base44Layout() {
 
       <QuickAddMenu open={quickAddOpen} onOpenChange={setQuickAddOpen} />
       {pathname !== '/' && <VoiceAgentButton panelOpen={voicePanelOpen} onTogglePanel={() => setVoicePanelOpen((prev) => !prev)} />}
+      <VoiceAgentPanel open={voicePanelOpen} onOpenChange={setVoicePanelOpen} />
 
       {/* AI Chat FAB — bottom-right, above mobile nav */}
       {hasAiAccess && pathname !== '/insights' && (
@@ -251,7 +253,7 @@ export function Base44Layout() {
           size="icon"
           onClick={() => setAiChatOpen(true)}
           className="fixed right-4 z-40 h-12 w-12 rounded-full bg-foreground text-background hover:bg-foreground/90 shadow-card-lg md:right-6 lg:bottom-6"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)' }}
+          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 9.75rem)' }}
           aria-label="Open AI Coach"
         >
           <Sparkles className="h-5 w-5" />

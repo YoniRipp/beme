@@ -23,7 +23,7 @@ export type Currency =
 
 export type DateFormat = 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
 export type Units = 'metric' | 'imperial';
-export type Theme = 'light';
+export type Theme = 'light' | 'dark' | 'system';
 export type BalanceDisplayColor = 'green' | 'blue' | 'neutral' | 'primary';
 export type BalanceDisplayLayout = 'compact' | 'with_income_expenses';
 

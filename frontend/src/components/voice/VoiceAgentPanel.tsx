@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Mic, Square } from 'lucide-react';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Mic, Square, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEnergy } from '@/hooks/useEnergy';
 import { useWorkouts } from '@/hooks/useWorkouts';
@@ -162,47 +161,67 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
   const displayTranscript = currentTranscript || transcript;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-md"
-        onInteractOutside={(e) => e.preventDefault()}
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="max-h-[82vh] overflow-y-auto rounded-t-2xl px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
       >
-        <DialogHeader>
-          <DialogTitle>Voice Agent</DialogTitle>
-        </DialogHeader>
+        <SheetHeader className="pb-2">
+          <SheetTitle className="text-center text-base font-semibold">Voice Agent</SheetTitle>
+        </SheetHeader>
         <LocalErrorBoundary label="Voice">
           {!isAvailable ? (
-            <div className="py-4 text-sm text-muted-foreground">
+            <div className="py-6 text-center text-sm text-muted-foreground">
               Voice is not supported in this browser. Microphone access required.
             </div>
           ) : (
-            <div className="space-y-4 py-2">
+            <div className="flex flex-col items-center gap-4 py-5">
               {(isNative || isStreaming) && (
                 <p className="text-xs text-muted-foreground">
                   {isNative ? 'Using native speech recognition' : 'Real-time streaming'}
                 </p>
               )}
 
-              <div className="flex gap-2">
-                {!isListening && !isProcessing ? (
-                  <Button type="button" onClick={handleStartRecording} className="flex-1">
-                    <Mic className="mr-2 h-4 w-4" />
-                    Start recording
-                  </Button>
+              <button
+                type="button"
+                onClick={isListening ? handleStopRecording : handleStartRecording}
+                disabled={isProcessing}
+                className={[
+                  'relative flex h-24 w-24 items-center justify-center rounded-full shadow-card-lg transition-all',
+                  isListening
+                    ? 'bg-destructive text-destructive-foreground ring-[6px] ring-destructive/20'
+                    : 'bg-primary text-primary-foreground',
+                  isProcessing ? 'opacity-70' : 'hover:scale-105',
+                ].join(' ')}
+                aria-label={isListening ? 'Stop recording and send' : 'Start voice input'}
+              >
+                {isListening && <span className="absolute inset-0 animate-ping rounded-full bg-destructive/25" />}
+                {isProcessing ? (
+                  <Loader2 className="relative z-10 h-9 w-9 animate-spin" />
                 ) : isListening ? (
-                  <Button type="button" variant="destructive" onClick={handleStopRecording} className="flex-1">
-                    <Square className="mr-2 h-4 w-4" />
-                    Stop
-                  </Button>
+                  <Square className="relative z-10 h-9 w-9" />
                 ) : (
-                  <Button type="button" disabled className="flex-1">
-                    Processing...
-                  </Button>
+                  <Mic className="relative z-10 h-9 w-9" />
+                )}
+              </button>
+
+              <div className="max-w-sm text-center">
+                <p className="font-display text-lg font-medium tracking-tight text-foreground">
+                  {isListening
+                    ? 'Listening... tap to stop'
+                    : isProcessing
+                      ? 'Processing your voice...'
+                      : 'Tap to log by voice'}
+                </p>
+                {!displayTranscript && !isListening && !isProcessing && (
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                    Try "I had oatmeal for breakfast" or "30 min run"
+                  </p>
                 )}
               </div>
 
-              {displayTranscript && isListening && (
-                <p className="text-sm text-muted-foreground italic" role="status" aria-live="polite">
+              {displayTranscript && (
+                <p className="max-w-sm break-words text-center text-sm italic text-muted-foreground" role="status" aria-live="polite">
                   "{displayTranscript}"
                 </p>
               )}
@@ -217,7 +236,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
             </div>
           )}
         </LocalErrorBoundary>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

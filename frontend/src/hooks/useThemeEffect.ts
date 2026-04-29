@@ -10,9 +10,21 @@ export function useThemeEffect(_theme: unknown, accentColor: BalanceDisplayColor
   useEffect(() => {
     const root = document.documentElement;
     const palette = ACCENT_PALETTE[accentColor];
-    root.style.setProperty('--primary', palette.primary);
-    root.style.setProperty('--primary-foreground', palette.primaryForeground);
-    root.style.setProperty('--sidebar-primary', palette.primary);
-    root.style.setProperty('--sidebar-primary-foreground', palette.primaryForeground);
+
+    const applyPalette = () => {
+      const isDark = root.classList.contains('dark');
+      const primary = isDark ? palette.darkPrimary : palette.primary;
+      const foreground = isDark ? palette.darkPrimaryForeground : palette.primaryForeground;
+      root.style.setProperty('--primary', primary);
+      root.style.setProperty('--primary-foreground', foreground);
+      root.style.setProperty('--sidebar-primary', primary);
+      root.style.setProperty('--sidebar-primary-foreground', foreground);
+      root.style.setProperty('--ring', primary);
+    };
+
+    applyPalette();
+    const observer = new MutationObserver(applyPalette);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
   }, [accentColor]);
 }

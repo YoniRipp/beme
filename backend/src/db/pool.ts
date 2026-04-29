@@ -34,6 +34,7 @@ function getConnectionString(context: string | null | undefined): string | null 
 }
 
 const poolMax = Math.max(1, parseInt(process.env.DB_POOL_MAX ?? '10', 10) || 10);
+const sslEnabled = process.env.DB_SSL !== 'false' && process.env.DB_SSL !== '0';
 const sslRejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false';
 
 /**
@@ -80,7 +81,7 @@ function createPool(connectionString: string): pg.Pool {
   const cleanConn = url.toString();
   const pool = new Pool({
     connectionString: cleanConn,
-    ssl: { rejectUnauthorized: sslRejectUnauthorized },
+    ssl: sslEnabled ? { rejectUnauthorized: sslRejectUnauthorized } : false,
     max: poolMax,
     idleTimeoutMillis: 30000,
     statement_timeout: 30000,
