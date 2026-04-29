@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TrackVibe — 3 Frontend Directions</title>
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#0a4d2e"/>
+    <circle cx="50" cy="50" r="22" fill="none" stroke="#7ee05a" stroke-width="6"/>
+    <path d="M40 50 L48 58 L62 42" fill="none" stroke="#7ee05a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: 'Inter', system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  /* Press feedback used inside all 3 apps */
+  .tv-press { transition: transform .08s ease, opacity .12s; }
+  .tv-press:active { transform: scale(0.97); opacity: 0.85; }
+  .tv-card-in { animation: tvCardIn .35s cubic-bezier(.2,.7,.3,1); }
+  @keyframes tvCardIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes tvWave {
+    0%, 100% { transform: scaleY(0.3); }
+    50% { transform: scaleY(1); }
+  }
+  .tv-no-scroll::-webkit-scrollbar { display: none; }
+  .tv-no-scroll { scrollbar-width: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="app/shared.jsx"></script>
+<script type="text/babel" src="app/PulseApp.jsx"></script>
+<script type="text/babel" src="app/FreshApp.jsx"></script>
+<script type="text/babel" src="app/CourtApp.jsx"></script>
+
+<script type="text/babel">
+  const { useState } = React;
+
+  /** Phone bezel — wraps a full-bleed app (which renders its own status bar). */
+  function PhoneBezel({ children, width = 320, height = 660, bezel = '#1a1a1c', screenBg = '#000' }) {
+    return (
+      <div style={{
+        width, height, borderRadius: 44, background: bezel,
+        padding: 8, boxShadow: '0 1px 0 rgba(255,255,255,0.06) inset, 0 12px 30px rgba(0,0,0,0.18)',
+        position: 'relative',
+      }}>
+        <div style={{
+          width: '100%', height: '100%', borderRadius: 36, overflow: 'hidden',
+          background: screenBg, position: 'relative',
+        }}>
+          {children}
+        </div>
+        {/* dynamic island */}
+        <div style={{
+          position: 'absolute', top: 18, left: '50%', transform: 'translateX(-50%)',
+          width: 96, height: 26, borderRadius: 14, background: '#000', zIndex: 50, pointerEvents: 'none',
+        }}/>
+      </div>
+    );
+  }
+
+  /** A force-mounted screen — toggles which screen the inner app shows by clicking
+   *  through buttons on first mount. Simplest approach: just render the app itself
+   *  and let the user click; for the canvas we want different starting screens
+   *  per artboard, so we use a key + an initial-screen prop forwarded by re-mounting
+   *  helpers. The apps already self-contain their nav, so each artboard renders
+   *  the full app and we use a small adapter to pre-set its tab. */
+  function AppFrame({ App, initialTab, initialScreen, initialAuth = true, voiceOpen = false }) {
+    return (
+      <App key={`${initialTab}-${initialScreen}-${initialAuth}-${voiceOpen}`}
+           __initial={{ tab: initialTab, screen: initialScreen, authed: initialAuth, voiceOpen }} />
+    );
+  }
+
+  /* Each direction's variations to display in the canvas */
+  const W = 320, H = 660;
+
+  function Variant({ App, tab, screen, authed = true, voiceOpen = false, bezel, screenBg }) {
+    return (
+      <PhoneBezel width={W} height={H} bezel={bezel} screenBg={screenBg}>
+        <App key={`${tab}-${screen}-${authed}-${voiceOpen}`}
+             __initial={{ tab, screen, authed, voiceOpen }} />
+      </PhoneBezel>
+    );
+  }
+
+  function App() {
+    const directions = [
+      {
+        id: 'pulse',
+        title: '01 — Pulse',
+        subtitle: 'Calm dark. Generous spacing. Sage-mint primary on near-black with a single warm coral accent. Type-led, charts breathe, all-business.',
+        bezel: '#0a0c0a',
+        screenBg: '#0d100d',
+        AppC: window.PulseApp,
+      },
+      {
+        id: 'fresh',
+        title: '02 — Fresh',
+        subtitle: 'Light & friendly. Warm cream paper, vivid forest-green primary, terracotta accents. Rounded cards, soft shadows, approachable.',
+        bezel: '#3a3a3a',
+        screenBg: '#f5f1e8',
+        AppC: window.FreshApp,
+      },
+      {
+        id: 'court',
+        title: '03 — Court',
+        subtitle: 'Editorial high-contrast. Cream paper, deep forest blocks, lime accent, Fraunces display, magazine numbering. Sharp corners. Bold.',
+        bezel: '#1f1f1d',
+        screenBg: '#f0ede4',
+        AppC: window.CourtApp,
+      },
+    ];
+
+    return (
+      <DesignCanvas
+        title="TrackVibe — Frontend Directions"
+        subtitle="Three coherent visual systems for the body / energy / goals tracker. Each direction shows the full app: Home, Body, Energy, Goals, Voice-log, Auth + a settings sheet. Tap any artboard to open it fullscreen and use the prototype.">
+
+        {directions.map((d) => (
+          <DCSection key={d.id} id={d.id} title={d.title} subtitle={d.subtitle}>
+            <DCArtboard id={`${d.id}-home`} label="Home · Dashboard" width={W} height={H}>
+              <Variant App={d.AppC} tab="home" screen={null} bezel={d.bezel} screenBg={d.screenBg} />
+            </DCArtboard>
+            <DCArtboard id={`${d.id}-body`} label="Body · Workouts" width={W} height={H}>
+              <Variant App={d.AppC} tab="body" screen={null} bezel={d.bezel} screenBg={d.screenBg} />
+            </DCArtboard>
+            <DCArtboard id={`${d.id}-energy`} label="Energy · Food log" width={W} height={H}>
+              <Variant App={d.AppC} tab="energy" screen={null} bezel={d.bezel} screenBg={d.screenBg} />
+            </DCArtboard>
+            <DCArtboard id={`${d.id}-goals`} label="Goals" width={W} height={H}>
+              <Variant App={d.AppC} tab="goals" screen={null} bezel={d.bezel} screenBg={d.screenBg} />
+            </DCArtboard>
+            <DCArtboard id={`${d.id}-voice`} label="Voice log" width={W} height={H}>
+              <Variant App={d.AppC} tab="home" screen={null} voiceOpen={true} bezel={d.bezel} screenBg={d.screenBg} />
+            </DCArtboard>
+            <DCArtboard id={`${d.id}-water`} label="Water sheet" width={W} height={H}>
+              <Variant App={d.AppC} tab="home" screen="water" bezel={d.bezel} screenBg={d.screenBg} />
+            </DCArtboard>
+            <DCArtboard id={`${d.id}-weight`} label="Weight sheet" width={W} height={H}>
+              <Variant App={d.AppC} tab="home" screen="weight" bezel={d.bezel} screenBg={d.screenBg} />
+            </DCArtboard>
+            <DCArtboard id={`${d.id}-sleep`} label="Sleep sheet" width={W} height={H}>
+              <Variant App={d.AppC} tab="home" screen="sleep" bezel={d.bezel} screenBg={d.screenBg} />
+            </DCArtboard>
+            <DCArtboard id={`${d.id}-profile`} label="Profile" width={W} height={H}>
+              <Variant App={d.AppC} tab="home" screen="profile" bezel={d.bezel} screenBg={d.screenBg} />
+            </DCArtboard>
+            <DCArtboard id={`${d.id}-auth`} label="Auth" width={W} height={H}>
+              <Variant App={d.AppC} tab="home" screen={null} authed={false} bezel={d.bezel} screenBg={d.screenBg} />
+            </DCArtboard>
+          </DCSection>
+        ))}
+      </DesignCanvas>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
