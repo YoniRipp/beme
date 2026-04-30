@@ -30,7 +30,7 @@ export function Goals() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h2 className="font-display text-[28px] md:text-[32px] font-medium tracking-tight leading-tight">Goals</h2>
+        <h2 className="font-display text-[28px] md:text-[32px] font-semibold dark:font-bold tracking-tight leading-tight">Goals</h2>
         <p className="text-sm text-muted-foreground mt-1.5">Set targets that guide your week.</p>
       </div>
 

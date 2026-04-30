@@ -232,7 +232,9 @@ export function Base44Layout() {
         </header>
 
         <main className="px-5 sm:px-6 lg:px-8 pb-28 lg:pb-10 pt-3 animate-fade-up">
-          <Outlet />
+          <div className="max-w-[700px] xl:max-w-none mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
 

@@ -19,11 +19,12 @@ import { SetupWizard } from '@/components/onboarding/SetupWizard';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { isOnboardingCompleted } from '@/lib/onboarding';
 import { useProfile } from '@/hooks/useProfile';
+import { useApp } from '@/context/AppContext';
 import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
 import { StreakCard } from '@/components/home/StreakCard';
-import { Apple, ChevronRight, Droplets, Dumbbell, Moon, Scale, UtensilsCrossed } from 'lucide-react';
+import { Apple, ChevronRight, Droplets, Dumbbell, Moon, Scale, UtensilsCrossed, User } from 'lucide-react';
 import { isSameDay, format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,8 @@ export function Home() {
   const { addGoal, updateGoal, goalsLoading } = useGoals();
   const { macroGoals, setMacroGoals, calorieGoal } = useMacroGoals();
   const { profile, profileLoading } = useProfile();
+  const { user } = useApp();
+  const firstName = user?.name?.split(' ')[0] ?? 'there';
 
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>(undefined);
@@ -144,19 +147,31 @@ export function Home() {
     return <SetupWizard onComplete={() => window.location.reload()} />;
   }
 
-  const todayDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const todayDate = format(new Date(), 'EEE · MMM d');
 
   return (
     <div className="max-w-lg md:max-w-6xl mx-auto space-y-6">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">{todayDate}</p>
-        <h1 className="font-display text-[32px] md:text-[40px] font-medium tracking-tight leading-tight mt-1">Today</h1>
-        <p className="text-sm text-muted-foreground mt-1.5">{progressMessage}</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{todayDate}</p>
+          <h1 className="font-display text-[30px] md:text-[36px] font-semibold dark:font-bold tracking-tight leading-tight mt-1">
+            Hi {firstName}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1.5">{progressMessage}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/settings')}
+          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-primary/10 hover:bg-primary/20 transition-colors press mt-1"
+          aria-label="Profile"
+        >
+          <User className="w-5 h-5 text-primary" />
+        </button>
       </div>
 
       <ContentWithLoading loading={workoutsLoading || energyLoading || goalsLoading} loadingText="Loading dashboard...">
       <div className="space-y-5">
-        <Card className="overflow-hidden relative" data-onboarding="dashboard">
+        <Card className="overflow-hidden relative dark:bg-gradient-to-br dark:from-[#15181a] dark:to-[#1f2826]" data-onboarding="dashboard">
           <CardContent className="p-5">
             <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-4">
               <span className="text-primary">Today's fuel</span>
@@ -165,11 +180,11 @@ export function Home() {
             <div className="flex items-center gap-5">
               <div className="relative w-[132px] h-[132px]">
                 <svg viewBox="0 0 100 100" className="w-[132px] h-[132px] -rotate-90">
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="8" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="11" />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="11" strokeLinecap="round" strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - calPct)} className="transition-all duration-700 ease-out" />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="font-display text-2xl font-medium tabular-nums leading-none">{Math.round(todaySummary.totalCal)}</span>
+                  <span className="font-display text-[34px] font-semibold tabular-nums leading-none">{Math.round(todaySummary.totalCal)}</span>
                   <span className="text-[10px] text-muted-foreground mt-1">kcal</span>
                 </div>
               </div>
@@ -212,21 +227,21 @@ export function Home() {
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">
-          <button type="button" onClick={() => setFoodModalOpen(true)} className="h-14 rounded-2xl bg-primary text-primary-foreground px-4 flex items-center justify-between press">
-            <span className="text-sm font-semibold">Log food</span>
-            <Apple className="w-4 h-4" />
+          <button type="button" onClick={() => setFoodModalOpen(true)} className="h-[78px] rounded-[18px] bg-primary text-primary-foreground px-4 flex items-center justify-between press">
+            <span className="text-sm font-bold">Log food</span>
+            <Apple className="w-[22px] h-[22px]" />
           </button>
-          <button type="button" onClick={() => setWorkoutModalOpen(true)} className="h-14 rounded-2xl border border-border bg-card px-4 flex items-center justify-between press">
-            <span className="text-sm font-semibold">Log workout</span>
-            <Dumbbell className="w-4 h-4" />
+          <button type="button" onClick={() => setWorkoutModalOpen(true)} className="h-[78px] rounded-[18px] border border-border bg-card px-4 flex items-center justify-between press">
+            <span className="text-sm font-bold">Log workout</span>
+            <Dumbbell className="w-[22px] h-[22px]" />
           </button>
-          <button type="button" onClick={() => navigate('/settings')} className="h-14 rounded-2xl border border-border bg-card px-4 flex items-center justify-between press">
-            <span className="text-sm font-semibold">Water</span>
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Droplets className="w-3.5 h-3.5" />0/8</span>
+          <button type="button" onClick={() => navigate('/energy')} className="h-[78px] rounded-[18px] border border-border bg-card px-4 flex items-center justify-between press">
+            <span className="text-sm font-bold">Water</span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted rounded-lg px-2 py-1"><Droplets className="w-3.5 h-3.5" />0/8</span>
           </button>
-          <button type="button" onClick={() => setSleepModalOpen(true)} className="h-14 rounded-2xl border border-border bg-card px-4 flex items-center justify-between press">
-            <span className="text-sm font-semibold">Sleep</span>
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Moon className="w-3.5 h-3.5" />{sleepHours}h</span>
+          <button type="button" onClick={() => setSleepModalOpen(true)} className="h-[78px] rounded-[18px] border border-border bg-card px-4 flex items-center justify-between press">
+            <span className="text-sm font-bold">Sleep</span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted rounded-lg px-2 py-1"><Moon className="w-3.5 h-3.5" />{sleepHours}h</span>
           </button>
         </div>
 
