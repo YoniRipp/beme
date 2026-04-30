@@ -499,14 +499,14 @@ export function Energy() {
         );
 
         const calorieRingEl = (
-          <div className="relative w-44 h-44">
-            <svg viewBox="0 0 100 100" className="w-44 h-44 -rotate-90">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
-              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - calPct)} className="transition-all duration-700 ease-out" />
+          <div className="relative w-[132px] h-[132px]">
+            <svg viewBox="0 0 100 100" className="w-[132px] h-[132px] -rotate-90">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="11" />
+              <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="11" strokeLinecap="round" strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - calPct)} className="transition-all duration-700 ease-out" />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-display text-[40px] font-medium tabular-nums leading-none tracking-tight">{Math.round(periodTotals.calories)}</span>
-              <span className="text-[11px] text-muted-foreground leading-none mt-2">of {calGoalTarget}{caloriePeriod !== 'daily' ? ' / day' : ''} kcal</span>
+              <span className="font-display text-[34px] font-semibold tabular-nums leading-none tracking-tight">{Math.round(periodTotals.calories)}</span>
+              <span className="text-[10px] text-muted-foreground leading-none mt-1.5">of {calGoalTarget}{caloriePeriod !== 'daily' ? ' / day' : ''} kcal</span>
             </div>
           </div>
         );
@@ -528,10 +528,13 @@ export function Energy() {
                 <CardContent className="p-5 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-display text-3xl leading-none tabular-nums">{Math.round(periodTotals.calories)}</p>
+                      <p className="font-display text-[38px] font-semibold leading-none tabular-nums">{Math.round(periodTotals.calories)}</p>
                       <p className="text-sm text-muted-foreground mt-1">/ {calGoalTarget} kcal</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">Remaining: <span className="tabular-nums text-foreground">{remainingCal}</span></p>
+                    <div className="text-right">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Remaining</p>
+                      <p className="font-display text-[22px] font-semibold tabular-nums text-primary leading-tight">{remainingCal}</p>
+                    </div>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div className="h-full bg-primary rounded-full" style={{ width: `${calPct * 100}%` }} />

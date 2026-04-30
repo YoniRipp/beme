@@ -46,7 +46,7 @@ export function GoalCard({ goal, onEdit }: GoalCardProps) {
 
   return (
     <>
-      <Card className={cn('p-4', achieved && 'border-success/40')}>
+      <Card className={cn('p-4 rounded-[22px]', achieved && 'border-success/40')}>
         <div className="flex items-center gap-3.5">
           <div className="relative shrink-0">
             <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">

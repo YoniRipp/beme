@@ -59,6 +59,7 @@ export function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
+                className="rounded-[14px] h-[50px] px-4 text-[14px]"
               />
             </div>
             <div className="space-y-2">
@@ -70,11 +71,12 @@ export function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="rounded-[14px] h-[50px] px-4 text-[14px]"
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-[50px] text-[15px] font-bold rounded-[14px] shadow-[0_8px_20px_rgba(46,125,62,0.25)] dark:shadow-[0_8px_20px_rgba(156,242,91,0.2)]" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
             <Link to="/forgot-password" className="text-sm text-muted-foreground hover:text-primary transition-colors">

@@ -35,7 +35,7 @@ export const FoodCard = memo(function FoodCard({ entry, onEdit, onDelete }: Food
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-[15px] font-semibold text-foreground truncate leading-tight">{entry.name}</p>
+        <p className="text-[14px] font-bold text-foreground truncate leading-tight">{entry.name}</p>
         {portionText && (
           <p className="text-xs text-muted-foreground truncate mt-0.5">{portionText}</p>
         )}
@@ -43,7 +43,7 @@ export const FoodCard = memo(function FoodCard({ entry, onEdit, onDelete }: Food
 
       <div className="flex items-center gap-1 shrink-0">
         <div className="text-right pr-1">
-          <p className="font-display text-lg font-medium leading-none tabular-nums text-foreground">{entry.calories}</p>
+          <p className="font-display text-[18px] font-semibold leading-none tabular-nums text-primary">{entry.calories}</p>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">kcal</p>
         </div>
         <Button
