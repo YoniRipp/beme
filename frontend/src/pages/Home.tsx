@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
+import { useWater } from '@/hooks/useWater';
 import { useGoals } from '@/hooks/useGoals';
 import { useMacroGoals } from '@/hooks/useMacroGoals';
 import { MacroGoalModal } from '@/components/home/MacroGoalModal';
@@ -37,7 +38,9 @@ export function Home() {
   const { macroGoals, setMacroGoals, calorieGoal } = useMacroGoals();
   const { profile, profileLoading } = useProfile();
   const { user } = useApp();
+  const { glasses, addGlass } = useWater();
   const firstName = user?.name?.split(' ')[0] ?? 'there';
+  const waterGoal = (profile as { waterGoalGlasses?: number })?.waterGoalGlasses || 8;
 
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>(undefined);
@@ -147,7 +150,7 @@ export function Home() {
     return <SetupWizard onComplete={() => window.location.reload()} />;
   }
 
-  const todayDate = format(new Date(), 'EEE · MMM d');
+  const todayDate = format(new Date(), 'EEE · d MMM');
 
   return (
     <div className="max-w-lg md:max-w-6xl mx-auto space-y-6">
@@ -179,9 +182,9 @@ export function Home() {
             </div>
             <div className="flex items-center gap-5">
               <div className="relative w-[132px] h-[132px]">
-                <svg viewBox="0 0 100 100" className="w-[132px] h-[132px] -rotate-90">
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="11" />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="11" strokeLinecap="round" strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - calPct)} className="transition-all duration-700 ease-out" />
+                <svg viewBox="0 0 132 132" className="w-[132px] h-[132px] -rotate-90">
+                  <circle cx="66" cy="66" r="60.5" fill="none" stroke="hsl(var(--muted))" strokeWidth="11" />
+                  <circle cx="66" cy="66" r="60.5" fill="none" stroke="hsl(var(--primary))" strokeWidth="11" strokeLinecap="round" strokeDasharray={2 * Math.PI * 60.5} strokeDashoffset={2 * Math.PI * 60.5 * (1 - calPct)} className="transition-all duration-700 ease-out" />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="font-display text-[34px] font-semibold tabular-nums leading-none">{Math.round(todaySummary.totalCal)}</span>
@@ -235,9 +238,9 @@ export function Home() {
             <span className="text-sm font-bold">Log workout</span>
             <Dumbbell className="w-[22px] h-[22px]" />
           </button>
-          <button type="button" onClick={() => navigate('/energy')} className="h-[78px] rounded-[18px] border border-border bg-card px-4 flex items-center justify-between press">
+          <button type="button" onClick={() => addGlass()} className="h-[78px] rounded-[18px] border border-border bg-card px-4 flex items-center justify-between press">
             <span className="text-sm font-bold">Water</span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted rounded-lg px-2 py-1"><Droplets className="w-3.5 h-3.5" />0/8</span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted rounded-lg px-2 py-1"><Droplets className="w-3.5 h-3.5" />{glasses}/{waterGoal}</span>
           </button>
           <button type="button" onClick={() => setSleepModalOpen(true)} className="h-[78px] rounded-[18px] border border-border bg-card px-4 flex items-center justify-between press">
             <span className="text-sm font-bold">Sleep</span>

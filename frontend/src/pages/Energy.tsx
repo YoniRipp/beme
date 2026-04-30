@@ -500,9 +500,9 @@ export function Energy() {
 
         const calorieRingEl = (
           <div className="relative w-[132px] h-[132px]">
-            <svg viewBox="0 0 100 100" className="w-[132px] h-[132px] -rotate-90">
-              <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="11" />
-              <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="11" strokeLinecap="round" strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - calPct)} className="transition-all duration-700 ease-out" />
+            <svg viewBox="0 0 132 132" className="w-[132px] h-[132px] -rotate-90">
+              <circle cx="66" cy="66" r="60.5" fill="none" stroke="hsl(var(--muted))" strokeWidth="11" />
+              <circle cx="66" cy="66" r="60.5" fill="none" stroke="hsl(var(--primary))" strokeWidth="11" strokeLinecap="round" strokeDasharray={2 * Math.PI * 60.5} strokeDashoffset={2 * Math.PI * 60.5 * (1 - calPct)} className="transition-all duration-700 ease-out" />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="font-display text-[34px] font-semibold tabular-nums leading-none tracking-tight">{Math.round(periodTotals.calories)}</span>
