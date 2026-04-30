@@ -524,7 +524,7 @@ export function Energy() {
         return (
           <>
             {caloriePeriod === 'daily' && (
-              <Card className="overflow-hidden">
+              <Card className="overflow-hidden dark:bg-gradient-to-br dark:from-[#15181a] dark:to-[#1d2123]">
                 <CardContent className="p-5 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
@@ -537,12 +537,21 @@ export function Energy() {
                     </div>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full bg-primary rounded-full" style={{ width: `${calPct * 100}%` }} />
+                    <div className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-700" style={{ width: `${calPct * 100}%` }} />
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground tabular-nums">
-                    <p>P {Math.round(periodTotals.protein)}/{macroGoals.protein}g</p>
-                    <p>C {Math.round(periodTotals.carbs)}/{macroGoals.carbs}g</p>
-                    <p>F {Math.round(periodTotals.fats)}/{macroGoals.fat}g</p>
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Protein</p>
+                      <p className="text-[13px] font-bold mt-0.5 tabular-nums"><span className="text-primary">{Math.round(periodTotals.protein)}</span><span className="text-muted-foreground">/{macroGoals.protein}g</span></p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Carbs</p>
+                      <p className="text-[13px] font-bold mt-0.5 tabular-nums"><span className="text-info">{Math.round(periodTotals.carbs)}</span><span className="text-muted-foreground">/{macroGoals.carbs}g</span></p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Fat</p>
+                      <p className="text-[13px] font-bold mt-0.5 tabular-nums"><span className="text-gold">{Math.round(periodTotals.fats)}</span><span className="text-muted-foreground">/{macroGoals.fat}g</span></p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

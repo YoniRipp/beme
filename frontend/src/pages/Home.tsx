@@ -101,9 +101,9 @@ export function Home() {
 
   const calGoalTarget = calorieGoal;
   const macroRows = [
-    { label: 'Protein', current: Math.round(todaySummary.totalProtein), goal: macroGoals.protein, color: 'bg-info' },
-    { label: 'Carbs', current: Math.round(todaySummary.totalCarbs), goal: macroGoals.carbs, color: 'bg-gold' },
-    { label: 'Fat', current: Math.round(todaySummary.totalFats), goal: macroGoals.fat, color: 'bg-terracotta' },
+    { label: 'Protein', current: Math.round(todaySummary.totalProtein), goal: macroGoals.protein, color: 'bg-primary' },
+    { label: 'Carbs', current: Math.round(todaySummary.totalCarbs), goal: macroGoals.carbs, color: 'bg-info' },
+    { label: 'Fat', current: Math.round(todaySummary.totalFats), goal: macroGoals.fat, color: 'bg-gold' },
   ];
 
   const progressMessage = useMemo(() => {

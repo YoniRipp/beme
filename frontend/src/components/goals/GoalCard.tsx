@@ -14,6 +14,7 @@ const GOAL_ICON_STYLES: Record<GoalType, { icon: React.ElementType; color: strin
   workouts: { icon: Dumbbell, color: 'text-info' },
   sleep: { icon: Moon, color: 'text-gold' },
 };
+
 const GOAL_LABELS: Record<GoalType, string> = {
   calories: 'calories',
   workouts: 'workouts',
@@ -40,39 +41,40 @@ export function GoalCard({ goal, onEdit }: GoalCardProps) {
   const style = GOAL_ICON_STYLES[goal.type];
   const Icon = style.icon;
   const achieved = progress.percentage >= 100;
+  const ringColor = achieved ? 'text-primary' : style.color;
   const radius = 26;
   const circumference = 2 * Math.PI * radius;
   const normalizedProgress = Math.min(progress.percentage, 100);
 
   return (
     <>
-      <Card className={cn('p-4 rounded-[22px]', achieved && 'border-success/40')}>
+      <Card className={cn('p-4 rounded-[22px]', achieved && 'border-primary/30')}>
         <div className="flex items-center gap-3.5">
           <div className="relative shrink-0">
             <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
-              <circle cx="32" cy="32" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
+              <circle cx="32" cy="32" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
               <circle
                 cx="32"
                 cy="32"
                 r={radius}
                 fill="none"
                 stroke="currentColor"
-                className={cn('transition-all duration-700', style.color)}
-                strokeWidth="5"
+                className={cn('transition-all duration-700', ringColor)}
+                strokeWidth="6"
                 strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={circumference * (1 - normalizedProgress / 100)}
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <Icon className={cn('w-5 h-5', style.color)} />
+              <Icon className={cn('w-5 h-5', ringColor)} />
             </div>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{goal.period}</p>
-            <h4 className="font-display text-base font-medium mt-0.5 capitalize">{goal.type} goal</h4>
+            <h4 className="font-display text-base font-semibold mt-0.5 capitalize">{goal.type} goal</h4>
             <p className="text-sm text-muted-foreground tabular-nums mt-1">
-              <span className={cn('font-bold', style.color)}>{formatGoalValue(goal.type, progress.current)}</span>
+              <span className={cn('font-bold', ringColor)}>{formatGoalValue(goal.type, progress.current)}</span>
               {' '}/ {formatGoalValue(goal.type, goal.target)} {GOAL_LABELS[goal.type]}
             </p>
             <p className="text-xs text-muted-foreground mt-1">{normalizedProgress.toFixed(0)}% complete</p>

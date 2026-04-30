@@ -70,20 +70,15 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
           </span>
         </div>
         {workout.exercises.length > 0 && (
-          <div className="mt-2 space-y-1.5">
+          <div className="mt-2 flex flex-wrap gap-1.5">
             {workout.exercises.slice(0, 3).map((ex, i) => (
-              <div key={i} className="flex items-center justify-between gap-3 rounded-lg bg-foreground/5 px-2.5 py-2">
-                <span className="min-w-0 truncate text-[12px] font-semibold text-foreground/90">{ex.name}</span>
-                <span className="shrink-0 text-[11px] font-medium tabular-nums text-muted-foreground">
-                  {ex.sets} sets × {ex.reps} reps{ex.weight ? ` · ${ex.weight}${getWeightUnit(settings.units)}` : ''}
-                </span>
-              </div>
+              <span key={i} className="inline-flex items-center text-[11px] font-semibold text-foreground/80 bg-foreground/5 px-2.5 py-1 rounded-[10px]">
+                {ex.name}
+                <span className="text-muted-foreground"> · {ex.sets}×{ex.reps}{ex.weight ? ` · ${ex.weight}${getWeightUnit(settings.units)}` : ''}</span>
+              </span>
             ))}
             {workout.exercises.length > 3 && (
-              <div className="inline-flex items-center gap-1 px-2 text-[11px] font-medium text-muted-foreground">
-                +{workout.exercises.length - 3} more
-                <ChevronRight className="h-3 w-3" />
-              </div>
+              <span className="text-[11px] font-medium text-muted-foreground px-1 py-1">+{workout.exercises.length - 3} more</span>
             )}
           </div>
         )}

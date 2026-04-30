@@ -44,9 +44,9 @@ describe('Energy Page', () => {
     render(<Energy />, { wrapper });
     await waitFor(() => {
       expect(screen.getByText(/^remaining$/i)).toBeInTheDocument();
-      expect(screen.getByText(/P\s*0\s*\/\s*120g/i)).toBeInTheDocument();
-      expect(screen.getByText(/C\s*0\s*\/\s*300g/i)).toBeInTheDocument();
-      expect(screen.getByText(/F\s*0\s*\/\s*80g/i)).toBeInTheDocument();
+      expect(screen.getByText(/^protein$/i)).toBeInTheDocument();
+      expect(screen.getByText(/^carbs$/i)).toBeInTheDocument();
+      expect(screen.getByText(/^fat$/i)).toBeInTheDocument();
     });
   });
 
