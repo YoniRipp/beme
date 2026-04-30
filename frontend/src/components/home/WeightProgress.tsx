@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useWeight } from '@/hooks/useWeight';
 import { useProfile } from '@/hooks/useProfile';
 import { Scale, TrendingDown, TrendingUp, Minus, Plus } from 'lucide-react';
 import { WeightLogModal } from './WeightLogModal';
+import { PulseCard } from '@/components/pulse/PulseUI';
 
 export function WeightProgress() {
   const { weightEntries, latestWeight } = useWeight();
@@ -22,14 +22,13 @@ export function WeightProgress() {
 
   return (
     <>
-      <Card className="overflow-hidden cursor-pointer hover:border-primary/30 hover:bg-muted/40 transition-colors press" onClick={() => setModalOpen(true)} role="button">
-        <CardContent className="p-5">
+      <PulseCard className="overflow-hidden cursor-pointer p-5 hover:border-primary/30 transition-colors press" onClick={() => setModalOpen(true)} role="button">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <div className="h-7 w-7 rounded-lg bg-primary/15 flex items-center justify-center">
                 <Scale className="w-4 h-4 text-primary" />
               </div>
-              <h3 className="font-display text-base font-medium tracking-tight">Weight</h3>
+              <h3 className="text-base font-bold tracking-tight">Weight</h3>
             </div>
             <div className="flex items-center gap-1 text-xs text-primary font-medium">
               <Plus className="w-3 h-3" />
@@ -40,7 +39,7 @@ export function WeightProgress() {
           {current ? (
             <div className="space-y-2.5">
               <div className="flex items-baseline gap-1.5">
-                <span className="font-display text-3xl font-medium tabular-nums leading-none">{current.toFixed(1)}</span>
+                <span className="text-3xl font-extrabold tabular-nums leading-none">{current.toFixed(1)}</span>
                 <span className="text-sm text-muted-foreground">kg</span>
               </div>
 
@@ -80,7 +79,7 @@ export function WeightProgress() {
                     return (
                       <div
                         key={entry.id || i}
-                        className="flex-1 bg-primary/40 rounded-t-sm transition-all"
+                        className="flex-1 bg-primary/60 rounded-t-sm transition-all"
                         style={{ height: `${Math.max(height, 10)}%` }}
                         title={`${entry.weight} kg`}
                       />
@@ -97,8 +96,7 @@ export function WeightProgress() {
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
+      </PulseCard>
 
       <WeightLogModal open={modalOpen} onOpenChange={setModalOpen} />
     </>

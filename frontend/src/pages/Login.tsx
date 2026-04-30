@@ -35,12 +35,12 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-[#0b0d0c] p-4 text-[#f4f7f4]">
+      <Card className="w-full max-w-md rounded-[24px] border-white/10 bg-[#15181a] text-[#f4f7f4] shadow-2xl">
         <CardHeader className="text-center space-y-4">
-          <img src="/logo.png" alt="TrackVibe" className="mx-auto max-w-[160px] w-auto h-16 rounded-lg object-contain" />
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Enter your email and password to access your account.</CardDescription>
+          <img src="/logo.png" alt="TrackVibe" className="mx-auto h-14 w-auto max-w-[150px] rounded-xl object-contain" />
+          <CardTitle className="text-2xl font-extrabold">TrackVibe</CardTitle>
+          <CardDescription className="text-white/55">Body, energy, and goals in one place.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -50,7 +50,7 @@ export function Login() {
               </p>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-white/75">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -59,11 +59,11 @@ export function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="rounded-[14px] h-[50px] px-4 text-[14px]"
+                className="rounded-[14px] h-[50px] border-white/10 bg-[#1d2123] px-4 text-[14px] text-white placeholder:text-white/30"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-white/75">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -71,15 +71,15 @@ export function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="rounded-[14px] h-[50px] px-4 text-[14px]"
+                className="rounded-[14px] h-[50px] border-white/10 bg-[#1d2123] px-4 text-[14px] text-white"
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full h-[50px] text-[15px] font-bold rounded-[14px] shadow-[0_8px_20px_rgba(46,125,62,0.25)] dark:shadow-[0_8px_20px_rgba(156,242,91,0.2)]" disabled={loading}>
+            <Button type="submit" className="w-full h-[50px] rounded-[14px] bg-[#9cf25b] text-[15px] font-extrabold text-[#0b0d0c] shadow-[0_0_24px_rgba(156,242,91,0.28),0_8px_20px_rgba(0,0,0,0.35)] hover:bg-[#a8f76b]" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
-            <Link to="/forgot-password" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <Link to="/forgot-password" className="text-sm text-white/55 hover:text-[#9cf25b] transition-colors">
               Forgot your password?
             </Link>
             <div className="relative my-2">
@@ -87,13 +87,13 @@ export function Login() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-[#15181a] px-2 text-white/45">Or continue with</span>
               </div>
             </div>
             <SocialLoginButtons />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-white/55">
               Don&apos;t have an account?{' '}
-              <Link to="/signup" className="text-primary underline-offset-4 hover:underline">
+              <Link to="/signup" className="text-[#9cf25b] underline-offset-4 hover:underline">
                 Sign up
               </Link>
             </p>

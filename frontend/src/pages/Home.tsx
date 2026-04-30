@@ -10,7 +10,6 @@ import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
 import { WorkoutModal } from '@/components/body/WorkoutModal';
 import { GoalModal } from '@/components/goals/GoalModal';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
-import { Card, CardContent } from '@/components/ui/card';
 import { VoiceMicHero } from '@/components/voice/VoiceMicHero';
 import { WaterTracker } from '@/components/home/WaterTracker';
 import { WeightProgress } from '@/components/home/WeightProgress';
@@ -28,6 +27,7 @@ import { Apple, ChevronRight, Droplets, Dumbbell, Moon, Scale, UtensilsCrossed, 
 import { isSameDay, format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { PulseCard, PulseHeader, PulsePage, PulseQuickTile, PulseRing, PulseSectionHeader, PulseStatCard } from '@/components/pulse/PulseUI';
 
 export function Home() {
   const navigate = useNavigate();
@@ -150,44 +150,35 @@ export function Home() {
   const todayDate = format(new Date(), 'EEE · MMM d');
 
   return (
-    <div className="max-w-lg md:max-w-6xl mx-auto space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{todayDate}</p>
-          <h1 className="font-display text-[30px] md:text-[36px] font-semibold dark:font-bold tracking-tight leading-tight mt-1">
-            Hi {firstName}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1.5">{progressMessage}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate('/settings')}
-          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-primary/10 hover:bg-primary/20 transition-colors press mt-1"
-          aria-label="Profile"
-        >
-          <User className="w-5 h-5 text-primary" />
-        </button>
-      </div>
+    <PulsePage>
+      <PulseHeader
+        kicker={todayDate}
+        title={<>Hey {firstName}</>}
+        subtitle={progressMessage}
+        action={
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            className="mt-1 flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-card hover:border-primary/50 transition-colors press"
+            aria-label="Profile"
+          >
+            <User className="w-5 h-5" />
+          </button>
+        }
+      />
 
       <ContentWithLoading loading={workoutsLoading || energyLoading || goalsLoading} loadingText="Loading dashboard...">
       <div className="space-y-5">
-        <Card className="overflow-hidden relative dark:bg-gradient-to-br dark:from-[#15181a] dark:to-[#1f2826]" data-onboarding="dashboard">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-4">
+        <PulseCard className="pulse-hero-glow relative overflow-hidden p-5" data-onboarding="dashboard">
+            <div className="relative z-10 mb-4 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
               <span className="text-primary">Today's fuel</span>
               <span>{Math.round(todaySummary.totalCal)} / {calGoalTarget} kcal</span>
             </div>
-            <div className="flex items-center gap-5">
-              <div className="relative w-[132px] h-[132px]">
-                <svg viewBox="0 0 100 100" className="w-[132px] h-[132px] -rotate-90">
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="11" />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="11" strokeLinecap="round" strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - calPct)} className="transition-all duration-700 ease-out" />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="font-display text-[34px] font-semibold tabular-nums leading-none">{Math.round(todaySummary.totalCal)}</span>
-                  <span className="text-[10px] text-muted-foreground mt-1">kcal</span>
-                </div>
-              </div>
+            <div className="relative z-10 flex items-center gap-5">
+              <PulseRing pct={calPct}>
+                <span className="text-[34px] font-extrabold tabular-nums leading-none tracking-tight">{Math.round(todaySummary.totalCal)}</span>
+                <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">kcal in</span>
+              </PulseRing>
               <div className="flex-1 space-y-3">
                 {macroRows.map((row) => {
                   const pct = row.goal > 0 ? Math.min(row.current / row.goal, 1) : 0;
@@ -205,44 +196,20 @@ export function Home() {
                 })}
               </div>
             </div>
-          </CardContent>
-        </Card>
+        </PulseCard>
 
         <div className="grid grid-cols-3 gap-2.5">
-          <button type="button" className="rounded-[18px] border border-border bg-card p-3 h-[100px] text-left press" onClick={() => navigate('/body')}>
-            <Dumbbell className="w-4 h-4 text-primary mb-2" />
-            <p className="font-display text-2xl leading-none">{workoutsThisWeek}</p>
-            <p className="text-xs text-muted-foreground mt-1">this week</p>
-          </button>
-          <button type="button" className="rounded-[18px] border border-border bg-card p-3 h-[100px] text-left press" onClick={() => setSleepModalOpen(true)}>
-            <Moon className="w-4 h-4 text-info mb-2" />
-            <p className="font-display text-2xl leading-none">{sleepHours}h</p>
-            <p className="text-xs text-muted-foreground mt-1">last night</p>
-          </button>
-          <button type="button" className="rounded-[18px] border border-border bg-card p-3 h-[100px] text-left press" onClick={() => navigate('/settings')}>
-            <Scale className="w-4 h-4 text-terracotta mb-2" />
-            <p className="font-display text-2xl leading-none">{weightKg}</p>
-            <p className="text-xs text-muted-foreground mt-1">kg</p>
-          </button>
+          <PulseStatCard icon={Dumbbell} label="Workouts" value={workoutsThisWeek} sub="this week" onClick={() => navigate('/body')} />
+          <PulseStatCard icon={Moon} label="Sleep" value={`${sleepHours}h`} sub="last night" color="text-info" onClick={() => setSleepModalOpen(true)} />
+          <PulseStatCard icon={Scale} label="Weight" value={weightKg} sub="kg" color="text-terracotta" onClick={() => navigate('/settings')} />
         </div>
 
+        <PulseSectionHeader title="Quick log" eyebrow="Tap to add" />
         <div className="grid grid-cols-2 gap-2.5">
-          <button type="button" onClick={() => setFoodModalOpen(true)} className="h-[78px] rounded-[18px] bg-primary text-primary-foreground px-4 flex items-center justify-between press">
-            <span className="text-sm font-bold">Log food</span>
-            <Apple className="w-[22px] h-[22px]" />
-          </button>
-          <button type="button" onClick={() => setWorkoutModalOpen(true)} className="h-[78px] rounded-[18px] border border-border bg-card px-4 flex items-center justify-between press">
-            <span className="text-sm font-bold">Log workout</span>
-            <Dumbbell className="w-[22px] h-[22px]" />
-          </button>
-          <button type="button" onClick={() => navigate('/energy')} className="h-[78px] rounded-[18px] border border-border bg-card px-4 flex items-center justify-between press">
-            <span className="text-sm font-bold">Water</span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted rounded-lg px-2 py-1"><Droplets className="w-3.5 h-3.5" />0/8</span>
-          </button>
-          <button type="button" onClick={() => setSleepModalOpen(true)} className="h-[78px] rounded-[18px] border border-border bg-card px-4 flex items-center justify-between press">
-            <span className="text-sm font-bold">Sleep</span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted rounded-lg px-2 py-1"><Moon className="w-3.5 h-3.5" />{sleepHours}h</span>
-          </button>
+          <PulseQuickTile icon={Apple} label="Log food" primary onClick={() => setFoodModalOpen(true)} />
+          <PulseQuickTile icon={Dumbbell} label="Log workout" onClick={() => setWorkoutModalOpen(true)} />
+          <PulseQuickTile icon={Droplets} label="Water" pill="Open" onClick={() => navigate('/water')} />
+          <PulseQuickTile icon={Moon} label="Sleep" pill={`${sleepHours}h`} onClick={() => setSleepModalOpen(true)} />
         </div>
 
         {/* Voice Input */}
@@ -263,16 +230,15 @@ export function Home() {
 
         {/* Recent Activity */}
         {recentActivity.length > 0 && (
-          <Card className="overflow-hidden">
-            <CardContent className="p-6">
-              <h3 className="font-display text-lg font-medium tracking-tight mb-4">Recent activity</h3>
+          <PulseCard className="overflow-hidden p-5">
+              <h3 className="mb-4 text-base font-bold tracking-tight">Recent activity</h3>
               <div className="space-y-1">
                 {recentActivity.map((item) => (
                   <div
                     key={`${item.type}-${item.id}`}
                     className="flex items-center gap-3 py-2.5"
                   >
-                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${item.type === 'food' ? 'bg-terracotta/10 text-terracotta' : 'bg-info/10 text-info'}`}>
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${item.type === 'food' ? 'bg-terracotta/15 text-terracotta' : 'bg-info/15 text-info'}`}>
                       {item.type === 'food'
                         ? <UtensilsCrossed className="w-4 h-4" />
                         : <Dumbbell className="w-4 h-4" />}
@@ -288,8 +254,7 @@ export function Home() {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+          </PulseCard>
         )}
       </div>
       </ContentWithLoading>
@@ -329,6 +294,6 @@ export function Home() {
 
       {/* Onboarding tour for first-time users */}
       {showTour && <OnboardingTour />}
-    </div>
+    </PulsePage>
   );
 }

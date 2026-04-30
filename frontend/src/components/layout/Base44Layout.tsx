@@ -40,6 +40,7 @@ const ROUTE_TO_TITLE: Record<string, string> = {
   '/': 'Home',
   '/body': 'Workouts',
   '/energy': 'Journal',
+  '/water': 'Water',
   '/goals': 'Goals',
   '/insights': 'Insights',
   '/settings': 'Settings',
@@ -180,7 +181,7 @@ export function Base44Layout() {
       {/* Main content */}
       <div className="lg:ml-72 min-h-screen">
         <header
-          className={`sticky top-0 z-30 transition-all duration-300
+          className={`hidden lg:sticky lg:block top-0 z-30 transition-all duration-300
             ${scrolled ? 'glass border-b border-border/70' : 'bg-transparent'}`}
         >
           <div className="flex items-center justify-between px-5 sm:px-6 lg:px-8 py-3 min-h-[60px]">
@@ -231,8 +232,8 @@ export function Base44Layout() {
           </div>
         </header>
 
-        <main className="px-5 sm:px-6 lg:px-8 pb-28 lg:pb-10 pt-3 animate-fade-up">
-          <div className="max-w-[700px] xl:max-w-none mx-auto">
+        <main className="px-4 sm:px-6 lg:px-8 pb-32 lg:pb-10 pt-5 lg:pt-3 animate-fade-up">
+          <div className="mx-auto max-w-[700px] xl:max-w-none">
             <Outlet />
           </div>
         </main>

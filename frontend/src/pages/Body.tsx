@@ -8,11 +8,11 @@ import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { SearchBar } from '@/components/shared/SearchBar';
 import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
-import { Card } from '@/components/ui/card';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isToday, isYesterday, parseISO, isWithinInterval } from 'date-fns';
 import { getPeriodRange } from '@/lib/dateRanges';
+import { PulseCard, PulseHeader, PulsePage } from '@/components/pulse/PulseUI';
 
 function groupWorkoutsByDate(workouts: Workout[], ascending = false): { date: string; label: string; workouts: Workout[] }[] {
   const byDate = new Map<string, Workout[]>();
@@ -130,7 +130,7 @@ export function Body() {
             <h4 className="text-xs font-semibold text-foreground/80 mb-2 pl-1">
               {dayLabel}
             </h4>
-            <div className="rounded-2xl border border-border bg-card shadow-card p-2 space-y-1">
+            <div className="space-y-2">
               {dayWorkouts.map((workout) => (
                 <WorkoutCard
                   key={workout.id}
@@ -148,10 +148,12 @@ export function Body() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <PulsePage>
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
-          <h2 className="font-display text-[28px] md:text-[32px] font-medium tracking-tight leading-tight sm:flex-1">Workouts</h2>
+          <div className="sm:flex-1">
+            <PulseHeader kicker="Body" title="Workouts" subtitle="Track strength, cardio, and weekly consistency." />
+          </div>
           <div className="w-full sm:max-w-64">
             <SearchBar
               value={searchQuery}
@@ -162,11 +164,11 @@ export function Body() {
         </div>
         <ContentWithLoading loading={workoutsLoading} loadingText="Loading workouts...">
           <div className="space-y-8">
-            <Card className="p-4">
+            <PulseCard className="p-4">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Goal · {weeklyGoal}/week</p>
-                  <p className="font-display text-3xl font-medium mt-1">
+                  <p className="text-3xl font-extrabold mt-1 tracking-tight">
                     <span className="text-primary">{workoutsThisWeek.length}</span>
                     <span className="text-muted-foreground">/{weeklyGoal}</span>
                   </p>
@@ -188,14 +190,14 @@ export function Body() {
                   </div>
                 ))}
               </div>
-            </Card>
+            </PulseCard>
 
             <div className="flex gap-2 overflow-x-auto no-scrollbar">
               {(['All', 'Strength', 'Cardio', 'Flexibility'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap press border transition-colors ${filter === f ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/40'}`}
+                  className={`px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap press border transition-colors ${filter === f ? 'bg-primary text-primary-foreground border-primary' : 'border-border bg-card text-muted-foreground hover:border-primary/40'}`}
                 >
                   {f}
                 </button>
@@ -241,6 +243,6 @@ export function Body() {
           setDeleteConfirmId(null);
         }}
       />
-    </div>
+    </PulsePage>
   );
 }

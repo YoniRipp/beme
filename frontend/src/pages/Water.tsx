@@ -1,0 +1,105 @@
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Droplets, Minus, Plus } from 'lucide-react';
+import { toast } from 'sonner';
+import { useWater } from '@/hooks/useWater';
+import { useProfile } from '@/hooks/useProfile';
+import { PulseBackButton, PulseCard, PulseHeader, PulsePage, PulseRing } from '@/components/pulse/PulseUI';
+
+export function Water() {
+  const navigate = useNavigate();
+  const { glasses, mlTotal, addGlass, removeGlass, waterLoading } = useWater();
+  const { profile } = useProfile();
+  const [busy, setBusy] = useState(false);
+  const goal = profile.waterGoalGlasses || 8;
+  const pct = Math.min(glasses / goal, 1);
+  const tiles = useMemo(() => Array.from({ length: Math.max(goal, 8) }), [goal]);
+
+  const adjustBy = async (delta: number) => {
+    if (busy || delta === 0) return;
+    setBusy(true);
+    try {
+      const count = Math.abs(delta);
+      for (let i = 0; i < count; i += 1) {
+        if (delta > 0) await addGlass();
+        else await removeGlass();
+      }
+    } catch {
+      toast.error('Could not update water');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setTarget = async (next: number) => {
+    const clamped = Math.max(0, next);
+    await adjustBy(clamped - glasses);
+  };
+
+  return (
+    <PulsePage narrow className="pb-28">
+      <PulseHeader
+        kicker="Today"
+        title="Water"
+        subtitle="Keep your hydration streak moving."
+        action={<PulseBackButton onClick={() => navigate(-1)} />}
+      />
+
+      <PulseCard className="overflow-hidden p-6 text-center">
+        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-info/15 text-info">
+          <Droplets className="h-6 w-6" />
+        </div>
+        <PulseRing pct={pct} size={180} stroke={9} colorClass="text-info" className="mx-auto">
+          <span className="text-[56px] font-extrabold leading-none tracking-tight text-info tabular-nums">{glasses}</span>
+          <span className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">of {goal}</span>
+        </PulseRing>
+        <p className="mt-4 text-sm font-semibold text-muted-foreground tabular-nums">{mlTotal} ml logged</p>
+
+        <div className="mt-6 grid grid-cols-4 gap-2">
+          {tiles.map((_, i) => {
+            const filled = i < glasses;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setTarget(filled && i === glasses - 1 ? i : i + 1)}
+                disabled={busy || waterLoading}
+                className={[
+                  'flex h-14 items-center justify-center rounded-xl border press',
+                  filled
+                    ? 'border-info bg-info text-white'
+                    : 'border-border bg-muted/40 text-muted-foreground hover:border-info/60',
+                ].join(' ')}
+                aria-label={`Set water to ${i + 1} glasses`}
+              >
+                <Droplets className="h-5 w-5" />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => adjustBy(-1)}
+            disabled={busy || waterLoading || glasses <= 0}
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-muted text-foreground disabled:opacity-40 press"
+            aria-label="Remove a glass"
+          >
+            <Minus className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => adjustBy(1)}
+            disabled={busy || waterLoading}
+            className="flex h-12 min-w-36 items-center justify-center gap-2 rounded-full bg-info px-5 text-sm font-extrabold text-white shadow-card-lg disabled:opacity-60 press"
+          >
+            <Plus className="h-4 w-4" />
+            Add glass
+          </button>
+        </div>
+      </PulseCard>
+    </PulsePage>
+  );
+}
+

@@ -6,6 +6,7 @@ import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import type { Goal } from '@/types/goals';
+import { PulseHeader, PulsePage } from '@/components/pulse/PulseUI';
 
 export function Goals() {
   const { goals, goalsLoading, goalsError, addGoal, updateGoal } = useGoals();
@@ -28,11 +29,8 @@ export function Goals() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h2 className="font-display text-[28px] md:text-[32px] font-semibold dark:font-bold tracking-tight leading-tight">Goals</h2>
-        <p className="text-sm text-muted-foreground mt-1.5">Set targets that guide your week.</p>
-      </div>
+    <PulsePage narrow>
+      <PulseHeader kicker="Goals" title="Stay on target" subtitle="Set targets that guide your week." />
 
       <ContentWithLoading loading={goalsLoading} loadingText="Loading goals..." error={goalsError}>
         <div className="space-y-3">
@@ -68,6 +66,6 @@ export function Goals() {
         onSave={handleGoalSave}
         goal={editingGoal}
       />
-    </div>
+    </PulsePage>
   );
 }

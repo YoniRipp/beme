@@ -14,6 +14,7 @@ import {
 import { FitnessInsightsSection } from '@/components/insights/FitnessInsightsSection';
 import { HealthInsightsSection } from '@/components/insights/HealthInsightsSection';
 import { AiInsightsSection } from '@/components/insights/AiInsightsSection';
+import { PulseHeader, PulsePage } from '@/components/pulse/PulseUI';
 
 export function Insights() {
   const { hasAiAccess } = useSubscription();
@@ -46,11 +47,8 @@ export function Insights() {
   }, [workouts]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <div>
-        <h2 className="font-display text-[28px] md:text-[32px] font-medium tracking-tight leading-tight">Insights</h2>
-        <p className="text-sm text-muted-foreground mt-1.5">Patterns and trends from your recent activity.</p>
-      </div>
+    <PulsePage className="space-y-6">
+      <PulseHeader kicker="Insights" title="Patterns" subtitle="Trends from your recent activity." />
 
       {hasAiAccess ? (
         <AiInsightsSection />
@@ -64,6 +62,6 @@ export function Insights() {
         fitnessInsights={fitnessInsights}
       />
       <HealthInsightsSection calorieTrend={calorieTrend} healthInsights={healthInsights} />
-    </div>
+    </PulsePage>
   );
 }

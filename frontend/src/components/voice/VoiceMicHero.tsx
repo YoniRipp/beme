@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, Lock, Loader2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useVoiceActions } from '@/hooks/useVoiceActions';
 import { toast } from '@/components/shared/ToastProvider';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn } from '@/lib/utils';
+import { PulseCard, PulseWave } from '@/components/pulse/PulseUI';
 
 const VOICE_USED_KEY = 'trackvibe_voice_used';
 const TAG = '[VoiceMicHero]';
@@ -161,8 +161,9 @@ export function VoiceMicHero() {
   const state = isStarting ? 'starting' : isListening ? 'listening' : isProcessing ? 'processing' : 'idle';
 
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="flex flex-col items-center gap-4 py-8">
+    <PulseCard className="overflow-hidden">
+      <div className="flex flex-col items-center gap-4 px-5 py-8">
+        {state === 'listening' && <PulseWave className="-mb-2" />}
         <button
           onClick={handleMicClick}
           disabled={state === 'processing'}
@@ -189,7 +190,7 @@ export function VoiceMicHero() {
         </button>
 
         <div className="text-center max-w-sm">
-          <p className="font-display text-lg font-medium tracking-tight text-foreground">
+          <p className="text-lg font-extrabold tracking-tight text-foreground">
             {!hasAiAccess
               ? "You've used all free calls this month"
               : state === 'starting'
@@ -218,7 +219,7 @@ export function VoiceMicHero() {
             {statusText}
           </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </PulseCard>
   );
 }

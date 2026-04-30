@@ -1,6 +1,6 @@
 import { Flame, Dumbbell, UtensilsCrossed, Droplets, Trophy } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { useStreaks } from '@/hooks/useStreaks';
+import { PulseCard } from '@/components/pulse/PulseUI';
 
 const STREAK_CONFIG = {
   workout: { label: 'Workout', icon: Dumbbell, color: 'text-info', bg: 'bg-info/10' },
@@ -22,11 +22,10 @@ export function StreakCard() {
   if (isLoading || !hasAnyStreak) return null;
 
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-5">
+    <PulseCard className="overflow-hidden bg-gradient-to-r from-card to-terracotta/10 p-5">
         <div className="flex items-center gap-2 mb-4">
           <Flame className="h-4 w-4 text-gold animate-flame-pulse" />
-          <h3 className="font-display text-base font-medium tracking-tight">Streaks</h3>
+          <h3 className="text-base font-bold tracking-tight">Streaks</h3>
         </div>
         <div className="flex gap-3">
           {streakItems.map(({ label, icon: Icon, color, bg, streak }) => {
@@ -37,7 +36,7 @@ export function StreakCard() {
                 <div className={`inline-flex items-center justify-center w-11 h-11 rounded-xl ${bg} mb-2`}>
                   <Icon className={`h-5 w-5 ${color}`} />
                 </div>
-                <div className="font-display text-2xl font-medium leading-none tabular-nums text-gold">{streak.currentCount}</div>
+                <div className="text-2xl font-extrabold leading-none tabular-nums text-gold">{streak.currentCount}</div>
                 <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1">{label}</div>
                 {isPersonalBest ? (
                   <div className="flex items-center justify-center gap-0.5 mt-1.5">
@@ -54,7 +53,6 @@ export function StreakCard() {
             );
           })}
         </div>
-      </CardContent>
-    </Card>
+    </PulseCard>
   );
 }

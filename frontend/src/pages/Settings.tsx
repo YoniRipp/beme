@@ -15,10 +15,13 @@ import { DataManagementSection } from '@/components/settings/DataManagementSecti
 import { SubscriptionSection } from '@/components/settings/SubscriptionSection';
 import { storage } from '@/lib/storage';
 import { PendingInvitations } from '@/components/trainer/PendingInvitations';
+import { useApp } from '@/context/AppContext';
+import { PulseCard, PulseHeader, PulsePage } from '@/components/pulse/PulseUI';
 
 export function Settings() {
   const { updateSettings } = useSettings();
   const { profile } = useProfile();
+  const { user } = useApp();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -42,11 +45,19 @@ export function Settings() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h2 className="font-display text-[28px] md:text-[32px] font-medium tracking-tight leading-tight">Settings</h2>
-        <p className="text-sm text-muted-foreground mt-1.5">Manage your account, preferences, and data.</p>
-      </div>
+    <PulsePage narrow className="space-y-5">
+      <PulseHeader kicker="Profile" title="Settings" subtitle="Manage your account, preferences, and data." />
+      <PulseCard className="flex items-center gap-4 p-5">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl font-extrabold text-primary-foreground shadow-card-lg">
+          {(user?.name ?? 'T').trim().charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-lg font-extrabold tracking-tight">{user?.name ?? 'TrackVibe user'}</p>
+          <p className="text-sm text-muted-foreground">
+            {profile.activityLevel ? `${profile.activityLevel} activity` : 'Fitness profile'}
+          </p>
+        </div>
+      </PulseCard>
       <SubscriptionSection />
       <AccountSection />
       <ProfileSection />
@@ -82,6 +93,6 @@ export function Settings() {
         cancelLabel="Cancel"
         variant="default"
       />
-    </div>
+    </PulsePage>
   );
 }

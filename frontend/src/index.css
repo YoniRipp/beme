@@ -103,7 +103,7 @@
     --ink: 138 10% 96%;
     --ink-2: 138 8% 68%;
     --ink-3: 138 5% 44%;
-    --hairline: 200 8% 12%;
+    --hairline: 200 8% 15%;
 
     --sage: 83 83% 64%;
     --sage-dark: 83 65% 48%;
@@ -135,7 +135,7 @@
     --primary-foreground: 12 10% 5%;
     --secondary: 200 8% 14%;
     --secondary-foreground: var(--ink);
-    --muted: 200 8% 14%;
+    --muted: 200 8% 15%;
     --muted-foreground: var(--ink-3);
     --accent: 200 8% 14%;
     --accent-foreground: var(--ink);
@@ -160,10 +160,10 @@
     --chart-4: 206 100% 68%;
     --chart-5: 138 8% 68%;
 
-    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.2);
-    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.22), 0 1px 3px 0 hsl(0 0% 0% / 0.3);
-    --shadow-md: 0 2px 4px -1px hsl(0 0% 0% / 0.25), 0 4px 8px -2px hsl(0 0% 0% / 0.3);
-    --shadow-lg: 0 6px 16px -4px hsl(0 0% 0% / 0.35), 0 12px 32px -8px hsl(0 0% 0% / 0.4);
+    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.24);
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.26), 0 8px 20px -10px hsl(0 0% 0% / 0.5);
+    --shadow-md: 0 2px 6px -2px hsl(0 0% 0% / 0.34), 0 14px 32px -14px hsl(0 0% 0% / 0.58);
+    --shadow-lg: 0 8px 22px -8px hsl(0 0% 0% / 0.55), 0 20px 44px -18px hsl(0 0% 0% / 0.72);
   }
 }
 
@@ -244,6 +244,10 @@
   .animate-flame-pulse { animation: flamePulse 2s ease-in-out infinite; }
   .animate-celebrate { animation: celebrate 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
   .animate-count-up { animation: countUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .animate-pulse-wave { animation: pulseWave 0.9s ease-in-out infinite; transform-origin: center; }
+  .pulse-card-glow { box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.04), var(--shadow-sm); }
+  .pulse-hero-glow { background-image: radial-gradient(circle at 88% 5%, hsl(var(--primary) / 0.22), transparent 34%), linear-gradient(140deg, hsl(var(--card)) 0%, hsl(165 12% 14%) 100%); }
+  .pulse-bottom-sheet { border-top-left-radius: 1.5rem; border-top-right-radius: 1.5rem; border-color: hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--foreground)); }
 }
 
 @keyframes fadeIn {
@@ -278,6 +282,10 @@
 @keyframes countUp {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulseWave {
+  0%, 100% { transform: scaleY(0.35); opacity: 0.55; }
+  50% { transform: scaleY(1); opacity: 1; }
 }
 @keyframes thinkingDots {
   0%, 20% { opacity: 0.3; }

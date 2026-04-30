@@ -15,6 +15,7 @@ import { executeVoiceAction, type VoiceExecutorContext } from '@/lib/voiceAction
 import { queryKeys } from '@/lib/queryClient';
 import { toast } from '@/components/shared/ToastProvider';
 import { LocalErrorBoundary } from '@/components/shared/LocalErrorBoundary';
+import { PulseWave } from '@/components/pulse/PulseUI';
 
 interface VoiceAgentPanelProps {
   open: boolean;
@@ -164,7 +165,7 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-[82vh] overflow-y-auto rounded-t-2xl px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+        className="pulse-bottom-sheet max-h-[82vh] overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
       >
         <SheetHeader className="pb-2">
           <SheetTitle className="text-center text-base font-semibold">Voice Agent</SheetTitle>
@@ -181,6 +182,8 @@ export function VoiceAgentPanel({ open, onOpenChange }: VoiceAgentPanelProps) {
                   {isNative ? 'Using native speech recognition' : 'Real-time streaming'}
                 </p>
               )}
+
+              {isListening && <PulseWave className="-mb-1" />}
 
               <button
                 type="button"

@@ -20,6 +20,7 @@ import { PeriodSelector } from '@/components/shared/PeriodSelector';
 import { Moon, Trash2, Pencil, ChevronDown, Plus, ClipboardList, Copy, Sun, CloudSun, Sunset, Cookie, UtensilsCrossed, Mic } from 'lucide-react';
 import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
+import { PulseCard, PulseHeader, PulsePage } from '@/components/pulse/PulseUI';
 
 interface FoodGroup {
   key: string;
@@ -182,7 +183,7 @@ function CollapsibleGroup({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="font-display text-base font-medium tabular-nums">{calLabel}</span>
+          <span className="text-base font-extrabold tabular-nums">{calLabel}</span>
           <ChevronDown
             className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
           />
@@ -216,15 +217,15 @@ function MealGroupHeader({
 }) {
   const Icon = MEAL_ICONS[meal];
   return (
-    <div className="flex items-center justify-between px-1 pt-1 pb-2">
+    <div className="flex items-center justify-between gap-3 px-1 pt-1 pb-2">
       <div className="flex items-center gap-2">
-        <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+        <div className="h-8 w-8 rounded-lg bg-primary/15 text-primary flex items-center justify-center">
           <Icon className="w-4 h-4" />
         </div>
         <span className="text-[13px] font-bold uppercase tracking-[0.04em]">{meal}</span>
       </div>
       <div className="text-right">
-        <p className="text-sm text-muted-foreground tabular-nums">{totalCal} kcal</p>
+        <p className="text-sm font-bold text-primary tabular-nums">{totalCal} kcal</p>
         <span className="text-[10px] text-muted-foreground tabular-nums hidden sm:inline">
           P {totalProtein}g · C {totalCarbs}g · F {totalFats}g
         </span>
@@ -232,7 +233,7 @@ function MealGroupHeader({
       <button
         type="button"
         onClick={() => onVoiceAdd(meal)}
-        className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-card press"
+        className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-card-lg press"
         aria-label={`Log ${meal.toLowerCase()} by voice`}
       >
         <Mic className="h-4 w-4" />
@@ -453,8 +454,13 @@ export function Energy() {
   };
 
   return (
-    <div className="max-w-lg md:max-w-6xl mx-auto space-y-5 pb-24">
+    <PulsePage className="pb-24">
       <ContentWithLoading loading={energyLoading} loadingText="Loading energy...">
+      <PulseHeader
+        kicker="Energy"
+        title="Food log"
+        subtitle={caloriePeriod === 'daily' ? 'Tap a meal mic and log naturally.' : 'Review your nutrition history.'}
+      />
       {/* Action buttons */}
       <div className="flex items-center justify-end gap-2">
         <Button
@@ -505,7 +511,7 @@ export function Energy() {
               <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="11" strokeLinecap="round" strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - calPct)} className="transition-all duration-700 ease-out" />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-display text-[34px] font-semibold tabular-nums leading-none tracking-tight">{Math.round(periodTotals.calories)}</span>
+              <span className="text-[34px] font-extrabold tabular-nums leading-none tracking-tight">{Math.round(periodTotals.calories)}</span>
               <span className="text-[10px] text-muted-foreground leading-none mt-1.5">of {calGoalTarget}{caloriePeriod !== 'daily' ? ' / day' : ''} kcal</span>
             </div>
           </div>
@@ -524,16 +530,15 @@ export function Energy() {
         return (
           <>
             {caloriePeriod === 'daily' && (
-              <Card className="overflow-hidden">
-                <CardContent className="p-5 space-y-3">
+              <PulseCard className="overflow-hidden p-5 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-display text-[38px] font-semibold leading-none tabular-nums">{Math.round(periodTotals.calories)}</p>
+                      <p className="text-[38px] font-extrabold leading-none tabular-nums tracking-tight">{Math.round(periodTotals.calories)}</p>
                       <p className="text-sm text-muted-foreground mt-1">/ {calGoalTarget} kcal</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Remaining</p>
-                      <p className="font-display text-[22px] font-semibold tabular-nums text-primary leading-tight">{remainingCal}</p>
+                      <p className="text-[22px] font-extrabold tabular-nums text-primary leading-tight">{remainingCal}</p>
                     </div>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -544,20 +549,15 @@ export function Energy() {
                     <p>C {Math.round(periodTotals.carbs)}/{macroGoals.carbs}g</p>
                     <p>F {Math.round(periodTotals.fats)}/{macroGoals.fat}g</p>
                   </div>
-                </CardContent>
-              </Card>
+              </PulseCard>
             )}
             {/* Mobile: stacked cards */}
             <div className="md:hidden space-y-4">
-              <Card className="overflow-hidden">
-                <CardContent className="p-5">
+              <PulseCard className="overflow-hidden p-5">
                   {periodSelectorEl}
                   {caloriePeriod !== 'daily' && <div className="flex justify-center mt-4">{calorieRingEl}</div>}
-                </CardContent>
-              </Card>
-              {caloriePeriod !== 'daily' && <Card className="overflow-hidden">
-                <CardContent className="p-5">{macroCirclesEl}</CardContent>
-              </Card>}
+              </PulseCard>
+              {caloriePeriod !== 'daily' && <PulseCard className="overflow-hidden p-5">{macroCirclesEl}</PulseCard>}
             </div>
 
             {/* Desktop: single card, all circles in one row */}
@@ -578,7 +578,7 @@ export function Energy() {
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="font-display text-xl font-medium tracking-tight">Journal</h3>
+            <h3 className="text-xl font-extrabold tracking-tight">Journal</h3>
             {caloriePeriod === 'daily' && (
               <p className="mt-1 text-xs text-muted-foreground">Tap a meal mic to log naturally.</p>
             )}
@@ -587,7 +587,7 @@ export function Energy() {
             <button
               type="button"
               onClick={() => handleVoiceFood()}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-card press"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-extrabold text-primary-foreground shadow-card-lg press"
             >
               <Mic className="h-4 w-4" />
               Voice
@@ -600,13 +600,13 @@ export function Energy() {
           <>
             {periodFoodEntries.length === 0 ? (
               /* Empty state */
-              <Card>
+              <PulseCard>
                 <div className="flex flex-col items-center gap-4 p-8 text-center">
                   <div className="w-16 h-16 rounded-2xl bg-terracotta/10 flex items-center justify-center">
                     <UtensilsCrossed className="w-7 h-7 text-terracotta" />
                   </div>
                   <div>
-                    <p className="font-display text-lg font-medium tracking-tight">What did you eat today?</p>
+                    <p className="text-lg font-extrabold tracking-tight">What did you eat today?</p>
                     <p className="text-sm text-muted-foreground mt-1.5 max-w-xs leading-relaxed">
                       Log your meals to track your nutrition and stay on top of your goals.
                     </p>
@@ -615,7 +615,7 @@ export function Energy() {
                     <button
                       type="button"
                       onClick={() => handleVoiceFood()}
-                      className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors press"
+                      className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-sm font-extrabold text-primary-foreground hover:bg-primary/90 transition-colors press"
                     >
                       <Mic className="w-4 h-4" />
                       Voice
@@ -630,7 +630,7 @@ export function Energy() {
                     </button>
                   </div>
                 </div>
-              </Card>
+              </PulseCard>
             ) : (
               <>
                 {/* Compact meal-grouped timeline */}
@@ -646,7 +646,7 @@ export function Energy() {
                           onVoiceAdd={handleVoiceFood}
                         />
                         {group.entries.length > 0 ? (
-                          <Card>
+                          <PulseCard>
                             <div className="p-2 space-y-1">
                               {group.entries.map((entry) => (
                                 <FoodCard
@@ -673,9 +673,9 @@ export function Energy() {
                                 </button>
                               </div>
                             </div>
-                          </Card>
+                          </PulseCard>
                         ) : (
-                          <div className="grid grid-cols-2 gap-2 rounded-2xl border-[1.5px] border-dashed border-border/80 p-2">
+                          <div className="grid grid-cols-2 gap-2 rounded-2xl border-[1.5px] border-dashed border-border/80 bg-card/40 p-2">
                             <button
                               type="button"
                               onClick={() => handleVoiceFood(group.meal)}
@@ -707,7 +707,7 @@ export function Energy() {
         ) : (
           /* Weekly/Monthly/Yearly: unified accordion */
           <>
-            <Card className="overflow-hidden divide-y divide-border">
+            <PulseCard className="overflow-hidden divide-y divide-border">
               {foodGroups.map((group, i) => (
                 <CollapsibleGroup
                   key={group.key}
@@ -718,15 +718,15 @@ export function Energy() {
                   onDelete={handleDeleteFood}
                 />
               ))}
-            </Card>
+            </PulseCard>
             <AddAnotherCard onClick={() => handleAddFood()} label="Add food entry" />
           </>
         )}
       </div>
 
       {/* Sleep Hours Card */}
-      <Card className="p-5 sm:p-6">
-        <h3 className="font-display text-xl font-medium tracking-tight mb-4">Sleep</h3>
+      <PulseCard className="p-5 sm:p-6">
+        <h3 className="text-xl font-extrabold tracking-tight mb-4">Sleep</h3>
 
         <PeriodSelector
           options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
@@ -738,7 +738,7 @@ export function Energy() {
         />
 
         <div className="my-5">
-          <p className="font-display text-4xl font-medium tabular-nums tracking-tight leading-none">
+          <p className="text-4xl font-extrabold tabular-nums tracking-tight leading-none">
             {sleepPeriod === 'daily'
               ? (selectedSleep.count > 0 ? <>{selectedSleep.hours.toFixed(1)}<span className="text-xl font-sans font-normal text-muted-foreground ml-1.5">h</span></> : <span className="text-base font-sans text-muted-foreground">Not logged</span>)
               : selectedSleep.count > 0
@@ -791,7 +791,7 @@ export function Energy() {
         )}
 
         <AddAnotherCard onClick={openSleepModalForToday} icon={Moon} label="Log sleep" />
-      </Card>
+      </PulseCard>
       </ContentWithLoading>
 
       <SleepEditModal
@@ -860,6 +860,6 @@ export function Energy() {
         onOpenChange={setDuplicateDialogOpen}
         onDuplicate={duplicateDay}
       />
-    </div>
+    </PulsePage>
   );
 }

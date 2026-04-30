@@ -12,6 +12,7 @@ import { parseFoodItems, getMealStartTime, inferMealFromTime, textContainsMealKe
 import type { MealType } from '@/features/energy/parseFoodText';
 import { searchFoods, lookupOrCreateFood } from '@/features/energy/api';
 import type { FoodSearchResult } from '@/features/energy/api';
+import { PulseWave } from '@/components/pulse/PulseUI';
 
 interface ResolvedEntry {
   name: string;
@@ -189,7 +190,7 @@ export default function QuickVoiceEntry({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-2xl max-h-[80vh] overflow-y-auto"
+        className="pulse-bottom-sheet max-h-[82vh] overflow-y-auto"
         showCloseButton={false}
       >
         <SheetHeader className="pb-2">
@@ -200,15 +201,16 @@ export default function QuickVoiceEntry({
 
         {phase === 'recording' && (
           <div className="flex flex-col items-center gap-4 py-6">
+            {isListening && <PulseWave className="-mb-2" />}
             {/* Mic button */}
             <button
               type="button"
               onClick={handleMicToggle}
               disabled={!isSupported && !showTextInput}
               className={[
-                'relative flex h-20 w-20 items-center justify-center rounded-full transition-colors',
+                'relative flex h-24 w-24 items-center justify-center rounded-full shadow-card-lg transition-colors',
                 isListening
-                  ? 'bg-red-500 text-white'
+                  ? 'bg-destructive text-destructive-foreground ring-[6px] ring-destructive/20'
                   : 'bg-primary text-primary-foreground',
                 !isSupported && !showTextInput ? 'opacity-40 cursor-not-allowed' : '',
               ].join(' ')}
@@ -225,7 +227,7 @@ export default function QuickVoiceEntry({
               )}
             </button>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm font-semibold text-muted-foreground">
               {isListening
                 ? 'Tap to stop'
                 : isSupported
@@ -249,13 +251,13 @@ export default function QuickVoiceEntry({
                   onChange={(e) => setTextInput(e.target.value)}
                   placeholder="e.g. 2 eggs, toast with butter, coffee"
                   rows={3}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                  className="w-full resize-none rounded-2xl border border-input bg-muted px-4 py-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
                 <button
                   type="button"
                   onClick={handleTextSubmit}
                   disabled={!textInput.trim()}
-                  className="mt-3 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-40"
+                  className="mt-3 w-full rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground disabled:opacity-40"
                 >
                   Add Items
                 </button>
@@ -280,7 +282,7 @@ export default function QuickVoiceEntry({
               <button
                 type="button"
                 onClick={handleDone}
-                className="mt-2 w-full max-w-xs rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
+                className="mt-2 w-full max-w-xs rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground"
               >
                 Done
               </button>
@@ -305,7 +307,7 @@ export default function QuickVoiceEntry({
                   {resolvedItems.map((item, idx) => (
                     <li
                       key={`${item.name}-${idx}`}
-                      className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3"
+                      className="flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 shadow-card"
                     >
                       <div className="flex-1 min-w-0 pr-3">
                         <div className="flex items-center gap-1.5">
@@ -341,7 +343,7 @@ export default function QuickVoiceEntry({
                   type="button"
                   onClick={handleSaveAll}
                   disabled={isSaving || resolvedItems.length === 0}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground disabled:opacity-40"
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground disabled:opacity-40"
                 >
                   {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                   Save All ({resolvedItems.length})

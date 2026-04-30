@@ -12,6 +12,7 @@ import { AppProviders } from './Providers';
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const Body = lazy(() => import('./pages/Body').then((m) => ({ default: m.Body })));
 const Energy = lazy(() => import('./pages/Energy').then((m) => ({ default: m.Energy })));
+const Water = lazy(() => import('./pages/Water').then((m) => ({ default: m.Water })));
 const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })));
 const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'));
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
@@ -123,6 +124,14 @@ function ProtectedAppRoutes() {
           element={
             <Suspense fallback={<LoadingSpinner text="Loading energy page..." />}>
               <Energy />
+            </Suspense>
+          }
+        />
+        <Route
+          path="water"
+          element={
+            <Suspense fallback={<LoadingSpinner text="Loading water..." />}>
+              <Water />
             </Suspense>
           }
         />

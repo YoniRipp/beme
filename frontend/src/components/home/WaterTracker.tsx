@@ -1,11 +1,13 @@
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useWater } from '@/hooks/useWater';
 import { useProfile } from '@/hooks/useProfile';
 import { Droplets, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { PulseCard } from '@/components/pulse/PulseUI';
 
 export function WaterTracker() {
+  const navigate = useNavigate();
   const { glasses, mlTotal, addGlass, removeGlass, waterLoading } = useWater();
   const { profile } = useProfile();
   const goal = profile.waterGoalGlasses || 8;
@@ -29,20 +31,21 @@ export function WaterTracker() {
   };
 
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-5">
+    <PulseCard className="overflow-hidden p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-info/10 flex items-center justify-center">
+            <div className="h-7 w-7 rounded-lg bg-info/15 flex items-center justify-center">
               <Droplets className="w-4 h-4 text-info" />
             </div>
-            <h3 className="font-display text-base font-medium tracking-tight">Water</h3>
+            <button type="button" onClick={() => navigate('/water')} className="text-base font-bold tracking-tight press">
+              Water
+            </button>
           </div>
           <span className="text-xs text-muted-foreground tabular-nums">{mlTotal} ml</span>
         </div>
 
         <div className="flex items-baseline gap-1.5 mb-3">
-          <span className="font-display text-3xl font-medium tabular-nums leading-none">{glasses}</span>
+          <span className="text-3xl font-extrabold tabular-nums leading-none">{glasses}</span>
           <span className="text-sm text-muted-foreground">/ {goal} glasses</span>
         </div>
 
@@ -58,7 +61,7 @@ export function WaterTracker() {
           <Button
             variant="outline"
             size="icon"
-            className="h-9 w-9 rounded-full"
+            className="h-9 w-9 rounded-full bg-muted"
             onClick={handleRemove}
             disabled={glasses <= 0 || waterLoading}
             aria-label="Remove a glass"
@@ -76,7 +79,6 @@ export function WaterTracker() {
             Add glass
           </Button>
         </div>
-      </CardContent>
-    </Card>
+    </PulseCard>
   );
 }

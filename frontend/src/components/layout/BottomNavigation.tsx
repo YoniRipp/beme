@@ -53,16 +53,16 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 14px)' }}
       aria-label="Main navigation"
     >
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background/95 to-transparent pointer-events-none" />
-      <div className="relative mx-3.5 mb-3.5 h-16 bg-card border border-border rounded-[22px] flex items-center justify-around shadow-card-lg pointer-events-auto">
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-none" />
+      <div className="relative mx-3.5 mb-3.5 h-16 rounded-[22px] border border-border bg-card/95 flex items-center justify-around shadow-card-lg pointer-events-auto backdrop-blur-xl">
         {leftItems.map(renderItem)}
         <div className="w-16" />
         {rightItems.map(renderItem)}
         <button
           type="button"
           onClick={onCenterPress}
-          className="absolute top-[-22px] left-1/2 -translate-x-1/2 w-[60px] h-[60px] rounded-full bg-primary flex items-center justify-center ring-[3px] ring-background press"
-          style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.35), 0 8px 20px rgba(0,0,0,0.3)' }}
+          className="absolute top-[-22px] left-1/2 -translate-x-1/2 w-[60px] h-[60px] rounded-full bg-primary text-primary-foreground flex items-center justify-center ring-[3px] ring-background press"
+          style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.35), 0 8px 20px rgba(0,0,0,0.4)' }}
           aria-label="Open voice"
         >
           <Mic className="w-6 h-6 text-primary-foreground" strokeWidth={2.2} />

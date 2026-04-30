@@ -21,7 +21,7 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
   const cardImageUrl = workout.exercises.map(ex => getImageUrl(ex.name)).find(Boolean);
   return (
     <div
-      className={`group flex items-start gap-3.5 p-4 rounded-[20px] bg-card hover:bg-muted/60 transition-colors cursor-pointer tap-target ${workout.completed ? 'opacity-75' : ''}`}
+      className={`group flex items-start gap-3.5 rounded-[20px] border border-border bg-card p-4 shadow-card hover:border-primary/35 transition-colors cursor-pointer tap-target ${workout.completed ? 'opacity-75' : ''}`}
       onClick={() => onEdit && onEdit(workout)}
       role="button"
       tabIndex={0}
@@ -55,10 +55,10 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <p className={`text-[15px] font-semibold truncate leading-tight ${workout.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+          <p className={`text-[15px] font-extrabold truncate leading-tight ${workout.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
             {workout.title}
           </p>
-          <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 text-[10px] px-1.5 py-0 h-4 font-medium uppercase tracking-wider">
+          <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 text-[10px] px-1.5 py-0 h-4 font-bold uppercase tracking-wider">
             {workout.type}
           </Badge>
         </div>
@@ -72,7 +72,7 @@ export const WorkoutCard = memo(function WorkoutCard({ workout, onEdit, onDelete
         {workout.exercises.length > 0 && (
           <div className="mt-2 space-y-1.5">
             {workout.exercises.slice(0, 3).map((ex, i) => (
-              <div key={i} className="flex items-center justify-between gap-3 rounded-lg bg-foreground/5 px-2.5 py-2">
+              <div key={i} className="flex items-center justify-between gap-3 rounded-lg bg-muted/70 px-2.5 py-2">
                 <span className="min-w-0 truncate text-[12px] font-semibold text-foreground/90">{ex.name}</span>
                 <span className="shrink-0 text-[11px] font-medium tabular-nums text-muted-foreground">
                   {ex.sets} sets × {ex.reps} reps{ex.weight ? ` · ${ex.weight}${getWeightUnit(settings.units)}` : ''}
