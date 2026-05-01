@@ -6,6 +6,8 @@ export interface Exercise {
   reps: number;
   /** When present, one rep count per set; length must equal sets. */
   repsPerSet?: number[];
+  /** When present, one weight value per set; length must equal sets. */
+  weightPerSet?: Array<number | undefined>;
   weight?: number;
   notes?: string;
 }

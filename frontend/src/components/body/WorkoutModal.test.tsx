@@ -35,24 +35,27 @@ describe('WorkoutModal', () => {
     expect(screen.getByLabelText('Set 3 reps')).toBeInTheDocument();
   });
 
-  it('shows more rep inputs when sets is increased', async () => {
+  it('adds and removes set rows from the set controls', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
     render(
       <WorkoutModal open={true} onOpenChange={vi.fn()} onSave={onSave} />
     );
 
-    const setsInputs = screen.getAllByPlaceholderText('3');
-    const setsInput = setsInputs[0];
-    await user.clear(setsInput);
-    await user.type(setsInput, '4');
+    await user.click(screen.getByRole('button', { name: /add set/i }));
 
     await waitFor(() => {
       expect(screen.getByLabelText('Set 4 reps')).toBeInTheDocument();
     });
+
+    await user.click(screen.getByRole('button', { name: /remove set 4/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Set 4 reps')).not.toBeInTheDocument();
+    });
   });
 
-  it('calls onSave with repsPerSet when filled and submitted', async () => {
+  it('calls onSave with per-set reps and weight when filled and submitted', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
     render(
@@ -66,6 +69,9 @@ describe('WorkoutModal', () => {
     await user.clear(set1Input);
     await user.type(set1Input, '10');
 
+    const set1WeightInput = screen.getByLabelText('Set 1 weight');
+    await user.type(set1WeightInput, '135');
+
     const submitButton = screen.getByRole('button', { name: /add workout/i });
     await user.click(submitButton);
 
@@ -76,6 +82,9 @@ describe('WorkoutModal', () => {
     expect(saved.exercises).toHaveLength(1);
     expect(saved.exercises[0].repsPerSet).toBeDefined();
     expect(saved.exercises[0].repsPerSet).toHaveLength(3);
+    expect(saved.exercises[0].weightPerSet).toBeDefined();
+    expect(saved.exercises[0].weightPerSet[0]).toBe(135);
+    expect(saved.exercises[0].weight).toBe(135);
   });
 
   it('loads workout with repsPerSet into form', () => {
@@ -129,8 +138,8 @@ describe('WorkoutModal', () => {
     );
 
     expect(screen.getByDisplayValue('Squat')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('4')).toBeInTheDocument();
     expect(screen.getByLabelText('Set 1 reps')).toHaveValue(10);
+    expect(screen.getByLabelText('Set 1 weight')).toHaveValue(225);
     expect(screen.getByLabelText('Set 4 reps')).toBeInTheDocument();
   });
 });

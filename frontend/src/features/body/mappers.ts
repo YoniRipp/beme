@@ -1,7 +1,15 @@
 import { Workout } from '@/types/workout';
 import { parseLocalDateString } from '@/lib/dateRanges';
 
-type ApiExercise = { name: string; sets: number; reps: number; repsPerSet?: number[]; weight?: number; notes?: string };
+type ApiExercise = {
+  name: string;
+  sets: number;
+  reps: number;
+  repsPerSet?: number[];
+  weightPerSet?: Array<number | null | undefined>;
+  weight?: number;
+  notes?: string;
+};
 
 export function apiWorkoutToWorkout(a: {
   id: string;
@@ -24,6 +32,9 @@ export function apiWorkoutToWorkout(a: {
       sets: e.sets,
       reps: e.reps,
       ...(e.repsPerSet && e.repsPerSet.length === e.sets ? { repsPerSet: e.repsPerSet } : undefined),
+      ...(e.weightPerSet && e.weightPerSet.length === e.sets
+        ? { weightPerSet: e.weightPerSet.map((value) => value ?? undefined) }
+        : undefined),
       weight: e.weight,
       notes: e.notes,
     })),

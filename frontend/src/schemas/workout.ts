@@ -9,6 +9,14 @@ const exerciseFormSchema = z
     sets: z.coerce.number().int().min(1).max(LIMITS.MAX_EXERCISE_SETS),
     reps: z.coerce.number().int().min(0).max(LIMITS.MAX_EXERCISE_REPS),
     repsPerSet: z.array(z.number().int().min(0).max(LIMITS.MAX_EXERCISE_REPS)).optional(),
+    weightPerSet: z
+      .array(
+        z.preprocess(
+          (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
+          z.number().min(0).max(LIMITS.MAX_EXERCISE_WEIGHT).optional()
+        )
+      )
+      .optional(),
     weight: z.preprocess(
       (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
       z.number().min(0).max(LIMITS.MAX_EXERCISE_WEIGHT).optional()
@@ -17,6 +25,10 @@ const exerciseFormSchema = z
   .refine((data) => !data.repsPerSet || data.repsPerSet.length === data.sets, {
     message: 'Reps per set must have one value per set',
     path: ['repsPerSet'],
+  })
+  .refine((data) => !data.weightPerSet || data.weightPerSet.length === data.sets, {
+    message: 'Weight per set must have one value per set',
+    path: ['weightPerSet'],
   });
 
 export const workoutFormSchema = z.object({

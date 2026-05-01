@@ -26,6 +26,7 @@ describe('workoutFormSchema', () => {
           sets: 3,
           reps: 10,
           repsPerSet: [10, 8, 6],
+          weightPerSet: [135, 135, 125],
           weight: 135,
         },
       ],
@@ -34,6 +35,7 @@ describe('workoutFormSchema', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.exercises[0].repsPerSet).toEqual([10, 8, 6]);
+      expect(result.data.exercises[0].weightPerSet).toEqual([135, 135, 125]);
     }
   });
 
@@ -93,5 +95,26 @@ describe('workoutFormSchema', () => {
     };
     const result = workoutFormSchema.safeParse(data);
     expect(result.success).toBe(false);
+  });
+
+  it('parses failure when weightPerSet length does not match sets', () => {
+    const data = {
+      ...baseWorkout,
+      exercises: [
+        {
+          name: 'Deadlift',
+          sets: 3,
+          reps: 5,
+          repsPerSet: [5, 5, 5],
+          weightPerSet: [225, 225],
+        },
+      ],
+    };
+    const result = workoutFormSchema.safeParse(data);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const weightPerSetError = result.error.issues.find((i) => i.path.includes('weightPerSet'));
+      expect(weightPerSetError).toBeDefined();
+    }
   });
 });

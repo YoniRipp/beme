@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, Copy, Save } from 'lucide-react';
+import { Plus, Trash2, Copy, Save, X } from 'lucide-react';
 import { STORAGE_KEYS, storage } from '@/lib/storage';
 import { toLocalDateString, parseLocalDateString } from '@/lib/dateRanges';
 import { toast } from 'sonner';
@@ -45,6 +45,7 @@ const defaultExercise: WorkoutFormValues['exercises'][0] = {
   sets: 3,
   reps: 10,
   repsPerSet: [10, 10, 10],
+  weightPerSet: [undefined, undefined, undefined],
   weight: undefined,
 };
 
@@ -190,24 +191,83 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
   const watchedTitle = watch('title');
   const watchedExercises = watch('exercises');
 
-  // Keep repsPerSet length in sync with sets for each exercise
+  // Keep per-set arrays in sync with each exercise's set count.
   useEffect(() => {
     const exercises = watchedExercises ?? [];
     exercises.forEach((ex, idx) => {
       if (!ex) return;
       const sets = Math.min(20, Math.max(1, Number(ex.sets) || 1));
-      const current = ex.repsPerSet ?? [];
-      if (current.length === sets) return;
-      let next: number[];
-      if (current.length < sets) {
-        const fill = ex.reps ?? 0;
-        next = [...current, ...Array.from({ length: sets - current.length }, () => (current.length ? current[current.length - 1] : fill))];
-      } else {
-        next = current.slice(0, sets);
+      const currentReps = ex.repsPerSet ?? [];
+      if (currentReps.length !== sets) {
+        let next: number[];
+        if (currentReps.length < sets) {
+          const fill = ex.reps ?? 0;
+          next = [
+            ...currentReps,
+            ...Array.from({ length: sets - currentReps.length }, () => (currentReps.length ? currentReps[currentReps.length - 1] : fill)),
+          ];
+        } else {
+          next = currentReps.slice(0, sets);
+        }
+        setValue(`exercises.${idx}.repsPerSet`, next, { shouldValidate: true });
       }
-      setValue(`exercises.${idx}.repsPerSet`, next, { shouldValidate: true });
+
+      const currentWeight = ex.weightPerSet ?? [];
+      if (currentWeight.length !== sets) {
+        let next: Array<number | undefined>;
+        if (currentWeight.length < sets) {
+          const fill = currentWeight.length ? currentWeight[currentWeight.length - 1] : ex.weight;
+          next = [...currentWeight, ...Array.from({ length: sets - currentWeight.length }, () => fill)];
+        } else {
+          next = currentWeight.slice(0, sets);
+        }
+        setValue(`exercises.${idx}.weightPerSet`, next, { shouldValidate: true });
+      }
     });
   }, [watchedExercises, setValue]);
+
+  const addSet = (exerciseIdx: number) => {
+    const exercise = watchedExercises?.[exerciseIdx];
+    if (!exercise) return;
+    const sets = Math.min(20, Math.max(1, Number(exercise.sets) || 1));
+    if (sets >= 20) return;
+    const repsPerSet = exercise.repsPerSet ?? Array.from({ length: sets }, () => exercise.reps ?? 0);
+    const weightPerSet = exercise.weightPerSet ?? Array.from({ length: sets }, () => exercise.weight);
+    const nextReps = [...repsPerSet, repsPerSet[repsPerSet.length - 1] ?? exercise.reps ?? 0];
+    const nextWeight = [...weightPerSet, weightPerSet[weightPerSet.length - 1] ?? exercise.weight];
+
+    setValue(`exercises.${exerciseIdx}.sets`, sets + 1, { shouldValidate: true, shouldDirty: true });
+    setValue(`exercises.${exerciseIdx}.repsPerSet`, nextReps, { shouldValidate: true, shouldDirty: true });
+    setValue(`exercises.${exerciseIdx}.weightPerSet`, nextWeight, { shouldValidate: true, shouldDirty: true });
+  };
+
+  const removeSet = (exerciseIdx: number, setIdx: number) => {
+    const exercise = watchedExercises?.[exerciseIdx];
+    if (!exercise) return;
+    const sets = Math.min(20, Math.max(1, Number(exercise.sets) || 1));
+    if (sets <= 1) return;
+    const repsPerSet = exercise.repsPerSet ?? Array.from({ length: sets }, () => exercise.reps ?? 0);
+    const weightPerSet = exercise.weightPerSet ?? Array.from({ length: sets }, () => exercise.weight);
+    const nextReps = repsPerSet.filter((_, idx) => idx !== setIdx);
+    const nextWeight = weightPerSet.filter((_, idx) => idx !== setIdx);
+
+    setValue(`exercises.${exerciseIdx}.sets`, sets - 1, { shouldValidate: true, shouldDirty: true });
+    setValue(`exercises.${exerciseIdx}.repsPerSet`, nextReps, { shouldValidate: true, shouldDirty: true });
+    setValue(`exercises.${exerciseIdx}.weightPerSet`, nextWeight, { shouldValidate: true, shouldDirty: true });
+    setValue(`exercises.${exerciseIdx}.reps`, nextReps[0] ?? 0, { shouldValidate: true, shouldDirty: true });
+    setValue(`exercises.${exerciseIdx}.weight`, nextWeight.find((value) => value !== undefined), { shouldValidate: true, shouldDirty: true });
+  };
+
+  const updateSetWeight = (exerciseIdx: number, setIdx: number, value: number | undefined) => {
+    const exercise = watchedExercises?.[exerciseIdx];
+    if (!exercise) return;
+    const sets = Math.min(20, Math.max(1, Number(exercise.sets) || 1));
+    const weightPerSet = exercise.weightPerSet ?? Array.from({ length: sets }, () => exercise.weight);
+    const next = [...weightPerSet];
+    next[setIdx] = value;
+    setValue(`exercises.${exerciseIdx}.weightPerSet`, next, { shouldValidate: true, shouldDirty: true });
+    setValue(`exercises.${exerciseIdx}.weight`, next.find((item) => item !== undefined), { shouldValidate: true, shouldDirty: true });
+  };
 
   useEffect(() => {
     if (open) {
@@ -231,7 +291,11 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                 e.repsPerSet && e.repsPerSet.length === e.sets
                   ? e.repsPerSet
                   : Array.from({ length: e.sets }, () => e.reps);
-              return { name: e.name, sets: e.sets, reps: e.reps, repsPerSet, weight: e.weight };
+              const weightPerSet =
+                e.weightPerSet && e.weightPerSet.length === e.sets
+                  ? e.weightPerSet
+                  : Array.from({ length: e.sets }, () => e.weight);
+              return { name: e.name, sets: e.sets, reps: e.reps, repsPerSet, weightPerSet, weight: e.weight };
             })
           : [defaultExercise],
       });
@@ -259,7 +323,11 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
               e.repsPerSet && e.repsPerSet.length === e.sets
                 ? e.repsPerSet
                 : Array.from({ length: e.sets }, () => e.reps);
-            return { name: e.name, sets: e.sets, reps: e.reps, repsPerSet, weight: e.weight };
+            const weightPerSet =
+              e.weightPerSet && e.weightPerSet.length === e.sets
+                ? e.weightPerSet
+                : Array.from({ length: e.sets }, () => e.weight);
+            return { name: e.name, sets: e.sets, reps: e.reps, repsPerSet, weightPerSet, weight: e.weight };
           })
         : [defaultExercise],
     });
@@ -287,7 +355,8 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
         sets: e.sets,
         reps: e.reps,
         ...(e.repsPerSet && e.repsPerSet.length === e.sets ? { repsPerSet: e.repsPerSet } : undefined),
-        weight: e.weight,
+        ...(e.weightPerSet && e.weightPerSet.length === e.sets ? { weightPerSet: e.weightPerSet } : undefined),
+        weight: e.weightPerSet?.find((value) => value !== undefined) ?? e.weight,
       })),
     };
     try {
@@ -317,7 +386,8 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
           sets: ex.sets,
           reps,
           ...(ex.repsPerSet && ex.repsPerSet.length === ex.sets ? { repsPerSet: ex.repsPerSet } : undefined),
-          weight: ex.weight,
+          ...(ex.weightPerSet && ex.weightPerSet.length === ex.sets ? { weightPerSet: ex.weightPerSet } : undefined),
+          weight: ex.weightPerSet?.find((value) => value !== undefined) ?? ex.weight,
         };
       });
     onSave({
@@ -449,11 +519,13 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                 {fields.map((field, idx) => {
                   const setsCount = Math.min(20, Math.max(1, Number(watchedExercises?.[idx]?.sets) || 1));
                   const repsPerSet = watchedExercises?.[idx]?.repsPerSet ?? Array.from({ length: setsCount }, () => watchedExercises?.[idx]?.reps ?? 0);
+                  const weightPerSet = watchedExercises?.[idx]?.weightPerSet ?? Array.from({ length: setsCount }, () => watchedExercises?.[idx]?.weight);
                   const repsError = errors.exercises?.[idx]?.repsPerSet;
+                  const weightError = errors.exercises?.[idx]?.weightPerSet;
                   return (
                     <div key={field.id} className="rounded-2xl border border-border bg-card p-3 shadow-card">
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-3">
+                      <div className="mb-3 space-y-2">
+                        <div className="relative">
                           {watchedExercises?.[idx]?.name ? (
                             <button
                               type="button"
@@ -463,7 +535,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                                   setLightboxImage({ src: imgUrl, alt: watchedExercises[idx].name });
                                 }
                               }}
-                              className="h-11 w-11 overflow-hidden rounded-xl bg-muted transition-all hover:ring-2 hover:ring-primary/50"
+                              className="block h-28 w-full overflow-hidden rounded-xl bg-muted transition-all hover:ring-2 hover:ring-primary/50"
                             >
                               <img
                                 src={getImageUrl(watchedExercises[idx].name) ?? ''}
@@ -473,17 +545,24 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                               />
                             </button>
                           ) : (
-                            <div className="h-11 w-11 rounded-xl bg-muted" />
+                            <div className="h-28 w-full rounded-xl bg-muted" />
                           )}
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-foreground">Exercise {idx + 1}</p>
-                            <p className="text-xs text-muted-foreground">Sets, reps, and load</p>
-                          </div>
-                        </div>
 
-                        <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={() => remove(idx)} aria-label="Remove exercise">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-2 h-8 w-8 rounded-full bg-background/80 text-muted-foreground backdrop-blur hover:text-destructive"
+                            onClick={() => remove(idx)}
+                            aria-label="Remove exercise"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="min-w-0 px-1">
+                          <p className="text-sm font-semibold text-foreground">Exercise {idx + 1}</p>
+                          <p className="text-xs text-muted-foreground">Sets, reps, and load</p>
+                        </div>
                       </div>
 
                       <div className="space-y-3">
@@ -511,68 +590,95 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                           )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <Label className="mb-1.5 block text-xs text-muted-foreground">Sets</Label>
-                            <Input
-                              type="number"
-                              placeholder="3"
-                              min={1}
-                              max={20}
-                              {...register(`exercises.${idx}.sets`)}
-                              aria-invalid={!!errors.exercises?.[idx]?.sets}
-                            />
-                            {errors.exercises?.[idx]?.sets && (
-                              <p className="text-xs text-destructive mt-1">{errors.exercises[idx]?.sets?.message}</p>
-                            )}
-                          </div>
-                          <div>
-                            <Label className="mb-1.5 block text-xs text-muted-foreground">{`Weight (${unit})`}</Label>
-                            <Controller
-                              name={`exercises.${idx}.weight`}
-                              control={control}
-                              render={({ field: weightField }) => (
-                                <Input
-                                  type="number"
-                                  placeholder={unit}
-                                  value={weightField.value ?? ''}
-                                  onChange={(e) => weightField.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                                  aria-invalid={!!errors.exercises?.[idx]?.weight}
-                                />
-                              )}
-                            />
-                          </div>
-                        </div>
                       </div>
 
                       <div className="mt-3 space-y-2 rounded-xl bg-muted/50 p-2">
-                        <div className="flex items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                          <span>Set</span>
-                          <span>Reps</span>
+                        <div className="flex items-center justify-between px-1">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Sets</p>
+                            <p className="text-xs text-muted-foreground">{setsCount} total</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-full px-3 text-xs"
+                            onClick={() => addSet(idx)}
+                            disabled={setsCount >= 20}
+                          >
+                            <Plus className="mr-1 h-3.5 w-3.5" />
+                            Add set
+                          </Button>
                         </div>
                         {Array.from({ length: setsCount }, (_, i) => (
-                          <div key={i} className="grid grid-cols-[1fr_5rem] items-center gap-3 rounded-lg bg-background/50 px-3 py-2">
-                            <span className="text-sm font-semibold text-muted-foreground">Set {i + 1}</span>
-                            <Input
-                              type="number"
-                              placeholder={`${i + 1}`}
-                              min={0}
-                              className="h-9 text-center"
-                              value={repsPerSet[i] ?? ''}
-                              onChange={(e) => {
-                                const v = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
-                                const next = [...(repsPerSet ?? [])];
-                                next[i] = v === undefined || Number.isNaN(v) ? 0 : v;
-                                setValue(`exercises.${idx}.repsPerSet`, next, { shouldValidate: true });
-                              }}
-                              aria-label={`Set ${i + 1} reps`}
-                            />
+                          <div key={i} className="rounded-lg bg-background/50 px-3 py-2">
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                              <span className="text-sm font-semibold text-muted-foreground">Set {i + 1}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-full text-muted-foreground hover:text-destructive"
+                                onClick={() => removeSet(idx, i)}
+                                disabled={setsCount <= 1}
+                                aria-label={`Remove set ${i + 1}`}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="mb-1 block text-[11px] text-muted-foreground">Reps</Label>
+                                <Input
+                                  type="number"
+                                  placeholder={`${i + 1}`}
+                                  min={0}
+                                  className="h-9 text-center"
+                                  value={repsPerSet[i] ?? ''}
+                                  onChange={(e) => {
+                                    const v = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                                    const next = [...(repsPerSet ?? [])];
+                                    next[i] = v === undefined || Number.isNaN(v) ? 0 : v;
+                                    setValue(`exercises.${idx}.repsPerSet`, next, { shouldValidate: true, shouldDirty: true });
+                                    if (i === 0) {
+                                      setValue(`exercises.${idx}.reps`, next[i] ?? 0, { shouldValidate: true, shouldDirty: true });
+                                    }
+                                  }}
+                                  aria-label={`Set ${i + 1} reps`}
+                                />
+                              </div>
+                              <div>
+                                <Label className="mb-1 block text-[11px] text-muted-foreground">{`Weight (${unit})`}</Label>
+                                <Input
+                                  type="number"
+                                  placeholder={unit}
+                                  min={0}
+                                  className="h-9 text-center"
+                                  value={weightPerSet[i] ?? ''}
+                                  onChange={(e) => {
+                                    const v = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                                    updateSetWeight(idx, i, v === undefined || Number.isNaN(v) ? undefined : v);
+                                  }}
+                                  aria-label={`Set ${i + 1} weight`}
+                                />
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
                       {repsError && (
                         <p className="mt-2 text-xs text-destructive" aria-live="polite">
                           {repsError.message}
+                        </p>
+                      )}
+                      {weightError && (
+                        <p className="mt-2 text-xs text-destructive" aria-live="polite">
+                          {weightError.message}
+                        </p>
+                      )}
+                      {errors.exercises?.[idx]?.sets && (
+                        <p className="mt-2 text-xs text-destructive" aria-live="polite">
+                          {errors.exercises[idx]?.sets?.message}
                         </p>
                       )}
                     </div>
