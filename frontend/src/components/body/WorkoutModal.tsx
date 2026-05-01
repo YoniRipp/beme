@@ -535,26 +535,22 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                   const weightPerSet = watchedExercises?.[idx]?.weightPerSet ?? Array.from({ length: setsCount }, () => watchedExercises?.[idx]?.weight);
                   const repsError = errors.exercises?.[idx]?.repsPerSet;
                   const weightError = errors.exercises?.[idx]?.weightPerSet;
+                  const exerciseName = watchedExercises?.[idx]?.name;
+                  const exerciseImageUrl = exerciseName ? getImageUrl(exerciseName) : undefined;
                   return (
                     <div key={field.id} className="rounded-2xl border border-border bg-card p-3 shadow-card">
                       <div className="mb-3 space-y-2">
                         <div className="relative">
-                          {watchedExercises?.[idx]?.name ? (
+                          {exerciseImageUrl && exerciseName ? (
                             <button
                               type="button"
-                              onClick={() => {
-                                const imgUrl = getImageUrl(watchedExercises[idx].name);
-                                if (imgUrl) {
-                                  setLightboxImage({ src: imgUrl, alt: watchedExercises[idx].name });
-                                }
-                              }}
+                              onClick={() => setLightboxImage({ src: exerciseImageUrl, alt: exerciseName })}
                               className="block h-28 w-full overflow-hidden rounded-xl bg-muted transition-all hover:ring-2 hover:ring-primary/50"
                             >
                               <img
-                                src={getImageUrl(watchedExercises[idx].name) ?? ''}
-                                alt={watchedExercises[idx].name}
+                                src={exerciseImageUrl}
+                                alt={exerciseName}
                                 className="w-full h-full object-cover"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                               />
                             </button>
                           ) : (
@@ -607,7 +603,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
 
                       </div>
 
-                      <div className="mt-3 space-y-2 rounded-xl bg-muted/50 p-2">
+                      <div className="mt-3 space-y-2 rounded-xl border border-border bg-muted/40 p-2">
                         <div className="flex items-center justify-between px-1">
                           <div>
                             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Sets</p>
@@ -615,14 +611,14 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                           </div>
                         </div>
                         {Array.from({ length: setsCount }, (_, i) => (
-                          <div key={i} className="space-y-3 rounded-lg bg-background/50 px-3 py-3">
+                          <div key={i} className="space-y-3 rounded-xl border border-border bg-card px-3 py-3 shadow-sm">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-semibold text-muted-foreground">Set {i + 1}</span>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 rounded-full text-muted-foreground hover:text-destructive"
+                                className="h-7 w-7 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
                                 onClick={() => removeSet(idx, i)}
                                 disabled={setsCount <= 1}
                                 aria-label={`Remove set ${i + 1}`}
@@ -637,25 +633,25 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                              <div className="grid grid-cols-[2rem_1fr_2rem] items-center gap-1.5 rounded-xl border border-border bg-card p-1.5">
+                              <div className="grid grid-cols-[2rem_1fr_2rem] items-center gap-1.5 rounded-xl border border-primary/25 bg-primary/5 p-1.5">
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 rounded-lg"
+                                  className="h-8 w-8 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
                                   onClick={() => updateSetReps(idx, i, (repsPerSet[i] ?? 0) - 1)}
                                   aria-label={`Decrease set ${i + 1} reps`}
                                 >
                                   -
                                 </Button>
-                                <span className="text-center text-sm font-bold tabular-nums" aria-label={`Set ${i + 1} reps`}>
+                                <span className="text-center text-sm font-extrabold tabular-nums text-foreground" aria-label={`Set ${i + 1} reps`}>
                                   {repsPerSet[i] ?? 0}
                                 </span>
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 rounded-lg"
+                                  className="h-8 w-8 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
                                   onClick={() => updateSetReps(idx, i, (repsPerSet[i] ?? 0) + 1)}
                                   aria-label={`Increase set ${i + 1} reps`}
                                 >
@@ -663,25 +659,25 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                                 </Button>
                               </div>
 
-                              <div className="grid grid-cols-[2.4rem_1fr_2.4rem] items-center gap-1.5 rounded-xl border border-border bg-card p-1.5">
+                              <div className="grid grid-cols-[2.4rem_1fr_2.4rem] items-center gap-1.5 rounded-xl border border-primary/25 bg-primary/5 p-1.5">
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-9 rounded-lg text-[11px]"
+                                  className="h-8 w-9 rounded-lg bg-primary/10 text-[11px] font-bold text-primary hover:bg-primary hover:text-primary-foreground"
                                   onClick={() => updateSetWeight(idx, i, Math.max(0, (weightPerSet[i] ?? 0) - 2.5))}
                                   aria-label={`Decrease set ${i + 1} weight by 2.5`}
                                 >
                                   -2.5
                                 </Button>
-                                <span className="text-center text-sm font-bold tabular-nums" aria-label={`Set ${i + 1} weight`}>
+                                <span className="text-center text-sm font-extrabold tabular-nums text-foreground" aria-label={`Set ${i + 1} weight`}>
                                   {weightPerSet[i] ?? 0}{unit}
                                 </span>
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-9 rounded-lg text-[11px]"
+                                  className="h-8 w-9 rounded-lg bg-primary/10 text-[11px] font-bold text-primary hover:bg-primary hover:text-primary-foreground"
                                   onClick={() => updateSetWeight(idx, i, (weightPerSet[i] ?? 0) + 2.5)}
                                   aria-label={`Increase set ${i + 1} weight by 2.5`}
                                 >
@@ -693,7 +689,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                         ))}
                         <button
                           type="button"
-                          className="flex min-h-[4.25rem] w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-background/35 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                          className="flex min-h-[4.25rem] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/45 bg-primary/5 text-sm font-bold text-primary transition-colors hover:border-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
                           onClick={() => addSet(idx)}
                           disabled={setsCount >= 20}
                         >
