@@ -258,6 +258,19 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
     setValue(`exercises.${exerciseIdx}.weight`, nextWeight.find((value) => value !== undefined), { shouldValidate: true, shouldDirty: true });
   };
 
+  const updateSetReps = (exerciseIdx: number, setIdx: number, value: number) => {
+    const exercise = watchedExercises?.[exerciseIdx];
+    if (!exercise) return;
+    const sets = Math.min(20, Math.max(1, Number(exercise.sets) || 1));
+    const repsPerSet = exercise.repsPerSet ?? Array.from({ length: sets }, () => exercise.reps ?? 0);
+    const next = [...repsPerSet];
+    next[setIdx] = Math.max(0, value);
+    setValue(`exercises.${exerciseIdx}.repsPerSet`, next, { shouldValidate: true, shouldDirty: true });
+    if (setIdx === 0) {
+      setValue(`exercises.${exerciseIdx}.reps`, next[0] ?? 0, { shouldValidate: true, shouldDirty: true });
+    }
+  };
+
   const updateSetWeight = (exerciseIdx: number, setIdx: number, value: number | undefined) => {
     const exercise = watchedExercises?.[exerciseIdx];
     if (!exercise) return;
@@ -548,20 +561,22 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                             <div className="h-28 w-full rounded-xl bg-muted" />
                           )}
 
+                        </div>
+                        <div className="flex items-start justify-between gap-3 px-1">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-foreground">Exercise {idx + 1}</p>
+                            <p className="text-xs text-muted-foreground">Sets, reps, and load</p>
+                          </div>
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-2 top-2 h-8 w-8 rounded-full bg-background/80 text-muted-foreground backdrop-blur hover:text-destructive"
+                            className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:text-destructive"
                             onClick={() => remove(idx)}
                             aria-label="Remove exercise"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
-                        </div>
-                        <div className="min-w-0 px-1">
-                          <p className="text-sm font-semibold text-foreground">Exercise {idx + 1}</p>
-                          <p className="text-xs text-muted-foreground">Sets, reps, and load</p>
                         </div>
                       </div>
 
@@ -598,21 +613,10 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Sets</p>
                             <p className="text-xs text-muted-foreground">{setsCount} total</p>
                           </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 rounded-full px-3 text-xs"
-                            onClick={() => addSet(idx)}
-                            disabled={setsCount >= 20}
-                          >
-                            <Plus className="mr-1 h-3.5 w-3.5" />
-                            Add set
-                          </Button>
                         </div>
                         {Array.from({ length: setsCount }, (_, i) => (
-                          <div key={i} className="rounded-lg bg-background/50 px-3 py-2">
-                            <div className="mb-2 flex items-center justify-between gap-2">
+                          <div key={i} className="space-y-3 rounded-lg bg-background/50 px-3 py-3">
+                            <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-semibold text-muted-foreground">Set {i + 1}</span>
                               <Button
                                 type="button"
@@ -626,45 +630,76 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                                 <X className="h-3.5 w-3.5" />
                               </Button>
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="mb-1 block text-[11px] text-muted-foreground">Reps</Label>
-                                <Input
-                                  type="number"
-                                  placeholder={`${i + 1}`}
-                                  min={0}
-                                  className="h-9 text-center"
-                                  value={repsPerSet[i] ?? ''}
-                                  onChange={(e) => {
-                                    const v = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
-                                    const next = [...(repsPerSet ?? [])];
-                                    next[i] = v === undefined || Number.isNaN(v) ? 0 : v;
-                                    setValue(`exercises.${idx}.repsPerSet`, next, { shouldValidate: true, shouldDirty: true });
-                                    if (i === 0) {
-                                      setValue(`exercises.${idx}.reps`, next[i] ?? 0, { shouldValidate: true, shouldDirty: true });
-                                    }
-                                  }}
-                                  aria-label={`Set ${i + 1} reps`}
-                                />
+
+                            <div className="grid grid-cols-2 gap-3 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                              <span>Reps</span>
+                              <span>Weight</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="grid grid-cols-[2rem_1fr_2rem] items-center gap-1.5 rounded-xl border border-border bg-card p-1.5">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg"
+                                  onClick={() => updateSetReps(idx, i, (repsPerSet[i] ?? 0) - 1)}
+                                  aria-label={`Decrease set ${i + 1} reps`}
+                                >
+                                  -
+                                </Button>
+                                <span className="text-center text-sm font-bold tabular-nums" aria-label={`Set ${i + 1} reps`}>
+                                  {repsPerSet[i] ?? 0}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg"
+                                  onClick={() => updateSetReps(idx, i, (repsPerSet[i] ?? 0) + 1)}
+                                  aria-label={`Increase set ${i + 1} reps`}
+                                >
+                                  +
+                                </Button>
                               </div>
-                              <div>
-                                <Label className="mb-1 block text-[11px] text-muted-foreground">{`Weight (${unit})`}</Label>
-                                <Input
-                                  type="number"
-                                  placeholder={unit}
-                                  min={0}
-                                  className="h-9 text-center"
-                                  value={weightPerSet[i] ?? ''}
-                                  onChange={(e) => {
-                                    const v = e.target.value === '' ? undefined : parseFloat(e.target.value);
-                                    updateSetWeight(idx, i, v === undefined || Number.isNaN(v) ? undefined : v);
-                                  }}
-                                  aria-label={`Set ${i + 1} weight`}
-                                />
+
+                              <div className="grid grid-cols-[2.4rem_1fr_2.4rem] items-center gap-1.5 rounded-xl border border-border bg-card p-1.5">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-9 rounded-lg text-[11px]"
+                                  onClick={() => updateSetWeight(idx, i, Math.max(0, (weightPerSet[i] ?? 0) - 2.5))}
+                                  aria-label={`Decrease set ${i + 1} weight by 2.5`}
+                                >
+                                  -2.5
+                                </Button>
+                                <span className="text-center text-sm font-bold tabular-nums" aria-label={`Set ${i + 1} weight`}>
+                                  {weightPerSet[i] ?? 0}{unit}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-9 rounded-lg text-[11px]"
+                                  onClick={() => updateSetWeight(idx, i, (weightPerSet[i] ?? 0) + 2.5)}
+                                  aria-label={`Increase set ${i + 1} weight by 2.5`}
+                                >
+                                  +2.5
+                                </Button>
                               </div>
                             </div>
                           </div>
                         ))}
+                        <button
+                          type="button"
+                          className="flex min-h-[4.25rem] w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-background/35 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={() => addSet(idx)}
+                          disabled={setsCount >= 20}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add set
+                        </button>
                       </div>
                       {repsError && (
                         <p className="mt-2 text-xs text-destructive" aria-live="polite">

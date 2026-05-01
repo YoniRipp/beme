@@ -55,7 +55,7 @@ describe('WorkoutModal', () => {
     });
   });
 
-  it('calls onSave with per-set reps and weight when filled and submitted', async () => {
+  it('calls onSave with per-set reps and weight when steppers are used and submitted', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
     render(
@@ -65,12 +65,8 @@ describe('WorkoutModal', () => {
     await user.type(screen.getByPlaceholderText(/e.g. Squat/i), 'Bench Press');
     await user.type(screen.getByLabelText(/duration/i), '45');
 
-    const set1Input = screen.getByLabelText('Set 1 reps');
-    await user.clear(set1Input);
-    await user.type(set1Input, '10');
-
-    const set1WeightInput = screen.getByLabelText('Set 1 weight');
-    await user.type(set1WeightInput, '135');
+    await user.click(screen.getByRole('button', { name: /increase set 1 reps/i }));
+    await user.click(screen.getByRole('button', { name: /increase set 1 weight by 2.5/i }));
 
     const submitButton = screen.getByRole('button', { name: /add workout/i });
     await user.click(submitButton);
@@ -83,8 +79,9 @@ describe('WorkoutModal', () => {
     expect(saved.exercises[0].repsPerSet).toBeDefined();
     expect(saved.exercises[0].repsPerSet).toHaveLength(3);
     expect(saved.exercises[0].weightPerSet).toBeDefined();
-    expect(saved.exercises[0].weightPerSet[0]).toBe(135);
-    expect(saved.exercises[0].weight).toBe(135);
+    expect(saved.exercises[0].repsPerSet[0]).toBe(11);
+    expect(saved.exercises[0].weightPerSet[0]).toBe(2.5);
+    expect(saved.exercises[0].weight).toBe(2.5);
   });
 
   it('loads workout with repsPerSet into form', () => {
@@ -111,9 +108,9 @@ describe('WorkoutModal', () => {
 
     expect(screen.getByRole('heading', { name: 'Edit Workout' })).toBeInTheDocument();
     expect(screen.getByDisplayValue('Bench Press')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('10')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('8')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('6')).toBeInTheDocument();
+    expect(screen.getByLabelText('Set 1 reps')).toHaveTextContent('10');
+    expect(screen.getByLabelText('Set 2 reps')).toHaveTextContent('8');
+    expect(screen.getByLabelText('Set 3 reps')).toHaveTextContent('6');
   });
 
   it('loads workout without repsPerSet using reps for each set', () => {
@@ -138,8 +135,8 @@ describe('WorkoutModal', () => {
     );
 
     expect(screen.getByDisplayValue('Squat')).toBeInTheDocument();
-    expect(screen.getByLabelText('Set 1 reps')).toHaveValue(10);
-    expect(screen.getByLabelText('Set 1 weight')).toHaveValue(225);
+    expect(screen.getByLabelText('Set 1 reps')).toHaveTextContent('10');
+    expect(screen.getByLabelText('Set 1 weight')).toHaveTextContent('225kg');
     expect(screen.getByLabelText('Set 4 reps')).toBeInTheDocument();
   });
 });
