@@ -23,7 +23,7 @@ import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
 import { StreakCard } from '@/components/home/StreakCard';
-import { Apple, ChevronRight, Droplets, Dumbbell, Moon, Pencil, Scale, UtensilsCrossed, User } from 'lucide-react';
+import { Apple, ChevronRight, Droplets, Dumbbell, Moon, Scale, SlidersHorizontal, UtensilsCrossed, User } from 'lucide-react';
 import { isSameDay, format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -171,17 +171,18 @@ export function Home() {
       <ContentWithLoading loading={workoutsLoading || energyLoading || goalsLoading} loadingText="Loading dashboard...">
       <div className="space-y-5">
         <PulseCard className="pulse-hero-glow relative overflow-hidden p-5" data-onboarding="dashboard">
-            <div className="relative z-10 mb-4 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="relative z-10 mb-4 flex items-center justify-between gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
               <span className="text-primary">Today's fuel</span>
               <div className="flex items-center gap-2">
                 <span>{Math.round(todaySummary.totalCal)} / {calGoalTarget} kcal</span>
                 <button
                   type="button"
                   onClick={() => setMacroGoalModalOpen(true)}
-                  className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors press"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
                   aria-label="Edit macro goals"
+                  title="Edit macros"
                 >
-                  <Pencil className="w-3 h-3" />
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -194,7 +195,13 @@ export function Home() {
                 {macroRows.map((row) => {
                   const pct = row.goal > 0 ? Math.min(row.current / row.goal, 1) : 0;
                   return (
-                    <div key={row.label}>
+                    <button
+                      key={row.label}
+                      type="button"
+                      onClick={() => setMacroGoalModalOpen(true)}
+                      className="block w-full rounded-xl p-1.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                      aria-label={`Edit ${row.label} goal`}
+                    >
                       <div className="flex justify-between text-xs mb-1">
                         <span className="font-medium">{row.label}</span>
                         <span className="text-muted-foreground tabular-nums">{row.current}/{row.goal}g</span>
@@ -202,7 +209,7 @@ export function Home() {
                       <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                         <div className={cn('h-full rounded-full', row.color)} style={{ width: `${pct * 100}%` }} />
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
