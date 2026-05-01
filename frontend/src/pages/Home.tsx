@@ -23,7 +23,7 @@ import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
 import { StreakCard } from '@/components/home/StreakCard';
-import { Apple, ChevronRight, Droplets, Dumbbell, Moon, Scale, UtensilsCrossed, User } from 'lucide-react';
+import { Apple, ChevronRight, Droplets, Dumbbell, Moon, Pencil, Scale, UtensilsCrossed, User } from 'lucide-react';
 import { isSameDay, format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -173,7 +173,17 @@ export function Home() {
         <PulseCard className="pulse-hero-glow relative overflow-hidden p-5" data-onboarding="dashboard">
             <div className="relative z-10 mb-4 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
               <span className="text-primary">Today's fuel</span>
-              <span>{Math.round(todaySummary.totalCal)} / {calGoalTarget} kcal</span>
+              <div className="flex items-center gap-2">
+                <span>{Math.round(todaySummary.totalCal)} / {calGoalTarget} kcal</span>
+                <button
+                  type="button"
+                  onClick={() => setMacroGoalModalOpen(true)}
+                  className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors press"
+                  aria-label="Edit macro goals"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+              </div>
             </div>
             <div className="relative z-10 flex items-center gap-5">
               <PulseRing pct={calPct}>
@@ -189,7 +199,7 @@ export function Home() {
                         <span className="font-medium">{row.label}</span>
                         <span className="text-muted-foreground tabular-nums">{row.current}/{row.goal}g</span>
                       </div>
-                      <div className="h-[5px] rounded-full bg-muted overflow-hidden">
+                      <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                         <div className={cn('h-full rounded-full', row.color)} style={{ width: `${pct * 100}%` }} />
                       </div>
                     </div>
