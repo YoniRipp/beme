@@ -354,7 +354,7 @@ export function Energy() {
   const recentCheckIns = useMemo(() => {
     return [...checkIns]
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 14);
+      .slice(0, 5);
   }, [checkIns]);
 
   const handleSleepSave = (hours: number) => {
@@ -461,27 +461,6 @@ export function Energy() {
         title="Food log"
         subtitle={caloriePeriod === 'daily' ? 'Tap a meal mic and log naturally.' : 'Review your nutrition history.'}
       />
-      {/* Action buttons */}
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1.5 h-8 text-xs"
-          onClick={() => setBulkModalOpen(true)}
-        >
-          <ClipboardList className="w-3.5 h-3.5" />
-          Add Menu
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1.5 h-8 text-xs"
-          onClick={() => setDuplicateDialogOpen(true)}
-        >
-          <Copy className="w-3.5 h-3.5" />
-          Copy Day
-        </Button>
-      </div>
 
       {/* Calorie + Macro Section */}
       {(() => {
@@ -583,16 +562,24 @@ export function Energy() {
               <p className="mt-1 text-xs text-muted-foreground">Tap a meal mic to log naturally.</p>
             )}
           </div>
-          {caloriePeriod === 'daily' && (
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              onClick={() => handleVoiceFood()}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-extrabold text-primary-foreground shadow-card-lg press"
+              onClick={() => setBulkModalOpen(true)}
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-bold text-muted-foreground hover:border-primary/40 hover:text-foreground press"
             >
-              <Mic className="h-4 w-4" />
-              Voice
+              <ClipboardList className="h-3.5 w-3.5" />
+              Menu
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setDuplicateDialogOpen(true)}
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-bold text-muted-foreground hover:border-primary/40 hover:text-foreground press"
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy
+            </button>
+          </div>
         </div>
 
         {caloriePeriod === 'daily' ? (
@@ -611,19 +598,11 @@ export function Energy() {
                       Log your meals to track your nutrition and stay on top of your goals.
                     </p>
                   </div>
-                  <div className="grid w-full max-w-xs grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleVoiceFood()}
-                      className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-sm font-extrabold text-primary-foreground hover:bg-primary/90 transition-colors press"
-                    >
-                      <Mic className="w-4 h-4" />
-                      Voice
-                    </button>
+                  <div className="w-full max-w-xs">
                     <button
                       type="button"
                       onClick={() => handleAddFood()}
-                      className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-4 text-sm font-semibold hover:border-primary/40 transition-colors press"
+                      className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-border bg-card px-4 text-sm font-semibold hover:border-primary/40 transition-colors press"
                     >
                       <Plus className="w-4 h-4" />
                       Add food
@@ -647,7 +626,7 @@ export function Energy() {
                         />
                         {group.entries.length > 0 ? (
                           <PulseCard>
-                            <div className="p-2 space-y-1">
+                            <div className="space-y-2 p-3">
                               {group.entries.map((entry) => (
                                 <FoodCard
                                   key={entry.id}
@@ -656,7 +635,7 @@ export function Energy() {
                                   onDelete={handleDeleteFood}
                                 />
                               ))}
-                              <div className="grid grid-cols-2 gap-2 px-1 pt-1">
+                              <div className="grid grid-cols-2 gap-2 pt-1">
                                 <button
                                   type="button"
                                   onClick={() => handleVoiceFood(group.meal)}

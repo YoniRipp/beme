@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
 import { useGoals } from '@/hooks/useGoals';
@@ -31,6 +31,7 @@ import { PulseCard, PulseHeader, PulsePage, PulseQuickTile, PulseRing, PulseSect
 
 export function Home() {
   const navigate = useNavigate();
+  const { openVoiceAgent } = useOutletContext<{ openVoiceAgent?: () => void }>() ?? {};
   const { workouts, workoutsLoading, addWorkout } = useWorkouts();
   const { checkIns, foodEntries, addCheckIn, updateCheckIn, addFoodEntry, getCheckInByDate, energyLoading } = useEnergy();
   const { addGoal, updateGoal, goalsLoading } = useGoals();
@@ -206,7 +207,7 @@ export function Home() {
 
         <PulseSectionHeader title="Quick log" eyebrow="Tap to add" />
         <div className="grid grid-cols-2 gap-2.5">
-          <PulseQuickTile icon={Apple} label="Log food" primary onClick={() => setFoodModalOpen(true)} />
+          <PulseQuickTile icon={Apple} label="Log food" onClick={() => setFoodModalOpen(true)} />
           <PulseQuickTile icon={Dumbbell} label="Log workout" onClick={() => setWorkoutModalOpen(true)} />
           <PulseQuickTile icon={Droplets} label="Water" pill="Open" onClick={() => navigate('/water')} />
           <PulseQuickTile icon={Moon} label="Sleep" pill={`${sleepHours}h`} onClick={() => setSleepModalOpen(true)} />
@@ -214,7 +215,7 @@ export function Home() {
 
         {/* Voice Input */}
         <div data-onboarding="voice">
-          <VoiceMicHero />
+          <VoiceMicHero onOpenAgent={() => openVoiceAgent?.()} />
         </div>
 
         {/* Streaks */}

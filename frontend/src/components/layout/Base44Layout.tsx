@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { AiChatPanel } from '../insights/AiChatPanel';
-import { VoiceAgentButton } from '../voice/VoiceAgentButton';
 import { VoiceAgentPanel } from '../voice/VoiceAgentPanel';
 import { QuickAddMenu } from '../shared/QuickAddMenu';
 import { BottomNavigation } from './BottomNavigation';
@@ -234,7 +233,7 @@ export function Base44Layout() {
 
         <main className="px-4 sm:px-6 lg:px-8 pb-32 lg:pb-10 pt-5 lg:pt-3 animate-fade-up">
           <div className="mx-auto max-w-[700px] xl:max-w-none">
-            <Outlet />
+            <Outlet context={{ openVoiceAgent: () => setVoicePanelOpen(true) }} />
           </div>
         </main>
       </div>
@@ -247,7 +246,6 @@ export function Base44Layout() {
       />
 
       <QuickAddMenu open={quickAddOpen} onOpenChange={setQuickAddOpen} />
-      {pathname !== '/' && <VoiceAgentButton panelOpen={voicePanelOpen} onTogglePanel={() => setVoicePanelOpen((prev) => !prev)} />}
       <VoiceAgentPanel open={voicePanelOpen} onOpenChange={setVoicePanelOpen} />
 
       {/* AI Chat FAB — bottom-right, above mobile nav */}

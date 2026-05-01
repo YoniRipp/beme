@@ -445,22 +445,15 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                   Add Exercise
                 </Button>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-                <div className="grid gap-2 grid-cols-[2.5rem_1fr_5rem_minmax(0,1fr)_6rem] items-center text-xs font-medium text-muted-foreground">
-                  <span></span>
-                  <span>Exercise name</span>
-                  <span className="text-center">Sets</span>
-                  <span>Reps per set</span>
-                  <span className="text-center">{`Weight (${unit})`}</span>
-                </div>
+              <div className="space-y-3">
                 {fields.map((field, idx) => {
                   const setsCount = Math.min(20, Math.max(1, Number(watchedExercises?.[idx]?.sets) || 1));
                   const repsPerSet = watchedExercises?.[idx]?.repsPerSet ?? Array.from({ length: setsCount }, () => watchedExercises?.[idx]?.reps ?? 0);
                   const repsError = errors.exercises?.[idx]?.repsPerSet;
                   return (
-                    <div key={field.id} className="space-y-1">
-                      <div className="grid gap-2 grid-cols-[2.5rem_1fr_5rem_minmax(0,1fr)_6rem] items-start">
-                        <div className="flex items-center justify-center pt-1">
+                    <div key={field.id} className="rounded-2xl border border-border bg-card p-3 shadow-card">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
                           {watchedExercises?.[idx]?.name ? (
                             <button
                               type="button"
@@ -470,7 +463,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                                   setLightboxImage({ src: imgUrl, alt: watchedExercises[idx].name });
                                 }
                               }}
-                              className="w-9 h-9 rounded-lg overflow-hidden bg-muted flex-shrink-0 hover:ring-2 hover:ring-primary/50 transition-all"
+                              className="h-11 w-11 overflow-hidden rounded-xl bg-muted transition-all hover:ring-2 hover:ring-primary/50"
                             >
                               <img
                                 src={getImageUrl(watchedExercises[idx].name) ?? ''}
@@ -480,10 +473,22 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                               />
                             </button>
                           ) : (
-                            <div className="w-9 h-9 rounded-lg bg-muted" />
+                            <div className="h-11 w-11 rounded-xl bg-muted" />
                           )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-foreground">Exercise {idx + 1}</p>
+                            <p className="text-xs text-muted-foreground">Sets, reps, and load</p>
+                          </div>
                         </div>
+
+                        <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={() => remove(idx)} aria-label="Remove exercise">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3">
                         <div>
+                          <Label className="mb-1.5 block text-xs text-muted-foreground">Exercise name</Label>
                           <Controller
                             name={`exercises.${idx}.name`}
                             control={control}
@@ -505,27 +510,54 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                             </p>
                           )}
                         </div>
-                        <div>
-                          <Input
-                            type="number"
-                            placeholder="3"
-                            min={1}
-                            max={20}
-                            {...register(`exercises.${idx}.sets`)}
-                            aria-invalid={!!errors.exercises?.[idx]?.sets}
-                          />
-                          {errors.exercises?.[idx]?.sets && (
-                            <p className="text-xs text-destructive mt-1">{errors.exercises[idx]?.sets?.message}</p>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 items-center min-h-10">
-                          {Array.from({ length: setsCount }, (_, i) => (
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="mb-1.5 block text-xs text-muted-foreground">Sets</Label>
                             <Input
-                              key={i}
+                              type="number"
+                              placeholder="3"
+                              min={1}
+                              max={20}
+                              {...register(`exercises.${idx}.sets`)}
+                              aria-invalid={!!errors.exercises?.[idx]?.sets}
+                            />
+                            {errors.exercises?.[idx]?.sets && (
+                              <p className="text-xs text-destructive mt-1">{errors.exercises[idx]?.sets?.message}</p>
+                            )}
+                          </div>
+                          <div>
+                            <Label className="mb-1.5 block text-xs text-muted-foreground">{`Weight (${unit})`}</Label>
+                            <Controller
+                              name={`exercises.${idx}.weight`}
+                              control={control}
+                              render={({ field: weightField }) => (
+                                <Input
+                                  type="number"
+                                  placeholder={unit}
+                                  value={weightField.value ?? ''}
+                                  onChange={(e) => weightField.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                                  aria-invalid={!!errors.exercises?.[idx]?.weight}
+                                />
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 space-y-2 rounded-xl bg-muted/50 p-2">
+                        <div className="flex items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                          <span>Set</span>
+                          <span>Reps</span>
+                        </div>
+                        {Array.from({ length: setsCount }, (_, i) => (
+                          <div key={i} className="grid grid-cols-[1fr_5rem] items-center gap-3 rounded-lg bg-background/50 px-3 py-2">
+                            <span className="text-sm font-semibold text-muted-foreground">Set {i + 1}</span>
+                            <Input
                               type="number"
                               placeholder={`${i + 1}`}
                               min={0}
-                              className="w-14 min-w-14 text-center"
+                              className="h-9 text-center"
                               value={repsPerSet[i] ?? ''}
                               onChange={(e) => {
                                 const v = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
@@ -535,30 +567,11 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                               }}
                               aria-label={`Set ${i + 1} reps`}
                             />
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-1">
-                        <Controller
-                          name={`exercises.${idx}.weight`}
-                          control={control}
-                          render={({ field: weightField }) => (
-                            <Input
-                              type="number"
-                              placeholder={unit}
-                              className="w-full"
-                              value={weightField.value ?? ''}
-                              onChange={(e) => weightField.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                              aria-invalid={!!errors.exercises?.[idx]?.weight}
-                            />
-                          )}
-                        />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(idx)} aria-label="Remove exercise">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                          </div>
+                        ))}
                       </div>
                       {repsError && (
-                        <p className="text-xs text-destructive" aria-live="polite">
+                        <p className="mt-2 text-xs text-destructive" aria-live="polite">
                           {repsError.message}
                         </p>
                       )}
