@@ -191,22 +191,54 @@ export function Base44Layout() {
 
       {/* Main content */}
       <div className="lg:ml-72 min-h-screen">
+        {/* Mobile top bar */}
+        <header className="sticky top-0 z-30 lg:hidden bg-card/95 backdrop-blur-xl border-b border-border">
+          <div className="flex items-center justify-between px-4 py-3 min-h-[56px]">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((o) => !o)}
+              className="-ml-1 p-2 rounded-xl hover:bg-muted transition-colors press"
+              aria-label="Toggle menu"
+            >
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            <h2 className="font-display text-lg font-semibold tracking-tight leading-none">{pageTitle}</h2>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="p-1 rounded-full hover:bg-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Open user menu"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-4 h-4 text-primary" />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[11rem]">
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 cursor-pointer text-muted-foreground focus:text-foreground"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        {/* Desktop header */}
         <header
           className={`hidden lg:sticky lg:block top-0 z-30 transition-all duration-300
             ${scrolled ? 'glass border-b border-border/70' : 'bg-transparent'}`}
         >
           <div className="flex items-center justify-between px-5 sm:px-6 lg:px-8 py-3 min-h-[60px]">
-            <div className="flex items-center gap-2.5">
-              <button
-                type="button"
-                onClick={() => setSidebarOpen((o) => !o)}
-                className="lg:hidden -ml-2 p-2 rounded-xl hover:bg-muted transition-colors press"
-                aria-label="Toggle menu"
-              >
-                {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
-              <h2 className="font-display text-[22px] font-medium tracking-tight leading-none">{pageTitle}</h2>
-            </div>
+            <h2 className="font-display text-[22px] font-medium tracking-tight leading-none">{pageTitle}</h2>
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-muted-foreground">
                 <Sun className="w-3.5 h-3.5" />

@@ -45,7 +45,7 @@ export function Settings() {
   };
 
   return (
-    <PulsePage narrow className="space-y-5">
+    <PulsePage className="space-y-5">
       <PulseHeader kicker="Profile" title="Settings" subtitle="Manage your account, preferences, and data." />
       <PulseCard className="flex items-center gap-4 p-5">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl font-extrabold text-primary-foreground shadow-card-lg">

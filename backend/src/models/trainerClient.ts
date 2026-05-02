@@ -113,6 +113,17 @@ export async function findInvitationByCode(code: string): Promise<TrainerInvitat
   return result.rows.length > 0 ? rowToTrainerInvitation(result.rows[0]) : null;
 }
 
+export async function findInvitationByIdForEmail(id: string, email: string): Promise<TrainerInvitation | null> {
+  const db = getPool();
+  const result = await db.query(
+    `SELECT id, trainer_id, email, invite_code, status, expires_at, created_at
+     FROM trainer_invitations
+     WHERE id = $1 AND email = $2 AND status = 'pending' AND expires_at > now()`,
+    [id, email],
+  );
+  return result.rows.length > 0 ? rowToTrainerInvitation(result.rows[0]) : null;
+}
+
 export async function findPendingInvitationsByEmail(email: string): Promise<Array<TrainerInvitation & { trainerName: string }>> {
   const db = getPool();
   const result = await db.query(
