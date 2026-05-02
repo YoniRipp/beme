@@ -43,7 +43,7 @@ const ROUTE_TO_TITLE: Record<string, string> = {
   '/goals': 'Goals',
   '/insights': 'Insights',
   '/settings': 'Settings',
-  '/trainer': 'Trainer',
+  '/trainer': 'My Clients',
   '/admin': 'Admin',
 };
 
@@ -56,13 +56,24 @@ const SIDEBAR_NAV_BASE = [
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
-/** MFP-style bottom nav: 4 items split around a center "+" button */
-const BOTTOM_NAV_ITEMS = [
+const BOTTOM_NAV_BASE = [
   { name: 'Home', path: '/', icon: Home },
   { name: 'Body', path: '/body', icon: Dumbbell },
   { name: 'Energy', path: '/energy', icon: Flame },
   { name: 'Goals', path: '/goals', icon: Target },
 ];
+
+function getBottomNav(role?: string) {
+  if (role === 'trainer' || role === 'admin') {
+    return [
+      { name: 'Home', path: '/', icon: Home },
+      { name: 'Body', path: '/body', icon: Dumbbell },
+      { name: 'Clients', path: '/trainer', icon: Users },
+      { name: 'Goals', path: '/goals', icon: Target },
+    ];
+  }
+  return BOTTOM_NAV_BASE;
+}
 
 function getSidebarNav(isAdmin: boolean, isTrainer: boolean) {
   const nav = [...SIDEBAR_NAV_BASE];
@@ -92,6 +103,7 @@ export function Base44Layout() {
     navigate('/login', { replace: true });
   };
   const sidebarNav = useMemo(() => getSidebarNav(user?.role === 'admin', user?.role === 'trainer'), [user?.role]);
+  const bottomNavItems = useMemo(() => getBottomNav(user?.role), [user?.role]);
 
   const pageTitle = getPageTitle(pathname);
 
@@ -240,7 +252,7 @@ export function Base44Layout() {
 
       {/* Mobile bottom nav with center "+" */}
       <BottomNavigation
-        items={BOTTOM_NAV_ITEMS}
+        items={bottomNavItems}
         currentPath={pathname}
         onCenterPress={() => setVoicePanelOpen((prev) => !prev)}
       />

@@ -1,204 +1,329 @@
+import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PulseCard, PulsePage } from '@/components/pulse/PulseUI';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
-import { ArrowLeft, Dumbbell, UtensilsCrossed, Moon, Target } from 'lucide-react';
+import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
+import {
+  ArrowLeft,
+  Droplets,
+  Dumbbell,
+  Moon,
+  Target,
+  UtensilsCrossed,
+} from 'lucide-react';
 import {
   useTrainerClients,
   useTrainerClientWorkouts,
   useTrainerClientFoodEntries,
   useTrainerClientCheckIns,
   useTrainerClientGoals,
+  useTrainerClientWater,
 } from '@/hooks/useTrainer';
+import { format, isSameDay } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { useState } from 'react';
+
+type Tab = 'food' | 'workouts' | 'water' | 'checkins' | 'goals';
+
+const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+  { id: 'food',     label: 'Food',      icon: UtensilsCrossed },
+  { id: 'workouts', label: 'Workouts',  icon: Dumbbell },
+  { id: 'water',    label: 'Water',     icon: Droplets },
+  { id: 'checkins', label: 'Check-ins', icon: Moon },
+  { id: 'goals',    label: 'Goals',     icon: Target },
+];
 
 export default function TrainerClientView() {
   const { clientId = '' } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<Tab>('food');
 
   const { data: clients = [] } = useTrainerClients();
   const client = clients.find((c) => c.clientId === clientId);
 
   const { data: workoutsData, isLoading: loadingWorkouts } = useTrainerClientWorkouts(clientId);
-  const { data: foodData, isLoading: loadingFood } = useTrainerClientFoodEntries(clientId);
+  const { data: foodData,     isLoading: loadingFood }     = useTrainerClientFoodEntries(clientId);
   const { data: checkInsData, isLoading: loadingCheckIns } = useTrainerClientCheckIns(clientId);
-  const { data: goalsData, isLoading: loadingGoals } = useTrainerClientGoals(clientId);
+  const { data: goalsData,    isLoading: loadingGoals }    = useTrainerClientGoals(clientId);
+  const { data: waterData,    isLoading: loadingWater }    = useTrainerClientWater(clientId);
 
-  const workouts = workoutsData?.data ?? [];
-  const foodEntries = foodData?.data ?? [];
-  const checkIns = checkInsData?.data ?? [];
-  const goals = goalsData?.data ?? [];
+  const workouts    = workoutsData?.data  ?? [];
+  const foodEntries = foodData?.data      ?? [];
+  const checkIns    = checkInsData?.data  ?? [];
+  const goals       = goalsData?.data     ?? [];
+  const waterEntries = waterData          ?? [];
 
-  const isLoading = loadingWorkouts || loadingFood || loadingCheckIns || loadingGoals;
+  const isLoading = loadingWorkouts || loadingFood || loadingCheckIns || loadingGoals || loadingWater;
+
+  // Summary stats
+  const stats = useMemo(() => {
+    const today = new Date();
+    const todayFood = foodEntries.filter((f: Record<string, unknown>) =>
+      isSameDay(new Date(f.date as string), today)
+    );
+    const avgCal = foodEntries.length > 0
+      ? Math.round(
+          foodEntries.reduce((s: number, f: Record<string, unknown>) => s + (Number(f.calories) || 0), 0) /
+          new Set(foodEntries.map((f: Record<string, unknown>) => f.date)).size
+        )
+      : 0;
+    const todayCal = todayFood.reduce((s: number, f: Record<string, unknown>) => s + (Number(f.calories) || 0), 0);
+    const avgSleep = checkIns.length > 0
+      ? (
+          checkIns.reduce((s: number, c: Record<string, unknown>) => s + (Number(c.sleepHours) || 0), 0) /
+          checkIns.length
+        ).toFixed(1)
+      : '—';
+    const todayWater = waterEntries.find((w: Record<string, unknown>) =>
+      isSameDay(new Date(w.date as string), today)
+    );
+    return { avgCal, todayCal, avgSleep, waterToday: (todayWater as Record<string, unknown>)?.glasses ?? 0 };
+  }, [foodEntries, checkIns, waterEntries]);
+
+  const joinedDate = client?.createdAt
+    ? format(new Date(client.createdAt), 'MMM d, yyyy')
+    : null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/trainer')}>
-          <ArrowLeft className="w-4 h-4 mr-1" />
+    <PulsePage>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-5">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/trainer')}
+          className="-ml-2 gap-1"
+        >
+          <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {client?.clientName ?? 'Client'}
-          </h1>
-          {client?.clientEmail && (
-            <p className="text-sm text-muted-foreground">{client.clientEmail}</p>
-          )}
-        </div>
       </div>
 
-      {isLoading ? (
-        <LoadingSpinner text="Loading client data..." />
-      ) : (
-        <Tabs defaultValue="workouts">
-          <TabsList>
-            <TabsTrigger value="workouts" className="gap-1.5">
-              <Dumbbell className="w-3.5 h-3.5" />
-              Workouts ({workouts.length})
-            </TabsTrigger>
-            <TabsTrigger value="food" className="gap-1.5">
-              <UtensilsCrossed className="w-3.5 h-3.5" />
-              Food ({foodEntries.length})
-            </TabsTrigger>
-            <TabsTrigger value="checkins" className="gap-1.5">
-              <Moon className="w-3.5 h-3.5" />
-              Check-ins ({checkIns.length})
-            </TabsTrigger>
-            <TabsTrigger value="goals" className="gap-1.5">
-              <Target className="w-3.5 h-3.5" />
-              Goals ({goals.length})
-            </TabsTrigger>
-          </TabsList>
+      {/* Client card */}
+      <PulseCard className="mb-5 flex items-center gap-4 p-5">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-extrabold text-primary">
+          {(client?.clientName ?? '?').trim().charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-lg font-extrabold tracking-tight">{client?.clientName ?? 'Client'}</p>
+          <p className="text-sm text-muted-foreground truncate">{client?.clientEmail}</p>
+          {joinedDate && (
+            <p className="text-xs text-muted-foreground mt-0.5">Client since {joinedDate}</p>
+          )}
+        </div>
+      </PulseCard>
 
-          <TabsContent value="workouts" className="mt-4">
-            <DataList
-              items={workouts}
-              emptyMessage="No workouts recorded yet."
-              renderItem={(item: Record<string, unknown>) => (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {String(item.title || 'Workout')}
+      {/* Summary stats */}
+      <div className="grid grid-cols-4 gap-2.5 mb-5">
+        <StatChip label="Workouts" value={workouts.length} />
+        <StatChip label="Avg cal" value={stats.avgCal > 0 ? stats.avgCal.toLocaleString() : '—'} />
+        <StatChip label="Avg sleep" value={`${stats.avgSleep}h`} />
+        <StatChip label="Water today" value={`${stats.waterToday}gl`} />
+      </div>
+
+      <ContentWithLoading loading={isLoading} loadingText="Loading client data...">
+        {/* Tab bar */}
+        <div className="flex gap-1 overflow-x-auto pb-1 mb-4 scrollbar-none">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const count = tabCount(tab.id, workouts, foodEntries, checkIns, goals, waterEntries);
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors press',
+                  activeTab === tab.id
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+                {count > 0 && (
+                  <span className={cn(
+                    'rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
+                    activeTab === tab.id ? 'bg-primary-foreground/20' : 'bg-muted-foreground/20'
+                  )}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab content */}
+        {activeTab === 'food' && (
+          <EntryList
+            items={foodEntries}
+            emptyMessage="No food entries yet."
+            renderItem={(item) => (
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{String(item.name || 'Food')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(item.date as string)}
+                    {item.mealType ? ` · ${item.mealType}` : ''}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-semibold">{item.calories != null ? `${item.calories} cal` : ''}</p>
+                  {(item.protein != null || item.carbs != null || item.fats != null) && (
+                    <p className="text-[11px] text-muted-foreground">
+                      P{item.protein ?? 0}·C{item.carbs ?? 0}·F{item.fats ?? 0}g
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {String(item.date || '')} - {String(item.type || 'strength')}
-                      {item.durationMinutes ? ` - ${item.durationMinutes} min` : ''}
-                    </p>
-                  </div>
-                  {Array.isArray(item.exercises) && (
-                    <span className="text-xs text-muted-foreground">
-                      {item.exercises.length} exercise{item.exercises.length !== 1 ? 's' : ''}
-                    </span>
                   )}
                 </div>
-              )}
-            />
-          </TabsContent>
+              </div>
+            )}
+          />
+        )}
 
-          <TabsContent value="food" className="mt-4">
-            <DataList
-              items={foodEntries}
-              emptyMessage="No food entries recorded yet."
-              renderItem={(item: Record<string, unknown>) => (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {String(item.name || 'Food')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {String(item.date || '')}
-                      {item.mealType ? ` - ${item.mealType}` : ''}
-                    </p>
-                  </div>
-                  {item.calories != null && (
-                    <span className="text-xs text-muted-foreground">{String(item.calories)} cal</span>
+        {activeTab === 'workouts' && (
+          <EntryList
+            items={workouts}
+            emptyMessage="No workouts yet."
+            renderItem={(item) => (
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{String(item.title || 'Workout')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(item.date as string)}
+                    {item.type ? ` · ${item.type}` : ''}
+                    {item.durationMinutes ? ` · ${item.durationMinutes} min` : ''}
+                  </p>
+                </div>
+                {Array.isArray(item.exercises) && (
+                  <p className="text-sm text-muted-foreground shrink-0">
+                    {item.exercises.length} exercise{item.exercises.length !== 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+            )}
+          />
+        )}
+
+        {activeTab === 'water' && (
+          <EntryList
+            items={waterEntries as Record<string, unknown>[]}
+            emptyMessage="No water entries yet."
+            renderItem={(item) => (
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium">{formatDate(item.date as string)}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-semibold text-info">{item.glasses as number} glasses</p>
+                  {item.mlTotal != null && Number(item.mlTotal) > 0 && (
+                    <p className="text-xs text-muted-foreground">{item.mlTotal} ml</p>
                   )}
                 </div>
-              )}
-            />
-          </TabsContent>
+              </div>
+            )}
+          />
+        )}
 
-          <TabsContent value="checkins" className="mt-4">
-            <DataList
-              items={checkIns}
-              emptyMessage="No check-ins recorded yet."
-              renderItem={(item: Record<string, unknown>) => (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {String(item.date || '')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.sleepHours != null ? `Sleep: ${item.sleepHours}h` : ''}
-                      {item.energyLevel != null ? ` | Energy: ${item.energyLevel}/10` : ''}
-                      {item.mood != null ? ` | Mood: ${item.mood}/10` : ''}
-                    </p>
-                  </div>
+        {activeTab === 'checkins' && (
+          <EntryList
+            items={checkIns}
+            emptyMessage="No check-ins yet."
+            renderItem={(item) => (
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-medium">{formatDate(item.date as string)}</p>
+                <div className="text-right text-xs text-muted-foreground space-y-0.5">
+                  {item.sleepHours != null && <p>Sleep {item.sleepHours}h</p>}
+                  {item.energyLevel != null && <p>Energy {item.energyLevel}/5</p>}
+                  {item.mood && <p>Mood: {item.mood}</p>}
                 </div>
-              )}
-            />
-          </TabsContent>
+              </div>
+            )}
+          />
+        )}
 
-          <TabsContent value="goals" className="mt-4">
-            <DataList
-              items={goals}
-              emptyMessage="No goals set yet."
-              renderItem={(item: Record<string, unknown>) => (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {String(item.type || 'Goal')}: {String(item.target || '')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {String(item.period || '')}
-                      {item.startDate ? ` | ${item.startDate}` : ''}
-                    </p>
-                  </div>
+        {activeTab === 'goals' && (
+          <EntryList
+            items={goals}
+            emptyMessage="No goals set yet."
+            renderItem={(item) => (
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium capitalize">{String(item.type || 'Goal')}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{String(item.period || '')}</p>
                 </div>
-              )}
-            />
-          </TabsContent>
-        </Tabs>
-      )}
-    </div>
+                <p className="text-sm font-semibold shrink-0">{String(item.target ?? '')}</p>
+              </div>
+            )}
+          />
+        )}
+      </ContentWithLoading>
+    </PulsePage>
   );
 }
 
-interface DataListProps {
+// ─── Helpers ───────────────────────────────────────────────
+
+function tabCount(
+  tab: Tab,
+  workouts: unknown[],
+  food: unknown[],
+  checkIns: unknown[],
+  goals: unknown[],
+  water: unknown[]
+) {
+  switch (tab) {
+    case 'food': return food.length;
+    case 'workouts': return workouts.length;
+    case 'checkins': return checkIns.length;
+    case 'goals': return goals.length;
+    case 'water': return water.length;
+  }
+}
+
+function formatDate(dateStr: string) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    return isSameDay(d, new Date()) ? 'Today' : format(d, 'MMM d, yyyy');
+  } catch {
+    return dateStr;
+  }
+}
+
+interface EntryListProps {
   items: Record<string, unknown>[];
   emptyMessage: string;
   renderItem: (item: Record<string, unknown>) => React.ReactNode;
 }
 
-function DataList({ items, emptyMessage, renderItem }: DataListProps) {
+function EntryList({ items, emptyMessage, renderItem }: EntryListProps) {
   if (items.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <p className="text-muted-foreground text-sm">{emptyMessage}</p>
-        </CardContent>
-      </Card>
+      <PulseCard className="py-12 text-center">
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+      </PulseCard>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm text-muted-foreground">{items.length} entries</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          {items.map((item, index) => (
-            <div
-              key={String(item.id ?? index)}
-              className="p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors"
-            >
-              {renderItem(item)}
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <PulseCard className="overflow-hidden p-0">
+      <div className="divide-y divide-border">
+        {items.map((item, i) => (
+          <div key={String(item.id ?? i)} className="px-5 py-3.5">
+            {renderItem(item)}
+          </div>
+        ))}
+      </div>
+    </PulseCard>
+  );
+}
+
+function StatChip({ label, value }: { label: string; value: string | number }) {
+  return (
+    <PulseCard className="p-3 text-center">
+      <p className="text-lg font-extrabold tabular-nums leading-none">{value}</p>
+      <p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground leading-none">{label}</p>
+    </PulseCard>
   );
 }

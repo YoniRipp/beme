@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Loader2, UserCheck, UserPlus } from 'lucide-react';
 import { usePendingTrainerInvitations, useAcceptInvitation, useMyTrainer } from '@/hooks/useTrainer';
+import { PulseCard } from '@/components/pulse/PulseUI';
 import { toast } from 'sonner';
 
 export function PendingInvitations() {
@@ -13,15 +12,18 @@ export function PendingInvitations() {
   const acceptMutation = useAcceptInvitation();
   const [manualCode, setManualCode] = useState('');
 
+  if (loadingInvitations || loadingTrainer) return null;
+
+  const trainer = trainerData?.trainer;
+  const pending = invitations.filter((inv) => inv.status === 'pending');
+
   const handleAccept = (code: string) => {
     acceptMutation.mutate(code, {
       onSuccess: () => {
-        toast.success('Invitation accepted');
+        toast.success('Trainer connected');
         setManualCode('');
       },
-      onError: (err) => {
-        toast.error(err instanceof Error ? err.message : 'Failed to accept invitation');
-      },
+      onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to accept invitation'),
     });
   };
 
@@ -31,89 +33,54 @@ export function PendingInvitations() {
     handleAccept(manualCode.trim());
   };
 
-  if (loadingInvitations || loadingTrainer) return null;
-
-  const trainer = trainerData?.trainer;
-  const hasPending = invitations.length > 0;
-
-  if (!trainer && !hasPending) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <UserPlus className="w-4 h-4" />
-            Trainer
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">
-            Have an invite code from a trainer? Enter it below to connect.
-          </p>
-          <form onSubmit={handleManualSubmit} className="flex gap-2">
-            <Input
-              placeholder="Enter invite code"
-              value={manualCode}
-              onChange={(e) => setManualCode(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit" disabled={acceptMutation.isPending || !manualCode.trim()}>
-              {acceptMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                'Accept'
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <UserPlus className="w-4 h-4" />
-          Trainer
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <PulseCard className="overflow-hidden p-0">
+      <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+        {trainer
+          ? <UserCheck className="h-4 w-4 text-primary" />
+          : <UserPlus className="h-4 w-4 text-muted-foreground" />}
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+          My trainer
+        </p>
+      </div>
+
+      <div className="p-5 space-y-4">
+        {/* Active trainer */}
         {trainer && (
-          <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
-            <p className="text-sm font-medium text-foreground">
-              Your trainer: {trainer.name}
-            </p>
-            <p className="text-xs text-muted-foreground">{trainer.email}</p>
+          <div className="flex items-center gap-3 rounded-xl bg-primary/5 border border-primary/15 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+              {trainer.name.trim().charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold truncate">{trainer.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{trainer.email}</p>
+            </div>
           </div>
         )}
 
-        {hasPending && (
+        {/* Pending invitations to accept */}
+        {pending.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
-              Pending Invitations
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Pending invitation{pending.length > 1 ? 's' : ''}
             </p>
-            {invitations.map((inv) => (
-              <div
-                key={inv.id}
-                className="flex items-center justify-between p-3 rounded-lg border border-border"
-              >
-                <div>
-                  <p className="text-sm font-medium text-foreground">
+            {pending.map((inv) => (
+              <div key={inv.id} className="flex items-center justify-between rounded-xl border border-border p-3 gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">
                     From: {inv.trainerName || 'A trainer'}
                   </p>
-                  <Badge variant="secondary" className="mt-1">pending</Badge>
                 </div>
                 {inv.inviteCode && (
                   <Button
                     size="sm"
                     onClick={() => handleAccept(inv.inviteCode!)}
                     disabled={acceptMutation.isPending}
+                    className="shrink-0"
                   >
-                    {acceptMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      'Accept'
-                    )}
+                    {acceptMutation.isPending
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : 'Accept'}
                   </Button>
                 )}
               </div>
@@ -121,29 +88,30 @@ export function PendingInvitations() {
           </div>
         )}
 
+        {/* Manual code entry (only when no trainer yet) */}
         {!trainer && (
           <>
             <p className="text-sm text-muted-foreground">
-              Have an invite code from a trainer? Enter it below.
+              {pending.length > 0
+                ? 'Or enter a code from your trainer:'
+                : 'Have an invite code from a trainer? Enter it here.'}
             </p>
             <form onSubmit={handleManualSubmit} className="flex gap-2">
               <Input
                 placeholder="Enter invite code"
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
-                className="flex-1"
+                className="flex-1 font-mono"
               />
               <Button type="submit" disabled={acceptMutation.isPending || !manualCode.trim()}>
-                {acceptMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  'Accept'
-                )}
+                {acceptMutation.isPending
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : 'Connect'}
               </Button>
             </form>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </PulseCard>
   );
 }

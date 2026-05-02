@@ -9,6 +9,7 @@ import * as workoutService from '../services/workout.js';
 import * as foodEntryService from '../services/foodEntry.js';
 import * as dailyCheckInService from '../services/dailyCheckIn.js';
 import * as goalService from '../services/goal.js';
+import * as waterModel from '../models/water.js';
 import { sendJson, sendCreated, sendNoContent, sendPaginated } from '../utils/response.js';
 import { paginationSchema } from '../schemas/routeSchemas.js';
 
@@ -165,4 +166,13 @@ export const removeClientGoal = asyncHandler(async (req: Request, res: Response)
   const userId = getEffectiveUserId(req);
   await goalService.remove(userId, req.params.id as string);
   sendNoContent(res);
+});
+
+// ─── Client water entries ───────────────────────────────────
+
+export const listClientWater = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getEffectiveUserId(req);
+  const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+  const entries = await waterModel.findByUserId(userId, startDate, endDate);
+  sendJson(res, entries);
 });

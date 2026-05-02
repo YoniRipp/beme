@@ -62,4 +62,14 @@ export const trainerApi = {
 
   getClientGoals: (clientId: string) =>
     request<ClientDataResponse>(`/api/trainer/clients/${clientId}/goals`),
+
+  getClientWater: (clientId: string) =>
+    request<WaterEntry[]>(`/api/trainer/clients/${clientId}/water-entries`),
 };
+
+export interface WaterEntry {
+  id?: string;
+  date: string;
+  glasses: number;
+  mlTotal: number;
+}
