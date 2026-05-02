@@ -192,15 +192,16 @@ export function Base44Layout() {
       {/* Main content */}
       <div className="lg:ml-72 min-h-screen">
         <header
-          className={`sticky block top-0 z-30 transition-all duration-300
-            ${scrolled ? 'glass border-b border-border/70' : 'bg-transparent'}`}
+          className={`sticky top-0 z-30 transition-all duration-300
+            border-b border-border/50 bg-background/95 backdrop-blur-xl
+            ${scrolled ? 'glass border-border/70' : 'lg:border-0 lg:bg-transparent lg:backdrop-blur-none'}`}
         >
           <div className="flex items-center justify-between px-5 sm:px-6 lg:px-8 py-3 min-h-[60px]">
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => setSidebarOpen((o) => !o)}
-                className="lg:hidden -ml-2 p-2 rounded-xl hover:bg-muted transition-colors press"
+                className="lg:hidden -ml-1 flex h-10 w-10 items-center justify-center rounded-xl hover:bg-muted transition-colors press"
                 aria-label="Toggle menu"
               >
                 {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
