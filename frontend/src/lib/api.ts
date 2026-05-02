@@ -29,4 +29,4 @@ export {
 } from '@/core/api/food';
 
 // Users (admin)
-export { usersApi, type ApiUserListItem } from '@/core/api/users';
+export { usersApi, type ApiUserListItem, type UserRole } from '@/core/api/users';

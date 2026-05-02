@@ -4,6 +4,8 @@ import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
 import { useGoals } from '@/hooks/useGoals';
 import { useMacroGoals } from '@/hooks/useMacroGoals';
+import { useProfile } from '@/hooks/useProfile';
+import { useApp } from '@/context/AppContext';
 import { MacroGoalModal } from '@/components/home/MacroGoalModal';
 import { SleepEditModal } from '@/components/energy/SleepEditModal';
 import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
@@ -14,22 +16,29 @@ import { VoiceMicHero } from '@/components/voice/VoiceMicHero';
 import { WaterTracker } from '@/components/home/WaterTracker';
 import { WeightProgress } from '@/components/home/WeightProgress';
 import { CycleTracker } from '@/components/home/CycleTracker';
+import { StreakCard } from '@/components/home/StreakCard';
 import { SetupWizard } from '@/components/onboarding/SetupWizard';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { isOnboardingCompleted } from '@/lib/onboarding';
-import { useProfile } from '@/hooks/useProfile';
-import { useApp } from '@/context/AppContext';
 import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
-import { StreakCard } from '@/components/home/StreakCard';
-import { Apple, ChevronRight, Droplets, Dumbbell, Moon, Scale, SlidersHorizontal, UtensilsCrossed, User } from 'lucide-react';
+import { Apple, ChevronRight, Droplets, Dumbbell, Moon, Pencil, Scale, UtensilsCrossed, User } from 'lucide-react';
 import { isSameDay, format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { PulseCard, PulseHeader, PulsePage, PulseQuickTile, PulseRing, PulseSectionHeader, PulseStatCard } from '@/components/pulse/PulseUI';
+import {
+  PulseCard,
+  PulseHeader,
+  PulsePage,
+  PulseQuickTile,
+  PulseRing,
+  PulseSectionHeader,
+  PulseStatCard,
+} from '@/components/pulse/PulseUI';
 
 export function Home() {
+  // Hooks
   const navigate = useNavigate();
   const { openVoiceAgent } = useOutletContext<{ openVoiceAgent?: () => void }>() ?? {};
   const { workouts, workoutsLoading, addWorkout } = useWorkouts();
@@ -40,6 +49,7 @@ export function Home() {
   const { user } = useApp();
   const firstName = user?.name?.split(' ')[0] ?? 'there';
 
+  // State
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>(undefined);
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
@@ -48,60 +58,29 @@ export function Home() {
   const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
   const [showTour] = useState(() => !isOnboardingCompleted());
 
-  const handleGoalSave = (goal: Omit<Goal, 'id' | 'createdAt'>) => {
-    if (editingGoal) {
-      updateGoal(editingGoal.id, goal);
-      toast.success('Goal updated');
-    } else {
-      addGoal(goal);
-      toast.success('Goal added');
-    }
-    setEditingGoal(undefined);
-  };
-
+  // Derived data
   const todayCheckIn = useMemo(
     () => getCheckInByDate(new Date()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [getCheckInByDate, checkIns]
   );
 
-  const handleSleepSave = (hours: number) => {
-    if (todayCheckIn) {
-      updateCheckIn(todayCheckIn.id, { sleepHours: hours });
-      toast.success('Sleep updated');
-    } else {
-      addCheckIn({ date: new Date(), sleepHours: hours });
-      toast.success('Sleep logged');
-    }
-    setSleepModalOpen(false);
-  };
-
-  const handleWorkoutSave = (workout: Omit<Workout, 'id'>) => {
-    addWorkout(workout);
-    toast.success('Workout added');
-  };
-
-  const handleFoodSave = (entry: Omit<FoodEntry, 'id'>) => {
-    addFoodEntry(entry);
-    toast.success('Food entry added');
-  };
-
   const todaySummary = useMemo(() => {
     const now = new Date();
     const todayFoods = foodEntries.filter((f) => isSameDay(new Date(f.date), now));
-    const totalCal = todayFoods.reduce((s, f) => s + f.calories, 0);
-    const totalProtein = todayFoods.reduce((s, f) => s + f.protein, 0);
-    const totalCarbs = todayFoods.reduce((s, f) => s + f.carbs, 0);
-    const totalFats = todayFoods.reduce((s, f) => s + f.fats, 0);
-    const mealsCount = todayFoods.length;
-    return { totalCal, totalProtein, totalCarbs, totalFats, mealsCount };
+    return {
+      totalCal: todayFoods.reduce((s, f) => s + f.calories, 0),
+      totalProtein: todayFoods.reduce((s, f) => s + f.protein, 0),
+      totalCarbs: todayFoods.reduce((s, f) => s + f.carbs, 0),
+      totalFats: todayFoods.reduce((s, f) => s + f.fats, 0),
+      mealsCount: todayFoods.length,
+    };
   }, [foodEntries]);
 
-  const calGoalTarget = calorieGoal;
   const macroRows = [
     { label: 'Protein', current: Math.round(todaySummary.totalProtein), goal: macroGoals.protein, color: 'bg-info' },
-    { label: 'Carbs', current: Math.round(todaySummary.totalCarbs), goal: macroGoals.carbs, color: 'bg-gold' },
-    { label: 'Fat', current: Math.round(todaySummary.totalFats), goal: macroGoals.fat, color: 'bg-terracotta' },
+    { label: 'Carbs',   current: Math.round(todaySummary.totalCarbs),   goal: macroGoals.carbs,   color: 'bg-gold' },
+    { label: 'Fat',     current: Math.round(todaySummary.totalFats),    goal: macroGoals.fat,     color: 'bg-terracotta' },
   ];
 
   const progressMessage = useMemo(() => {
@@ -131,24 +110,58 @@ export function Home() {
       .slice(0, 5);
   }, [foodEntries, workouts]);
 
-  const calPct = calGoalTarget > 0 ? Math.min(todaySummary.totalCal / calGoalTarget, 1) : 0;
-  const workoutsThisWeek = workouts.filter((w) => {
-    const d = new Date(w.date);
+  const workoutsThisWeek = useMemo(() => {
     const now = new Date();
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay());
-    start.setHours(0, 0, 0, 0);
-    return d >= start && d <= now;
-  }).length;
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    return workouts.filter((w) => {
+      const d = new Date(w.date);
+      return d >= weekStart && d <= now;
+    }).length;
+  }, [workouts]);
+
+  const calPct = calorieGoal > 0 ? Math.min(todaySummary.totalCal / calorieGoal, 1) : 0;
   const sleepHours = Number(todayCheckIn?.sleepHours ?? 0);
   const weightKg = profile?.currentWeight ? Number(profile.currentWeight).toFixed(1) : '--';
+  const todayDate = format(new Date(), 'EEE · MMM d');
 
-  // Onboarding flow: SetupWizard → OnboardingTour → Dashboard
+  // Handlers
+  const handleGoalSave = (goal: Omit<Goal, 'id' | 'createdAt'>) => {
+    if (editingGoal) {
+      updateGoal(editingGoal.id, goal);
+      toast.success('Goal updated');
+    } else {
+      addGoal(goal);
+      toast.success('Goal added');
+    }
+    setEditingGoal(undefined);
+  };
+
+  const handleSleepSave = (hours: number) => {
+    if (todayCheckIn) {
+      updateCheckIn(todayCheckIn.id, { sleepHours: hours });
+      toast.success('Sleep updated');
+    } else {
+      addCheckIn({ date: new Date(), sleepHours: hours });
+      toast.success('Sleep logged');
+    }
+    setSleepModalOpen(false);
+  };
+
+  const handleWorkoutSave = (workout: Omit<Workout, 'id'>) => {
+    addWorkout(workout);
+    toast.success('Workout added');
+  };
+
+  const handleFoodSave = (entry: Omit<FoodEntry, 'id'>) => {
+    addFoodEntry(entry);
+    toast.success('Food entry added');
+  };
+
   if (!profileLoading && !profile.setupCompleted) {
     return <SetupWizard onComplete={() => window.location.reload()} />;
   }
-
-  const todayDate = format(new Date(), 'EEE · MMM d');
 
   return (
     <PulsePage>
@@ -169,12 +182,14 @@ export function Home() {
       />
 
       <ContentWithLoading loading={workoutsLoading || energyLoading || goalsLoading} loadingText="Loading dashboard...">
-      <div className="space-y-5">
-        <PulseCard className="pulse-hero-glow relative overflow-hidden p-5" data-onboarding="dashboard">
-            <div className="relative z-10 mb-4 flex items-center justify-between gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="space-y-5">
+
+          {/* Today's fuel */}
+          <PulseCard className="pulse-hero-glow relative overflow-hidden p-5" data-onboarding="dashboard">
+            <div className="relative z-10 mb-4 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
               <span className="text-primary">Today's fuel</span>
               <div className="flex items-center gap-2">
-                <span>{Math.round(todaySummary.totalCal)} / {calGoalTarget} kcal</span>
+                <span>{Math.round(todaySummary.totalCal)} / {calorieGoal} kcal</span>
                 <button
                   type="button"
                   onClick={() => setMacroGoalModalOpen(true)}
@@ -182,14 +197,18 @@ export function Home() {
                   aria-label="Edit macro goals"
                   title="Edit macros"
                 >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <Pencil className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
             <div className="relative z-10 flex items-center gap-5">
               <PulseRing pct={calPct}>
-                <span className="text-[34px] font-extrabold tabular-nums leading-none tracking-tight">{Math.round(todaySummary.totalCal)}</span>
-                <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">kcal in</span>
+                <span className="text-[34px] font-extrabold tabular-nums leading-none tracking-tight">
+                  {Math.round(todaySummary.totalCal)}
+                </span>
+                <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                  kcal in
+                </span>
               </PulseRing>
               <div className="flex-1 space-y-3">
                 {macroRows.map((row) => {
@@ -214,48 +233,46 @@ export function Home() {
                 })}
               </div>
             </div>
-        </PulseCard>
+          </PulseCard>
 
-        <div className="grid grid-cols-3 gap-2.5">
-          <PulseStatCard icon={Dumbbell} label="Workouts" value={workoutsThisWeek} sub="this week" onClick={() => navigate('/body')} />
-          <PulseStatCard icon={Moon} label="Sleep" value={`${sleepHours}h`} sub="last night" color="text-info" onClick={() => setSleepModalOpen(true)} />
-          <PulseStatCard icon={Scale} label="Weight" value={weightKg} sub="kg" color="text-terracotta" onClick={() => navigate('/settings')} />
-        </div>
+          {/* Stats row */}
+          <div className="grid grid-cols-3 gap-2.5">
+            <PulseStatCard icon={Dumbbell} label="Workouts" value={workoutsThisWeek} sub="this week" onClick={() => navigate('/body')} />
+            <PulseStatCard icon={Moon} label="Sleep" value={`${sleepHours}h`} sub="last night" color="text-info" onClick={() => setSleepModalOpen(true)} />
+            <PulseStatCard icon={Scale} label="Weight" value={weightKg} sub="kg" color="text-terracotta" onClick={() => navigate('/settings')} />
+          </div>
 
-        <PulseSectionHeader title="Quick log" eyebrow="Tap to add" />
-        <div className="grid grid-cols-2 gap-2.5">
-          <PulseQuickTile icon={Apple} label="Log food" onClick={() => setFoodModalOpen(true)} />
-          <PulseQuickTile icon={Dumbbell} label="Log workout" onClick={() => setWorkoutModalOpen(true)} />
-          <PulseQuickTile icon={Droplets} label="Water" pill="Open" onClick={() => navigate('/water')} />
-          <PulseQuickTile icon={Moon} label="Sleep" pill={`${sleepHours}h`} onClick={() => setSleepModalOpen(true)} />
-        </div>
+          {/* Quick log */}
+          <PulseSectionHeader title="Quick log" eyebrow="Tap to add" />
+          <div className="grid grid-cols-2 gap-2.5">
+            <PulseQuickTile icon={Apple} label="Log food" onClick={() => setFoodModalOpen(true)} />
+            <PulseQuickTile icon={Dumbbell} label="Log workout" onClick={() => setWorkoutModalOpen(true)} />
+            <PulseQuickTile icon={Droplets} label="Water" pill="Open" onClick={() => navigate('/water')} />
+            <PulseQuickTile icon={Moon} label="Sleep" pill={`${sleepHours}h`} onClick={() => setSleepModalOpen(true)} />
+          </div>
 
-        {/* Voice Input */}
-        <div data-onboarding="voice">
-          <VoiceMicHero onOpenAgent={() => openVoiceAgent?.()} />
-        </div>
+          {/* Voice */}
+          <div data-onboarding="voice">
+            <VoiceMicHero onOpenAgent={() => openVoiceAgent?.()} />
+          </div>
 
-        {/* Streaks */}
-        <StreakCard />
-        {/* Health Trackers */}
-        <div className="grid grid-cols-2 gap-4" data-onboarding="trackers">
-          <WaterTracker />
-          <WeightProgress />
-        </div>
+          <StreakCard />
 
-        {/* Cycle Tracker (if enabled) */}
-        {profile.cycleTrackingEnabled && <CycleTracker />}
+          {/* Health trackers */}
+          <div className="grid grid-cols-2 gap-4" data-onboarding="trackers">
+            <WaterTracker />
+            <WeightProgress />
+          </div>
 
-        {/* Recent Activity */}
-        {recentActivity.length > 0 && (
-          <PulseCard className="overflow-hidden p-5">
+          {profile.cycleTrackingEnabled && <CycleTracker />}
+
+          {/* Recent activity */}
+          {recentActivity.length > 0 && (
+            <PulseCard className="overflow-hidden p-5">
               <h3 className="mb-4 text-base font-bold tracking-tight">Recent activity</h3>
               <div className="space-y-1">
                 {recentActivity.map((item) => (
-                  <div
-                    key={`${item.type}-${item.id}`}
-                    className="flex items-center gap-3 py-2.5"
-                  >
+                  <div key={`${item.type}-${item.id}`} className="flex items-center gap-3 py-2.5">
                     <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${item.type === 'food' ? 'bg-terracotta/15 text-terracotta' : 'bg-info/15 text-info'}`}>
                       {item.type === 'food'
                         ? <UtensilsCrossed className="w-4 h-4" />
@@ -272,37 +289,35 @@ export function Home() {
                   </div>
                 ))}
               </div>
-          </PulseCard>
-        )}
-      </div>
+            </PulseCard>
+          )}
+
+        </div>
       </ContentWithLoading>
 
+      {/* Modals */}
       <GoalModal
         open={goalModalOpen}
         onOpenChange={setGoalModalOpen}
         onSave={handleGoalSave}
         goal={editingGoal}
       />
-
       <WorkoutModal
         open={workoutModalOpen}
         onOpenChange={setWorkoutModalOpen}
         onSave={handleWorkoutSave}
       />
-
       <FoodEntryModal
         open={foodModalOpen}
         onOpenChange={setFoodModalOpen}
         onSave={handleFoodSave}
       />
-
       <SleepEditModal
         open={sleepModalOpen}
         onOpenChange={setSleepModalOpen}
         onSave={handleSleepSave}
         currentHours={todayCheckIn?.sleepHours}
       />
-
       <MacroGoalModal
         open={macroGoalModalOpen}
         onOpenChange={setMacroGoalModalOpen}
@@ -310,7 +325,6 @@ export function Home() {
         onSave={setMacroGoals}
       />
 
-      {/* Onboarding tour for first-time users */}
       {showTour && <OnboardingTour />}
     </PulsePage>
   );

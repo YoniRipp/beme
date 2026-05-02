@@ -53,6 +53,9 @@ clientData.patch('/daily-check-ins/:id', validateBody(updateCheckInSchema), trai
 
 // Goals
 clientData.get('/goals', trainerController.listClientGoals);
+
+// Water entries
+clientData.get('/water-entries', trainerController.listClientWater);
 clientData.post('/goals', validateBody(createGoalSchema), trainerController.addClientGoal);
 clientData.patch('/goals/:id', validateBody(updateGoalSchema), trainerController.updateClientGoal);
 clientData.delete('/goals/:id', trainerController.removeClientGoal);

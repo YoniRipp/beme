@@ -110,3 +110,12 @@ export function useTrainerClientGoals(clientId: string) {
     staleTime: 2 * 60 * 1000,
   });
 }
+
+export function useTrainerClientWater(clientId: string) {
+  return useQuery({
+    queryKey: [...queryKeys.trainerClientData(clientId), 'water'] as const,
+    queryFn: () => trainerApi.getClientWater(clientId),
+    enabled: !!clientId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
