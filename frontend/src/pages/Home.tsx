@@ -197,7 +197,7 @@ export function Home() {
                   aria-label="Edit macro goals"
                   title="Edit macros"
                 >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <Pencil className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>

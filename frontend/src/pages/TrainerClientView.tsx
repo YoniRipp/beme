@@ -237,7 +237,7 @@ export default function TrainerClientView() {
                 <div className="text-right text-xs text-muted-foreground space-y-0.5">
                   {item.sleepHours != null && <p>Sleep {String(item.sleepHours)}h</p>}
                   {item.energyLevel != null && <p>Energy {Number(item.energyLevel)}/5</p>}
-                  {item.mood && <p>Mood: {String(item.mood)}</p>}
+                  {item.mood != null && <p>Mood: {String(item.mood)}</p>}
                 </div>
               </div>
             )}
