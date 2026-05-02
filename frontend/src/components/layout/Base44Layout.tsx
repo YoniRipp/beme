@@ -192,7 +192,7 @@ export function Base44Layout() {
       {/* Main content */}
       <div className="lg:ml-72 min-h-screen">
         <header
-          className={`hidden lg:sticky lg:block top-0 z-30 transition-all duration-300
+          className={`sticky block top-0 z-30 transition-all duration-300
             ${scrolled ? 'glass border-b border-border/70' : 'bg-transparent'}`}
         >
           <div className="flex items-center justify-between px-5 sm:px-6 lg:px-8 py-3 min-h-[60px]">
