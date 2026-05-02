@@ -74,10 +74,8 @@ export default function TrainerClientView() {
           checkIns.length
         ).toFixed(1)
       : '—';
-    const todayWater = waterEntries.find((w: Record<string, unknown>) =>
-      isSameDay(new Date(w.date as string), today)
-    );
-    return { avgCal, todayCal, avgSleep, waterToday: (todayWater as Record<string, unknown>)?.glasses ?? 0 };
+    const todayWater = waterEntries.find((w) => isSameDay(new Date(w.date), today));
+    return { avgCal, todayCal, avgSleep, waterToday: todayWater?.glasses ?? 0 };
   }, [foodEntries, checkIns, waterEntries]);
 
   const joinedDate = client?.createdAt
@@ -172,7 +170,7 @@ export default function TrainerClientView() {
                   <p className="text-sm font-semibold">{item.calories != null ? `${item.calories} cal` : ''}</p>
                   {(item.protein != null || item.carbs != null || item.fats != null) && (
                     <p className="text-[11px] text-muted-foreground">
-                      P{item.protein ?? 0}·C{item.carbs ?? 0}·F{item.fats ?? 0}g
+                      P{Number(item.protein) || 0}·C{Number(item.carbs) || 0}·F{Number(item.fats) || 0}g
                     </p>
                   )}
                 </div>
@@ -206,23 +204,27 @@ export default function TrainerClientView() {
         )}
 
         {activeTab === 'water' && (
-          <EntryList
-            items={waterEntries as Record<string, unknown>[]}
-            emptyMessage="No water entries yet."
-            renderItem={(item) => (
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium">{formatDate(item.date as string)}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-semibold text-info">{item.glasses as number} glasses</p>
-                  {item.mlTotal != null && Number(item.mlTotal) > 0 && (
-                    <p className="text-xs text-muted-foreground">{item.mlTotal} ml</p>
-                  )}
-                </div>
+          waterEntries.length === 0 ? (
+            <PulseCard className="py-12 text-center">
+              <p className="text-sm text-muted-foreground">No water entries yet.</p>
+            </PulseCard>
+          ) : (
+            <PulseCard className="overflow-hidden p-0">
+              <div className="divide-y divide-border">
+                {waterEntries.map((entry, i) => (
+                  <div key={entry.id ?? i} className="flex items-center justify-between gap-3 px-5 py-3.5">
+                    <p className="font-medium">{formatDate(entry.date)}</p>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold text-info">{entry.glasses} glasses</p>
+                      {entry.mlTotal > 0 && (
+                        <p className="text-xs text-muted-foreground">{entry.mlTotal} ml</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
-          />
+            </PulseCard>
+          )
         )}
 
         {activeTab === 'checkins' && (
@@ -233,9 +235,9 @@ export default function TrainerClientView() {
               <div className="flex items-center justify-between gap-3">
                 <p className="font-medium">{formatDate(item.date as string)}</p>
                 <div className="text-right text-xs text-muted-foreground space-y-0.5">
-                  {item.sleepHours != null && <p>Sleep {item.sleepHours}h</p>}
-                  {item.energyLevel != null && <p>Energy {item.energyLevel}/5</p>}
-                  {item.mood && <p>Mood: {item.mood}</p>}
+                  {item.sleepHours != null && <p>Sleep {String(item.sleepHours)}h</p>}
+                  {item.energyLevel != null && <p>Energy {Number(item.energyLevel)}/5</p>}
+                  {item.mood && <p>Mood: {String(item.mood)}</p>}
                 </div>
               </div>
             )}

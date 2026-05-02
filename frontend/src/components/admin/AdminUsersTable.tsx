@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { usersApi, type ApiUserListItem } from '@/lib/api';
+import { usersApi, type ApiUserListItem, type UserRole } from '@/lib/api';
 import { toast } from 'sonner';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { Badge } from '@/components/ui/badge';
@@ -373,7 +373,7 @@ function CreateUserDialog({
           </div>
           <div>
             <Label>Role</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as 'user' | 'trainer' | 'admin')}>
+            <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -406,7 +406,7 @@ function EditUserDialog({
   onSuccess: () => void;
 }) {
   const [name, setName] = useState(user.name);
-  const [role, setRole] = useState<'user' | 'admin'>(user.role);
+  const [role, setRole] = useState<UserRole>(user.role);
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -452,7 +452,7 @@ function EditUserDialog({
           </div>
           <div>
             <Label>Role</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as 'user' | 'trainer' | 'admin')}>
+            <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
