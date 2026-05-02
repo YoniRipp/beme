@@ -58,6 +58,62 @@ const defaultValues: WorkoutFormValues = {
   exercises: [defaultExercise],
 };
 
+function EditableSetValueInput({
+  value,
+  onValueChange,
+  ariaLabel,
+  allowDecimal = false,
+}: {
+  value: number | undefined;
+  onValueChange: (value: number) => void;
+  ariaLabel: string;
+  allowDecimal?: boolean;
+}) {
+  const [draft, setDraft] = useState(String(value ?? 0));
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setDraft(String(value ?? 0));
+    }
+  }, [isFocused, value]);
+
+  const normalize = (raw: string) => {
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.max(0, allowDecimal ? parsed : Math.floor(parsed));
+  };
+
+  return (
+    <Input
+      type="number"
+      min={0}
+      step={allowDecimal ? 0.5 : 1}
+      inputMode={allowDecimal ? 'decimal' : 'numeric'}
+      value={draft}
+      onFocus={(event) => {
+        setIsFocused(true);
+        event.currentTarget.select();
+      }}
+      onChange={(event) => {
+        const nextDraft = event.target.value;
+        setDraft(nextDraft);
+        if (nextDraft.trim() !== '') {
+          onValueChange(normalize(nextDraft));
+        }
+      }}
+      onBlur={() => {
+        const normalized = normalize(draft);
+        setIsFocused(false);
+        setDraft(String(normalized));
+        onValueChange(normalized);
+      }}
+      className="h-8 border-0 bg-transparent px-0 text-center text-sm font-extrabold tabular-nums text-foreground shadow-none focus-visible:ring-1 focus-visible:ring-primary"
+      aria-label={ariaLabel}
+    />
+  );
+}
+
 function ExerciseNameInput({
   value,
   onChange,
@@ -545,7 +601,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                             <button
                               type="button"
                               onClick={() => setLightboxImage({ src: exerciseImageUrl, alt: exerciseName })}
-                              className="block h-28 w-full overflow-hidden rounded-xl bg-muted transition-all hover:ring-2 hover:ring-primary/50"
+                              className="block aspect-square w-full overflow-hidden rounded-xl bg-muted transition-all hover:ring-2 hover:ring-primary/50"
                             >
                               <img
                                 src={exerciseImageUrl}
@@ -554,7 +610,7 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                               />
                             </button>
                           ) : (
-                            <div className="h-28 w-full rounded-xl bg-muted" />
+                            <div className="aspect-square w-full rounded-xl bg-muted" />
                           )}
 
                         </div>
@@ -644,9 +700,11 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                                 >
                                   -
                                 </Button>
-                                <span className="text-center text-sm font-extrabold tabular-nums text-foreground" aria-label={`Set ${i + 1} reps`}>
-                                  {repsPerSet[i] ?? 0}
-                                </span>
+                                <EditableSetValueInput
+                                  value={repsPerSet[i] ?? 0}
+                                  onValueChange={(value) => updateSetReps(idx, i, value)}
+                                  ariaLabel={`Set ${i + 1} reps`}
+                                />
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -670,9 +728,12 @@ export function WorkoutModal({ open, onOpenChange, onSave, workout }: WorkoutMod
                                 >
                                   -2.5
                                 </Button>
-                                <span className="text-center text-sm font-extrabold tabular-nums text-foreground" aria-label={`Set ${i + 1} weight`}>
-                                  {weightPerSet[i] ?? 0}{unit}
-                                </span>
+                                <EditableSetValueInput
+                                  value={weightPerSet[i] ?? 0}
+                                  onValueChange={(value) => updateSetWeight(idx, i, value)}
+                                  ariaLabel={`Set ${i + 1} weight in ${unit}`}
+                                  allowDecimal
+                                />
                                 <Button
                                   type="button"
                                   variant="ghost"

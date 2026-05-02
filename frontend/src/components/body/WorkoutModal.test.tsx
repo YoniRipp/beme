@@ -108,9 +108,9 @@ describe('WorkoutModal', () => {
 
     expect(screen.getByRole('heading', { name: 'Edit Workout' })).toBeInTheDocument();
     expect(screen.getByDisplayValue('Bench Press')).toBeInTheDocument();
-    expect(screen.getByLabelText('Set 1 reps')).toHaveTextContent('10');
-    expect(screen.getByLabelText('Set 2 reps')).toHaveTextContent('8');
-    expect(screen.getByLabelText('Set 3 reps')).toHaveTextContent('6');
+    expect(screen.getByLabelText('Set 1 reps')).toHaveValue(10);
+    expect(screen.getByLabelText('Set 2 reps')).toHaveValue(8);
+    expect(screen.getByLabelText('Set 3 reps')).toHaveValue(6);
   });
 
   it('loads workout without repsPerSet using reps for each set', () => {
@@ -135,8 +135,33 @@ describe('WorkoutModal', () => {
     );
 
     expect(screen.getByDisplayValue('Squat')).toBeInTheDocument();
-    expect(screen.getByLabelText('Set 1 reps')).toHaveTextContent('10');
-    expect(screen.getByLabelText('Set 1 weight')).toHaveTextContent('225kg');
+    expect(screen.getByLabelText('Set 1 reps')).toHaveValue(10);
+    expect(screen.getByLabelText('Set 1 weight in kg')).toHaveValue(225);
     expect(screen.getByLabelText('Set 4 reps')).toBeInTheDocument();
+  });
+
+  it('saves manually edited per-set reps and weight', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <WorkoutModal open={true} onOpenChange={vi.fn()} onSave={onSave} />
+    );
+
+    await user.type(screen.getByPlaceholderText(/e.g. Squat/i), 'Hip Thrust');
+    await user.type(screen.getByLabelText(/duration/i), '50');
+    await user.clear(screen.getByLabelText('Set 1 reps'));
+    await user.type(screen.getByLabelText('Set 1 reps'), '12');
+    await user.clear(screen.getByLabelText('Set 1 weight in kg'));
+    await user.type(screen.getByLabelText('Set 1 weight in kg'), '170');
+
+    await user.click(screen.getByRole('button', { name: /add workout/i }));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalled();
+    });
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.exercises[0].repsPerSet[0]).toBe(12);
+    expect(saved.exercises[0].weightPerSet[0]).toBe(170);
+    expect(saved.exercises[0].weight).toBe(170);
   });
 });
