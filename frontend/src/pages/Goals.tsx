@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useGoals } from '@/hooks/useGoals';
 import { GoalCard } from '@/components/goals/GoalCard';
 import { GoalModal } from '@/components/goals/GoalModal';
@@ -13,14 +14,19 @@ export function Goals() {
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>(undefined);
 
-  const handleGoalSave = (data: Omit<Goal, 'id' | 'createdAt'>) => {
-    if (editingGoal) {
-      updateGoal(editingGoal.id, data);
-    } else {
-      addGoal(data);
+  const handleGoalSave = async (data: Omit<Goal, 'id' | 'createdAt'>) => {
+    try {
+      if (editingGoal) {
+        await updateGoal(editingGoal.id, data);
+      } else {
+        await addGoal(data);
+      }
+      setEditingGoal(undefined);
+      setGoalModalOpen(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not save goal';
+      toast.error(msg);
     }
-    setEditingGoal(undefined);
-    setGoalModalOpen(false);
   };
 
   const handleGoalEdit = (goal: Goal) => {
@@ -29,7 +35,7 @@ export function Goals() {
   };
 
   return (
-    <PulsePage narrow>
+    <PulsePage>
       <PulseHeader kicker="Goals" title="Stay on target" subtitle="Set targets that guide your week." />
 
       <ContentWithLoading loading={goalsLoading} loadingText="Loading goals..." error={goalsError}>

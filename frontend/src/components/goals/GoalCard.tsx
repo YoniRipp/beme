@@ -32,9 +32,13 @@ export function GoalCard({ goal, onEdit }: GoalCardProps) {
   const progress = useGoalProgress(goal.id);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const handleDelete = () => {
-    deleteGoal(goal.id);
-    toast.success('Goal deleted');
+  const handleDelete = async () => {
+    try {
+      await deleteGoal(goal.id);
+      toast.success('Goal deleted');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not delete goal');
+    }
   };
 
   const style = GOAL_ICON_STYLES[goal.type];

@@ -36,8 +36,9 @@ export const generateInviteCode = asyncHandler(async (req: Request, res: Respons
 
 export const acceptInvitation = asyncHandler(async (req: Request, res: Response) => {
   const clientId = req.user!.id;
+  const clientEmail = req.user!.email;
   const { inviteCode } = req.body as { inviteCode: string };
-  const result = await trainerService.acceptInvitation(clientId, inviteCode);
+  const result = await trainerService.acceptInvitation(clientId, inviteCode, clientEmail);
   sendJson(res, result);
 });
 

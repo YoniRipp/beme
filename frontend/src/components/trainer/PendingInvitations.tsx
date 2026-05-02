@@ -71,18 +71,16 @@ export function PendingInvitations() {
                     From: {inv.trainerName || 'A trainer'}
                   </p>
                 </div>
-                {inv.inviteCode && (
-                  <Button
-                    size="sm"
-                    onClick={() => handleAccept(inv.inviteCode!)}
-                    disabled={acceptMutation.isPending}
-                    className="shrink-0"
-                  >
-                    {acceptMutation.isPending
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : 'Accept'}
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  onClick={() => handleAccept(inv.inviteCode ?? inv.id)}
+                  disabled={acceptMutation.isPending}
+                  className="shrink-0"
+                >
+                  {acceptMutation.isPending
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : 'Accept'}
+                </Button>
               </div>
             ))}
           </div>

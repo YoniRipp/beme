@@ -36,11 +36,16 @@ export async function generateInviteCode(trainerId: string) {
   return invitation;
 }
 
-export async function acceptInvitation(clientId: string, inviteCode: string) {
+export async function acceptInvitation(clientId: string, inviteCode: string, clientEmail?: string) {
   if (!inviteCode) {
     throw new ValidationError('Invite code is required');
   }
-  const invitation = await trainerClientModel.findInvitationByCode(inviteCode);
+  // Try by invite code first (code-based invitations)
+  let invitation = await trainerClientModel.findInvitationByCode(inviteCode);
+  // Fall back to invitation ID lookup for email-based invitations
+  if (!invitation && clientEmail) {
+    invitation = await trainerClientModel.findInvitationByIdForEmail(inviteCode, clientEmail);
+  }
   if (!invitation) {
     throw new NotFoundError('Invitation not found or expired');
   }
