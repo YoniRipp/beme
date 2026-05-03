@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
-  XAxis, Tooltip,
+  Tooltip,
 } from 'recharts';
 import { format, subDays, isSameDay, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
@@ -587,8 +587,8 @@ export default function TrainerClientView() {
                           </div>
                           <div className="flex flex-wrap gap-1.5 mt-1.5">
                             <Chip>{fmtDate(item.date as string)}</Chip>
-                            {item.type && <Chip className="capitalize">{String(item.type)}</Chip>}
-                            {item.durationMinutes && <Chip>{Number(item.durationMinutes)} min</Chip>}
+                            {!!item.type && <Chip className="capitalize">{String(item.type)}</Chip>}
+                            {!!item.durationMinutes && <Chip>{Number(item.durationMinutes)} min</Chip>}
                             {exCount > 0 && <Chip>{exCount} exercise{exCount !== 1 ? 's' : ''}</Chip>}
                           </div>
                           {Array.isArray(item.exercises) && item.exercises.length > 0 && (
