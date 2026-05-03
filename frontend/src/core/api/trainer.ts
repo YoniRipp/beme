@@ -65,6 +65,32 @@ export const trainerApi = {
 
   getClientWater: (clientId: string) =>
     request<WaterEntry[]>(`/api/trainer/clients/${clientId}/water-entries`),
+
+  addClientWorkout: (clientId: string, body: object) =>
+    request<Record<string,unknown>>(`/api/trainer/clients/${clientId}/workouts`, { method: 'POST', body }),
+  updateClientWorkout: (clientId: string, workoutId: string, body: object) =>
+    request<Record<string,unknown>>(`/api/trainer/clients/${clientId}/workouts/${workoutId}`, { method: 'PATCH', body }),
+  removeClientWorkout: (clientId: string, workoutId: string) =>
+    request<void>(`/api/trainer/clients/${clientId}/workouts/${workoutId}`, { method: 'DELETE' }),
+
+  addClientFoodEntry: (clientId: string, body: object) =>
+    request<Record<string,unknown>>(`/api/trainer/clients/${clientId}/food-entries`, { method: 'POST', body }),
+  updateClientFoodEntry: (clientId: string, entryId: string, body: object) =>
+    request<Record<string,unknown>>(`/api/trainer/clients/${clientId}/food-entries/${entryId}`, { method: 'PATCH', body }),
+  removeClientFoodEntry: (clientId: string, entryId: string) =>
+    request<void>(`/api/trainer/clients/${clientId}/food-entries/${entryId}`, { method: 'DELETE' }),
+
+  addClientCheckIn: (clientId: string, body: object) =>
+    request<Record<string,unknown>>(`/api/trainer/clients/${clientId}/daily-check-ins`, { method: 'POST', body }),
+  updateClientCheckIn: (clientId: string, checkInId: string, body: object) =>
+    request<Record<string,unknown>>(`/api/trainer/clients/${clientId}/daily-check-ins/${checkInId}`, { method: 'PATCH', body }),
+
+  addClientGoal: (clientId: string, body: object) =>
+    request<Record<string,unknown>>(`/api/trainer/clients/${clientId}/goals`, { method: 'POST', body }),
+  updateClientGoal: (clientId: string, goalId: string, body: object) =>
+    request<Record<string,unknown>>(`/api/trainer/clients/${clientId}/goals/${goalId}`, { method: 'PATCH', body }),
+  removeClientGoal: (clientId: string, goalId: string) =>
+    request<void>(`/api/trainer/clients/${clientId}/goals/${goalId}`, { method: 'DELETE' }),
 };
 
 export interface WaterEntry {
