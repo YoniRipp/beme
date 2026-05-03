@@ -1,4 +1,7 @@
 import { request } from './client';
+import type { ApiDailyCheckIn, ApiFoodEntry } from './food';
+import type { ApiGoal } from './goals';
+import type { ApiWorkout } from './workouts';
 
 export interface TrainerClient {
   id: string;
@@ -52,16 +55,52 @@ export const trainerApi = {
     request<TrainerInvitation[]>('/api/trainer/pending-invitations'),
 
   getClientWorkouts: (clientId: string) =>
-    request<ClientDataResponse>(`/api/trainer/clients/${clientId}/workouts`),
+    request<ClientDataResponse<ApiWorkout>>(`/api/trainer/clients/${clientId}/workouts`),
+
+  addClientWorkout: (clientId: string, data: Omit<ApiWorkout, 'id'>) =>
+    request<ApiWorkout>(`/api/trainer/clients/${clientId}/workouts`, { method: 'POST', body: data }),
+
+  updateClientWorkout: (clientId: string, workoutId: string, updates: Record<string, unknown>) =>
+    request<ApiWorkout>(`/api/trainer/clients/${clientId}/workouts/${workoutId}`, { method: 'PATCH', body: updates }),
+
+  deleteClientWorkout: (clientId: string, workoutId: string) =>
+    request<void>(`/api/trainer/clients/${clientId}/workouts/${workoutId}`, { method: 'DELETE' }),
 
   getClientFoodEntries: (clientId: string) =>
-    request<ClientDataResponse>(`/api/trainer/clients/${clientId}/food-entries`),
+    request<ClientDataResponse<ApiFoodEntry>>(`/api/trainer/clients/${clientId}/food-entries`),
+
+  addClientFoodEntry: (clientId: string, data: Omit<ApiFoodEntry, 'id'>) =>
+    request<ApiFoodEntry>(`/api/trainer/clients/${clientId}/food-entries`, { method: 'POST', body: data }),
+
+  updateClientFoodEntry: (clientId: string, entryId: string, updates: Record<string, unknown>) =>
+    request<ApiFoodEntry>(`/api/trainer/clients/${clientId}/food-entries/${entryId}`, { method: 'PATCH', body: updates }),
+
+  deleteClientFoodEntry: (clientId: string, entryId: string) =>
+    request<void>(`/api/trainer/clients/${clientId}/food-entries/${entryId}`, { method: 'DELETE' }),
 
   getClientCheckIns: (clientId: string) =>
-    request<ClientDataResponse>(`/api/trainer/clients/${clientId}/daily-check-ins`),
+    request<ClientDataResponse<ApiDailyCheckIn>>(`/api/trainer/clients/${clientId}/daily-check-ins`),
+
+  addClientCheckIn: (clientId: string, data: Omit<ApiDailyCheckIn, 'id'>) =>
+    request<ApiDailyCheckIn>(`/api/trainer/clients/${clientId}/daily-check-ins`, { method: 'POST', body: data }),
+
+  updateClientCheckIn: (clientId: string, checkInId: string, updates: Record<string, unknown>) =>
+    request<ApiDailyCheckIn>(`/api/trainer/clients/${clientId}/daily-check-ins/${checkInId}`, { method: 'PATCH', body: updates }),
+
+  deleteClientCheckIn: (clientId: string, checkInId: string) =>
+    request<void>(`/api/trainer/clients/${clientId}/daily-check-ins/${checkInId}`, { method: 'DELETE' }),
 
   getClientGoals: (clientId: string) =>
-    request<ClientDataResponse>(`/api/trainer/clients/${clientId}/goals`),
+    request<ClientDataResponse<ApiGoal>>(`/api/trainer/clients/${clientId}/goals`),
+
+  addClientGoal: (clientId: string, data: Omit<ApiGoal, 'id' | 'createdAt'>) =>
+    request<ApiGoal>(`/api/trainer/clients/${clientId}/goals`, { method: 'POST', body: data }),
+
+  updateClientGoal: (clientId: string, goalId: string, updates: Record<string, unknown>) =>
+    request<ApiGoal>(`/api/trainer/clients/${clientId}/goals/${goalId}`, { method: 'PATCH', body: updates }),
+
+  deleteClientGoal: (clientId: string, goalId: string) =>
+    request<void>(`/api/trainer/clients/${clientId}/goals/${goalId}`, { method: 'DELETE' }),
 
   getClientWater: (clientId: string) =>
     request<WaterEntry[]>(`/api/trainer/clients/${clientId}/water-entries`),

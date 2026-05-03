@@ -1,12 +1,19 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PulseCard, PulsePage } from '@/components/pulse/PulseUI';
 import { Button } from '@/components/ui/button';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
+import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
+import { DailyCheckInModal } from '@/components/energy/DailyCheckInModal';
+import { GoalModal } from '@/components/goals/GoalModal';
+import { WorkoutModal } from '@/components/body/WorkoutModal';
 import {
   ArrowLeft,
   Droplets,
   Dumbbell,
+  Edit2,
+  Plus,
+  Trash2,
   Moon,
   Target,
   UtensilsCrossed,
@@ -18,10 +25,28 @@ import {
   useTrainerClientCheckIns,
   useTrainerClientGoals,
   useTrainerClientWater,
+  useAddTrainerClientWorkout,
+  useUpdateTrainerClientWorkout,
+  useDeleteTrainerClientWorkout,
+  useAddTrainerClientFoodEntry,
+  useUpdateTrainerClientFoodEntry,
+  useDeleteTrainerClientFoodEntry,
+  useAddTrainerClientCheckIn,
+  useUpdateTrainerClientCheckIn,
+  useDeleteTrainerClientCheckIn,
+  useAddTrainerClientGoal,
+  useUpdateTrainerClientGoal,
+  useDeleteTrainerClientGoal,
 } from '@/hooks/useTrainer';
 import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { toast } from 'sonner';
+import type { DailyCheckIn, FoodEntry } from '@/types/energy';
+import type { Goal } from '@/types/goals';
+import type { Workout } from '@/types/workout';
+import { apiWorkoutToWorkout } from '@/features/body/mappers';
+import { apiCheckInToDailyCheckIn, apiFoodEntryToFoodEntry } from '@/features/energy/mappers';
+import { apiGoalToGoal } from '@/features/goals/mappers';
 
 type Tab = 'food' | 'workouts' | 'water' | 'checkins' | 'goals';
 
@@ -37,6 +62,14 @@ export default function TrainerClientView() {
   const { clientId = '' } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('food');
+  const [foodModalOpen, setFoodModalOpen] = useState(false);
+  const [workoutModalOpen, setWorkoutModalOpen] = useState(false);
+  const [checkInModalOpen, setCheckInModalOpen] = useState(false);
+  const [goalModalOpen, setGoalModalOpen] = useState(false);
+  const [editingFoodEntry, setEditingFoodEntry] = useState<FoodEntry | undefined>();
+  const [editingWorkout, setEditingWorkout] = useState<Workout | undefined>();
+  const [editingCheckIn, setEditingCheckIn] = useState<DailyCheckIn | undefined>();
+  const [editingGoal, setEditingGoal] = useState<Goal | undefined>();
 
   const { data: clients = [] } = useTrainerClients();
   const client = clients.find((c) => c.clientId === clientId);
@@ -47,33 +80,44 @@ export default function TrainerClientView() {
   const { data: goalsData,    isLoading: loadingGoals }    = useTrainerClientGoals(clientId);
   const { data: waterData,    isLoading: loadingWater }    = useTrainerClientWater(clientId);
 
-  const workouts    = workoutsData?.data  ?? [];
-  const foodEntries = foodData?.data      ?? [];
-  const checkIns    = checkInsData?.data  ?? [];
-  const goals       = goalsData?.data     ?? [];
+  const workouts = useMemo(() => (workoutsData?.data ?? []).map(apiWorkoutToWorkout), [workoutsData]);
+  const foodEntries = useMemo(() => (foodData?.data ?? []).map(apiFoodEntryToFoodEntry), [foodData]);
+  const checkIns = useMemo(() => (checkInsData?.data ?? []).map(apiCheckInToDailyCheckIn), [checkInsData]);
+  const goals = useMemo(() => (goalsData?.data ?? []).map(apiGoalToGoal), [goalsData]);
   const waterEntries = waterData          ?? [];
 
   const isLoading = loadingWorkouts || loadingFood || loadingCheckIns || loadingGoals || loadingWater;
 
+  const addWorkoutMutation = useAddTrainerClientWorkout(clientId);
+  const updateWorkoutMutation = useUpdateTrainerClientWorkout(clientId);
+  const deleteWorkoutMutation = useDeleteTrainerClientWorkout(clientId);
+  const addFoodMutation = useAddTrainerClientFoodEntry(clientId);
+  const updateFoodMutation = useUpdateTrainerClientFoodEntry(clientId);
+  const deleteFoodMutation = useDeleteTrainerClientFoodEntry(clientId);
+  const addCheckInMutation = useAddTrainerClientCheckIn(clientId);
+  const updateCheckInMutation = useUpdateTrainerClientCheckIn(clientId);
+  const deleteCheckInMutation = useDeleteTrainerClientCheckIn(clientId);
+  const addGoalMutation = useAddTrainerClientGoal(clientId);
+  const updateGoalMutation = useUpdateTrainerClientGoal(clientId);
+  const deleteGoalMutation = useDeleteTrainerClientGoal(clientId);
+
   // Summary stats
   const stats = useMemo(() => {
     const today = new Date();
-    const todayFood = foodEntries.filter((f: Record<string, unknown>) =>
-      isSameDay(new Date(f.date as string), today)
-    );
+    const todayFood = foodEntries.filter((f) => isSameDay(f.date, today));
     const avgCal = foodEntries.length > 0
       ? Math.round(
-          foodEntries.reduce((s: number, f: Record<string, unknown>) => s + (Number(f.calories) || 0), 0) /
-          new Set(foodEntries.map((f: Record<string, unknown>) => f.date)).size
+          foodEntries.reduce((s, f) => s + (Number(f.calories) || 0), 0) /
+          new Set(foodEntries.map((f) => f.date.toDateString())).size
         )
       : 0;
-    const todayCal = todayFood.reduce((s: number, f: Record<string, unknown>) => s + (Number(f.calories) || 0), 0);
+    const todayCal = todayFood.reduce((s, f) => s + (Number(f.calories) || 0), 0);
     const avgSleep = checkIns.length > 0
       ? (
-          checkIns.reduce((s: number, c: Record<string, unknown>) => s + (Number(c.sleepHours) || 0), 0) /
+          checkIns.reduce((s, c) => s + (Number(c.sleepHours) || 0), 0) /
           checkIns.length
         ).toFixed(1)
-      : '—';
+      : '-';
     const todayWater = waterEntries.find((w) => isSameDay(new Date(w.date), today));
     return { avgCal, todayCal, avgSleep, waterToday: todayWater?.glasses ?? 0 };
   }, [foodEntries, checkIns, waterEntries]);
@@ -81,6 +125,70 @@ export default function TrainerClientView() {
   const joinedDate = client?.createdAt
     ? format(new Date(client.createdAt), 'MMM d, yyyy')
     : null;
+
+  const clientName = client?.clientName ?? 'client';
+
+  const handleSaveWorkout = async (workout: Omit<Workout, 'id'>) => {
+    if (editingWorkout) {
+      await updateWorkoutMutation.mutateAsync({ id: editingWorkout.id, updates: workout });
+      toast.success(`Workout updated for ${clientName}`);
+    } else {
+      await addWorkoutMutation.mutateAsync(workout);
+      toast.success(`Workout added for ${clientName}`);
+    }
+    setEditingWorkout(undefined);
+  };
+
+  const handleSaveFoodEntry = async (entry: Omit<FoodEntry, 'id'>) => {
+    if (editingFoodEntry) {
+      await updateFoodMutation.mutateAsync({ id: editingFoodEntry.id, updates: entry });
+      toast.success(`Food updated for ${clientName}`);
+    } else {
+      await addFoodMutation.mutateAsync(entry);
+      toast.success(`Food added for ${clientName}`);
+    }
+    setEditingFoodEntry(undefined);
+  };
+
+  const handleSaveCheckIn = async (checkIn: Omit<DailyCheckIn, 'id'>) => {
+    if (editingCheckIn) {
+      await updateCheckInMutation.mutateAsync({ id: editingCheckIn.id, updates: checkIn });
+      toast.success(`Check-in updated for ${clientName}`);
+    } else {
+      await addCheckInMutation.mutateAsync(checkIn);
+      toast.success(`Check-in added for ${clientName}`);
+    }
+    setEditingCheckIn(undefined);
+  };
+
+  const handleSaveGoal = async (goal: Omit<Goal, 'id' | 'createdAt'>) => {
+    if (editingGoal) {
+      await updateGoalMutation.mutateAsync({ id: editingGoal.id, updates: goal });
+      toast.success(`Goal updated for ${clientName}`);
+    } else {
+      await addGoalMutation.mutateAsync(goal);
+      toast.success(`Goal added for ${clientName}`);
+    }
+    setEditingGoal(undefined);
+  };
+
+  const openCreateModal = (tab: Tab) => {
+    if (tab === 'food') {
+      setEditingFoodEntry(undefined);
+      setFoodModalOpen(true);
+    } else if (tab === 'workouts') {
+      setEditingWorkout(undefined);
+      setWorkoutModalOpen(true);
+    } else if (tab === 'checkins') {
+      setEditingCheckIn(undefined);
+      setCheckInModalOpen(true);
+    } else if (tab === 'goals') {
+      setEditingGoal(undefined);
+      setGoalModalOpen(true);
+    }
+  };
+
+  const activeTabCanAdd = activeTab !== 'water';
 
   return (
     <PulsePage>
@@ -114,12 +222,31 @@ export default function TrainerClientView() {
       {/* Summary stats */}
       <div className="grid grid-cols-4 gap-2.5 mb-5">
         <StatChip label="Workouts" value={workouts.length} />
-        <StatChip label="Avg cal" value={stats.avgCal > 0 ? stats.avgCal.toLocaleString() : '—'} />
+        <StatChip label="Avg cal" value={stats.avgCal > 0 ? stats.avgCal.toLocaleString() : '-'} />
         <StatChip label="Avg sleep" value={`${stats.avgSleep}h`} />
         <StatChip label="Water today" value={`${stats.waterToday}gl`} />
       </div>
 
       <ContentWithLoading loading={isLoading} loadingText="Loading client data...">
+        <PulseCard className="mb-4 flex items-center justify-between gap-3 p-4">
+          <div className="min-w-0">
+            <p className="text-sm font-extrabold">Trainer edits</p>
+            <p className="text-xs text-muted-foreground truncate">
+              Add or update items that {client?.clientName ?? 'this client'} will see in their app.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0 gap-1.5"
+            disabled={!activeTabCanAdd}
+            onClick={() => openCreateModal(activeTab)}
+          >
+            <Plus className="h-4 w-4" />
+            Add
+          </Button>
+        </PulseCard>
+
         {/* Tab bar */}
         <div className="flex gap-1 overflow-x-auto pb-1 mb-4 scrollbar-none">
           {TABS.map((tab) => {
@@ -157,20 +284,26 @@ export default function TrainerClientView() {
           <EntryList
             items={foodEntries}
             emptyMessage="No food entries yet."
+            actionLabel="food entry"
+            onEdit={(item) => {
+              setEditingFoodEntry(item);
+              setFoodModalOpen(true);
+            }}
+            onDelete={(item) => void deleteFoodMutation.mutateAsync(item.id).then(() => toast.success('Food entry deleted'))}
             renderItem={(item) => (
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium truncate">{String(item.name || 'Food')}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatDate(item.date as string)}
-                    {item.mealType ? ` · ${item.mealType}` : ''}
+                    {formatDate(item.date)}
+                    {item.mealType ? ` - ${item.mealType}` : ''}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-semibold">{item.calories != null ? `${item.calories} cal` : ''}</p>
                   {(item.protein != null || item.carbs != null || item.fats != null) && (
                     <p className="text-[11px] text-muted-foreground">
-                      P{Number(item.protein) || 0}·C{Number(item.carbs) || 0}·F{Number(item.fats) || 0}g
+                      P{Number(item.protein) || 0} C{Number(item.carbs) || 0} F{Number(item.fats) || 0}g
                     </p>
                   )}
                 </div>
@@ -183,14 +316,20 @@ export default function TrainerClientView() {
           <EntryList
             items={workouts}
             emptyMessage="No workouts yet."
+            actionLabel="workout"
+            onEdit={(item) => {
+              setEditingWorkout(item);
+              setWorkoutModalOpen(true);
+            }}
+            onDelete={(item) => void deleteWorkoutMutation.mutateAsync(item.id).then(() => toast.success('Workout deleted'))}
             renderItem={(item) => (
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium truncate">{String(item.title || 'Workout')}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatDate(item.date as string)}
-                    {item.type ? ` · ${item.type}` : ''}
-                    {item.durationMinutes ? ` · ${item.durationMinutes} min` : ''}
+                    {formatDate(item.date)}
+                    {item.type ? ` - ${item.type}` : ''}
+                    {item.durationMinutes ? ` - ${item.durationMinutes} min` : ''}
                   </p>
                 </div>
                 {Array.isArray(item.exercises) && (
@@ -231,13 +370,17 @@ export default function TrainerClientView() {
           <EntryList
             items={checkIns}
             emptyMessage="No check-ins yet."
+            actionLabel="check-in"
+            onEdit={(item) => {
+              setEditingCheckIn(item);
+              setCheckInModalOpen(true);
+            }}
+            onDelete={(item) => void deleteCheckInMutation.mutateAsync(item.id).then(() => toast.success('Check-in deleted'))}
             renderItem={(item) => (
               <div className="flex items-center justify-between gap-3">
-                <p className="font-medium">{formatDate(item.date as string)}</p>
+                <p className="font-medium">{formatDate(item.date)}</p>
                 <div className="text-right text-xs text-muted-foreground space-y-0.5">
                   {item.sleepHours != null && <p>Sleep {String(item.sleepHours)}h</p>}
-                  {item.energyLevel != null && <p>Energy {Number(item.energyLevel)}/5</p>}
-                  {item.mood != null && <p>Mood: {String(item.mood)}</p>}
                 </div>
               </div>
             )}
@@ -248,6 +391,12 @@ export default function TrainerClientView() {
           <EntryList
             items={goals}
             emptyMessage="No goals set yet."
+            actionLabel="goal"
+            onEdit={(item) => {
+              setEditingGoal(item);
+              setGoalModalOpen(true);
+            }}
+            onDelete={(item) => void deleteGoalMutation.mutateAsync(item.id).then(() => toast.success('Goal deleted'))}
             renderItem={(item) => (
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -260,11 +409,48 @@ export default function TrainerClientView() {
           />
         )}
       </ContentWithLoading>
+
+      <FoodEntryModal
+        open={foodModalOpen}
+        onOpenChange={(open) => {
+          setFoodModalOpen(open);
+          if (!open) setEditingFoodEntry(undefined);
+        }}
+        onSave={(entry) => void handleSaveFoodEntry(entry)}
+        entry={editingFoodEntry}
+      />
+      <WorkoutModal
+        open={workoutModalOpen}
+        onOpenChange={(open) => {
+          setWorkoutModalOpen(open);
+          if (!open) setEditingWorkout(undefined);
+        }}
+        onSave={(workout) => void handleSaveWorkout(workout)}
+        workout={editingWorkout}
+      />
+      <DailyCheckInModal
+        open={checkInModalOpen}
+        onOpenChange={(open) => {
+          setCheckInModalOpen(open);
+          if (!open) setEditingCheckIn(undefined);
+        }}
+        onSave={(checkIn) => void handleSaveCheckIn(checkIn)}
+        checkIn={editingCheckIn}
+      />
+      <GoalModal
+        open={goalModalOpen}
+        onOpenChange={(open) => {
+          setGoalModalOpen(open);
+          if (!open) setEditingGoal(undefined);
+        }}
+        onSave={(goal) => void handleSaveGoal(goal)}
+        goal={editingGoal}
+      />
     </PulsePage>
   );
 }
 
-// ─── Helpers ───────────────────────────────────────────────
+// Helpers
 
 function tabCount(
   tab: Tab,
@@ -283,23 +469,33 @@ function tabCount(
   }
 }
 
-function formatDate(dateStr: string) {
-  if (!dateStr) return '';
+function formatDate(date: string | Date) {
+  if (!date) return '';
   try {
-    const d = new Date(dateStr);
+    const d = date instanceof Date ? date : new Date(date);
     return isSameDay(d, new Date()) ? 'Today' : format(d, 'MMM d, yyyy');
   } catch {
-    return dateStr;
+    return String(date);
   }
 }
 
-interface EntryListProps {
-  items: Record<string, unknown>[];
+interface EntryListProps<T extends { id?: string }> {
+  items: T[];
   emptyMessage: string;
-  renderItem: (item: Record<string, unknown>) => React.ReactNode;
+  renderItem: (item: T) => React.ReactNode;
+  actionLabel?: string;
+  onEdit?: (item: T) => void;
+  onDelete?: (item: T) => void;
 }
 
-function EntryList({ items, emptyMessage, renderItem }: EntryListProps) {
+function EntryList<T extends { id?: string }>({
+  items,
+  emptyMessage,
+  renderItem,
+  actionLabel,
+  onEdit,
+  onDelete,
+}: EntryListProps<T>) {
   if (items.length === 0) {
     return (
       <PulseCard className="py-12 text-center">
@@ -312,12 +508,56 @@ function EntryList({ items, emptyMessage, renderItem }: EntryListProps) {
     <PulseCard className="overflow-hidden p-0">
       <div className="divide-y divide-border">
         {items.map((item, i) => (
-          <div key={String(item.id ?? i)} className="px-5 py-3.5">
-            {renderItem(item)}
+          <div key={String(item.id ?? i)} className="flex items-center gap-2 px-5 py-3.5">
+            <div className="min-w-0 flex-1">
+              {renderItem(item)}
+            </div>
+            {item.id && actionLabel && onEdit && onDelete && (
+              <EntryActions
+                label={actionLabel}
+                onEdit={() => onEdit(item)}
+                onDelete={() => onDelete(item)}
+              />
+            )}
           </div>
         ))}
       </div>
     </PulseCard>
+  );
+}
+
+function EntryActions({
+  label,
+  onEdit,
+  onDelete,
+}: {
+  label: string;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={onEdit}
+        aria-label={`Edit ${label}`}
+      >
+        <Edit2 className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-destructive hover:text-destructive"
+        onClick={onDelete}
+        aria-label={`Delete ${label}`}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
   );
 }
 

@@ -142,6 +142,12 @@ export const updateClientCheckIn = asyncHandler(async (req: Request, res: Respon
   sendJson(res, item);
 });
 
+export const removeClientCheckIn = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getEffectiveUserId(req);
+  await dailyCheckInService.remove(userId, req.params.id as string);
+  sendNoContent(res);
+});
+
 // ─── Client data endpoints (goals) ─────────────────────────
 
 export const listClientGoals = asyncHandler(async (req: Request, res: Response) => {

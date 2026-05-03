@@ -50,6 +50,7 @@ clientData.delete('/food-entries/:id', trainerController.removeClientFoodEntry);
 clientData.get('/daily-check-ins', trainerController.listClientCheckIns);
 clientData.post('/daily-check-ins', validateBody(createCheckInSchema), trainerController.addClientCheckIn);
 clientData.patch('/daily-check-ins/:id', validateBody(updateCheckInSchema), trainerController.updateClientCheckIn);
+clientData.delete('/daily-check-ins/:id', trainerController.removeClientCheckIn);
 
 // Goals
 clientData.get('/goals', trainerController.listClientGoals);
