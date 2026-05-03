@@ -119,3 +119,91 @@ export function useTrainerClientWater(clientId: string) {
     staleTime: 2 * 60 * 1000,
   });
 }
+
+export function useAddClientWorkout(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: object) => trainerApi.addClientWorkout(clientId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...queryKeys.trainerClientData(clientId), 'workouts'] }),
+  });
+}
+
+export function useUpdateClientWorkout(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: object }) => trainerApi.updateClientWorkout(clientId, id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...queryKeys.trainerClientData(clientId), 'workouts'] }),
+  });
+}
+
+export function useRemoveClientWorkout(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (workoutId: string) => trainerApi.removeClientWorkout(clientId, workoutId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...queryKeys.trainerClientData(clientId), 'workouts'] }),
+  });
+}
+
+export function useAddClientFoodEntry(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: object) => trainerApi.addClientFoodEntry(clientId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...queryKeys.trainerClientData(clientId), 'foodEntries'] }),
+  });
+}
+
+export function useUpdateClientFoodEntry(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: object }) => trainerApi.updateClientFoodEntry(clientId, id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...queryKeys.trainerClientData(clientId), 'foodEntries'] }),
+  });
+}
+
+export function useRemoveClientFoodEntry(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (entryId: string) => trainerApi.removeClientFoodEntry(clientId, entryId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...queryKeys.trainerClientData(clientId), 'foodEntries'] }),
+  });
+}
+
+export function useAddClientCheckIn(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: object) => trainerApi.addClientCheckIn(clientId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...queryKeys.trainerClientData(clientId), 'checkIns'] }),
+  });
+}
+
+export function useUpdateClientCheckIn(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: object }) => trainerApi.updateClientCheckIn(clientId, id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...queryKeys.trainerClientData(clientId), 'checkIns'] }),
+  });
+}
+
+export function useAddClientGoal(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: object) => trainerApi.addClientGoal(clientId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...queryKeys.trainerClientData(clientId), 'goals'] }),
+  });
+}
+
+export function useUpdateClientGoal(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: object }) => trainerApi.updateClientGoal(clientId, id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...queryKeys.trainerClientData(clientId), 'goals'] }),
+  });
+}
+
+export function useRemoveClientGoal(clientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (goalId: string) => trainerApi.removeClientGoal(clientId, goalId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...queryKeys.trainerClientData(clientId), 'goals'] }),
+  });
+}
