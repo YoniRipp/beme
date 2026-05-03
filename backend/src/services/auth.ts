@@ -102,6 +102,12 @@ export async function register(data: {
       user.id
     ).catch((err) => logger.error({ err }, 'Failed to publish event'));
 
+    const appUrl = (config.frontendOrigin || '').replace(/\/$/, '');
+    import('../lib/email.js').then(({ sendMail, buildWelcomeEmail }) => {
+      const { subject, html } = buildWelcomeEmail(user.name, appUrl);
+      return sendMail({ to: user.email, subject, html });
+    }).catch((err) => logger.error({ err }, 'Failed to send welcome email'));
+
     return { user, token };
   } catch (e: unknown) {
     const err = e as Record<string, unknown>;
@@ -533,12 +539,9 @@ export async function forgotPassword(
   const resetLink = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(row.email)}`;
 
   try {
-    const { sendMail } = await import('../lib/email.js');
-    await sendMail({
-      to: row.email,
-      subject: 'Reset your TrackVibe password',
-      html: `<p>Click the link below to reset your password. This link expires in 1 hour.</p><p><a href="${resetLink}">Reset Password</a></p><p>If you didn't request this, you can safely ignore this email.</p>`,
-    });
+    const { sendMail, buildPasswordResetEmail } = await import('../lib/email.js');
+    const { subject, html } = buildPasswordResetEmail(resetLink);
+    await sendMail({ to: row.email, subject, html });
   } catch (emailErr) {
     logger.error({ err: emailErr }, 'Failed to send reset email');
   }

@@ -7,6 +7,7 @@ import { getPool } from '../db/index.js';
 import * as appLog from '../services/appLog.js';
 import * as userActivityLog from '../models/userActivityLog.js';
 import * as adminStatsService from '../services/adminStats.js';
+import { sendMail, buildInviteEmail } from '../lib/email.js';
 import * as workoutService from '../services/workout.js';
 import * as foodEntryService from '../services/foodEntry.js';
 import * as dailyCheckInService from '../services/dailyCheckIn.js';
@@ -97,6 +98,24 @@ router.get('/api/admin/users/search', requireAuth, requireAdmin, async (req, res
 router.get('/api/admin/stats', requireAuth, requireAdmin, asyncHandler(async (_req, res) => {
   const stats = await adminStatsService.getAll();
   sendJson(res, stats);
+}));
+
+router.post('/api/admin/invite', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const { email, note } = req.body ?? {};
+  if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    return sendError(res, 400, 'A valid email address is required');
+  }
+  const inviterName = req.user!.name || 'TrackVibe';
+  const baseUrl = (process.env.FRONTEND_ORIGIN || '').replace(/\/$/, '');
+  const signupUrl = `${baseUrl}/register?ref=invite&email=${encodeURIComponent(email.trim())}`;
+  const { subject, html } = buildInviteEmail(
+    inviterName,
+    email.trim(),
+    signupUrl,
+    typeof note === 'string' ? note.slice(0, 500) : undefined
+  );
+  await sendMail({ to: email.trim(), subject, html });
+  sendJson(res, { success: true, email: email.trim() });
 }));
 
 // ─── Exercise Catalog Management ────────────────────────────────────────────
