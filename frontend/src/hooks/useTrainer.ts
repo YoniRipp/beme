@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { trainerApi } from '@/core/api/trainer';
+import { trainerApi, type TrainerAnalyticsRange } from '@/core/api/trainer';
 import { queryKeys } from '@/lib/queryClient';
 import { useAuth } from '@/context/AuthContext';
 import type { DailyCheckIn, FoodEntry } from '@/types/energy';
@@ -120,6 +120,14 @@ export function useTrainerClientWater(clientId: string) {
     queryKey: [...queryKeys.trainerClientData(clientId), 'water'] as const,
     queryFn: () => trainerApi.getClientWater(clientId),
     enabled: !!clientId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useTrainerAnalytics(range: TrainerAnalyticsRange) {
+  return useQuery({
+    queryKey: queryKeys.trainerAnalytics(range),
+    queryFn: () => trainerApi.getAnalytics(range),
     staleTime: 2 * 60 * 1000,
   });
 }

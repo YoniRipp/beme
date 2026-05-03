@@ -23,6 +23,7 @@ router.get('/api/trainer/clients', requireAuth, requireTrainer, trainerControlle
 router.post('/api/trainer/invite', requireAuth, requireTrainer, trainerController.inviteByEmail);
 router.post('/api/trainer/invite-code', requireAuth, requireTrainer, trainerController.generateInviteCode);
 router.get('/api/trainer/invitations', requireAuth, requireTrainer, trainerController.listInvitations);
+router.get('/api/trainer/analytics', requireAuth, requireTrainer, trainerController.getAnalytics);
 router.delete('/api/trainer/clients/:clientId', requireAuth, requireTrainer, trainerController.removeClient);
 
 // ─── Client-facing ─────────────────────────────────────────

@@ -29,6 +29,49 @@ export interface ClientDataResponse<T = Record<string, unknown>> {
   total: number;
 }
 
+export type TrainerAnalyticsRange = '7d' | '30d' | '3m' | 'ytd' | '1y';
+export type TrainerClientAnalyticsStatus = 'new' | 'good' | 'attention' | 'at_risk';
+
+export interface TrainerAnalyticsPoint {
+  label: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface TrainerAnalytics {
+  range: TrainerAnalyticsRange;
+  summary: {
+    totalTrainees: number;
+    newTrainees: number;
+    engagedPercent: number;
+    atRiskCount: number;
+  };
+  engagementSeries: Array<TrainerAnalyticsPoint & { activeTrainees: number; engagementPercent: number }>;
+  growthSeries: Array<TrainerAnalyticsPoint & { totalTrainees: number; newTrainees: number }>;
+  subscriptionAgeBuckets: Array<{ label: string; count: number }>;
+  progress: {
+    weightDeltaAvg: number | null;
+    calorieAverage: number | null;
+    calorieTrendPercent: number | null;
+    volumeTotal: number;
+    volumeTrendPercent: number | null;
+    volumeKind: 'weighted' | 'set_reps';
+    series: Array<TrainerAnalyticsPoint & { weightDeltaAvg: number | null; calorieAverage: number | null; volume: number }>;
+  };
+  roster: Array<{
+    clientId: string;
+    clientName: string;
+    clientEmail: string;
+    status: TrainerClientAnalyticsStatus;
+    subscriptionAgeDays: number;
+    lastActivityAt: string | null;
+    weightDelta: number | null;
+    calorieAverage: number | null;
+    volumeTrendPercent: number | null;
+    volumeKind: 'weighted' | 'set_reps';
+  }>;
+}
+
 export const trainerApi = {
   listClients: () =>
     request<TrainerClient[]>('/api/trainer/clients'),
@@ -41,6 +84,9 @@ export const trainerApi = {
 
   listInvitations: () =>
     request<TrainerInvitation[]>('/api/trainer/invitations'),
+
+  getAnalytics: (range: TrainerAnalyticsRange) =>
+    request<TrainerAnalytics>(`/api/trainer/analytics?range=${encodeURIComponent(range)}`),
 
   removeClient: (clientId: string) =>
     request<void>(`/api/trainer/clients/${clientId}`, { method: 'DELETE' }),

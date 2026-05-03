@@ -77,9 +77,16 @@ function getBottomNav(role?: string) {
 
 function getSidebarNav(isAdmin: boolean, isTrainer: boolean) {
   const nav = [...SIDEBAR_NAV_BASE];
-  if (isTrainer) nav.push({ name: 'Trainer', path: '/trainer', icon: Users });
+  if (isTrainer) nav.push({ name: 'Clients', path: '/trainer', icon: Users });
   if (isAdmin) nav.push({ name: 'Admin', path: '/admin', icon: ShieldCheck });
   return nav;
+}
+
+function hasTrainerAccess(user?: { role?: string; subscriptionStatus?: string }) {
+  return user?.role === 'trainer' ||
+    user?.role === 'admin' ||
+    user?.subscriptionStatus === 'trainer' ||
+    user?.subscriptionStatus === 'trainer_pro';
 }
 
 function getPageTitle(pathname: string): string {
@@ -102,8 +109,14 @@ export function Base44Layout() {
     logout();
     navigate('/login', { replace: true });
   };
-  const sidebarNav = useMemo(() => getSidebarNav(user?.role === 'admin', user?.role === 'trainer'), [user?.role]);
-  const bottomNavItems = useMemo(() => getBottomNav(user?.role), [user?.role]);
+  const trainerAccess = hasTrainerAccess(user);
+  const sidebarNav = useMemo(() => getSidebarNav(user?.role === 'admin', trainerAccess), [user?.role, trainerAccess]);
+  const bottomNavItems = useMemo(() => trainerAccess ? [
+    { name: 'Home', path: '/', icon: Home },
+    { name: 'Body', path: '/body', icon: Dumbbell },
+    { name: 'Clients', path: '/trainer', icon: Users },
+    { name: 'Goals', path: '/goals', icon: Target },
+  ] : getBottomNav(user?.role), [trainerAccess, user?.role]);
 
   const pageTitle = getPageTitle(pathname);
 

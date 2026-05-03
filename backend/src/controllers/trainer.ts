@@ -10,6 +10,7 @@ import * as foodEntryService from '../services/foodEntry.js';
 import * as dailyCheckInService from '../services/dailyCheckIn.js';
 import * as goalService from '../services/goal.js';
 import * as waterModel from '../models/water.js';
+import * as trainerAnalyticsModel from '../models/trainerAnalytics.js';
 import { sendJson, sendCreated, sendNoContent, sendPaginated } from '../utils/response.js';
 import { paginationSchema } from '../schemas/routeSchemas.js';
 
@@ -65,6 +66,16 @@ export const getPendingInvitations = asyncHandler(async (req: Request, res: Resp
   const email = req.user!.email;
   const invitations = await trainerService.getPendingInvitations(email);
   sendJson(res, invitations);
+});
+
+export const getAnalytics = asyncHandler(async (req: Request, res: Response) => {
+  const trainerId = req.user!.id;
+  const rangeParam = typeof req.query.range === 'string' ? req.query.range : '30d';
+  const range = ['7d', '30d', '3m', 'ytd', '1y'].includes(rangeParam)
+    ? (rangeParam as trainerAnalyticsModel.TrainerAnalyticsRange)
+    : '30d';
+  const analytics = await trainerAnalyticsModel.getTrainerAnalytics(trainerId, range);
+  sendJson(res, analytics);
 });
 
 // ─── Client data endpoints (workouts) ──────────────────────

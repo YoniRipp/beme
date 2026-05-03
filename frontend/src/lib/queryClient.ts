@@ -15,6 +15,7 @@ export const queryKeys = {
   checkIns: ['checkIns'] as const,
   foodEntries: ['foodEntries'] as const,
   trainerClients: ['trainerClients'] as const,
+  trainerAnalytics: (range: string) => ['trainerAnalytics', range] as const,
   trainerInvitations: ['trainerInvitations'] as const,
   myTrainer: ['myTrainer'] as const,
   pendingTrainerInvitations: ['pendingTrainerInvitations'] as const,

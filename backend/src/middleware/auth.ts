@@ -56,14 +56,28 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-export function requireTrainer(req: Request, res: Response, next: NextFunction) {
+export async function requireTrainer(req: Request, res: Response, next: NextFunction) {
   if (!req.user) {
     return res.status(401).json({ error: 'Authentication required' });
   }
-  if (req.user.role !== 'trainer' && req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Trainer access required' });
+  if (req.user.role === 'trainer' || req.user.role === 'admin') {
+    return next();
   }
-  next();
+
+  try {
+    const pool = getPool();
+    const result = await pool.query(
+      `SELECT subscription_status FROM users WHERE id = $1 LIMIT 1`,
+      [req.user.id],
+    );
+    const subscriptionStatus = result.rows[0]?.subscription_status;
+    if (subscriptionStatus === 'trainer' || subscriptionStatus === 'trainer_pro') {
+      return next();
+    }
+    return res.status(403).json({ error: 'Trainer access required' });
+  } catch (e) {
+    next(e);
+  }
 }
 
 export async function resolveTrainerClientUserId(req: Request, res: Response, next: NextFunction) {
