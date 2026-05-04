@@ -44,9 +44,9 @@ describe('Energy Page', () => {
     render(<Energy />, { wrapper });
     await waitFor(() => {
       expect(screen.getByText(/^remaining$/i)).toBeInTheDocument();
-      expect(screen.getByText(/P\s*0\s*\/\s*120g/i)).toBeInTheDocument();
-      expect(screen.getByText(/C\s*0\s*\/\s*300g/i)).toBeInTheDocument();
-      expect(screen.getByText(/F\s*0\s*\/\s*80g/i)).toBeInTheDocument();
+      expect(screen.getByText((_, el) => el?.textContent === 'P 0/120g')).toBeInTheDocument();
+      expect(screen.getByText((_, el) => el?.textContent === 'C 0/300g')).toBeInTheDocument();
+      expect(screen.getByText((_, el) => el?.textContent === 'F 0/80g')).toBeInTheDocument();
     });
   });
 
@@ -55,10 +55,9 @@ describe('Energy Page', () => {
     render(<Energy />, { wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText('What did you eat today?')).toBeInTheDocument();
+      expect(screen.getByText('Log breakfast')).toBeInTheDocument();
     });
-    // Click the "Add Food" button in the empty state
-    const addButton = screen.getByText(/add food/i);
+    const addButton = screen.getAllByRole('button', { name: /^add$/i })[0];
     await user.click(addButton);
 
     await waitFor(() => {

@@ -17,7 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import { PeriodSelector } from '@/components/shared/PeriodSelector';
-import { Moon, Trash2, Pencil, ChevronDown, Plus, ClipboardList, Copy, Sun, CloudSun, Sunset, Cookie, UtensilsCrossed, Mic } from 'lucide-react';
+import { Moon, Trash2, Pencil, ChevronDown, Plus, ClipboardList, Copy, Sun, CloudSun, Sunset, Cookie, Mic } from 'lucide-react';
 import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
 import { PulseCard, PulseHeader, PulsePage } from '@/components/pulse/PulseUI';
@@ -90,7 +90,7 @@ function groupByMeal(entries: FoodEntry[]): MealGroup[] {
       totalFats: mealEntries.reduce((s, e) => s + e.fats, 0),
     };
   });
-  // All 4 meals always returned — no filter
+  // All 4 meals always returned - no filter
 }
 
 function groupFoodEntries(
@@ -113,7 +113,7 @@ function groupFoodEntries(
       const ws = startOfWeek(d, { weekStartsOn: 0 });
       const we = endOfWeek(d, { weekStartsOn: 0 });
       key = format(ws, 'yyyy-MM-dd');
-      label = `${format(ws, 'MMM d')} – ${format(we, 'MMM d')}`;
+      label = `${format(ws, 'MMM d')} - ${format(we, 'MMM d')}`;
     } else {
       key = format(d, 'yyyy-MM');
       label = format(d, 'MMMM yyyy');
@@ -179,7 +179,7 @@ function CollapsibleGroup({
           <p className="text-sm font-semibold">{group.label}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {group.entries.length} {group.entries.length === 1 ? 'item' : 'items'}
-            {isAvg && uniqueDays > 1 && ` · ${uniqueDays} days`}
+            {isAvg && uniqueDays > 1 && ` - ${uniqueDays} days`}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -227,7 +227,7 @@ function MealGroupHeader({
       <div className="text-right">
         <p className="text-sm font-bold text-primary tabular-nums">{totalCal} kcal</p>
         <span className="text-[10px] text-muted-foreground tabular-nums hidden sm:inline">
-          P {totalProtein}g · C {totalCarbs}g · F {totalFats}g
+          P {totalProtein}g - C {totalCarbs}g - F {totalFats}g
         </span>
       </div>
       <button
@@ -456,266 +456,183 @@ export function Energy() {
   return (
     <PulsePage className="pb-24">
       <ContentWithLoading loading={energyLoading} loadingText="Loading energy...">
-      <PulseHeader
-        kicker="Energy"
-        title="Food log"
-        subtitle={caloriePeriod === 'daily' ? 'Tap a meal mic and log naturally.' : 'Review your nutrition history.'}
-      />
-
-      {/* Calorie + Macro Section */}
-      {(() => {
-        const calGoalTarget = calorieGoal;
-        const calPct = calGoalTarget > 0 ? Math.min(periodTotals.calories / calGoalTarget, 1) : 0;
-
-        const periodSelectorEl = (
-          <PeriodSelector
-            options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
-              const range = getPeriodRange(period, today);
-              const entries = foodEntries.filter(f => isWithinInterval(new Date(f.date), range));
-              const totalCal = entries.reduce((sum, e) => sum + e.calories, 0);
-              if (period === 'daily') return { value: period, label: period, summary: `${totalCal} cal` };
-              const days = new Set(entries.map(e => e.date)).size;
-              const avg = days > 0 ? Math.round(totalCal / days) : 0;
-              return { value: period, label: period, summary: `${avg} avg` };
-            })}
-            selected={caloriePeriod}
-            onChange={setCaloriePeriod}
+        <div className="space-y-6">
+          <PulseHeader
+            kicker="Energy"
+            title="Food log"
+            subtitle={caloriePeriod === 'daily' ? 'Tap a meal mic and log naturally.' : 'Review your nutrition history.'}
           />
-        );
 
-        const calorieRingEl = (
-          <div className="relative w-[132px] h-[132px]">
-            <svg viewBox="0 0 100 100" className="w-[132px] h-[132px] -rotate-90">
-              <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="11" />
-              <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="11" strokeLinecap="round" strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - calPct)} className="transition-all duration-700 ease-out" />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[34px] font-extrabold tabular-nums leading-none tracking-tight">{Math.round(periodTotals.calories)}</span>
-              <span className="text-[10px] text-muted-foreground leading-none mt-1.5">of {calGoalTarget}{caloriePeriod !== 'daily' ? ' / day' : ''} kcal</span>
-            </div>
-          </div>
-        );
-
-        const macroCirclesEl = (
-          <MacroCircles
-            carbs={{ current: Math.round(periodTotals.carbs), goal: macroGoals.carbs }}
-            fat={{ current: Math.round(periodTotals.fats), goal: macroGoals.fat }}
-            protein={{ current: Math.round(periodTotals.protein), goal: macroGoals.protein }}
-            onEditGoals={() => setMacroGoalModalOpen(true)}
-          />
-        );
-
-        const remainingCal = Math.max(calGoalTarget - Math.round(periodTotals.calories), 0);
-        return (
-          <>
-            {caloriePeriod === 'daily' && (
-              <PulseCard className="overflow-hidden p-5 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-[38px] font-extrabold leading-none tabular-nums tracking-tight">{Math.round(periodTotals.calories)}</p>
-                      <p className="text-sm text-muted-foreground mt-1">/ {calGoalTarget} kcal</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Remaining</p>
-                      <p className="text-[22px] font-extrabold tabular-nums text-primary leading-tight">{remainingCal}</p>
-                    </div>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full bg-primary rounded-full" style={{ width: `${calPct * 100}%` }} />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground tabular-nums">
-                    <p>P {Math.round(periodTotals.protein)}/{macroGoals.protein}g</p>
-                    <p>C {Math.round(periodTotals.carbs)}/{macroGoals.carbs}g</p>
-                    <p>F {Math.round(periodTotals.fats)}/{macroGoals.fat}g</p>
-                  </div>
-              </PulseCard>
-            )}
-            {/* Mobile: stacked cards */}
-            <div className="md:hidden space-y-4">
-              <PulseCard className="overflow-hidden p-5">
-                  {periodSelectorEl}
-                  {caloriePeriod !== 'daily' && <div className="flex justify-center mt-4">{calorieRingEl}</div>}
-              </PulseCard>
-              {caloriePeriod !== 'daily' && <PulseCard className="overflow-hidden p-5">{macroCirclesEl}</PulseCard>}
-            </div>
-
-            {/* Desktop: single card, all circles in one row */}
-            <Card className="hidden md:block overflow-hidden">
-              <CardContent className="p-6">
-                {periodSelectorEl}
-                {caloriePeriod !== 'daily' && <div className="flex items-center justify-center gap-10 mt-5">
-                  <div className="shrink-0">{calorieRingEl}</div>
-                  <div className="flex-1">{macroCirclesEl}</div>
-                </div>}
-              </CardContent>
-            </Card>
-          </>
-        );
-      })()}
-
-      {/* Food entries */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-xl font-extrabold tracking-tight">Journal</h3>
-            {caloriePeriod === 'daily' && (
-              <p className="mt-1 text-xs text-muted-foreground">Tap a meal mic to log naturally.</p>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setBulkModalOpen(true)}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-bold text-muted-foreground hover:border-primary/40 hover:text-foreground press"
-            >
-              <ClipboardList className="h-3.5 w-3.5" />
-              Menu
-            </button>
-            <button
-              type="button"
-              onClick={() => setDuplicateDialogOpen(true)}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-bold text-muted-foreground hover:border-primary/40 hover:text-foreground press"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Copy
-            </button>
-          </div>
-        </div>
-
-        {caloriePeriod === 'daily' ? (
-          /* Daily: unified input + compact meal-grouped timeline */
-          <>
-            {periodFoodEntries.length === 0 ? (
-              /* Empty state */
-              <PulseCard>
-                <div className="flex flex-col items-center gap-4 p-8 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-terracotta/10 flex items-center justify-center">
-                    <UtensilsCrossed className="w-7 h-7 text-terracotta" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-extrabold tracking-tight">What did you eat today?</p>
-                    <p className="text-sm text-muted-foreground mt-1.5 max-w-xs leading-relaxed">
-                      Log your meals to track your nutrition and stay on top of your goals.
-                    </p>
-                  </div>
-                  <div className="w-full max-w-xs">
-                    <button
-                      type="button"
-                      onClick={() => handleAddFood()}
-                      className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-border bg-card px-4 text-sm font-semibold hover:border-primary/40 transition-colors press"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add food
-                    </button>
-                  </div>
+          {(() => {
+            const calGoalTarget = calorieGoal;
+            const calPct = calGoalTarget > 0 ? Math.min(periodTotals.calories / calGoalTarget, 1) : 0;
+            const remainingCal = Math.max(calGoalTarget - Math.round(periodTotals.calories), 0);
+            const periodSelectorEl = (
+              <PeriodSelector
+                options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
+                  const range = getPeriodRange(period, today);
+                  const entries = foodEntries.filter(f => isWithinInterval(new Date(f.date), range));
+                  const totalCal = entries.reduce((sum, e) => sum + e.calories, 0);
+                  if (period === 'daily') return { value: period, label: period, summary: `${totalCal} cal` };
+                  const days = new Set(entries.map(e => e.date)).size;
+                  const avg = days > 0 ? Math.round(totalCal / days) : 0;
+                  return { value: period, label: period, summary: `${avg} avg` };
+                })}
+                selected={caloriePeriod}
+                onChange={setCaloriePeriod}
+              />
+            );
+            const calorieRingEl = (
+              <div className="relative h-[132px] w-[132px]">
+                <svg viewBox="0 0 100 100" className="h-[132px] w-[132px] -rotate-90">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="11" />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="11" strokeLinecap="round" strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - calPct)} className="transition-all duration-700 ease-out" />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[34px] font-extrabold tabular-nums leading-none tracking-tight">{Math.round(periodTotals.calories)}</span>
+                  <span className="mt-1.5 text-[10px] leading-none text-muted-foreground">of {calGoalTarget}{caloriePeriod !== 'daily' ? ' / day' : ''} kcal</span>
                 </div>
-              </PulseCard>
-            ) : (
-              <>
-                {/* Compact meal-grouped timeline */}
-                <div className="space-y-5">
-                  {mealGroups.map((group) => (
-                      <div key={group.meal}>
-                        <MealGroupHeader
-                          meal={group.meal}
-                          totalCal={group.totalCal}
-                          totalProtein={group.totalProtein}
-                          totalCarbs={group.totalCarbs}
-                          totalFats={group.totalFats}
-                          onVoiceAdd={handleVoiceFood}
-                        />
-                        {group.entries.length > 0 ? (
-                          <PulseCard>
-                            <div className="space-y-2 p-3">
-                              {group.entries.map((entry) => (
-                                <FoodCard
-                                  key={entry.id}
-                                  entry={entry}
-                                  onEdit={handleEditFood}
-                                  onDelete={handleDeleteFood}
-                                />
-                              ))}
-                              <div className="grid grid-cols-2 gap-2 pt-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleVoiceFood(group.meal)}
-                                  className="flex h-10 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground press"
-                                >
-                                  <Mic className="h-4 w-4" /> Voice
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleAddFood(group.meal)}
-                                  className="flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-background text-sm font-semibold press"
-                                >
-                                  <Plus className="h-4 w-4" /> Add
-                                </button>
-                              </div>
-                            </div>
-                          </PulseCard>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-2 rounded-2xl border-[1.5px] border-dashed border-border/80 bg-card/40 p-2">
-                            <button
-                              type="button"
-                              onClick={() => handleVoiceFood(group.meal)}
-                              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground press"
-                            >
-                              <Mic className="w-4 h-4" /> Voice
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleAddFood(group.meal)}
-                              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-card text-sm font-semibold text-muted-foreground hover:text-primary transition-colors press"
-                            >
-                              <Plus className="w-4 h-4" /> Manual
-                            </button>
-                          </div>
-                        )}
+              </div>
+            );
+            const macroCirclesEl = (
+              <MacroCircles
+                carbs={{ current: Math.round(periodTotals.carbs), goal: macroGoals.carbs }}
+                fat={{ current: Math.round(periodTotals.fats), goal: macroGoals.fat }}
+                protein={{ current: Math.round(periodTotals.protein), goal: macroGoals.protein }}
+                onEditGoals={() => setMacroGoalModalOpen(true)}
+              />
+            );
+
+            return (
+              <div className="space-y-4 sm:space-y-5">
+                {caloriePeriod === 'daily' && (
+                  <PulseCard className="overflow-hidden p-5 sm:p-6">
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-[38px] font-extrabold leading-none tracking-tight tabular-nums">{Math.round(periodTotals.calories)}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">/ {calGoalTarget} kcal</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Remaining</p>
+                          <p className="text-[22px] font-extrabold leading-tight text-primary tabular-nums">{remainingCal}</p>
+                        </div>
                       </div>
-                    ))}
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-primary" style={{ width: `${calPct * 100}%` }} />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs tabular-nums">
+                        <p className="text-muted-foreground">P <span className="font-bold text-foreground">{Math.round(periodTotals.protein)}</span>/{macroGoals.protein}g</p>
+                        <p className="text-muted-foreground">C <span className="font-bold text-foreground">{Math.round(periodTotals.carbs)}</span>/{macroGoals.carbs}g</p>
+                        <p className="text-muted-foreground">F <span className="font-bold text-foreground">{Math.round(periodTotals.fats)}</span>/{macroGoals.fat}g</p>
+                      </div>
+                    </div>
+                  </PulseCard>
+                )}
+
+                <div className="md:hidden">
+                  <PulseCard className="overflow-hidden p-5">
+                    {periodSelectorEl}
+                    {caloriePeriod !== 'daily' && <div className="mt-4 flex justify-center">{calorieRingEl}</div>}
+                  </PulseCard>
+                  {caloriePeriod !== 'daily' && <PulseCard className="mt-4 overflow-hidden p-5">{macroCirclesEl}</PulseCard>}
                 </div>
-              </>
+
+                <Card className="hidden overflow-hidden md:block">
+                  <CardContent className="p-6">
+                    {periodSelectorEl}
+                    {caloriePeriod !== 'daily' && (
+                      <div className="mt-5 flex items-center justify-center gap-10">
+                        <div className="shrink-0">{calorieRingEl}</div>
+                        <div className="flex-1">{macroCirclesEl}</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
+
+          <div className="space-y-4 sm:space-y-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  {caloriePeriod === 'daily' ? "Today's meals" : 'Journal'}
+                </p>
+                <h3 className="mt-1 text-xl font-extrabold tracking-tight">Journal</h3>
+                {caloriePeriod === 'daily' && (
+                  <p className="mt-1 text-xs text-muted-foreground">Voice-first meal logging for today.</p>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBulkModalOpen(true)}
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-bold text-muted-foreground hover:border-primary/40 hover:text-foreground press"
+                >
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  Meal tools
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDuplicateDialogOpen(true)}
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-bold text-muted-foreground hover:border-primary/40 hover:text-foreground press"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy day
+                </button>
+              </div>
+            </div>
+
+            {caloriePeriod === 'daily' ? (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {mealGroups.map((group) => (
+                  <MealJournalCard
+                    key={group.meal}
+                    group={group}
+                    onVoiceAdd={handleVoiceFood}
+                    onManualAdd={handleAddFood}
+                    onEdit={handleEditFood}
+                    onDelete={handleDeleteFood}
+                  />
+                ))}
+              </div>
+            ) : periodFoodEntries.length === 0 ? (
+              <EmptyStateCard
+                onClick={() => handleAddFood()}
+                title="Add your first food entry"
+                description="Tap to log what you ate"
+              />
+            ) : (
+              <div className="space-y-4">
+                <PulseCard className="overflow-hidden divide-y divide-border">
+                  {foodGroups.map((group, i) => (
+                    <CollapsibleGroup
+                      key={group.key}
+                      group={group}
+                      defaultOpen={i === 0}
+                      period={caloriePeriod as 'weekly' | 'monthly' | 'yearly'}
+                      onEdit={handleEditFood}
+                      onDelete={handleDeleteFood}
+                    />
+                  ))}
+                </PulseCard>
+                <AddAnotherCard onClick={() => handleAddFood()} label="Add food entry" />
+              </div>
             )}
-          </>
-        ) : periodFoodEntries.length === 0 ? (
-          <EmptyStateCard
-            onClick={() => handleAddFood()}
-            title="Add your first food entry"
-            description="Tap to log what you ate"
-          />
-        ) : (
-          /* Weekly/Monthly/Yearly: unified accordion */
-          <>
-            <PulseCard className="overflow-hidden divide-y divide-border">
-              {foodGroups.map((group, i) => (
-                <CollapsibleGroup
-                  key={group.key}
-                  group={group}
-                  defaultOpen={i === 0}
-                  period={caloriePeriod as 'weekly' | 'monthly' | 'yearly'}
-                  onEdit={handleEditFood}
-                  onDelete={handleDeleteFood}
-                />
-              ))}
-            </PulseCard>
-            <AddAnotherCard onClick={() => handleAddFood()} label="Add food entry" />
-          </>
-        )}
-      </div>
+          </div>
 
-      {/* Sleep Hours Card */}
-      <PulseCard className="p-5 sm:p-6">
-        <h3 className="text-xl font-extrabold tracking-tight mb-4">Sleep</h3>
+          <PulseCard className="mt-2 p-5 sm:p-6">
+            <h3 className="mb-4 text-xl font-extrabold tracking-tight">Sleep</h3>
 
-        <PeriodSelector
-          options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
-            const sleep = sleepData[period];
-            return { value: period, label: period, summary: sleep.hours > 0 ? `${sleep.hours.toFixed(1)}h` : '—' };
-          })}
-          selected={sleepPeriod}
-          onChange={setSleepPeriod}
-        />
-
+            <PeriodSelector
+              options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
+                const sleep = sleepData[period];
+                return { value: period, label: period, summary: sleep.hours > 0 ? `${sleep.hours.toFixed(1)}h` : '--' };
+              })}
+              selected={sleepPeriod}
+              onChange={setSleepPeriod}
+            />
         <div className="my-5">
           <p className="text-4xl font-extrabold tabular-nums tracking-tight leading-none">
             {sleepPeriod === 'daily'
@@ -771,6 +688,7 @@ export function Energy() {
 
         <AddAnotherCard onClick={openSleepModalForToday} icon={Moon} label="Log sleep" />
       </PulseCard>
+        </div>
       </ContentWithLoading>
 
       <SleepEditModal
@@ -842,3 +760,70 @@ export function Energy() {
     </PulsePage>
   );
 }
+
+function MealJournalCard({
+  group,
+  onVoiceAdd,
+  onManualAdd,
+  onEdit,
+  onDelete,
+}: {
+  group: MealGroup;
+  onVoiceAdd: (meal: MealType) => void;
+  onManualAdd: (meal: MealType) => void;
+  onEdit: (entry: FoodEntry) => void;
+  onDelete: (id: string) => void;
+}) {
+  const hasEntries = group.entries.length > 0;
+
+  return (
+    <PulseCard className="overflow-hidden p-4 sm:p-5">
+      <MealGroupHeader
+        meal={group.meal}
+        totalCal={group.totalCal}
+        totalProtein={Math.round(group.totalProtein)}
+        totalCarbs={Math.round(group.totalCarbs)}
+        totalFats={Math.round(group.totalFats)}
+        onVoiceAdd={onVoiceAdd}
+      />
+
+      {hasEntries ? (
+        <div className="mt-3 space-y-2">
+          {group.entries.map((entry) => (
+            <FoodCard
+              key={entry.id}
+              entry={entry}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-3 rounded-2xl border border-dashed border-border bg-muted/25 px-4 py-5 text-center">
+          <p className="text-sm font-bold">Log {group.meal.toLowerCase()}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Use voice for the fastest entry.</p>
+        </div>
+      )}
+
+      <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+        <button
+          type="button"
+          onClick={() => onVoiceAdd(group.meal)}
+          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-extrabold text-primary-foreground press"
+        >
+          <Mic className="h-4 w-4" />
+          Voice log
+        </button>
+        <button
+          type="button"
+          onClick={() => onManualAdd(group.meal)}
+          className="flex h-11 min-w-24 items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-bold text-muted-foreground hover:border-primary/40 hover:text-foreground press"
+        >
+          <Plus className="h-4 w-4" />
+          Add
+        </button>
+      </div>
+    </PulseCard>
+  );
+}
+
