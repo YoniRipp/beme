@@ -6,6 +6,10 @@ export interface ApiUser {
   name: string;
   role: 'admin' | 'user' | 'trainer';
   createdAt?: string;
+  subscriptionStatus?: string;
+  subscriptionPlan?: string | null;
+  subscriptionCurrentPeriodEnd?: string | null;
+  aiCallsRemaining?: number;
 }
 
 export interface AuthResponse {

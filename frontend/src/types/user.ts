@@ -8,6 +8,7 @@ export interface User {
   role: UserRole;
   createdAt?: string;
   subscriptionStatus?: SubscriptionStatus;
+  subscriptionPlan?: 'monthly' | 'yearly' | null;
   subscriptionCurrentPeriodEnd?: string;
   aiCallsRemaining?: number; // -1 = unlimited (pro), 0-10 for free tier
 }

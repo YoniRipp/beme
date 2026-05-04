@@ -110,6 +110,7 @@ export default function Trainer() {
 
   const pendingInvitations = invitations.filter((i) => i.status === 'pending');
   const firstName = user?.name?.split(' ')[0] ?? 'Coach';
+  const trainerSubscriptionInfo = formatTrainerSubscription(user?.subscriptionPlan, user?.subscriptionCurrentPeriodEnd);
   const filteredRoster = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return analytics?.roster ?? [];
@@ -286,6 +287,7 @@ export default function Trainer() {
             onEmailInvite={handleEmailInvite}
             onGenerateCode={handleGenerateCode}
             onCopyCode={handleCopyCode}
+            subscriptionInfo={trainerSubscriptionInfo}
           />
         </div>
       </ContentWithLoading>
@@ -540,6 +542,7 @@ function InvitePanel({
   onEmailInvite,
   onGenerateCode,
   onCopyCode,
+  subscriptionInfo,
 }: {
   refTarget: React.RefObject<HTMLDivElement>;
   inviteTab: 'email' | 'code';
@@ -554,6 +557,7 @@ function InvitePanel({
   onEmailInvite: (e: React.FormEvent) => void;
   onGenerateCode: () => void;
   onCopyCode: () => void;
+  subscriptionInfo: string;
 }) {
   return (
     <div ref={refTarget}>
@@ -561,6 +565,9 @@ function InvitePanel({
         <div className="border-b border-border px-5 py-4">
           <p className="text-base font-extrabold">Invite a client</p>
           <p className="text-xs text-muted-foreground">Send an invite by email or generate a code.</p>
+          <div className="mt-3 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-xs font-medium leading-relaxed text-muted-foreground">
+            Invited trainees receive Pro access tied to your trainer subscription. {subscriptionInfo}
+          </div>
         </div>
         <div className="flex border-b border-border">
           {(['email', 'code'] as const).map((tab) => (
@@ -665,4 +672,10 @@ function formatAge(days: number) {
   if (days < 30) return `${days}d`;
   if (days < 365) return `${Math.floor(days / 30)}mo`;
   return `${Math.floor(days / 365)}y ${Math.floor((days % 365) / 30)}mo`;
+}
+
+function formatTrainerSubscription(plan?: string | null, currentPeriodEnd?: string | null) {
+  const planLabel = plan === 'yearly' ? 'Yearly plan' : plan === 'monthly' ? 'Monthly plan' : 'Current plan';
+  if (!currentPeriodEnd) return `${planLabel} seats stay active while your plan is active.`;
+  return `${planLabel} seats run through ${format(new Date(currentPeriodEnd), 'MMM d, yyyy')}.`;
 }

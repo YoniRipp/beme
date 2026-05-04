@@ -16,7 +16,7 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function apiUserToUser(a: { id: string; email: string; name: string; role: 'admin' | 'user' | 'trainer'; createdAt?: string; subscriptionStatus?: string; subscriptionCurrentPeriodEnd?: string; aiCallsRemaining?: number }): User {
+function apiUserToUser(a: { id: string; email: string; name: string; role: 'admin' | 'user' | 'trainer'; createdAt?: string; subscriptionStatus?: string; subscriptionPlan?: string | null; subscriptionCurrentPeriodEnd?: string | null; aiCallsRemaining?: number }): User {
   return {
     id: a.id,
     email: a.email,
@@ -24,7 +24,8 @@ function apiUserToUser(a: { id: string; email: string; name: string; role: 'admi
     role: a.role,
     createdAt: a.createdAt,
     subscriptionStatus: (a.subscriptionStatus as User['subscriptionStatus']) || 'free',
-    subscriptionCurrentPeriodEnd: a.subscriptionCurrentPeriodEnd,
+    subscriptionPlan: a.subscriptionPlan === 'monthly' || a.subscriptionPlan === 'yearly' ? a.subscriptionPlan : null,
+    subscriptionCurrentPeriodEnd: a.subscriptionCurrentPeriodEnd ?? undefined,
     aiCallsRemaining: a.aiCallsRemaining,
   };
 }

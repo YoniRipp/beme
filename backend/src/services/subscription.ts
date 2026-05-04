@@ -132,7 +132,7 @@ export async function updateSubscriptionStatus(
      SET subscription_status = $1,
          subscription_id = $2,
          subscription_current_period_end = $3,
-         subscription_plan = $4
+         subscription_plan = COALESCE($4, subscription_plan)
      WHERE lemon_squeezy_customer_id = $5`,
     [status, subscriptionId, periodEnd, plan, lemonSqueezyCustomerId],
   );

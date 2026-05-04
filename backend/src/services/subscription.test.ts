@@ -42,6 +42,7 @@ describe('subscription service', () => {
 
       expect(result).toEqual({
         status: 'pro',
+        plan: null,
         currentPeriodEnd: '2026-04-01T00:00:00Z',
       });
       expect(mockQuery).toHaveBeenCalledWith(
@@ -65,7 +66,7 @@ describe('subscription service', () => {
 
       const result = await getUserSubscription('user-123');
 
-      expect(result).toEqual({ status: 'free', currentPeriodEnd: null });
+      expect(result).toEqual({ status: 'free', plan: null, currentPeriodEnd: null });
     });
   });
 
@@ -77,7 +78,7 @@ describe('subscription service', () => {
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('lemon_squeezy_customer_id'),
-        ['pro', 'sub_123', expect.any(Date), 'ls_cus_123'],
+        ['pro', 'sub_123', expect.any(Date), null, 'ls_cus_123'],
       );
     });
   });
