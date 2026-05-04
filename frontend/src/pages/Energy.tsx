@@ -466,7 +466,6 @@ export function Energy() {
           {(() => {
             const calGoalTarget = calorieGoal;
             const calPct = calGoalTarget > 0 ? Math.min(periodTotals.calories / calGoalTarget, 1) : 0;
-            const remainingCal = Math.max(calGoalTarget - Math.round(periodTotals.calories), 0);
             const periodSelectorEl = (
               <PeriodSelector
                 options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
@@ -505,48 +504,21 @@ export function Energy() {
 
             return (
               <div className="space-y-4 sm:space-y-5">
-                {caloriePeriod === 'daily' && (
-                  <PulseCard className="overflow-hidden p-5 sm:p-6">
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-[38px] font-extrabold leading-none tracking-tight tabular-nums">{Math.round(periodTotals.calories)}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">/ {calGoalTarget} kcal</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Remaining</p>
-                          <p className="text-[22px] font-extrabold leading-tight text-primary tabular-nums">{remainingCal}</p>
-                        </div>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-primary" style={{ width: `${calPct * 100}%` }} />
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-xs tabular-nums">
-                        <p className="text-muted-foreground">P <span className="font-bold text-foreground">{Math.round(periodTotals.protein)}</span>/{macroGoals.protein}g</p>
-                        <p className="text-muted-foreground">C <span className="font-bold text-foreground">{Math.round(periodTotals.carbs)}</span>/{macroGoals.carbs}g</p>
-                        <p className="text-muted-foreground">F <span className="font-bold text-foreground">{Math.round(periodTotals.fats)}</span>/{macroGoals.fat}g</p>
-                      </div>
-                    </div>
-                  </PulseCard>
-                )}
-
                 <div className="md:hidden">
                   <PulseCard className="overflow-hidden p-5">
                     {periodSelectorEl}
-                    {caloriePeriod !== 'daily' && <div className="mt-4 flex justify-center">{calorieRingEl}</div>}
+                    <div className="mt-4 flex justify-center">{calorieRingEl}</div>
                   </PulseCard>
-                  {caloriePeriod !== 'daily' && <PulseCard className="mt-4 overflow-hidden p-5">{macroCirclesEl}</PulseCard>}
+                  <PulseCard className="mt-4 overflow-hidden p-5">{macroCirclesEl}</PulseCard>
                 </div>
 
                 <Card className="hidden overflow-hidden md:block">
                   <CardContent className="p-6">
                     {periodSelectorEl}
-                    {caloriePeriod !== 'daily' && (
-                      <div className="mt-5 flex items-center justify-center gap-10">
-                        <div className="shrink-0">{calorieRingEl}</div>
-                        <div className="flex-1">{macroCirclesEl}</div>
-                      </div>
-                    )}
+                    <div className="mt-5 flex items-center justify-center gap-10">
+                      <div className="shrink-0">{calorieRingEl}</div>
+                      <div className="flex-1">{macroCirclesEl}</div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>

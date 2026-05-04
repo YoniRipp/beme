@@ -43,10 +43,10 @@ describe('Energy Page', () => {
   it('shows calorie progress section', async () => {
     render(<Energy />, { wrapper });
     await waitFor(() => {
-      expect(screen.getByText(/^remaining$/i)).toBeInTheDocument();
-      expect(screen.getByText((_, el) => el?.textContent === 'P 0/120g')).toBeInTheDocument();
-      expect(screen.getByText((_, el) => el?.textContent === 'C 0/300g')).toBeInTheDocument();
-      expect(screen.getByText((_, el) => el?.textContent === 'F 0/80g')).toBeInTheDocument();
+      expect(screen.getAllByText(/of 2400 kcal/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/protein/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/carbs/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/^fat$/i).length).toBeGreaterThan(0);
     });
   });
 
