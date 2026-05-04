@@ -33,6 +33,7 @@ export async function initSchema() {
         lemon_squeezy_customer_id text,
         subscription_status text DEFAULT 'free',
         subscription_id text,
+        subscription_plan text,
         subscription_current_period_end timestamptz,
         subscription_source text DEFAULT 'self',
         ai_calls_used int DEFAULT 0,

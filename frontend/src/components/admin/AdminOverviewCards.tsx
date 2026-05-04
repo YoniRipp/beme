@@ -1,4 +1,4 @@
-import { Users, CreditCard, Mic, Activity } from 'lucide-react';
+import { Activity, CreditCard, Mic, Repeat, ShieldCheck, UserCheck, Users, WalletCards } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAdminStats } from '@/hooks/useAdminStats';
 import type { BusinessOverview } from '@/core/api/admin';
@@ -14,13 +14,49 @@ const cards = [
     getSub: (o: BusinessOverview) => `+${o.newUsersThisWeek} this week`,
   },
   {
+    key: 'trainees',
+    label: 'Trainees',
+    icon: UserCheck,
+    color: 'border-l-cyan-500',
+    iconColor: 'text-cyan-500',
+    getValue: (o: BusinessOverview) => o.totalTrainees,
+    getSub: (o: BusinessOverview) => `${o.activeTrainerClientLinks} active trainer links`,
+  },
+  {
+    key: 'trainers',
+    label: 'Trainers',
+    icon: ShieldCheck,
+    color: 'border-l-indigo-500',
+    iconColor: 'text-indigo-500',
+    getValue: (o: BusinessOverview) => o.totalTrainers,
+    getSub: (o: BusinessOverview) => `${o.activeTrainersWithClients} with clients`,
+  },
+  {
     key: 'subs',
-    label: 'Pro Subscribers',
+    label: 'Pro Accounts',
     icon: CreditCard,
     color: 'border-l-green-500',
     iconColor: 'text-green-500',
     getValue: (o: BusinessOverview) => o.proSubscribers,
-    getSub: (o: BusinessOverview) => `${o.churned} churned`,
+    getSub: (o: BusinessOverview) => `${o.selfPaidSubscribers} self-paid`,
+  },
+  {
+    key: 'monthly',
+    label: 'Monthly Pro',
+    icon: Repeat,
+    color: 'border-l-emerald-500',
+    iconColor: 'text-emerald-500',
+    getValue: (o: BusinessOverview) => o.monthlyProSubscribers,
+    getSub: (o: BusinessOverview) => `${o.yearlyProSubscribers} yearly pro`,
+  },
+  {
+    key: 'trainer_granted',
+    label: 'Trainer Seats',
+    icon: WalletCards,
+    color: 'border-l-orange-500',
+    iconColor: 'text-orange-500',
+    getValue: (o: BusinessOverview) => o.trainerGrantedSubscribers,
+    getSub: (o: BusinessOverview) => `${o.pendingTrainerInvites} pending invites`,
   },
   {
     key: 'voice',
@@ -50,7 +86,7 @@ export function AdminOverviewCards() {
   const overview = data?.overview;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (

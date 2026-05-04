@@ -65,6 +65,15 @@ export interface BusinessOverview {
   totalUsers: number;
   newUsersThisWeek: number;
   proSubscribers: number;
+  totalTrainers: number;
+  totalTrainees: number;
+  activeTrainerClientLinks: number;
+  activeTrainersWithClients: number;
+  pendingTrainerInvites: number;
+  monthlyProSubscribers: number;
+  yearlyProSubscribers: number;
+  selfPaidSubscribers: number;
+  trainerGrantedSubscribers: number;
   churned: number;
   voiceCallsThisMonth: number;
   weeklyActiveUsers: number;
@@ -88,6 +97,8 @@ export interface AdminStatsResponse {
   overview: BusinessOverview;
   userGrowth: Array<{ date: string; count: number }>;
   dailyVoiceCalls: Array<{ date: string; calls: number }>;
+  subscriptionBreakdown: Array<{ label: string; count: number }>;
+  trainerGrowth: Array<{ date: string; newTrainers: number; newTrainees: number }>;
   voiceHeavyUsers: VoiceHeavyUser[];
   recentErrors: AdminRecentErrors;
 }

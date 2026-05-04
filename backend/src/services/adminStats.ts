@@ -14,20 +14,31 @@ const OVERVIEW_FALLBACK = {
   totalUsers: 0,
   newUsersThisWeek: 0,
   proSubscribers: 0,
+  totalTrainers: 0,
+  totalTrainees: 0,
+  activeTrainerClientLinks: 0,
+  activeTrainersWithClients: 0,
+  pendingTrainerInvites: 0,
+  monthlyProSubscribers: 0,
+  yearlyProSubscribers: 0,
+  selfPaidSubscribers: 0,
+  trainerGrantedSubscribers: 0,
   churned: 0,
   voiceCallsThisMonth: 0,
   weeklyActiveUsers: 0,
 };
 
 export async function getAll() {
-  const [overview, userGrowth, dailyVoiceCalls, voiceHeavyUsers, recentErrors] =
+  const [overview, userGrowth, dailyVoiceCalls, voiceHeavyUsers, recentErrors, subscriptionBreakdown, trainerGrowth] =
     await Promise.all([
       safe('overview', () => adminStatsModel.getBusinessOverview(), OVERVIEW_FALLBACK),
       safe('userGrowth', () => adminStatsModel.getUserGrowth(), []),
       safe('dailyVoiceCalls', () => adminStatsModel.getDailyVoiceCalls(), []),
       safe('voiceHeavyUsers', () => adminStatsModel.getVoiceHeavyUsers(), []),
       safe('recentErrors', () => adminStatsModel.getRecentErrors(), { count: 0, lastErrorMessage: null }),
+      safe('subscriptionBreakdown', () => adminStatsModel.getSubscriptionBreakdown(), []),
+      safe('trainerGrowth', () => adminStatsModel.getTrainerGrowth(), []),
     ]);
 
-  return { overview, userGrowth, dailyVoiceCalls, voiceHeavyUsers, recentErrors };
+  return { overview, userGrowth, dailyVoiceCalls, voiceHeavyUsers, recentErrors, subscriptionBreakdown, trainerGrowth };
 }

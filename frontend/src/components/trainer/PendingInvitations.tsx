@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, UserCheck, UserPlus } from 'lucide-react';
@@ -11,8 +12,8 @@ export function PendingInvitations() {
   const { data: trainerData, isLoading: loadingTrainer } = useMyTrainer();
   const acceptMutation = useAcceptInvitation();
   const [manualCode, setManualCode] = useState('');
-
-  if (loadingInvitations || loadingTrainer) return null;
+  const [searchParams] = useSearchParams();
+  const handledInviteRef = useRef<string | null>(null);
 
   const trainer = trainerData?.trainer;
   const pending = invitations.filter((inv) => inv.status === 'pending');
@@ -26,6 +27,17 @@ export function PendingInvitations() {
       onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to accept invitation'),
     });
   };
+
+  useEffect(() => {
+    if (loadingInvitations || loadingTrainer || trainer || acceptMutation.isPending) return;
+    const inviteFromEmail = searchParams.get('trainerInvite')?.trim();
+    if (!inviteFromEmail || handledInviteRef.current === inviteFromEmail) return;
+    handledInviteRef.current = inviteFromEmail;
+    setManualCode(inviteFromEmail);
+    handleAccept(inviteFromEmail);
+  }, [acceptMutation.isPending, loadingInvitations, loadingTrainer, searchParams, trainer]);
+
+  if (loadingInvitations || loadingTrainer) return null;
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();

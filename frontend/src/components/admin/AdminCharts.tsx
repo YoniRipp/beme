@@ -46,8 +46,14 @@ export function AdminCharts() {
     calls: d.calls,
   }));
 
+  const trainerGrowthData = data.trainerGrowth.map((d) => ({
+    date: formatDate(d.date),
+    trainers: d.newTrainers,
+    trainees: d.newTrainees,
+  }));
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">User Growth (30 days)</CardTitle>
@@ -83,6 +89,41 @@ export function AdminCharts() {
                 strokeDasharray="3 3"
                 label={{ value: 'Heavy use', position: 'right', fill: '#ef4444', fontSize: 11 }}
               />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Subscription Mix</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={data.subscriptionBreakdown} layout="vertical" margin={{ left: 28, right: 12 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+              <YAxis dataKey="label" type="category" width={112} tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Bar dataKey="count" fill="#10b981" radius={[0, 8, 8, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Trainer CRM Growth (30 days)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={trainerGrowthData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Bar dataKey="trainers" name="New trainers" fill="#6366f1" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="trainees" name="New trainees" fill="#06b6d4" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

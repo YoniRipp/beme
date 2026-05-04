@@ -21,6 +21,7 @@ export interface LemonSqueezyWebhookPayload {
       customer_id: number;
       status?: string;
       renews_at?: string;
+      variant_id?: number | string;
       urls?: { customer_portal?: string };
       [key: string]: unknown;
     };
@@ -107,12 +108,13 @@ export async function getCustomerPortalUrl(userId: string): Promise<string | nul
 export async function getUserSubscription(userId: string) {
   const pool = getPool();
   const { rows } = await pool.query(
-    'SELECT subscription_status, subscription_current_period_end FROM users WHERE id = $1',
+    'SELECT subscription_status, subscription_plan, subscription_current_period_end FROM users WHERE id = $1',
     [userId],
   );
   if (rows.length === 0) return null;
   return {
     status: rows[0].subscription_status || 'free',
+    plan: rows[0].subscription_plan || null,
     currentPeriodEnd: rows[0].subscription_current_period_end,
   };
 }
@@ -122,22 +124,38 @@ export async function updateSubscriptionStatus(
   status: string,
   subscriptionId: string | null,
   periodEnd: Date | null,
+  plan: 'monthly' | 'yearly' | null = null,
 ) {
   const pool = getPool();
   await pool.query(
     `UPDATE users
      SET subscription_status = $1,
          subscription_id = $2,
-         subscription_current_period_end = $3
-     WHERE lemon_squeezy_customer_id = $4`,
-    [status, subscriptionId, periodEnd, lemonSqueezyCustomerId],
+         subscription_current_period_end = $3,
+         subscription_plan = $4
+     WHERE lemon_squeezy_customer_id = $5`,
+    [status, subscriptionId, periodEnd, plan, lemonSqueezyCustomerId],
   );
 }
 
-/**
- * When a trainer's subscription is canceled/expired, revoke pro from all their active trainees.
- */
-async function cascadeTrainerRevocation(lemonSqueezyCustomerId: string) {
+function getPlanFromVariantId(variantId: unknown): 'monthly' | 'yearly' | null {
+  if (variantId == null) return null;
+  const normalized = String(variantId);
+  if (config.lemonSqueezyVariantIdYearly && normalized === String(config.lemonSqueezyVariantIdYearly)) {
+    return 'yearly';
+  }
+  if (config.lemonSqueezyVariantIdMonthly && normalized === String(config.lemonSqueezyVariantIdMonthly)) {
+    return 'monthly';
+  }
+  return null;
+}
+
+async function cascadeTrainerSubscription(
+  lemonSqueezyCustomerId: string,
+  status: string,
+  periodEnd: Date | null,
+  plan: 'monthly' | 'yearly' | null,
+) {
   const pool = getPool();
   const { rows } = await pool.query(
     'SELECT id, role FROM users WHERE lemon_squeezy_customer_id = $1',
@@ -147,11 +165,16 @@ async function cascadeTrainerRevocation(lemonSqueezyCustomerId: string) {
 
   const trainerId = rows[0].id as string;
   const clientIds = await trainerClientModel.findActiveClientIds(trainerId);
+  const shouldRevoke = ['canceled', 'expired', 'free'].includes(status);
   for (const clientId of clientIds) {
-    await userModel.revokeTrainerSubscription(clientId);
+    if (shouldRevoke) {
+      await userModel.revokeTrainerSubscription(clientId);
+    } else if (status === 'pro') {
+      await userModel.grantTrainerSubscription(clientId, { currentPeriodEnd: periodEnd, plan });
+    }
   }
   if (clientIds.length > 0) {
-    logger.info({ trainerId, clientCount: clientIds.length }, 'Cascaded subscription revocation to trainer clients');
+    logger.info({ trainerId, clientCount: clientIds.length, status, plan }, 'Cascaded trainer subscription to clients');
   }
 }
 
@@ -160,6 +183,7 @@ export async function handleWebhookEvent(payload: LemonSqueezyWebhookPayload) {
   const customData = payload.meta.custom_data;
   const attrs = payload.data.attributes;
   const customerId = String(attrs.customer_id);
+  const plan = getPlanFromVariantId(attrs.variant_id);
 
   switch (eventName) {
     case 'subscription_created': {
@@ -179,7 +203,9 @@ export async function handleWebhookEvent(payload: LemonSqueezyWebhookPayload) {
         'pro',
         String(payload.data.id),
         attrs.renews_at ? new Date(attrs.renews_at) : null,
+        plan,
       );
+      await cascadeTrainerSubscription(customerId, 'pro', attrs.renews_at ? new Date(attrs.renews_at) : null, plan);
       logger.info({ userId, subscriptionId: payload.data.id }, 'Subscription created');
       break;
     }
@@ -196,11 +222,9 @@ export async function handleWebhookEvent(payload: LemonSqueezyWebhookPayload) {
         mappedStatus,
         String(payload.data.id),
         attrs.renews_at ? new Date(attrs.renews_at) : null,
+        plan,
       );
-      // Cascade: if a trainer loses their subscription, revoke pro from all their trainees
-      if (['canceled', 'expired', 'free'].includes(mappedStatus)) {
-        await cascadeTrainerRevocation(customerId);
-      }
+      await cascadeTrainerSubscription(customerId, mappedStatus, attrs.renews_at ? new Date(attrs.renews_at) : null, plan);
       logger.info({ customerId, status: mappedStatus }, 'Subscription updated');
       break;
     }
@@ -210,6 +234,7 @@ export async function handleWebhookEvent(payload: LemonSqueezyWebhookPayload) {
         'past_due',
         String(payload.data.id),
         null,
+        plan,
       );
       logger.warn({ customerId }, 'Subscription payment failed');
       break;
@@ -220,7 +245,9 @@ export async function handleWebhookEvent(payload: LemonSqueezyWebhookPayload) {
         'pro',
         String(payload.data.id),
         attrs.renews_at ? new Date(attrs.renews_at) : null,
+        plan,
       );
+      await cascadeTrainerSubscription(customerId, 'pro', attrs.renews_at ? new Date(attrs.renews_at) : null, plan);
       logger.info({ customerId }, 'Subscription payment succeeded');
       break;
     }

@@ -18,6 +18,7 @@ export interface UserRow {
   reset_token_hash: string | null;
   reset_token_expires: string | null;
   subscription_status: string | null;
+  subscription_plan: string | null;
   subscription_current_period_end: string | null;
   subscription_source: string | null;
   ai_calls_used: number | null;
@@ -31,11 +32,12 @@ export interface User {
   role: 'admin' | 'user' | 'trainer';
   createdAt?: string;
   subscriptionStatus: string;
+  subscriptionPlan: string | null;
   subscriptionCurrentPeriodEnd: string | null;
   aiCallsRemaining: number;
 }
 
-const USER_COLS = 'id, email, name, role, created_at, subscription_status, subscription_current_period_end, ai_calls_used, ai_calls_reset_month';
+const USER_COLS = 'id, email, name, role, created_at, subscription_status, subscription_plan, subscription_current_period_end, ai_calls_used, ai_calls_reset_month';
 const FULL_USER_COLS = USER_COLS + ', password_hash, auth_provider, provider_id, failed_login_attempts, locked_until';
 
 export function rowToUser(row: UserRow): User {
@@ -48,6 +50,7 @@ export function rowToUser(row: UserRow): User {
     role: row.role,
     createdAt: row.created_at,
     subscriptionStatus: status,
+    subscriptionPlan: row.subscription_plan || null,
     subscriptionCurrentPeriodEnd: row.subscription_current_period_end || null,
     aiCallsRemaining: remaining,
   };
@@ -201,13 +204,41 @@ export async function updatePassword(
   );
 }
 
-/** Grant pro subscription from trainer link (only upgrades free users). */
-export async function grantTrainerSubscription(userId: string): Promise<void> {
+export interface TrainerSubscriptionGrant {
+  plan?: string | null;
+  currentPeriodEnd?: Date | string | null;
+}
+
+export async function getSubscriptionGrant(userId: string): Promise<TrainerSubscriptionGrant> {
+  const db = getPool();
+  const result = await db.query(
+    `SELECT subscription_plan, subscription_current_period_end
+     FROM users
+     WHERE id = $1`,
+    [userId],
+  );
+  return {
+    plan: result.rows[0]?.subscription_plan ?? null,
+    currentPeriodEnd: result.rows[0]?.subscription_current_period_end ?? null,
+  };
+}
+
+/** Grant pro subscription from trainer link without overriding self-paid pro users. */
+export async function grantTrainerSubscription(userId: string, grant: TrainerSubscriptionGrant = {}): Promise<void> {
   const db = getPool();
   await db.query(
-    `UPDATE users SET subscription_status = 'pro', subscription_source = 'trainer'
-     WHERE id = $1 AND (subscription_status IS NULL OR subscription_status = 'free')`,
-    [userId],
+    `UPDATE users
+     SET subscription_status = 'pro',
+         subscription_source = 'trainer',
+         subscription_plan = $2,
+         subscription_current_period_end = $3
+     WHERE id = $1
+       AND (
+         subscription_status IS NULL
+         OR subscription_status = 'free'
+         OR subscription_source = 'trainer'
+       )`,
+    [userId, grant.plan ?? null, grant.currentPeriodEnd ?? null],
   );
 }
 
@@ -215,7 +246,11 @@ export async function grantTrainerSubscription(userId: string): Promise<void> {
 export async function revokeTrainerSubscription(userId: string): Promise<void> {
   const db = getPool();
   await db.query(
-    `UPDATE users SET subscription_status = 'free', subscription_source = 'self'
+    `UPDATE users
+     SET subscription_status = 'free',
+         subscription_source = 'self',
+         subscription_plan = NULL,
+         subscription_current_period_end = NULL
      WHERE id = $1 AND subscription_source = 'trainer'`,
     [userId],
   );
