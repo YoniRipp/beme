@@ -134,10 +134,12 @@ describe('Home Page', () => {
     expect(screen.getByRole('button', { name: /log food/i })).toBeInTheDocument();
   });
 
-it('displays dashboard stats section', () => {
+it('replaces dashboard stats with voice hero and quick log', () => {
     render(<Home />, { wrapper });
-    expect(screen.getByText(/this week/i)).toBeInTheDocument();
-    expect(screen.getByText(/last night/i)).toBeInTheDocument();
+    expect(screen.queryByText(/this week/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/last night/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/tap to log by voice/i)).toBeInTheDocument();
+    expect(screen.getByText(/quick log/i)).toBeInTheDocument();
   });
 
   it('displays calories and sleep stats', () => {

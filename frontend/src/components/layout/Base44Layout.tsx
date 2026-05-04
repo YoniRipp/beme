@@ -18,6 +18,7 @@ import {
   BookOpen,
   Sparkles,
   Flame,
+  Mic,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
@@ -305,13 +306,23 @@ export function Base44Layout() {
       <QuickAddMenu open={quickAddOpen} onOpenChange={setQuickAddOpen} />
       <VoiceAgentPanel open={voicePanelOpen} onOpenChange={setVoicePanelOpen} />
 
+      {pathname !== '/' && (
+        <Button
+          size="icon"
+          onClick={() => setVoicePanelOpen((prev) => !prev)}
+          className="fixed right-4 z-40 hidden h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-card-lg hover:bg-primary/90 md:right-6 lg:bottom-6 lg:flex"
+          aria-label={voicePanelOpen ? 'Close voice panel' : 'Open voice'}
+        >
+          <Mic className="h-5 w-5" />
+        </Button>
+      )}
+
       {/* AI Chat FAB — bottom-right, above mobile nav */}
       {hasAiAccess && pathname !== '/insights' && (
         <Button
           size="icon"
           onClick={() => setAiChatOpen(true)}
-          className="fixed right-4 z-40 h-12 w-12 rounded-full bg-foreground text-background hover:bg-foreground/90 shadow-card-lg md:right-6 lg:bottom-6"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 9.75rem)' }}
+          className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom,0px)+9.75rem)] z-40 h-12 w-12 rounded-full bg-foreground text-background hover:bg-foreground/90 shadow-card-lg md:right-6 lg:bottom-[5.25rem]"
           aria-label="Open AI Coach"
         >
           <Sparkles className="h-5 w-5" />

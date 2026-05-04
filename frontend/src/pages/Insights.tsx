@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
+import { useWeight } from '@/hooks/useWeight';
 import { useSubscription } from '@/hooks/useSubscription';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import {
@@ -20,6 +21,7 @@ export function Insights() {
   const { hasAiAccess } = useSubscription();
   const { workouts } = useWorkouts();
   const { foodEntries, checkIns } = useEnergy();
+  const { weightEntries } = useWeight();
 
   const fitnessInsights = useMemo(() => getFitnessInsights(workouts), [workouts]);
   const healthInsights = useMemo(() => getHealthInsights(foodEntries, checkIns), [foodEntries, checkIns]);
@@ -29,6 +31,17 @@ export function Insights() {
     [workouts]
   );
   const calorieTrend = useMemo(() => getCalorieTrendData(foodEntries, 30), [foodEntries]);
+  const weightProgress = useMemo(
+    () => weightEntries
+      .slice()
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(-30)
+      .map((entry) => ({
+        date: new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        weight: Number(entry.weight),
+      })),
+    [weightEntries]
+  );
 
   const workoutTrendData = useMemo(() => {
     return calculateTrends(workouts, () => 1, 'week');
@@ -61,7 +74,7 @@ export function Insights() {
         workoutTypePieData={workoutTypePieData}
         fitnessInsights={fitnessInsights}
       />
-      <HealthInsightsSection calorieTrend={calorieTrend} healthInsights={healthInsights} />
+      <HealthInsightsSection calorieTrend={calorieTrend} weightProgress={weightProgress} healthInsights={healthInsights} />
     </PulsePage>
   );
 }

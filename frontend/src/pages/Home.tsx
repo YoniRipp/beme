@@ -5,6 +5,8 @@ import { useEnergy } from '@/hooks/useEnergy';
 import { useGoals } from '@/hooks/useGoals';
 import { useMacroGoals } from '@/hooks/useMacroGoals';
 import { useProfile } from '@/hooks/useProfile';
+import { useWater } from '@/hooks/useWater';
+import { useWeight } from '@/hooks/useWeight';
 import { useApp } from '@/context/AppContext';
 import { MacroGoalModal } from '@/components/home/MacroGoalModal';
 import { SleepEditModal } from '@/components/energy/SleepEditModal';
@@ -15,6 +17,7 @@ import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { VoiceMicHero } from '@/components/voice/VoiceMicHero';
 import { WaterTracker } from '@/components/home/WaterTracker';
 import { WeightProgress } from '@/components/home/WeightProgress';
+import { WeightLogModal } from '@/components/home/WeightLogModal';
 import { CycleTracker } from '@/components/home/CycleTracker';
 import { StreakCard } from '@/components/home/StreakCard';
 import { SetupWizard } from '@/components/onboarding/SetupWizard';
@@ -23,7 +26,7 @@ import { isOnboardingCompleted } from '@/lib/onboarding';
 import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
-import { Apple, ChevronRight, Droplets, Dumbbell, Moon, Pencil, Scale, UtensilsCrossed, User } from 'lucide-react';
+import { Apple, ChevronRight, Droplets, Dumbbell, Minus, Moon, Pencil, Plus, Scale, UtensilsCrossed, User } from 'lucide-react';
 import { isSameDay, format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -34,7 +37,6 @@ import {
   PulseQuickTile,
   PulseRing,
   PulseSectionHeader,
-  PulseStatCard,
 } from '@/components/pulse/PulseUI';
 
 export function Home() {
@@ -46,6 +48,8 @@ export function Home() {
   const { addGoal, updateGoal, goalsLoading } = useGoals();
   const { macroGoals, setMacroGoals, calorieGoal } = useMacroGoals();
   const { profile, profileLoading } = useProfile();
+  const { glasses, mlTotal, addGlass, removeGlass, waterLoading } = useWater();
+  const { weightEntries } = useWeight();
   const { user } = useApp();
   const firstName = user?.name?.split(' ')[0] ?? 'there';
 
@@ -55,6 +59,7 @@ export function Home() {
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
   const [workoutModalOpen, setWorkoutModalOpen] = useState(false);
   const [foodModalOpen, setFoodModalOpen] = useState(false);
+  const [weightModalOpen, setWeightModalOpen] = useState(false);
   const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
   const [showTour] = useState(() => !isOnboardingCompleted());
 
@@ -110,21 +115,14 @@ export function Home() {
       .slice(0, 5);
   }, [foodEntries, workouts]);
 
-  const workoutsThisWeek = useMemo(() => {
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-    return workouts.filter((w) => {
-      const d = new Date(w.date);
-      return d >= weekStart && d <= now;
-    }).length;
-  }, [workouts]);
-
   const calPct = calorieGoal > 0 ? Math.min(todaySummary.totalCal / calorieGoal, 1) : 0;
   const sleepHours = Number(todayCheckIn?.sleepHours ?? 0);
   const weightKg = profile?.currentWeight ? Number(profile.currentWeight).toFixed(1) : '--';
   const todayDate = format(new Date(), 'EEE · MMM d');
+  const todaysWeight = useMemo(
+    () => weightEntries.find((entry) => isSameDay(new Date(entry.date), new Date())),
+    [weightEntries]
+  );
 
   // Handlers
   const handleGoalSave = (goal: Omit<Goal, 'id' | 'createdAt'>) => {
@@ -157,6 +155,23 @@ export function Home() {
   const handleFoodSave = (entry: Omit<FoodEntry, 'id'>) => {
     addFoodEntry(entry);
     toast.success('Food entry added');
+  };
+
+  const handleAddWater = async () => {
+    try {
+      await addGlass();
+    } catch {
+      toast.error('Could not log water');
+    }
+  };
+
+  const handleRemoveWater = async () => {
+    if (glasses <= 0) return;
+    try {
+      await removeGlass();
+    } catch {
+      toast.error('Could not update water');
+    }
   };
 
   if (!profileLoading && !profile.setupCompleted) {
@@ -235,28 +250,33 @@ export function Home() {
             </div>
           </PulseCard>
 
-          {/* Stats row */}
-          <div className="grid grid-cols-3 gap-2.5">
-            <PulseStatCard icon={Dumbbell} label="Workouts" value={workoutsThisWeek} sub="this week" onClick={() => navigate('/body')} />
-            <PulseStatCard icon={Moon} label="Sleep" value={`${sleepHours}h`} sub="last night" color="text-info" onClick={() => setSleepModalOpen(true)} />
-            <PulseStatCard icon={Scale} label="Weight" value={weightKg} sub="kg" color="text-terracotta" onClick={() => navigate('/settings')} />
-          </div>
-
-          {/* Quick log */}
-          <PulseSectionHeader title="Quick log" eyebrow="Tap to add" />
-          <div className="grid grid-cols-2 gap-2.5">
-            <PulseQuickTile icon={Apple} label="Log food" onClick={() => setFoodModalOpen(true)} />
-            <PulseQuickTile icon={Dumbbell} label="Log workout" onClick={() => setWorkoutModalOpen(true)} />
-            <PulseQuickTile icon={Droplets} label="Water" pill="Open" onClick={() => navigate('/water')} />
-            <PulseQuickTile icon={Moon} label="Sleep" pill={`${sleepHours}h`} onClick={() => setSleepModalOpen(true)} />
-          </div>
-
           {/* Voice */}
           <div data-onboarding="voice">
             <VoiceMicHero onOpenAgent={() => openVoiceAgent?.()} />
           </div>
 
           <StreakCard />
+
+          {/* Quick log */}
+          <PulseSectionHeader title="Quick log" eyebrow="Today" />
+          <div className="grid grid-cols-2 gap-2.5">
+            <PulseQuickTile icon={Apple} label="Log food" onClick={() => setFoodModalOpen(true)} />
+            <PulseQuickTile icon={Dumbbell} label="Log workout" onClick={() => setWorkoutModalOpen(true)} />
+            <WaterQuickTile
+              glasses={glasses}
+              mlTotal={mlTotal}
+              goal={profile.waterGoalGlasses || 8}
+              loading={waterLoading}
+              onAdd={handleAddWater}
+              onRemove={handleRemoveWater}
+              onOpen={() => navigate('/water')}
+            />
+            {sleepHours > 0 ? (
+              !todaysWeight && <PulseQuickTile icon={Scale} label="Log weight" pill={weightKg === '--' ? undefined : `${weightKg}kg`} onClick={() => setWeightModalOpen(true)} />
+            ) : (
+              <PulseQuickTile icon={Moon} label="Log sleep" onClick={() => setSleepModalOpen(true)} />
+            )}
+          </div>
 
           {/* Health trackers */}
           <div className="grid grid-cols-2 gap-4" data-onboarding="trackers">
@@ -324,8 +344,74 @@ export function Home() {
         goals={macroGoals}
         onSave={setMacroGoals}
       />
+      <WeightLogModal open={weightModalOpen} onOpenChange={setWeightModalOpen} />
 
       {showTour && <OnboardingTour />}
     </PulsePage>
+  );
+}
+
+function WaterQuickTile({
+  glasses,
+  mlTotal,
+  goal,
+  loading,
+  onAdd,
+  onRemove,
+  onOpen,
+}: {
+  glasses: number;
+  mlTotal: number;
+  goal: number;
+  loading: boolean;
+  onAdd: () => void;
+  onRemove: () => void;
+  onOpen: () => void;
+}) {
+  const pct = Math.min(glasses / goal, 1);
+
+  return (
+    <PulseCard className="flex h-[108px] flex-col justify-between p-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-2 text-left">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-info/15 text-info">
+            <Droplets className="h-5 w-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold leading-none">Water</span>
+            <span className="mt-1 block truncate text-[11px] font-medium text-muted-foreground">{mlTotal} ml</span>
+          </span>
+        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={onRemove}
+            disabled={glasses <= 0 || loading}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground disabled:opacity-40"
+            aria-label="Remove a glass"
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onAdd}
+            disabled={loading}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-info text-white disabled:opacity-60"
+            aria-label="Add a glass"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+      <div>
+        <div className="flex items-baseline gap-1 text-xs text-muted-foreground">
+          <span className="text-xl font-extrabold leading-none text-foreground">{glasses}</span>
+          <span>/ {goal} glasses</span>
+        </div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full bg-info transition-all" style={{ width: `${pct * 100}%` }} />
+        </div>
+      </div>
+    </PulseCard>
   );
 }

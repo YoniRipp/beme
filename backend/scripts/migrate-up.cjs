@@ -38,7 +38,8 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-const cliPath = require.resolve('node-pg-migrate/bin/node-pg-migrate.js');
+const packageJsonPath = require.resolve('node-pg-migrate/package.json');
+const cliPath = path.join(path.dirname(packageJsonPath), 'bin', 'node-pg-migrate.js');
 const result = spawnSync(process.execPath, [cliPath, 'up', '--no-check-order'], {
   cwd: backendDir,
   stdio: 'inherit',

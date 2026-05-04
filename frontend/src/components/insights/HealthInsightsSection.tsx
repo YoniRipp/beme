@@ -6,10 +6,18 @@ import type { HealthInsight } from '@/lib/analytics';
 
 interface HealthInsightsSectionProps {
   calorieTrend: Array<{ date: string; calories: number }>;
+  weightProgress: Array<{ date: string; weight: number }>;
   healthInsights: HealthInsight;
 }
 
-export function HealthInsightsSection({ calorieTrend, healthInsights }: HealthInsightsSectionProps) {
+const chartStyle = {
+  background: 'hsl(var(--card))',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: 12,
+  color: 'hsl(var(--foreground))',
+};
+
+export function HealthInsightsSection({ calorieTrend, weightProgress, healthInsights }: HealthInsightsSectionProps) {
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -29,11 +37,32 @@ export function HealthInsightsSection({ calorieTrend, healthInsights }: HealthIn
                 <CardContent>
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={calorieTrend}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="calories" stroke="#8b5cf6" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={chartStyle} />
+                      <Line type="monotone" dataKey="calories" stroke="hsl(var(--terracotta))" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            ),
+          },
+          {
+            title: 'Weight Progress',
+            content: (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Weight Progress</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={weightProgress}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} domain={['dataMin - 1', 'dataMax + 1']} />
+                      <Tooltip contentStyle={chartStyle} formatter={(value) => [`${Number(value).toFixed(1)} kg`, 'Weight']} />
+                      <Line type="monotone" dataKey="weight" stroke="hsl(var(--info))" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
