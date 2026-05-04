@@ -91,6 +91,7 @@ function hasTrainerAccess(user?: { role?: string; subscriptionStatus?: string })
 }
 
 function getPageTitle(pathname: string): string {
+  if (pathname.startsWith('/trainer/client/')) return 'Client profile';
   return ROUTE_TO_TITLE[pathname] ?? (pathname.slice(1) || 'Dashboard');
 }
 
