@@ -11,6 +11,10 @@ export interface TrainerClient {
   clientEmail: string;
   status: string;
   createdAt: string;
+  subscriptionStatus?: string | null;
+  subscriptionSource?: string | null;
+  subscriptionPlan?: string | null;
+  subscriptionCurrentPeriodEnd?: string | null;
 }
 
 export interface TrainerInvitation {
@@ -95,7 +99,16 @@ export const trainerApi = {
     request<{ message: string }>('/api/trainer/accept-invite', { method: 'POST', body: { inviteCode } }),
 
   getMyTrainer: () =>
-    request<{ trainer: { id: string; name: string; email: string } | null }>('/api/trainer/my-trainer'),
+    request<{
+      trainerId: string;
+      trainerName: string;
+      trainerEmail: string;
+      connectedAt: string;
+      subscriptionStatus: string | null;
+      subscriptionSource: string | null;
+      subscriptionPlan: string | null;
+      subscriptionCurrentPeriodEnd: string | null;
+    } | null>('/api/trainer/my-trainer'),
 
   getPendingInvitations: () =>
     request<TrainerInvitation[]>('/api/trainer/pending-invitations'),

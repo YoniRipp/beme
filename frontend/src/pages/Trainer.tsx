@@ -435,7 +435,7 @@ function RosterPanel({
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-base font-extrabold">Trainee roster</p>
-            <p className="text-xs text-muted-foreground">Status, subscription age, and progress deltas</p>
+            <p className="text-xs text-muted-foreground">Status, connection age, and progress deltas</p>
           </div>
           <div className="relative md:w-72">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -481,7 +481,7 @@ function RosterPanel({
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{client.clientEmail}</p>
                   <p className="mt-1 text-[11px] font-medium text-muted-foreground">
-                    {formatAge(client.subscriptionAgeDays)} subscribed - last active {client.lastActivityAt ? format(new Date(client.lastActivityAt), 'MMM d') : 'never'}
+                    Connected {formatAge(client.subscriptionAgeDays)} - last active {client.lastActivityAt ? format(new Date(client.lastActivityAt), 'MMM d') : 'never'}
                   </p>
                 </div>
               </button>

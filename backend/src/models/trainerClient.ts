@@ -13,6 +13,10 @@ function rowToTrainerClient(row: Record<string, unknown>): TrainerClient {
     clientEmail: row.client_email as string,
     status: row.status as TrainerClientStatus,
     createdAt: String(row.created_at),
+    subscriptionStatus: (row.subscription_status as string | null) ?? null,
+    subscriptionSource: (row.subscription_source as string | null) ?? null,
+    subscriptionPlan: (row.subscription_plan as string | null) ?? null,
+    subscriptionCurrentPeriodEnd: row.subscription_current_period_end ? String(row.subscription_current_period_end) : null,
   };
 }
 
@@ -32,7 +36,9 @@ export async function findClientsByTrainerId(trainerId: string): Promise<Trainer
   const db = getPool();
   const result = await db.query(
     `SELECT tc.id, tc.trainer_id, tc.client_id, tc.status, tc.created_at,
-            u.name AS client_name, u.email AS client_email
+            u.name AS client_name, u.email AS client_email,
+            u.subscription_status, u.subscription_source, u.subscription_plan,
+            u.subscription_current_period_end
      FROM trainer_clients tc
      JOIN users u ON u.id = tc.client_id
      WHERE tc.trainer_id = $1 AND tc.status = 'active'
@@ -161,12 +167,25 @@ export async function acceptInvitation(invitationId: string, clientId: string): 
   );
 }
 
-export async function findTrainerByClientId(clientId: string): Promise<{ trainerId: string; trainerName: string; trainerEmail: string } | null> {
+export async function findTrainerByClientId(clientId: string): Promise<{
+  trainerId: string;
+  trainerName: string;
+  trainerEmail: string;
+  connectedAt: string;
+  subscriptionStatus: string | null;
+  subscriptionSource: string | null;
+  subscriptionPlan: string | null;
+  subscriptionCurrentPeriodEnd: string | null;
+} | null> {
   const db = getPool();
   const result = await db.query(
-    `SELECT tc.trainer_id, u.name AS trainer_name, u.email AS trainer_email
+    `SELECT tc.trainer_id, tc.created_at AS connected_at,
+            trainer.name AS trainer_name, trainer.email AS trainer_email,
+            client.subscription_status, client.subscription_source, client.subscription_plan,
+            client.subscription_current_period_end
      FROM trainer_clients tc
-     JOIN users u ON u.id = tc.trainer_id
+     JOIN users trainer ON trainer.id = tc.trainer_id
+     JOIN users client ON client.id = tc.client_id
      WHERE tc.client_id = $1 AND tc.status = 'active'
      LIMIT 1`,
     [clientId],
@@ -177,6 +196,11 @@ export async function findTrainerByClientId(clientId: string): Promise<{ trainer
     trainerId: row.trainer_id as string,
     trainerName: row.trainer_name as string,
     trainerEmail: row.trainer_email as string,
+    connectedAt: String(row.connected_at),
+    subscriptionStatus: (row.subscription_status as string | null) ?? null,
+    subscriptionSource: (row.subscription_source as string | null) ?? null,
+    subscriptionPlan: (row.subscription_plan as string | null) ?? null,
+    subscriptionCurrentPeriodEnd: row.subscription_current_period_end ? String(row.subscription_current_period_end) : null,
   };
 }
 

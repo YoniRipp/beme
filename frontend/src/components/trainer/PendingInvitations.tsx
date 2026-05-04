@@ -15,7 +15,7 @@ export function PendingInvitations() {
   const [searchParams] = useSearchParams();
   const handledInviteRef = useRef<string | null>(null);
 
-  const trainer = trainerData?.trainer;
+  const trainer = trainerData;
   const pending = invitations.filter((inv) => inv.status === 'pending');
 
   const handleAccept = (code: string) => {
@@ -61,11 +61,14 @@ export function PendingInvitations() {
         {trainer && (
           <div className="flex items-center gap-3 rounded-xl bg-primary/5 border border-primary/15 p-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-              {trainer.name.trim().charAt(0).toUpperCase()}
+              {trainer.trainerName.trim().charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="font-semibold truncate">{trainer.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{trainer.email}</p>
+              <p className="font-semibold truncate">{trainer.trainerName}</p>
+              <p className="text-xs text-muted-foreground truncate">{trainer.trainerEmail}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Trainee since {new Date(trainer.connectedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
             </div>
           </div>
         )}

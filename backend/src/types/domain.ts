@@ -186,6 +186,10 @@ export interface TrainerClient {
   clientEmail: string;
   status: TrainerClientStatus;
   createdAt: string;
+  subscriptionStatus?: string | null;
+  subscriptionSource?: string | null;
+  subscriptionPlan?: string | null;
+  subscriptionCurrentPeriodEnd?: string | null;
 }
 
 export interface TrainerInvitation {

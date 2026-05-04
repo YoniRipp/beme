@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PulseCard, PulsePage } from '@/components/pulse/PulseUI';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
 import { DailyCheckInModal } from '@/components/energy/DailyCheckInModal';
@@ -214,8 +215,21 @@ export default function TrainerClientView() {
           <p className="truncate text-lg font-extrabold tracking-tight">{client?.clientName ?? 'Client'}</p>
           <p className="text-sm text-muted-foreground truncate">{client?.clientEmail}</p>
           {joinedDate && (
-            <p className="text-xs text-muted-foreground mt-0.5">Client since {joinedDate}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Trainee since {joinedDate}</p>
           )}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <Badge variant="outline" className="border-primary/25 bg-primary/10 text-primary">
+              Trainee
+            </Badge>
+            <Badge variant="outline" className={cn('border-border bg-muted/45', accessBadgeClass(client?.subscriptionSource))}>
+              {formatAccessLabel(client?.subscriptionStatus, client?.subscriptionSource)}
+            </Badge>
+            {client?.subscriptionCurrentPeriodEnd && (
+              <Badge variant="secondary" className="font-medium">
+                Until {format(new Date(client.subscriptionCurrentPeriodEnd), 'MMM d, yyyy')}
+              </Badge>
+            )}
+          </div>
         </div>
       </PulseCard>
 
@@ -477,6 +491,17 @@ function formatDate(date: string | Date) {
   } catch {
     return String(date);
   }
+}
+
+function formatAccessLabel(status?: string | null, source?: string | null) {
+  if (status === 'pro' && source === 'trainer') return 'Trainer-granted Pro';
+  if (status === 'pro') return 'Self-paid Pro';
+  return 'Free account';
+}
+
+function accessBadgeClass(source?: string | null) {
+  if (source === 'trainer') return 'border-info/25 bg-info/10 text-info';
+  return 'border-success/25 bg-success/10 text-success';
 }
 
 interface EntryListProps<T extends { id?: string }> {
