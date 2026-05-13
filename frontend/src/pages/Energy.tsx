@@ -766,11 +766,11 @@ function MealJournalCard({
         </div>
       )}
 
-      <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => onVoiceAdd(group.meal)}
-          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-extrabold text-primary-foreground press"
+          className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-extrabold text-primary-foreground press"
         >
           <Mic className="h-4 w-4" />
           Voice log
@@ -778,7 +778,7 @@ function MealJournalCard({
         <button
           type="button"
           onClick={() => onManualAdd(group.meal)}
-          className="flex h-11 min-w-24 items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-bold text-muted-foreground hover:border-primary/40 hover:text-foreground press"
+          className="flex h-11 items-center justify-center gap-2 rounded-2xl border border-border bg-background px-3 text-sm font-bold text-muted-foreground hover:border-primary/40 hover:text-foreground press"
         >
           <Plus className="h-4 w-4" />
           Add
