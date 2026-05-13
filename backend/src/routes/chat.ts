@@ -11,6 +11,7 @@ const router = Router();
 router.post('/api/chat', requireAuth, requirePro, chatController.chat);
 router.post('/api/chat/agent', requireAuth, requirePro, chatController.agentChat);
 router.post('/api/chat/agent/stream', requireAuth, requirePro, chatController.agentChatStream);
+router.post('/api/chat/agent/confirm-plan', requireAuth, requirePro, chatController.confirmPlan);
 router.get('/api/chat/history', requireAuth, requirePro, chatController.getHistory);
 router.delete('/api/chat/history', requireAuth, requirePro, chatController.deleteHistory);
 

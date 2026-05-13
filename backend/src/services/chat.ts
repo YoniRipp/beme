@@ -215,22 +215,50 @@ ${detailedFood}
 - Be encouraging but honest — if they're not hitting goals, say so kindly with a concrete plan.
 - Keep responses concise for mobile — 2-4 short paragraphs unless they ask for detailed breakdowns.
 - You can respond in Hebrew or English based on the language the user writes in.
-- WORKOUT IMPLEMENTATION: Whenever you write, create, suggest, or describe a workout plan for the user — you MUST call add_workout for EACH session/day. This applies whether the user says "write me a workout", "create a program", "give me a plan", "implement this", etc. Use today's date for the first session and increment dates (tomorrow, day after, etc.) for subsequent days. After logging all sessions, briefly confirm what was saved. NEVER describe a workout plan without creating it in the app.
+- PLAN PROPOSALS: When the user asks you to write/create/generate a multi-item plan (a workout program with multiple sessions, a meal plan, etc.), call propose_plan ONCE with the full plan (all workouts and/or foods). Do NOT call add_workout or add_food directly for plans — the app will show a "Save to app" confirmation card and the user will decide. Use today's date for the first workout and increment for subsequent days. After proposing, briefly describe what's in the plan.
+- SINGLE-ITEM LOGS: For single-item logs the user is already committing to ("I ate 2 eggs", "I did squats today"), keep calling add_food / add_workout directly — no confirmation needed for things the user just did.
 - Today's date: ${new Date().toISOString().slice(0, 10)}`;
 }
 
 // ─── Agent response type ────────────────────────────────────────────────────
 
+export interface ProposedWorkout {
+  date?: string;
+  title: string;
+  type: 'strength' | 'cardio' | 'flexibility' | 'sports';
+  durationMinutes?: number;
+  notes?: string;
+  exercises?: Array<{ name: string; sets: number; reps: number; weight?: number; notes?: string }>;
+}
+
+export interface ProposedFood {
+  date?: string;
+  food: string;
+  amount?: number;
+  unit?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface PlanProposal {
+  id: string;
+  title: string;
+  summary: string;
+  workouts: ProposedWorkout[];
+  foods: ProposedFood[];
+}
+
 export interface AgentChatResponse {
   message: ChatMessage;
   actions: ExecuteResult[];
+  proposals?: PlanProposal[];
 }
 
 // ─── Streaming send message ─────────────────────────────────────────────────
 
 const AGENT_SYSTEM_INIT = `You are an AI agent — not just a chatbot. CRITICAL RULES:
-1. When the user asks to log, add, edit, or delete data (food, workouts, sleep, goals, weight, water) — USE the appropriate tool. Do NOT describe what you would do — actually call the tool.
-2. When you write or create a workout plan for the user — call add_workout for EACH session/day. Never describe a plan without actually creating it in the app. Use today's date for the first session and increment dates for each subsequent day.
+1. For single-item logs the user is already committing to (e.g. "I ate 2 eggs", "I did squats today") — call the appropriate add tool directly.
+2. For multi-item PLANS the user is asking you to design (workout programs across multiple days, meal plans) — call propose_plan ONCE with the full plan. Do NOT call add_workout / add_food directly for plans. The app will show a confirmation card so the user can choose to save the plan.
 3. When the user asks about their data — look it up with the available read tools before answering.
 4. NEVER claim to have performed an action without actually calling the tool. "I've logged..." means you MUST have called the tool, not just described doing so.`;
 
@@ -240,6 +268,7 @@ export async function sendMessageStream(
   onChunk: (text: string) => void,
   onThinking: () => void,
   signal?: AbortSignal,
+  onProposal?: (proposal: PlanProposal) => void,
 ): Promise<AgentChatResponse> {
   // 1. Save user message
   await saveChatMessage(userId, 'user', userMessage);
@@ -274,6 +303,7 @@ export async function sendMessageStream(
   //    - If model returns tool calls instead of text, handle them synchronously
   //    - After tool calls, emit final text in word-level chunks (simulated streaming)
   const allActions: ExecuteResult[] = [];
+  const proposals: PlanProposal[] = [];
   let responseText = '';
 
   try {
@@ -308,19 +338,42 @@ export async function sendMessageStream(
       while (pendingCalls.length > 0 && rounds < MAX_TOOL_ROUNDS) {
         onThinking();
 
-        const actions = pendingCalls.map(fc => ({ intent: fc.name, ...fc.args }));
-        const results = await executeActions(actions as { intent: string; [key: string]: unknown }[], userId);
-        allActions.push(...results);
+        const planCalls = pendingCalls.filter(fc => fc.name === 'propose_plan');
+        const otherCalls = pendingCalls.filter(fc => fc.name !== 'propose_plan');
 
-        const functionResponses = pendingCalls.map((fc, i) => ({
+        const planResponses = planCalls.map(fc => {
+          const proposal = buildProposal(fc.args as Record<string, unknown>);
+          proposals.push(proposal);
+          onProposal?.(proposal);
+          return {
+            functionResponse: {
+              name: fc.name,
+              response: {
+                success: true,
+                message: `Plan "${proposal.title}" prepared and shown to user for confirmation.`,
+                proposalId: proposal.id,
+              },
+            },
+          };
+        });
+
+        const otherActions = otherCalls.map(fc => ({ intent: fc.name, ...fc.args }));
+        const otherResults = otherCalls.length
+          ? await executeActions(otherActions as { intent: string; [key: string]: unknown }[], userId)
+          : [];
+        allActions.push(...otherResults);
+
+        const otherResponses = otherCalls.map((fc, i) => ({
           functionResponse: {
             name: fc.name,
             response: {
-              success: results[i]?.success ?? false,
-              message: results[i]?.message ?? 'Unknown result',
+              success: otherResults[i]?.success ?? false,
+              message: otherResults[i]?.message ?? 'Unknown result',
             },
           },
         }));
+
+        const functionResponses = [...planResponses, ...otherResponses];
 
         const nextResult = await chat.sendMessage(functionResponses as never);
         const nextResponse = nextResult.response;
@@ -366,7 +419,31 @@ export async function sendMessageStream(
 
   // 5. Save and return
   const saved = await saveChatMessage(userId, 'assistant', responseText);
-  return { message: saved, actions: allActions };
+  return { message: saved, actions: allActions, proposals };
+}
+
+function buildProposal(args: Record<string, unknown>): PlanProposal {
+  const workouts = Array.isArray(args.workouts) ? (args.workouts as ProposedWorkout[]) : [];
+  const foods = Array.isArray(args.foods) ? (args.foods as ProposedFood[]) : [];
+  return {
+    id: `prop_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    title: typeof args.title === 'string' ? args.title : 'Suggested plan',
+    summary: typeof args.summary === 'string' ? args.summary : '',
+    workouts,
+    foods,
+  };
+}
+
+export async function executePlanProposal(userId: string, proposal: PlanProposal): Promise<ExecuteResult[]> {
+  const actions: { intent: string; [key: string]: unknown }[] = [];
+  for (const w of proposal.workouts ?? []) {
+    actions.push({ intent: 'add_workout', ...w });
+  }
+  for (const f of proposal.foods ?? []) {
+    actions.push({ intent: 'add_food', ...f });
+  }
+  if (actions.length === 0) return [];
+  return executeActions(actions, userId);
 }
 
 // ─── Send message (agent loop with function calling) ────────────────────────
@@ -404,6 +481,7 @@ export async function sendMessage(userId: string, userMessage: string): Promise<
 
   // 4. Agent loop: send message, handle function calls, repeat until text response
   const allActions: ExecuteResult[] = [];
+  const proposals: PlanProposal[] = [];
   let responseText: string;
 
   try {
@@ -415,26 +493,41 @@ export async function sendMessage(userId: string, userMessage: string): Promise<
       const functionCalls = response.functionCalls?.() ?? [];
       if (functionCalls.length === 0) break;
 
-      // Execute function calls via voiceExecutor
-      const actions = functionCalls.map(fc => ({
-        intent: fc.name,
-        ...fc.args,
-      }));
-      const results = await executeActions(actions as { intent: string; [key: string]: unknown }[], userId);
-      allActions.push(...results);
+      const planCalls = functionCalls.filter(fc => fc.name === 'propose_plan');
+      const otherCalls = functionCalls.filter(fc => fc.name !== 'propose_plan');
 
-      // Send function results back to Gemini so it can generate a natural response
-      const functionResponses = functionCalls.map((fc, i) => ({
+      const planResponses = planCalls.map(fc => {
+        const proposal = buildProposal(fc.args as Record<string, unknown>);
+        proposals.push(proposal);
+        return {
+          functionResponse: {
+            name: fc.name,
+            response: {
+              success: true,
+              message: `Plan "${proposal.title}" prepared for user confirmation.`,
+              proposalId: proposal.id,
+            },
+          },
+        };
+      });
+
+      const otherActions = otherCalls.map(fc => ({ intent: fc.name, ...fc.args }));
+      const otherResults = otherCalls.length
+        ? await executeActions(otherActions as { intent: string; [key: string]: unknown }[], userId)
+        : [];
+      allActions.push(...otherResults);
+
+      const otherResponses = otherCalls.map((fc, i) => ({
         functionResponse: {
           name: fc.name,
           response: {
-            success: results[i]?.success ?? false,
-            message: results[i]?.message ?? 'Unknown result',
+            success: otherResults[i]?.success ?? false,
+            message: otherResults[i]?.message ?? 'Unknown result',
           },
         },
       }));
 
-      result = await chat.sendMessage(functionResponses as never);
+      result = await chat.sendMessage([...planResponses, ...otherResponses] as never);
       response = result.response;
       rounds++;
     }
@@ -447,5 +540,5 @@ export async function sendMessage(userId: string, userMessage: string): Promise<
 
   // 5. Save and return assistant response with action results
   const saved = await saveChatMessage(userId, 'assistant', responseText);
-  return { message: saved, actions: allActions };
+  return { message: saved, actions: allActions, proposals };
 }

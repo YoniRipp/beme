@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, X, Loader2, Mic, CheckCircle2, AlertCircle, MoreVertical, Trash2, Square } from 'lucide-react';
+import { Send, X, Loader2, Mic, CheckCircle2, AlertCircle, MoreVertical, Trash2, Square, Dumbbell, UtensilsCrossed, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import {
@@ -11,7 +11,8 @@ import {
 import { useAgent } from '@/hooks/useAgent';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { cn } from '@/lib/utils';
-import type { AgentResponse } from '@/core/api/chat';
+import type { AgentResponse, PlanProposal } from '@/core/api/chat';
+import { toast } from 'sonner';
 
 function isRTL(text: string): boolean {
   return /[\u0590-\u05FF\uFB1D-\uFB4F]/.test(text);
@@ -23,7 +24,20 @@ interface ChatAgentPanelProps {
 }
 
 export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
-  const { messages, isLoadingHistory, isSending, isThinking, streamingContent, hasPendingResponse, sendMessage, clearHistory } = useAgent();
+  const {
+    messages,
+    isLoadingHistory,
+    isSending,
+    isThinking,
+    streamingContent,
+    hasPendingResponse,
+    pendingProposals,
+    confirmingProposalId,
+    sendMessage,
+    clearHistory,
+    confirmProposal,
+    dismissProposal,
+  } = useAgent();
   const [input, setInput] = useState('');
   const [lastActions, setLastActions] = useState<AgentResponse['actions'] | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -88,6 +102,23 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
       setLastActions(null);
     }
   }, [clearHistory]);
+
+  const handleConfirmProposal = useCallback(async (proposal: PlanProposal) => {
+    const actions = await confirmProposal(proposal);
+    if (!actions) {
+      toast.error('Failed to save plan');
+      return;
+    }
+    const failed = actions.filter((a) => !a.success).length;
+    if (failed === 0) {
+      toast.success(`Saved "${proposal.title}" to your app`);
+    } else if (failed === actions.length) {
+      toast.error('Could not save plan');
+    } else {
+      toast.warning(`Saved ${actions.length - failed} of ${actions.length} items`);
+    }
+    setLastActions(actions);
+  }, [confirmProposal]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -215,6 +246,104 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
               ))}
             </div>
           )}
+
+          {/* Plan proposals — user confirms before saving */}
+          {pendingProposals.map((proposal) => {
+            const isConfirming = confirmingProposalId === proposal.id;
+            const workoutCount = proposal.workouts?.length ?? 0;
+            const foodCount = proposal.foods?.length ?? 0;
+            return (
+              <div
+                key={proposal.id}
+                className="mr-auto w-full max-w-[92%] rounded-2xl border bg-card p-4 shadow-card"
+              >
+                <div className="mb-2">
+                  <h4 className="text-sm font-semibold tracking-tight">{proposal.title}</h4>
+                  {proposal.summary && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">{proposal.summary}</p>
+                  )}
+                </div>
+
+                {workoutCount > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <Dumbbell className="h-3 w-3" />
+                      <span>{workoutCount} workout{workoutCount === 1 ? '' : 's'}</span>
+                    </div>
+                    {proposal.workouts.slice(0, 6).map((w, i) => (
+                      <div key={i} className="rounded-lg bg-muted/60 px-3 py-2 text-xs">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="font-medium">{w.title}</span>
+                          <span className="text-muted-foreground tabular-nums">{w.date ?? '—'}</span>
+                        </div>
+                        {w.exercises && w.exercises.length > 0 && (
+                          <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
+                            {w.exercises.slice(0, 6).map((e, j) => (
+                              <li key={j}>
+                                {e.name} — {e.sets}×{e.reps}
+                                {e.weight ? ` @ ${e.weight}kg` : ''}
+                              </li>
+                            ))}
+                            {w.exercises.length > 6 && (
+                              <li className="italic">+{w.exercises.length - 6} more</li>
+                            )}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                    {workoutCount > 6 && (
+                      <div className="text-[11px] italic text-muted-foreground">+{workoutCount - 6} more sessions</div>
+                    )}
+                  </div>
+                )}
+
+                {foodCount > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <UtensilsCrossed className="h-3 w-3" />
+                      <span>{foodCount} food item{foodCount === 1 ? '' : 's'}</span>
+                    </div>
+                    {proposal.foods.slice(0, 8).map((f, i) => (
+                      <div key={i} className="flex items-baseline justify-between gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs">
+                        <span className="font-medium">
+                          {f.amount && f.unit ? `${f.amount} ${f.unit} ` : ''}{f.food}
+                        </span>
+                        <span className="text-muted-foreground tabular-nums">{f.date ?? '—'}</span>
+                      </div>
+                    ))}
+                    {foodCount > 8 && (
+                      <div className="text-[11px] italic text-muted-foreground">+{foodCount - 8} more items</div>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-4 flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    className="h-9 flex-1 rounded-full"
+                    onClick={() => handleConfirmProposal(proposal)}
+                    disabled={isConfirming}
+                  >
+                    {isConfirming ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Check className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Save to app
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 rounded-full"
+                    onClick={() => dismissProposal(proposal.id)}
+                    disabled={isConfirming}
+                  >
+                    Discard
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
 
           {/* Pending response indicator — backend still processing after reconnect */}
           {hasPendingResponse && !isSending && (

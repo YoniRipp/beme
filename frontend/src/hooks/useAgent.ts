@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { chatApi, type ChatMessage, type StreamAction } from '@/core/api/chat';
+import { chatApi, type ChatMessage, type StreamAction, type PlanProposal } from '@/core/api/chat';
 
 interface AgentMessage {
   id: string;
@@ -16,6 +16,8 @@ export function useAgent() {
   const [isThinking, setIsThinking] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [pendingUserMsg, setPendingUserMsg] = useState<AgentMessage | null>(null);
+  const [pendingProposals, setPendingProposals] = useState<PlanProposal[]>([]);
+  const [confirmingProposalId, setConfirmingProposalId] = useState<string | null>(null);
 
   const {
     data: historyData,
@@ -114,6 +116,9 @@ export function useAgent() {
           await queryClient.invalidateQueries({ queryKey: ['chat', 'history'] });
           resolve(null);
         },
+        (proposal) => {
+          setPendingProposals((prev) => [...prev, proposal]);
+        },
       ).catch((err) => {
         console.error('Stream failed:', err);
         setIsSending(false);
@@ -124,6 +129,26 @@ export function useAgent() {
       });
     });
   }, [isSending, queryClient]);
+
+  const confirmProposal = useCallback(async (proposal: PlanProposal): Promise<StreamAction[] | null> => {
+    setConfirmingProposalId(proposal.id);
+    try {
+      const { actions } = await chatApi.confirmPlan(proposal);
+      setPendingProposals((prev) => prev.filter((p) => p.id !== proposal.id));
+      await queryClient.invalidateQueries({ queryKey: ['workouts'] });
+      await queryClient.invalidateQueries({ queryKey: ['foodEntries'] });
+      return actions;
+    } catch (err) {
+      console.error('Confirm plan failed:', err);
+      return null;
+    } finally {
+      setConfirmingProposalId(null);
+    }
+  }, [queryClient]);
+
+  const dismissProposal = useCallback((id: string) => {
+    setPendingProposals((prev) => prev.filter((p) => p.id !== id));
+  }, []);
 
   const clearHistory = useCallback(async () => {
     await chatApi.clearHistory();
@@ -137,7 +162,11 @@ export function useAgent() {
     isThinking,
     streamingContent,
     hasPendingResponse,
+    pendingProposals,
+    confirmingProposalId,
     sendMessage,
     clearHistory,
+    confirmProposal,
+    dismissProposal,
   };
 }
