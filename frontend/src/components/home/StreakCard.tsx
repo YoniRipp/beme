@@ -22,7 +22,7 @@ export function StreakCard() {
   if (isLoading || !hasAnyStreak) return null;
 
   return (
-    <PulseCard className="overflow-hidden bg-gradient-to-r from-card to-terracotta/10 p-5">
+    <PulseCard className="overflow-hidden p-5">
         <div className="flex items-center gap-2 mb-4">
           <Flame className="h-4 w-4 text-gold animate-flame-pulse" />
           <h3 className="text-base font-bold tracking-tight">Streaks</h3>

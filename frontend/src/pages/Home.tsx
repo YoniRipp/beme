@@ -181,7 +181,7 @@ export function Home() {
         <div className="space-y-5">
 
           {/* Today's fuel */}
-          <PulseCard className="pulse-hero-glow relative overflow-hidden p-5" data-onboarding="dashboard">
+          <PulseCard className="relative overflow-hidden p-5" data-onboarding="dashboard">
             <div className="relative z-10 mb-4 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
               <span className="text-primary">Today's fuel</span>
               <div className="flex items-center gap-2">
