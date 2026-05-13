@@ -16,6 +16,32 @@ export type AgentResponse = ChatResponse;
 
 export type StreamAction = { intent: string; success: boolean; message: string; [key: string]: unknown };
 
+export interface ProposedWorkout {
+  date?: string;
+  title: string;
+  type: 'strength' | 'cardio' | 'flexibility' | 'sports';
+  durationMinutes?: number;
+  notes?: string;
+  exercises?: Array<{ name: string; sets: number; reps: number; weight?: number; notes?: string }>;
+}
+
+export interface ProposedFood {
+  date?: string;
+  food: string;
+  amount?: number;
+  unit?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface PlanProposal {
+  id: string;
+  title: string;
+  summary: string;
+  workouts: ProposedWorkout[];
+  foods: ProposedFood[];
+}
+
 export const chatApi = {
   sendMessage: (message: string): Promise<ChatResponse> =>
     request('/api/chat', { method: 'POST', body: { message }, timeoutMs: 60000 }),
@@ -27,8 +53,9 @@ export const chatApi = {
     message: string,
     onChunk: (text: string) => void,
     onThinking: () => void,
-    onDone: (actions: StreamAction[]) => void,
+    onDone: (actions: StreamAction[], proposals: PlanProposal[]) => void,
     onError: (err: string) => void,
+    onProposal?: (proposal: PlanProposal) => void,
   ): Promise<void> {
     const token = getToken();
     const res = await fetch(`${getApiBase()}/api/chat/agent/stream`, {
@@ -65,11 +92,14 @@ export const chatApi = {
             thinking?: boolean;
             done?: boolean;
             actions?: StreamAction[];
+            proposals?: PlanProposal[];
+            proposal?: PlanProposal;
             error?: string;
           };
           if (data.chunk) onChunk(data.chunk);
           else if (data.thinking) onThinking();
-          else if (data.done) { completed = true; onDone(data.actions ?? []); }
+          else if (data.proposal) onProposal?.(data.proposal);
+          else if (data.done) { completed = true; onDone(data.actions ?? [], data.proposals ?? []); }
           else if (data.error) { completed = true; onError(data.error); }
         } catch {
           // ignore malformed lines
@@ -88,4 +118,7 @@ export const chatApi = {
 
   clearHistory: (): Promise<void> =>
     request('/api/chat/history', { method: 'DELETE' }),
+
+  confirmPlan: (proposal: PlanProposal): Promise<{ actions: StreamAction[] }> =>
+    request('/api/chat/agent/confirm-plan', { method: 'POST', body: { proposal }, timeoutMs: 60000 }),
 };

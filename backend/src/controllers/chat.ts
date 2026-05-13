@@ -7,7 +7,7 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { sendJson, sendError } from '../utils/response.js';
-import { sendMessage, getChatHistory, clearChatHistory, sendMessageStream } from '../services/chat.js';
+import { sendMessage, getChatHistory, clearChatHistory, sendMessageStream, executePlanProposal, type PlanProposal } from '../services/chat.js';
 import { sendAgentMessage } from '../services/chatAgent.js';
 import { config } from '../config/index.js';
 
@@ -71,8 +71,9 @@ export const agentChatStream = asyncHandler(async (req: Request, res: Response) 
       (chunk: string) => send({ chunk }),
       () => send({ thinking: true }),
       controller.signal,
+      (proposal: PlanProposal) => send({ proposal }),
     );
-    send({ done: true, actions: result.actions });
+    send({ done: true, actions: result.actions, proposals: result.proposals ?? [] });
   } catch (err) {
     if ((err as Error)?.name === 'AbortError') {
       send({ error: 'Request timed out. Your response may still be processing — check back shortly.' });
@@ -83,6 +84,25 @@ export const agentChatStream = asyncHandler(async (req: Request, res: Response) 
     clearTimeout(timeout);
     res.end();
   }
+});
+
+export const confirmPlan = asyncHandler(async (req: Request, res: Response) => {
+  const { proposal } = req.body ?? {};
+  if (!proposal || typeof proposal !== 'object') {
+    return sendError(res, 400, 'Proposal is required');
+  }
+  const p = proposal as PlanProposal;
+  if (!Array.isArray(p.workouts) && !Array.isArray(p.foods)) {
+    return sendError(res, 400, 'Proposal must include workouts or foods');
+  }
+  const results = await executePlanProposal(req.user!.id, {
+    id: p.id ?? '',
+    title: p.title ?? '',
+    summary: p.summary ?? '',
+    workouts: Array.isArray(p.workouts) ? p.workouts : [],
+    foods: Array.isArray(p.foods) ? p.foods : [],
+  });
+  return sendJson(res, { actions: results });
 });
 
 export const agentChat = asyncHandler(async (req: Request, res: Response) => {
