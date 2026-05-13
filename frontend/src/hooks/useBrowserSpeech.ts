@@ -27,11 +27,16 @@ function getSpeechCtor(): (new () => SpeechRecognitionInstance) | null {
   return (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition ?? null;
 }
 
+interface UseBrowserSpeechOptions {
+  lang?: string;
+}
+
 /**
  * Lightweight browser-native speech recognition hook for the bulk food input modal.
  * Uses the Web Speech API directly (no server round-trip).
+ * Supports any language the browser's ASR backend handles (including he-IL).
  */
-export function useBrowserSpeech() {
+export function useBrowserSpeech({ lang }: UseBrowserSpeechOptions = {}) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +57,7 @@ export function useBrowserSpeech() {
     const recognition = new Ctor();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    recognition.lang = lang ?? navigator.language ?? 'he-IL';
 
     let finalTranscript = '';
 

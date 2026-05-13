@@ -206,14 +206,12 @@ function MealGroupHeader({
   totalProtein,
   totalCarbs,
   totalFats,
-  onVoiceAdd,
 }: {
   meal: MealType;
   totalCal: number;
   totalProtein: number;
   totalCarbs: number;
   totalFats: number;
-  onVoiceAdd: (meal: MealType) => void;
 }) {
   const Icon = MEAL_ICONS[meal];
   return (
@@ -230,14 +228,6 @@ function MealGroupHeader({
           P {totalProtein}g - C {totalCarbs}g - F {totalFats}g
         </span>
       </div>
-      <button
-        type="button"
-        onClick={() => onVoiceAdd(meal)}
-        className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-card-lg press"
-        aria-label={`Log ${meal.toLowerCase()} by voice`}
-      >
-        <Mic className="h-4 w-4" />
-      </button>
     </div>
   );
 }
@@ -756,7 +746,6 @@ function MealJournalCard({
         totalProtein={Math.round(group.totalProtein)}
         totalCarbs={Math.round(group.totalCarbs)}
         totalFats={Math.round(group.totalFats)}
-        onVoiceAdd={onVoiceAdd}
       />
 
       {hasEntries ? (
