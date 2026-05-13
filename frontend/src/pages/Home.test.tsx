@@ -148,11 +148,6 @@ it('replaces dashboard stats with voice hero and quick log', () => {
     expect(screen.getByText(/sleep/i)).toBeInTheDocument();
   });
 
-  it('keeps voice onboarding section mounted', () => {
-    const { container } = render(<Home />, { wrapper });
-    expect(container.querySelector('[data-onboarding="voice"]')).toBeInTheDocument();
-  });
-
 it('opens food modal from quick log button', async () => {
     const user = userEvent.setup();
     render(<Home />, { wrapper });

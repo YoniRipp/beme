@@ -20,13 +20,6 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
   const leftItems = items.slice(0, half);
   const rightItems = items.slice(half);
 
-  const onboardingKey = (path: string) => {
-    if (path === '/body') return 'nav-body';
-    if (path === '/energy') return 'nav-energy';
-    if (path === '/insights') return 'nav-insights';
-    return undefined;
-  };
-
   const renderItem = (item: NavItem) => {
     const isActive = currentPath === item.path;
     const Icon = item.icon;
@@ -34,7 +27,6 @@ export function BottomNavigation({ items, currentPath, onCenterPress }: BottomNa
       <Link
         key={item.path}
         to={item.path}
-        data-onboarding={onboardingKey(item.path)}
         className={`flex-1 flex flex-col items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-[0.06em] py-2 transition-colors press min-h-[48px]
           ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
         aria-current={isActive ? 'page' : undefined}

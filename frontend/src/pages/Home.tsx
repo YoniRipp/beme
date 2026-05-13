@@ -20,8 +20,6 @@ import { WeightLogModal } from '@/components/home/WeightLogModal';
 import { CycleTracker } from '@/components/home/CycleTracker';
 import { StreakCard } from '@/components/home/StreakCard';
 import { SetupWizard } from '@/components/onboarding/SetupWizard';
-import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
-import { isOnboardingCompleted } from '@/lib/onboarding';
 import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
@@ -59,7 +57,6 @@ export function Home() {
   const [foodModalOpen, setFoodModalOpen] = useState(false);
   const [weightModalOpen, setWeightModalOpen] = useState(false);
   const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
-  const [showTour] = useState(() => !isOnboardingCompleted());
 
   // Derived data
   const todayCheckIn = useMemo(
@@ -181,7 +178,7 @@ export function Home() {
         <div className="space-y-5">
 
           {/* Today's fuel */}
-          <PulseCard className="pulse-hero-glow relative overflow-hidden p-5" data-onboarding="dashboard">
+          <PulseCard className="pulse-hero-glow relative overflow-hidden p-5">
             <div className="relative z-10 mb-4 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
               <span className="text-primary">Today's fuel</span>
               <div className="flex items-center gap-2">
@@ -232,9 +229,7 @@ export function Home() {
           </PulseCard>
 
           {/* Voice */}
-          <div data-onboarding="voice">
-            <VoiceMicHero onOpenAgent={() => openVoiceAgent?.()} />
-          </div>
+          <VoiceMicHero onOpenAgent={() => openVoiceAgent?.()} />
 
           <StreakCard />
 
@@ -251,7 +246,7 @@ export function Home() {
           </div>
 
           {/* Health trackers */}
-          <div className="grid grid-cols-2 gap-4" data-onboarding="trackers">
+          <div className="grid grid-cols-2 gap-4">
             <WaterTracker />
             <WeightProgress />
           </div>
@@ -317,8 +312,6 @@ export function Home() {
         onSave={setMacroGoals}
       />
       <WeightLogModal open={weightModalOpen} onOpenChange={setWeightModalOpen} />
-
-      {showTour && <OnboardingTour />}
     </PulsePage>
   );
 }
