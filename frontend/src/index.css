@@ -246,7 +246,8 @@
   .animate-count-up { animation: countUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
   .animate-pulse-wave { animation: pulseWave 0.9s ease-in-out infinite; transform-origin: center; }
   .pulse-card-glow { box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.04), var(--shadow-sm); }
-  .pulse-hero-glow { background-image: radial-gradient(circle at 88% 5%, hsl(var(--primary) / 0.22), transparent 34%), linear-gradient(140deg, hsl(var(--card)) 0%, hsl(165 12% 14%) 100%); }
+  .pulse-hero-glow { background-image: radial-gradient(circle at 88% 5%, hsl(var(--primary) / 0.18), transparent 34%), linear-gradient(140deg, hsl(var(--card)) 0%, hsl(var(--secondary)) 100%); }
+  .dark .pulse-hero-glow { background-image: radial-gradient(circle at 88% 5%, hsl(var(--primary) / 0.22), transparent 34%), linear-gradient(140deg, hsl(var(--card)) 0%, hsl(165 12% 14%) 100%); }
   .pulse-bottom-sheet { border-top-left-radius: 1.5rem; border-top-right-radius: 1.5rem; border-color: hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--foreground)); }
 }
 
