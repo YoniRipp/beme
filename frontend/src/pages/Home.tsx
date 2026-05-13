@@ -19,6 +19,7 @@ import { WeightProgress } from '@/components/home/WeightProgress';
 import { WeightLogModal } from '@/components/home/WeightLogModal';
 import { CycleTracker } from '@/components/home/CycleTracker';
 import { StreakCard } from '@/components/home/StreakCard';
+import { SetupWizard } from '@/components/onboarding/SetupWizard';
 import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
@@ -43,7 +44,7 @@ export function Home() {
   const { checkIns, foodEntries, addCheckIn, updateCheckIn, addFoodEntry, getCheckInByDate, energyLoading } = useEnergy();
   const { addGoal, updateGoal, goalsLoading } = useGoals();
   const { macroGoals, setMacroGoals, calorieGoal } = useMacroGoals();
-  const { profile } = useProfile();
+  const { profile, profileLoading } = useProfile();
   const { weightEntries } = useWeight();
   const { user } = useApp();
   const firstName = user?.name?.split(' ')[0] ?? 'there';
@@ -150,6 +151,10 @@ export function Home() {
     addFoodEntry(entry);
     toast.success('Food entry added');
   };
+
+  if (!profileLoading && !profile.setupCompleted) {
+    return <SetupWizard onComplete={() => window.location.reload()} />;
+  }
 
   return (
     <PulsePage>
