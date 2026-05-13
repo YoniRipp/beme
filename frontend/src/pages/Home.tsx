@@ -20,8 +20,6 @@ import { WeightLogModal } from '@/components/home/WeightLogModal';
 import { CycleTracker } from '@/components/home/CycleTracker';
 import { StreakCard } from '@/components/home/StreakCard';
 import { SetupWizard } from '@/components/onboarding/SetupWizard';
-import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
-import { isOnboardingCompleted } from '@/lib/onboarding';
 import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
@@ -59,7 +57,6 @@ export function Home() {
   const [foodModalOpen, setFoodModalOpen] = useState(false);
   const [weightModalOpen, setWeightModalOpen] = useState(false);
   const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
-  const [showTour] = useState(() => !isOnboardingCompleted());
 
   // Derived data
   const todayCheckIn = useMemo(
@@ -318,7 +315,6 @@ export function Home() {
       />
       <WeightLogModal open={weightModalOpen} onOpenChange={setWeightModalOpen} />
 
-      {showTour && <OnboardingTour />}
     </PulsePage>
   );
 }
