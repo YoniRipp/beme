@@ -35,9 +35,9 @@ const ForgotPassword = lazy(() =>
 const Pricing = lazy(() =>
   import('./pages/Pricing').then((m) => ({ default: m.Pricing }))
 );
-const Landing = lazy(() =>
-  import('./pages/Landing').then((m) => ({ default: m.Landing }))
-);
+// const Landing = lazy(() =>
+//   import('./pages/Landing').then((m) => ({ default: m.Landing }))
+// );
 const About = lazy(() =>
   import('./pages/About').then((m) => ({ default: m.About }))
 );
@@ -68,7 +68,7 @@ function ProtectedRoutes() {
   }
 
   if (!user) {
-    return <Navigate to="/welcome" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return (
@@ -298,6 +298,7 @@ export function AppRoutes() {
           }
         />
         <Route element={<PublicLayout />}>
+          {/*
           <Route
             path="/welcome"
             element={
@@ -306,6 +307,7 @@ export function AppRoutes() {
               </Suspense>
             }
           />
+          */}
           <Route
             path="/pricing"
             element={
