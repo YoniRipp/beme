@@ -10,7 +10,7 @@ import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, isToday, isYesterday, parseISO, isWithinInterval } from 'date-fns';
+import { format, isToday, isYesterday, parseISO, isWithinInterval, subWeeks } from 'date-fns';
 import { getPeriodRange } from '@/lib/dateRanges';
 import { PulseCard, PulseHeader, PulsePage } from '@/components/pulse/PulseUI';
 
@@ -62,6 +62,8 @@ export function Body() {
   }, [workouts, searchQuery, filter]);
 
   const { start: weekStart, end: weekEnd } = useMemo(() => getPeriodRange('weekly', new Date()), []);
+  const lastWeekStart = useMemo(() => subWeeks(weekStart, 1), [weekStart]);
+  const lastWeekEnd = useMemo(() => subWeeks(weekEnd, 1), [weekEnd]);
   const workoutsThisWeek = useMemo(
     () =>
       filteredWorkouts.filter((w) => isWithinInterval(new Date(w.date), { start: weekStart, end: weekEnd })),
@@ -73,13 +75,15 @@ export function Body() {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     [filteredWorkouts, weekEnd]
   );
-  const workoutsOlder = useMemo(
-    () => filteredWorkouts.filter((w) => new Date(w.date) < weekStart),
-    [filteredWorkouts, weekStart]
+  const workoutsLastWeek = useMemo(
+    () => filteredWorkouts.filter((w) =>
+      isWithinInterval(new Date(w.date), { start: lastWeekStart, end: lastWeekEnd })
+    ),
+    [filteredWorkouts, lastWeekStart, lastWeekEnd]
   );
   const groupedUpcoming = useMemo(() => groupWorkoutsByDate(workoutsUpcoming, true), [workoutsUpcoming]);
   const groupedThisWeek = useMemo(() => groupWorkoutsByDate(workoutsThisWeek), [workoutsThisWeek]);
-  const groupedOlder = useMemo(() => groupWorkoutsByDate(workoutsOlder), [workoutsOlder]);
+  const groupedLastWeek = useMemo(() => groupWorkoutsByDate(workoutsLastWeek), [workoutsLastWeek]);
   const weeklyGoal = 4;
   const weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   const hasWorkoutByDay = useMemo(() => {
@@ -203,7 +207,7 @@ export function Body() {
                 </button>
               ))}
             </div>
-            {filteredWorkouts.length === 0 ? (
+            {groupedUpcoming.length === 0 && groupedThisWeek.length === 0 && groupedLastWeek.length === 0 ? (
               <EmptyStateCard
                 onClick={handleAddNew}
                 title="Add your first workout"
@@ -213,7 +217,7 @@ export function Body() {
               <>
                 {groupedUpcoming.length > 0 && renderSection('Upcoming', groupedUpcoming)}
                 {groupedThisWeek.length > 0 && renderSection('This week', groupedThisWeek)}
-                {groupedOlder.length > 0 && renderSection('Older', groupedOlder)}
+                {groupedLastWeek.length > 0 && renderSection('Last week', groupedLastWeek)}
                 <AddAnotherCard onClick={handleAddNew} label="Add another workout" />
               </>
             )}

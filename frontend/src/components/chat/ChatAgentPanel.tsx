@@ -1,13 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, X, Loader2, Mic, CheckCircle2, AlertCircle, MoreVertical, Trash2, Square, Dumbbell, UtensilsCrossed, Check } from 'lucide-react';
+import { Send, Loader2, Mic, CheckCircle2, AlertCircle, Trash2, Square, Dumbbell, UtensilsCrossed, Check } from 'lucide-react';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useAgent } from '@/hooks/useAgent';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { cn } from '@/lib/utils';
@@ -132,41 +127,19 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
           <div className="h-1 w-9 rounded-full bg-muted-foreground/30" />
         </div>
 
-        {/* Header: X left, title center, overflow right */}
+        {/* Header: title left, trash right */}
         <div className="flex items-center px-4 py-2">
+          <h2 className="flex-1 text-base font-semibold">AI Coach</h2>
+
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10 shrink-0"
-            onClick={() => onOpenChange(false)}
-            aria-label="Close"
+            className="h-10 w-10 shrink-0 text-destructive hover:text-destructive"
+            onClick={handleClearHistory}
+            aria-label="Clear chat history"
           >
-            <X className="h-5 w-5" />
+            <Trash2 className="h-5 w-5" />
           </Button>
-
-          <h2 className="flex-1 text-center text-base font-semibold">AI Coach</h2>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 shrink-0"
-                aria-label="Chat options"
-              >
-                <MoreVertical className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={handleClearHistory}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear history
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         {/* Divider */}
@@ -207,18 +180,30 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
 
           {messages.map((msg) => {
             const rtl = isRTL(msg.content);
+            const ts = msg.created_at ? new Date(msg.created_at) : null;
+            const tsLabel = ts && !isNaN(ts.getTime()) ? format(ts, 'MMM d, HH:mm') : null;
             return (
               <div
                 key={msg.id}
                 className={cn(
-                  'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
-                  msg.role === 'user'
-                    ? 'ml-auto bg-primary text-primary-foreground'
-                    : 'mr-auto bg-muted'
+                  'flex max-w-[85%] flex-col gap-1',
+                  msg.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'
                 )}
-                dir={rtl ? 'rtl' : 'ltr'}
               >
-                <p className={cn('whitespace-pre-wrap', rtl && 'text-right')}>{msg.content}</p>
+                <div
+                  className={cn(
+                    'rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
+                    msg.role === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  )}
+                  dir={rtl ? 'rtl' : 'ltr'}
+                >
+                  <p className="whitespace-pre-wrap text-start">{msg.content}</p>
+                </div>
+                {tsLabel && (
+                  <span className="px-1 text-[10px] tabular-nums text-muted-foreground">{tsLabel}</span>
+                )}
               </div>
             );
           })}
@@ -374,7 +359,7 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
               className="mr-auto max-w-[85%] rounded-2xl bg-muted px-4 py-2.5 text-sm leading-relaxed"
               dir={isRTL(streamingContent) ? 'rtl' : 'ltr'}
             >
-              <p className={cn('whitespace-pre-wrap', isRTL(streamingContent) && 'text-right')}>
+              <p className="whitespace-pre-wrap text-start">
                 {streamingContent}
                 <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-foreground/60 align-middle" />
               </p>
@@ -407,6 +392,7 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isSending}
+              dir="auto"
             />
             {isSending ? (
               <Button

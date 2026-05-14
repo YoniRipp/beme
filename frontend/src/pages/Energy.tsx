@@ -18,7 +18,7 @@ import { EmptyStateCard } from '@/components/shared/EmptyStateCard';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import { PeriodSelector } from '@/components/shared/PeriodSelector';
 import { Moon, Trash2, Pencil, ChevronDown, Plus, ClipboardList, Copy, Sun, CloudSun, Sunset, Cookie, Mic } from 'lucide-react';
-import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek } from 'date-fns';
+import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
 import { PulseCard, PulseHeader, PulsePage } from '@/components/pulse/PulseUI';
 
@@ -342,10 +342,12 @@ export function Energy() {
   }, [checkIns, today]);
 
   const recentCheckIns = useMemo(() => {
+    const { start: thisWeekStart } = getPeriodRange('weekly', today);
+    const cutoff = subWeeks(thisWeekStart, 1);
     return [...checkIns]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
-  }, [checkIns]);
+      .filter((c) => new Date(c.date) >= cutoff)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [checkIns, today]);
 
   const handleSleepSave = (hours: number) => {
     if (editingCheckIn) {

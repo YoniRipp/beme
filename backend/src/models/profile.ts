@@ -65,7 +65,7 @@ export async function upsert(input: UpsertProfileInput, client?: pg.Pool | pg.Po
       input.waterGoalGlasses ?? 8,
       input.cycleTrackingEnabled ?? false,
       input.averageCycleLength ?? null,
-      input.setupCompleted ?? false,
+      input.setupCompleted ?? null,
       input.macroCarbs ?? null,
       input.macroFat ?? null,
       input.macroProtein ?? null,
