@@ -3,63 +3,6 @@ export const VOICE_TOOLS = [
   {
     functionDeclarations: [
       {
-        name: 'propose_plan',
-        description: 'Propose a multi-item workout or meal plan for the user to review BEFORE saving. Use this whenever the user asks you to write/create/generate a workout program (multiple sessions/days), a meal plan, or any multi-item plan. Do NOT save items directly with add_workout/add_food in that case — instead, build the full plan with this tool. The app will show the user a confirmation card with "Save to app" / "Discard" buttons. For single-item logs ("I ate eggs", "I did a workout today") keep using add_food / add_workout directly.',
-        parameters: {
-          type: 'object',
-          properties: {
-            title: { type: 'string', description: 'Short title for the plan, e.g. "5-day Push/Pull/Legs program" or "High-protein meal plan".' },
-            summary: { type: 'string', description: 'One-sentence summary the user will see at the top of the proposal card.' },
-            workouts: {
-              type: 'array',
-              description: 'Workout sessions in the plan. Empty array if this is a meal-only plan.',
-              items: {
-                type: 'object',
-                properties: {
-                  date: { type: 'string', description: 'YYYY-MM-DD. Use today for the first session and increment dates for subsequent days.' },
-                  title: { type: 'string' },
-                  type: { type: 'string', enum: ['strength', 'cardio', 'flexibility', 'sports'] },
-                  durationMinutes: { type: 'number' },
-                  notes: { type: 'string' },
-                  exercises: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        name: { type: 'string' },
-                        sets: { type: 'number' },
-                        reps: { type: 'number' },
-                        weight: { type: 'number', description: 'Weight in kg (optional)' },
-                        notes: { type: 'string' },
-                      },
-                      required: ['name', 'sets', 'reps'],
-                    },
-                  },
-                },
-                required: ['date', 'title', 'type'],
-              },
-            },
-            foods: {
-              type: 'array',
-              description: 'Food entries in the plan. Empty array if this is a workout-only plan.',
-              items: {
-                type: 'object',
-                properties: {
-                  date: { type: 'string', description: 'YYYY-MM-DD' },
-                  food: { type: 'string', description: 'Food name in English' },
-                  amount: { type: 'number' },
-                  unit: { type: 'string' },
-                  startTime: { type: 'string', description: 'Optional HH:MM 24h' },
-                  endTime: { type: 'string', description: 'Optional HH:MM 24h' },
-                },
-                required: ['food'],
-              },
-            },
-          },
-          required: ['title', 'summary'],
-        },
-      },
-      {
         name: 'add_workout',
         description: 'Log a workout. When the user does not give a workout name use title "Workout". When they say a program name (e.g. SS, Starting Strength) use that as title. When the user says they did a SAVED/NAMED workout without listing exercises (e.g. "I did Yoni\'s workout", "did my Monday routine") call add_workout with title set to that workout name and exercises: [] (empty array) so the app can copy from the user\'s saved workout. When they give overrides (e.g. "I did Yoni\'s workout with 150kg squat") use title = workout name and exercises = only the overrides (e.g. one exercise with name "Squat", weight: 150). Do not use an exercise name as the workout title. Examples: "ran 45 minutes", "did squats 5 sets of 3 at 140 kilos", "SS: squat 5x3 140kg deadlift 3x3 160kg". For strength with sets/reps/weight use type "strength" and fill the exercises array. durationMinutes is optional (default 30).',
         parameters: {

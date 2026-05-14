@@ -215,9 +215,8 @@ ${detailedFood}
 - Be encouraging but honest — if they're not hitting goals, say so kindly with a concrete plan.
 - Keep responses concise for mobile — 2-4 short paragraphs unless they ask for detailed breakdowns.
 - You can respond in Hebrew or English based on the language the user writes in.
-- PLAN PROPOSALS: When the user asks you to write/create/generate/build/design a multi-item plan (a workout program with multiple sessions, a meal plan, etc.), you MUST call propose_plan in the SAME turn — never just describe the plan in text without calling the tool. Call propose_plan ONCE with the full plan (all workouts and/or foods). Do NOT call add_workout or add_food directly for plans — the app will show a "Save to app" confirmation card and the user will decide. Use today's date for the first workout and increment for subsequent days. After proposing, briefly describe what's in the plan.
-- SAVE/CONFIRM REQUESTS: If the user later says "save it", "push it", "add it", "do it", "go ahead", "yes save", "log them" or similar referring to a plan you previously described but didn't propose with the tool, call propose_plan NOW with the same plan so the confirmation card appears. Never claim a confirmation card was shown unless you actually called propose_plan in this turn.
-- SINGLE-ITEM LOGS: For single-item logs the user is already committing to ("I ate 2 eggs", "I did squats today"), keep calling add_food / add_workout directly — no confirmation needed for things the user just did.
+- SAVE DIRECTLY: When the user asks you to log, save, push, add, or create any workout, food, sleep, weight, water, or goal — call the appropriate write tool (add_workout, add_food, log_sleep, log_weight, add_water, log_cycle, add_goal) IMMEDIATELY. No confirmation cards, no "would you like me to save?" — just save it. For multi-day plans, call add_workout once per day (use today's date for day 1 and increment).
+- SAVE/CONFIRM FOLLOW-UPS: If the user says "save it", "push it", "add it", "do it", "go ahead", "yes" referring to something you described — call the write tools NOW for every item you described. Never describe an action without also calling the tool in the same turn.
 - Today's date: ${new Date().toISOString().slice(0, 10)}`;
 }
 
@@ -257,28 +256,18 @@ export interface AgentChatResponse {
 
 // ─── Streaming send message ─────────────────────────────────────────────────
 
-// Phrases the model uses when it describes a plan in text instead of calling
-// the propose_plan tool. If detected without a tool call, we force a retry.
-const PLAN_CLAIM_PATTERN = /(confirmation card|save to app|will (now |then )?(show|appear)|prepared (the |a |your |this )?(plan|program|routine|schedule)|successfully prepared|put together (a |the |your )(new |updated |\d+-day )?(plan|program|routine|schedule|workout)|here'?s (the |a |your )?(plan|program|schedule|routine|new )|i'?ve (created|designed|built|drafted|set up|prepared) (a |the |your |this )(new |updated |\d+-day )?(plan|program|routine|schedule|workout))/i;
-
-// User intent: clear ask to create or save a MULTI-item plan. Triggers the
-// propose_plan fallback if the model only replied with text. Intentionally
-// excludes bare "workout" so single-workout requests fall through to the
-// single-action fallback below (which forces add_workout, not propose_plan).
-const USER_PLAN_INTENT_PATTERN = /\b(create|make|build|design|write|generate|draft|put together|set up|set-up|prepare|give me|i want)\b.*\b(plan|program|routine|schedule|split|push[\s\-/]*pull|ppl)\b|\b(push (the plan|the program|the routine)|save (the plan|the program|the routine)|add (the plan|the program|the routine)|log the plan|go ahead|do it|approve|confirm|yes save)\b/i;
-
-// Phrases the model uses when it claims to have logged a SINGLE item
+// Phrases the model uses when it claims to have logged an item
 // (workout, food, weight, sleep, water, goal) without actually calling
-// the corresponding add/log tool. If detected with no successful write
+// the corresponding write tool. If detected with no successful write
 // in this turn, we force a tool call.
-const SINGLE_ACTION_CLAIM_PATTERN = /\b(i'?ve|i have|just|all)?\s*(logged|added|saved|recorded|tracked|noted|created|set)\s+(your|the|that|it|a|an|this|that)\b|\b(done|got it|all set)[!.]?\s*$/i;
+const SINGLE_ACTION_CLAIM_PATTERN = /\b(i'?ve|i have|just|all)?\s*(logged|added|saved|recorded|tracked|noted|created|set|pushed)\s+(your|the|that|it|a|an|this|that)\b|\b(done|got it|all set)[!.]?\s*$/i;
 
 const AGENT_SYSTEM_INIT = `You are an AI agent — not just a chatbot. CRITICAL RULES:
-1. For single-item logs the user is already committing to (e.g. "I ate 2 eggs", "I did squats today") — call the appropriate add tool directly.
-2. For multi-item PLANS the user is asking you to design (workout programs across multiple days, meal plans) — you MUST call propose_plan ONCE with the full plan IN THE SAME TURN as describing it. Do NOT call add_workout / add_food directly for plans. The app will show a confirmation card so the user can choose to save the plan. Never describe a plan in text without also calling propose_plan.
-3. SAVE/CONFIRM follow-ups: If the user replies "save it", "push it", "add it to my workouts", "do it", "go ahead", "yes" or anything similar referring to a plan you described earlier without proposing — call propose_plan NOW with that plan. Do not claim a confirmation card was shown unless you actually called propose_plan in this turn.
+1. When the user asks to log, save, push, add, or create anything (workout, food, sleep, weight, water, goal) — call the appropriate write tool IMMEDIATELY. No confirmation cards, no "would you like me to save?" prompts. Just save it.
+2. For multi-day workout plans, call add_workout once per day. Use today's date for day 1 and increment dates for each subsequent day.
+3. SAVE/CONFIRM follow-ups: If the user says "save it", "push it", "add it", "do it", "go ahead", "yes" referring to something you described — call the write tools NOW for every item you described.
 4. When the user asks about their data — look it up with the available read tools before answering.
-5. NEVER claim to have performed an action without actually calling the tool. "I've logged..." or "the app will show a card" means you MUST have called the tool, not just described doing so.`;
+5. NEVER claim to have performed an action without actually calling the tool. "I've logged..." means you MUST have called the tool in this turn, not just described doing so.`;
 
 export async function sendMessageStream(
   userId: string,
@@ -417,39 +406,18 @@ export async function sendMessageStream(
       }
     }
 
-    // Fallback: model described a plan but didn't actually call propose_plan.
-    // Force a second turn that requires the tool call so the user sees the card.
-    // We gate on user intent (asked to create/save a plan) OR clear claim-language
-    // in the model's reply, so info-only questions don't trigger this.
-    const claimedPlan = PLAN_CLAIM_PATTERN.test(responseText || streamedText);
-    const userWantsAction = USER_PLAN_INTENT_PATTERN.test(userMessage);
-    if (proposals.length === 0 && (userWantsAction || claimedPlan)) {
-      onThinking();
-      const forceResult = await chat.sendMessage(
-        '[SYSTEM] You described a plan in text but did NOT call the propose_plan tool, so the user cannot see the confirmation card. Call propose_plan NOW with the FULL plan (all workouts and/or foods) you just described. Use today\'s date for the first day and increment for subsequent days. Reply only with the tool call.',
-      );
-      const forceCalls = forceResult.response.functionCalls?.() ?? [];
-      const planForceCalls = forceCalls.filter(fc => fc.name === 'propose_plan');
-      for (const fc of planForceCalls) {
-        const proposal = buildProposal(fc.args as Record<string, unknown>);
-        proposals.push(proposal);
-        onProposal?.(proposal);
-      }
-    }
-
-    // Fallback: model claimed to have logged a single item (workout/food/etc.)
-    // but didn't actually call any write tool. Force a tool call so the entry
-    // really lands in the DB. Skip if a plan proposal was made or a write
-    // already succeeded this turn.
+    // Fallback: model claimed to have logged/added something but didn't
+    // actually call any write tool. Force a tool call so the entry really
+    // lands in the DB.
     const hasSuccessfulWrite = allActions.some(a => a.success);
-    const claimedSingleAction = SINGLE_ACTION_CLAIM_PATTERN.test(responseText || streamedText);
-    if (proposals.length === 0 && !hasSuccessfulWrite && claimedSingleAction) {
+    const claimedAction = SINGLE_ACTION_CLAIM_PATTERN.test(responseText || streamedText);
+    if (!hasSuccessfulWrite && claimedAction) {
       onThinking();
       const forceResult = await chat.sendMessage(
-        '[SYSTEM] You claimed to have logged/added/saved an item but did NOT actually call the tool, so nothing was saved. Call the appropriate write tool NOW (add_workout, add_food, log_sleep, log_weight, add_water, log_cycle, add_goal, edit_*, delete_*) for exactly what the user asked. Reply only with the tool call(s).',
+        '[SYSTEM] You claimed to have logged/added/saved an item but did NOT actually call any tool, so nothing was saved. Call the appropriate write tool(s) NOW (add_workout, add_food, log_sleep, log_weight, add_water, log_cycle, add_goal, edit_*, delete_*) for EVERY item you described. For multi-day plans call add_workout once per day. Reply only with the tool call(s).',
       );
       const forceCalls = forceResult.response.functionCalls?.() ?? [];
-      const writeCalls = forceCalls.filter(fc => fc.name !== 'propose_plan' && !fc.name.startsWith('get_'));
+      const writeCalls = forceCalls.filter(fc => !fc.name.startsWith('get_'));
       if (writeCalls.length > 0) {
         const forceActions = writeCalls.map(fc => ({ intent: fc.name, ...fc.args }));
         const forceResults = await executeActions(forceActions as { intent: string; [key: string]: unknown }[], userId);
@@ -595,13 +563,13 @@ export async function sendMessage(userId: string, userMessage: string): Promise<
     // Same fallback as the streaming path: if the model only described an
     // action without calling a tool, force the tool call so the entry lands.
     const hasSuccessfulWrite = allActions.some(a => a.success);
-    const claimedSingleAction = SINGLE_ACTION_CLAIM_PATTERN.test(responseText);
-    if (proposals.length === 0 && !hasSuccessfulWrite && claimedSingleAction) {
+    const claimedAction = SINGLE_ACTION_CLAIM_PATTERN.test(responseText);
+    if (!hasSuccessfulWrite && claimedAction) {
       const forceResult = await chat.sendMessage(
-        '[SYSTEM] You claimed to have logged/added/saved an item but did NOT actually call the tool, so nothing was saved. Call the appropriate write tool NOW (add_workout, add_food, log_sleep, log_weight, add_water, log_cycle, add_goal, edit_*, delete_*) for exactly what the user asked. Reply only with the tool call(s).',
+        '[SYSTEM] You claimed to have logged/added/saved an item but did NOT actually call any tool, so nothing was saved. Call the appropriate write tool(s) NOW for EVERY item you described. For multi-day plans call add_workout once per day. Reply only with the tool call(s).',
       );
       const forceCalls = forceResult.response.functionCalls?.() ?? [];
-      const writeCalls = forceCalls.filter(fc => fc.name !== 'propose_plan' && !fc.name.startsWith('get_'));
+      const writeCalls = forceCalls.filter(fc => !fc.name.startsWith('get_'));
       if (writeCalls.length > 0) {
         const forceActions = writeCalls.map(fc => ({ intent: fc.name, ...fc.args }));
         const forceResults = await executeActions(forceActions as { intent: string; [key: string]: unknown }[], userId);
