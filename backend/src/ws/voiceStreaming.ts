@@ -70,6 +70,9 @@ function buildSetupMessage(mimeType: string) {
         parts: [{ text: VOICE_PROMPT }],
       },
       tools: [{ functionDeclarations: toolDeclarations }],
+      // Stream the user's spoken text back so the client can show a live
+      // preview while they're still talking, matching the meal voice sheet UX.
+      inputAudioTranscription: {},
     },
   };
 }
@@ -105,6 +108,10 @@ async function handleConnection(clientWs: WebSocket, req: IncomingMessage) {
   let sessionMetadata: { today: string; timezone: string; mimeType: string } | null = null;
   let allActions: Record<string, unknown>[] = [];
   let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+  // Accumulated user-speech transcript across Gemini's incremental chunks.
+  // The client replaces (not appends) on each `transcript` message, so we
+  // ship the running total here.
+  let inputTranscript = '';
 
   function resetInactivityTimer() {
     if (inactivityTimer) clearTimeout(inactivityTimer);
@@ -202,6 +209,15 @@ async function handleConnection(clientWs: WebSocket, req: IncomingMessage) {
         if (msg.serverContent?.turnComplete) {
           await finishSession();
           return;
+        }
+
+        // Live transcription of the user's audio (enabled via
+        // inputAudioTranscription in the setup message). Streams while the
+        // user is still speaking so the client can show a preview.
+        const inputChunk = msg.serverContent?.inputTranscription?.text;
+        if (typeof inputChunk === 'string' && inputChunk.length > 0) {
+          inputTranscript += inputChunk;
+          sendToClient(clientWs, { type: 'transcript', text: inputTranscript });
         }
 
         // Transcript/text from Gemini (model generated text)

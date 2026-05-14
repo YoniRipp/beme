@@ -34,6 +34,18 @@ interface QuickVoiceEntryProps {
 }
 
 type Phase = 'recording' | 'review';
+type Lang = 'en-US' | 'he-IL';
+
+const LANG_STORAGE_KEY = 'quickVoiceEntry.lang';
+
+function getInitialLang(): Lang {
+  if (typeof window !== 'undefined') {
+    const stored = window.localStorage.getItem(LANG_STORAGE_KEY);
+    if (stored === 'en-US' || stored === 'he-IL') return stored;
+    if (navigator.language?.toLowerCase().startsWith('he')) return 'he-IL';
+  }
+  return 'en-US';
+}
 
 export default function QuickVoiceEntry({
   open,
@@ -41,8 +53,10 @@ export default function QuickVoiceEntry({
   mealType,
   onSave,
 }: QuickVoiceEntryProps) {
+  const [lang, setLang] = useState<Lang>(getInitialLang);
+
   const { isListening, transcript, error: speechError, isSupported, start, stop, reset } =
-    useBrowserSpeech();
+    useBrowserSpeech({ lang });
 
   const [phase, setPhase] = useState<Phase>('recording');
   const [showTextInput, setShowTextInput] = useState(false);
@@ -234,6 +248,48 @@ export default function QuickVoiceEntry({
                   ? 'Tap to start listening'
                   : 'Speech not supported in this browser'}
             </p>
+
+            {/* Language toggle */}
+            {!showTextInput && (
+              <div
+                role="group"
+                aria-label="Speech language"
+                className="inline-flex rounded-full border border-border bg-muted p-0.5 text-xs font-semibold"
+              >
+                {([
+                  { code: 'en-US' as const, label: 'EN' },
+                  { code: 'he-IL' as const, label: 'עב' },
+                ]).map(({ code, label }) => {
+                  const active = lang === code;
+                  return (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => {
+                        if (active) return;
+                        if (isListening) stop();
+                        reset();
+                        setLang(code);
+                        try {
+                          window.localStorage.setItem(LANG_STORAGE_KEY, code);
+                        } catch {
+                          // ignore storage errors (e.g. private browsing)
+                        }
+                      }}
+                      aria-pressed={active}
+                      className={[
+                        'rounded-full px-3 py-1 transition-colors',
+                        active
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground',
+                      ].join(' ')}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Live transcript */}
             {transcript && !showTextInput && (

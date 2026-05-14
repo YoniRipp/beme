@@ -100,7 +100,7 @@ export function useBrowserSpeech({ lang }: UseBrowserSpeechOptions = {}) {
       setError('Could not start speech recognition');
       setIsListening(false);
     }
-  }, []);
+  }, [lang]);
 
   const stop = useCallback(() => {
     if (recognitionRef.current) {
