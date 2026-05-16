@@ -316,12 +316,13 @@ export const VOICE_TOOLS = [
       // ─── Trainer ──────────────────────────────────────────────
       {
         name: 'add_client_workout',
-        description: 'Trainer: log a workout for a client. Requires the client\'s name or ID.',
+        description: 'Trainer: log a workout for a named client. Use clientName for the client\'s name (first or full name). Use clientTraineeNumber for their roster number when the trainer says "Guy number 4" or "client 4". When multiple clients share the same first name, the system will ask for the full name or number — in that case, use both clientName (full name) and/or clientTraineeNumber.',
         parameters: {
           type: 'object',
           properties: {
-            clientName: { type: 'string', description: 'Client display name for lookup' },
+            clientName: { type: 'string', description: 'Client first name or full name (e.g. "Guy" or "Guy Malka")' },
             clientId: { type: 'string', description: 'Client user ID if known' },
+            clientTraineeNumber: { type: 'number', description: 'Client roster number for disambiguation (e.g. 4 if trainer says "Guy number 4" or "trainee 4")' },
             date: { type: 'string', description: 'YYYY-MM-DD, default today' },
             title: { type: 'string', description: 'Workout name' },
             type: { type: 'string', enum: ['strength', 'cardio', 'flexibility', 'sports'] },
@@ -346,12 +347,13 @@ export const VOICE_TOOLS = [
       },
       {
         name: 'edit_client_workout',
-        description: 'Trainer: edit a client\'s workout.',
+        description: 'Trainer: edit a client\'s existing workout. Use clientTraineeNumber when trainer identifies client by roster number.',
         parameters: {
           type: 'object',
           properties: {
-            clientName: { type: 'string' },
+            clientName: { type: 'string', description: 'Client first name or full name' },
             clientId: { type: 'string' },
+            clientTraineeNumber: { type: 'number', description: 'Client roster number for disambiguation' },
             workoutTitle: { type: 'string' },
             workoutId: { type: 'string' },
             title: { type: 'string' },
@@ -379,8 +381,9 @@ export const VOICE_TOOLS = [
         parameters: {
           type: 'object',
           properties: {
-            clientName: { type: 'string' },
+            clientName: { type: 'string', description: 'Client first name or full name' },
             clientId: { type: 'string' },
+            clientTraineeNumber: { type: 'number', description: 'Client roster number for disambiguation' },
             workoutTitle: { type: 'string' },
             workoutId: { type: 'string' },
           },
@@ -388,12 +391,13 @@ export const VOICE_TOOLS = [
       },
       {
         name: 'add_client_food',
-        description: 'Trainer: log food for a client.',
+        description: 'Trainer: log food for a client. Use clientTraineeNumber when trainer identifies client by roster number.',
         parameters: {
           type: 'object',
           properties: {
-            clientName: { type: 'string', description: 'Client display name for lookup' },
+            clientName: { type: 'string', description: 'Client first name or full name' },
             clientId: { type: 'string', description: 'Client user ID if known' },
+            clientTraineeNumber: { type: 'number', description: 'Client roster number for disambiguation' },
             food: { type: 'string', description: 'Food name in English' },
             amount: { type: 'number' },
             unit: { type: 'string' },
@@ -408,8 +412,9 @@ export const VOICE_TOOLS = [
         parameters: {
           type: 'object',
           properties: {
-            clientName: { type: 'string' },
+            clientName: { type: 'string', description: 'Client first name or full name' },
             clientId: { type: 'string' },
+            clientTraineeNumber: { type: 'number', description: 'Client roster number for disambiguation' },
             foodName: { type: 'string' },
             entryId: { type: 'string' },
             name: { type: 'string' },
@@ -426,8 +431,9 @@ export const VOICE_TOOLS = [
         parameters: {
           type: 'object',
           properties: {
-            clientName: { type: 'string' },
+            clientName: { type: 'string', description: 'Client first name or full name' },
             clientId: { type: 'string' },
+            clientTraineeNumber: { type: 'number', description: 'Client roster number for disambiguation' },
             foodName: { type: 'string' },
             entryId: { type: 'string' },
           },

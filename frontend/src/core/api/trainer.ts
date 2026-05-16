@@ -11,6 +11,7 @@ export interface TrainerClient {
   clientEmail: string;
   status: string;
   createdAt: string;
+  traineeNumber?: number;
   subscriptionStatus?: string | null;
   subscriptionSource?: string | null;
   subscriptionPlan?: string | null;

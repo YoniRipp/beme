@@ -186,6 +186,7 @@ export interface TrainerClient {
   clientEmail: string;
   status: TrainerClientStatus;
   createdAt: string;
+  traineeNumber?: number;
   subscriptionStatus?: string | null;
   subscriptionSource?: string | null;
   subscriptionPlan?: string | null;
