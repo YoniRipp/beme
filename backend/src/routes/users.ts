@@ -51,7 +51,7 @@ async function createUser(req: Request, res: Response) {
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'name is required' });
     }
-    const r = role === 'admin' ? 'admin' : 'user';
+    const r = role === 'admin' || role === 'trainer' ? role : 'user';
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
     const pool = getPool();
     const result = await pool.query(
@@ -82,7 +82,12 @@ async function updateUser(req: Request, res: Response) {
     const values: (string | number)[] = [];
     let i = 1;
     if (name !== undefined) { updates.push(`name = $${i}`); values.push(typeof name === 'string' ? name.trim() : name); i++; }
-    if (role !== undefined) { updates.push(`role = $${i}`); values.push(role === 'admin' ? 'admin' : 'user'); i++; }
+    if (role !== undefined) {
+      if (role !== 'admin' && role !== 'trainer' && role !== 'user') {
+        return res.status(400).json({ error: 'role must be one of: admin, trainer, user' });
+      }
+      updates.push(`role = $${i}`); values.push(role); i++;
+    }
     if (password !== undefined && typeof password === 'string') {
       if (password.length < 8) {
         return res.status(400).json({ error: 'password must be at least 8 characters' });
@@ -121,6 +126,11 @@ async function deleteUser(req: Request, res: Response) {
     await logAction('User deleted', { targetId: id, targetEmail: result.rows[0].email }, req.user!.id);
     res.status(204).send();
   } catch (e: unknown) {
+    const err = e as Record<string, unknown>;
+    if (err.code === '23503') {
+      logger.error({ err: e }, 'delete user FK violation');
+      return res.status(409).json({ error: 'Cannot delete user: related records exist. Run database migrations to enable cascading delete.' });
+    }
     logger.error({ err: e }, 'delete user error');
     res.status(500).json({ error: (e instanceof Error ? e.message : undefined) ?? 'Could not delete user. Please try again.' });
   }

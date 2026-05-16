@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,10 +11,17 @@ import { adminApi, type ApiUserSearchItem } from '@/core/api/admin';
 import { toast } from 'sonner';
 
 export default function AdminUserDataPage() {
+  const location = useLocation();
+  const initialUser = (location.state as { user?: ApiUserSearchItem } | null)?.user ?? null;
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUser, setSelectedUser] = useState<ApiUserSearchItem | null>(null);
+  const [selectedUser, setSelectedUser] = useState<ApiUserSearchItem | null>(initialUser);
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<ApiUserSearchItem[]>([]);
+
+  useEffect(() => {
+    const u = (location.state as { user?: ApiUserSearchItem } | null)?.user;
+    if (u) setSelectedUser(u);
+  }, [location.state]);
 
   const handleSearch = async () => {
     if (searchQuery.trim().length < 1) return;
