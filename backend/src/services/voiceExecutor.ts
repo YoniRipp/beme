@@ -178,15 +178,42 @@ async function resolveCycleEntry(userId: string, action: VoiceAction) {
   return entries[0] ?? null;
 }
 
-async function resolveClientId(trainerId: string, action: VoiceAction): Promise<string | null> {
-  if (action.clientId) return action.clientId as string;
-  if (action.clientName) {
-    const clients = await trainerClientModel.findClientsByTrainerId(trainerId);
-    const lower = String(action.clientName).toLowerCase();
-    const match = clients.find((c) => c.clientName.toLowerCase().includes(lower));
-    return match?.clientId ?? null;
+type ClientResolveResult =
+  | { kind: 'found'; clientId: string }
+  | { kind: 'ambiguous'; matches: Array<{ name: string; traineeNumber: number }> }
+  | { kind: 'not_found' };
+
+async function resolveClientId(trainerId: string, action: VoiceAction): Promise<ClientResolveResult> {
+  if (action.clientId) return { kind: 'found', clientId: action.clientId as string };
+
+  const clients = await trainerClientModel.findClientsByTrainerId(trainerId);
+
+  // Resolve by trainee roster number (e.g. "Guy number 4")
+  if (action.clientTraineeNumber != null) {
+    const n = Number(action.clientTraineeNumber);
+    const match = clients.find((c) => c.traineeNumber === n);
+    return match ? { kind: 'found', clientId: match.clientId } : { kind: 'not_found' };
   }
-  return null;
+
+  if (action.clientName) {
+    const lower = String(action.clientName).toLowerCase().trim();
+
+    // Exact full-name match first (case-insensitive)
+    const exact = clients.find((c) => c.clientName.toLowerCase() === lower);
+    if (exact) return { kind: 'found', clientId: exact.clientId };
+
+    // Partial match — may collide
+    const partial = clients.filter((c) => c.clientName.toLowerCase().includes(lower));
+    if (partial.length === 1) return { kind: 'found', clientId: partial[0].clientId };
+    if (partial.length > 1) {
+      return {
+        kind: 'ambiguous',
+        matches: partial.map((c) => ({ name: c.clientName, traineeNumber: c.traineeNumber ?? 0 })),
+      };
+    }
+  }
+
+  return { kind: 'not_found' };
 }
 
 /**
@@ -484,12 +511,17 @@ export async function executeActions(actions: VoiceAction[], userId: string): Pr
 
         // ─── Trainer: client workouts ───────────────────────
         case 'add_client_workout': {
-          const clientId = await resolveClientId(userId, action);
-          if (!clientId) {
-            results.push({ intent: 'add_client_workout', success: false, message: 'Client not found' });
+          const resolved = await resolveClientId(userId, action);
+          if (resolved.kind === 'ambiguous') {
+            const list = resolved.matches.map((m) => `${m.name} (#${m.traineeNumber})`).join(', ');
+            results.push({ intent: 'add_client_workout', success: false, message: `Multiple clients match "${action.clientName}": ${list}. Please say the full name or say "number X".` });
             break;
           }
-          await workoutService.create(clientId, {
+          if (resolved.kind === 'not_found') {
+            results.push({ intent: 'add_client_workout', success: false, message: `Client "${action.clientName ?? action.clientTraineeNumber}" not found` });
+            break;
+          }
+          await workoutService.create(resolved.clientId, {
             date: parseDate(action.date),
             title: (action.title as string) ?? 'Workout',
             type: ((action.type as string) ?? 'cardio') as WorkoutType,
@@ -497,55 +529,70 @@ export async function executeActions(actions: VoiceAction[], userId: string): Pr
             exercises: Array.isArray(action.exercises) ? action.exercises : [],
             notes: action.notes as string,
           });
-          results.push({ intent: 'add_client_workout', success: true, message: `Logged workout for client: ${(action.title as string) ?? 'Workout'}` });
+          results.push({ intent: 'add_client_workout', success: true, message: `Logged workout for ${action.clientName ?? 'client'}: ${(action.title as string) ?? 'Workout'}` });
           break;
         }
 
         case 'edit_client_workout': {
-          const clientId = await resolveClientId(userId, action);
-          if (!clientId) {
-            results.push({ intent: 'edit_client_workout', success: false, message: 'Client not found' });
+          const resolved = await resolveClientId(userId, action);
+          if (resolved.kind === 'ambiguous') {
+            const list = resolved.matches.map((m) => `${m.name} (#${m.traineeNumber})`).join(', ');
+            results.push({ intent: 'edit_client_workout', success: false, message: `Multiple clients match "${action.clientName}": ${list}. Please say the full name or say "number X".` });
             break;
           }
-          const w = await resolveWorkout(clientId, action);
+          if (resolved.kind === 'not_found') {
+            results.push({ intent: 'edit_client_workout', success: false, message: `Client "${action.clientName ?? action.clientTraineeNumber}" not found` });
+            break;
+          }
+          const w = await resolveWorkout(resolved.clientId, action);
           if (!w) {
             results.push({ intent: 'edit_client_workout', success: false, message: 'Client workout not found' });
             break;
           }
-          await workoutService.update(clientId, w.id as string, {
+          await workoutService.update(resolved.clientId, w.id as string, {
             title: action.title as string,
             type: action.type as WorkoutType | undefined,
             durationMinutes: action.durationMinutes != null ? Number(action.durationMinutes) : undefined,
             exercises: Array.isArray(action.exercises) ? action.exercises : undefined,
           });
-          results.push({ intent: 'edit_client_workout', success: true, message: 'Updated client workout' });
+          results.push({ intent: 'edit_client_workout', success: true, message: `Updated ${action.clientName ?? 'client'}'s workout` });
           break;
         }
 
         case 'delete_client_workout': {
-          const clientId = await resolveClientId(userId, action);
-          if (!clientId) {
-            results.push({ intent: 'delete_client_workout', success: false, message: 'Client not found' });
+          const resolved = await resolveClientId(userId, action);
+          if (resolved.kind === 'ambiguous') {
+            const list = resolved.matches.map((m) => `${m.name} (#${m.traineeNumber})`).join(', ');
+            results.push({ intent: 'delete_client_workout', success: false, message: `Multiple clients match "${action.clientName}": ${list}. Please say the full name or say "number X".` });
             break;
           }
-          const w = await resolveWorkout(clientId, action);
+          if (resolved.kind === 'not_found') {
+            results.push({ intent: 'delete_client_workout', success: false, message: `Client "${action.clientName ?? action.clientTraineeNumber}" not found` });
+            break;
+          }
+          const w = await resolveWorkout(resolved.clientId, action);
           if (!w) {
             results.push({ intent: 'delete_client_workout', success: false, message: 'Client workout not found' });
             break;
           }
-          await workoutService.remove(clientId, w.id as string);
-          results.push({ intent: 'delete_client_workout', success: true, message: 'Deleted client workout' });
+          await workoutService.remove(resolved.clientId, w.id as string);
+          results.push({ intent: 'delete_client_workout', success: true, message: `Deleted ${action.clientName ?? 'client'}'s workout` });
           break;
         }
 
         // ─── Trainer: client food ───────────────────────────
         case 'add_client_food': {
-          const clientId = await resolveClientId(userId, action);
-          if (!clientId) {
-            results.push({ intent: 'add_client_food', success: false, message: 'Client not found' });
+          const resolved = await resolveClientId(userId, action);
+          if (resolved.kind === 'ambiguous') {
+            const list = resolved.matches.map((m) => `${m.name} (#${m.traineeNumber})`).join(', ');
+            results.push({ intent: 'add_client_food', success: false, message: `Multiple clients match "${action.clientName}": ${list}. Please say the full name or say "number X".` });
             break;
           }
-          await foodEntryService.create(clientId, {
+          if (resolved.kind === 'not_found') {
+            results.push({ intent: 'add_client_food', success: false, message: `Client "${action.clientName ?? action.clientTraineeNumber}" not found` });
+            break;
+          }
+          await foodEntryService.create(resolved.clientId, {
             date: parseDate(action.date),
             name: (action.name as string) ?? 'Unknown',
             calories: Number(action.calories) || 0,
@@ -555,45 +602,55 @@ export async function executeActions(actions: VoiceAction[], userId: string): Pr
             portionAmount: action.portionAmount != null ? Number(action.portionAmount) : undefined,
             portionUnit: action.portionUnit as string,
           });
-          results.push({ intent: 'add_client_food', success: true, message: `Logged food for client: ${(action.name as string) ?? 'food'}` });
+          results.push({ intent: 'add_client_food', success: true, message: `Logged food for ${action.clientName ?? 'client'}: ${(action.name as string) ?? 'food'}` });
           break;
         }
 
         case 'edit_client_food': {
-          const clientId = await resolveClientId(userId, action);
-          if (!clientId) {
-            results.push({ intent: 'edit_client_food', success: false, message: 'Client not found' });
+          const resolved = await resolveClientId(userId, action);
+          if (resolved.kind === 'ambiguous') {
+            const list = resolved.matches.map((m) => `${m.name} (#${m.traineeNumber})`).join(', ');
+            results.push({ intent: 'edit_client_food', success: false, message: `Multiple clients match "${action.clientName}": ${list}. Please say the full name or say "number X".` });
             break;
           }
-          const e = await resolveFoodEntry(clientId, action);
+          if (resolved.kind === 'not_found') {
+            results.push({ intent: 'edit_client_food', success: false, message: `Client "${action.clientName ?? action.clientTraineeNumber}" not found` });
+            break;
+          }
+          const e = await resolveFoodEntry(resolved.clientId, action);
           if (!e) {
             results.push({ intent: 'edit_client_food', success: false, message: 'Client food entry not found' });
             break;
           }
-          await foodEntryService.update(clientId, e.id as string, {
+          await foodEntryService.update(resolved.clientId, e.id as string, {
             name: action.name as string,
             calories: action.calories != null ? Number(action.calories) : undefined,
             protein: action.protein != null ? Number(action.protein) : undefined,
             carbs: action.carbs != null ? Number(action.carbs) : undefined,
             fats: action.fats != null ? Number(action.fats) : undefined,
           });
-          results.push({ intent: 'edit_client_food', success: true, message: 'Updated client food entry' });
+          results.push({ intent: 'edit_client_food', success: true, message: `Updated ${action.clientName ?? 'client'}'s food entry` });
           break;
         }
 
         case 'delete_client_food': {
-          const clientId = await resolveClientId(userId, action);
-          if (!clientId) {
-            results.push({ intent: 'delete_client_food', success: false, message: 'Client not found' });
+          const resolved = await resolveClientId(userId, action);
+          if (resolved.kind === 'ambiguous') {
+            const list = resolved.matches.map((m) => `${m.name} (#${m.traineeNumber})`).join(', ');
+            results.push({ intent: 'delete_client_food', success: false, message: `Multiple clients match "${action.clientName}": ${list}. Please say the full name or say "number X".` });
             break;
           }
-          const e = await resolveFoodEntry(clientId, action);
+          if (resolved.kind === 'not_found') {
+            results.push({ intent: 'delete_client_food', success: false, message: `Client "${action.clientName ?? action.clientTraineeNumber}" not found` });
+            break;
+          }
+          const e = await resolveFoodEntry(resolved.clientId, action);
           if (!e) {
             results.push({ intent: 'delete_client_food', success: false, message: 'Client food entry not found' });
             break;
           }
-          await foodEntryService.remove(clientId, e.id as string);
-          results.push({ intent: 'delete_client_food', success: true, message: 'Deleted client food entry' });
+          await foodEntryService.remove(resolved.clientId, e.id as string);
+          results.push({ intent: 'delete_client_food', success: true, message: `Deleted ${action.clientName ?? 'client'}'s food entry` });
           break;
         }
 

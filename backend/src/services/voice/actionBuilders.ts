@@ -67,10 +67,10 @@ const EDIT_CYCLE_SPEC = { entryId: trimOrUndefined, date: passThrough, periodSta
 const DELETE_CYCLE_SPEC = { entryId: trimOrUndefined, date: passThrough };
 
 // Trainer edit/delete
-const EDIT_CLIENT_WORKOUT_SPEC = { clientName: trimOrUndefined, clientId: trimOrUndefined, workoutTitle: trimOrUndefined, workoutId: trimOrUndefined, title: trimOrUndefined, type: passThrough, durationMinutes: num, exercises: normExercises };
-const DELETE_CLIENT_WORKOUT_SPEC = { clientName: trimOrUndefined, clientId: trimOrUndefined, workoutTitle: trimOrUndefined, workoutId: trimOrUndefined };
-const EDIT_CLIENT_FOOD_SPEC = { clientName: trimOrUndefined, clientId: trimOrUndefined, foodName: trimOrUndefined, entryId: trimOrUndefined, name: trimOrUndefined, calories: num, protein: num, carbs: num, fats: num };
-const DELETE_CLIENT_FOOD_SPEC = { clientName: trimOrUndefined, clientId: trimOrUndefined, foodName: trimOrUndefined, entryId: trimOrUndefined };
+const EDIT_CLIENT_WORKOUT_SPEC = { clientName: trimOrUndefined, clientId: trimOrUndefined, clientTraineeNumber: num, workoutTitle: trimOrUndefined, workoutId: trimOrUndefined, title: trimOrUndefined, type: passThrough, durationMinutes: num, exercises: normExercises };
+const DELETE_CLIENT_WORKOUT_SPEC = { clientName: trimOrUndefined, clientId: trimOrUndefined, clientTraineeNumber: num, workoutTitle: trimOrUndefined, workoutId: trimOrUndefined };
+const EDIT_CLIENT_FOOD_SPEC = { clientName: trimOrUndefined, clientId: trimOrUndefined, clientTraineeNumber: num, foodName: trimOrUndefined, entryId: trimOrUndefined, name: trimOrUndefined, calories: num, protein: num, carbs: num, fats: num };
+const DELETE_CLIENT_FOOD_SPEC = { clientName: trimOrUndefined, clientId: trimOrUndefined, clientTraineeNumber: num, foodName: trimOrUndefined, entryId: trimOrUndefined };
 
 // --- Builders ----------------------------------------------
 
@@ -196,6 +196,7 @@ export function buildAddClientWorkout(args: Record<string, unknown>, ctx: BuildC
   return {
     clientName: trimOrUndefined(args.clientName),
     clientId: trimOrUndefined(args.clientId),
+    clientTraineeNumber: num(args.clientTraineeNumber),
     ...buildAddWorkout(args, ctx),
   };
 }
@@ -207,6 +208,7 @@ export async function buildAddClientFood(args: Record<string, unknown>, ctx: Bui
   return {
     clientName: trimOrUndefined(args.clientName),
     clientId: trimOrUndefined(args.clientId),
+    clientTraineeNumber: num(args.clientTraineeNumber),
     ...(await buildAddFood(args, ctx)),
   };
 }

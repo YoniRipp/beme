@@ -23,6 +23,7 @@ import {
   Link as LinkIcon,
   Loader2,
   Mail,
+  Mic,
   Plus,
   Search,
   Scale,
@@ -273,6 +274,8 @@ export default function Trainer() {
             })}
           />
 
+          <VoiceTipsCard />
+
           <InvitePanel
             refTarget={inviteRef}
             inviteTab={inviteTab}
@@ -429,6 +432,13 @@ function RosterPanel({
   navigateToClient: (clientId: string) => void;
   removeClient: (client: TrainerAnalytics['roster'][number]) => void;
 }) {
+  const traineeNumberMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const c of clients) {
+      if (c.traineeNumber != null) map.set(c.clientId, c.traineeNumber);
+    }
+    return map;
+  }, [clients]);
   return (
     <PulseCard className="overflow-hidden p-0">
       <div className="border-b border-border px-5 py-4">
@@ -475,6 +485,9 @@ function RosterPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold truncate">{client.clientName}</p>
+                    {traineeNumberMap.get(client.clientId) != null && (
+                      <span className="text-[11px] font-bold text-muted-foreground tabular-nums">#{traineeNumberMap.get(client.clientId)}</span>
+                    )}
                     <Badge variant="outline" className={cn('capitalize', STATUS_STYLES[client.status])}>
                       {STATUS_LABELS[client.status]}
                     </Badge>
@@ -651,6 +664,32 @@ function InvitePanel({
         )}
       </PulseCard>
     </div>
+  );
+}
+
+function VoiceTipsCard() {
+  const tips = [
+    { cmd: '"Log Guy\'s pull workout: lat pull-down 4 sets of 10 at 60 kg"', label: 'Add workout' },
+    { cmd: '"Edit Guy\'s pull workout, change lat pull-downs to pull-ups at 0 kg"', label: 'Edit exercise' },
+    { cmd: '"Add Guy number 4\'s workout: bench press 3 sets of 10 at 80 kg"', label: 'Disambiguate by number' },
+    { cmd: '"Add Guy Malka\'s lunch: 200g chicken breast"', label: 'Log food by full name' },
+  ];
+  return (
+    <PulseCard className="p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Mic className="h-4 w-4 text-primary" />
+        <p className="text-base font-extrabold">Voice commands for trainees</p>
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground">Tap the mic button and speak naturally. Use the trainee&apos;s name — or their roster number (#) if names collide.</p>
+      <div className="space-y-2">
+        {tips.map((t) => (
+          <div key={t.cmd} className="rounded-xl bg-muted/50 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{t.label}</p>
+            <p className="mt-0.5 text-xs italic text-foreground">{t.cmd}</p>
+          </div>
+        ))}
+      </div>
+    </PulseCard>
   );
 }
 

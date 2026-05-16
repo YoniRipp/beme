@@ -13,6 +13,7 @@ function rowToTrainerClient(row: Record<string, unknown>): TrainerClient {
     clientEmail: row.client_email as string,
     status: row.status as TrainerClientStatus,
     createdAt: String(row.created_at),
+    traineeNumber: row.trainee_number != null ? Number(row.trainee_number) : undefined,
     subscriptionStatus: (row.subscription_status as string | null) ?? null,
     subscriptionSource: (row.subscription_source as string | null) ?? null,
     subscriptionPlan: (row.subscription_plan as string | null) ?? null,
@@ -38,11 +39,12 @@ export async function findClientsByTrainerId(trainerId: string): Promise<Trainer
     `SELECT tc.id, tc.trainer_id, tc.client_id, tc.status, tc.created_at,
             u.name AS client_name, u.email AS client_email,
             u.subscription_status, u.subscription_source, u.subscription_plan,
-            u.subscription_current_period_end
+            u.subscription_current_period_end,
+            ROW_NUMBER() OVER (ORDER BY tc.created_at ASC) AS trainee_number
      FROM trainer_clients tc
      JOIN users u ON u.id = tc.client_id
      WHERE tc.trainer_id = $1 AND tc.status = 'active'
-     ORDER BY tc.created_at DESC`,
+     ORDER BY tc.created_at ASC`,
     [trainerId],
   );
   return result.rows.map(rowToTrainerClient);
