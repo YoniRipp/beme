@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Loader2, Mic, CheckCircle2, AlertCircle, Trash2, Square, Dumbbell, UtensilsCrossed, Check } from 'lucide-react';
+import { Send, Loader2, Mic, CheckCircle2, AlertCircle, Trash2, Square, Dumbbell, UtensilsCrossed, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useAgent } from '@/hooks/useAgent';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { PulseWave } from '@/components/pulse/PulseUI';
 import { cn } from '@/lib/utils';
 import type { AgentResponse, PlanProposal } from '@/core/api/chat';
 import { toast } from 'sonner';
@@ -44,7 +45,14 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
     startListening,
     stopListening,
     currentTranscript,
-  } = useSpeechRecognition();
+  } = useSpeechRecognition({
+    language: navigator.language || 'en-US',
+  });
+
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const transcriptRef = useRef('');
+  useEffect(() => { transcriptRef.current = currentTranscript; }, [currentTranscript]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -59,6 +67,14 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open && isVoiceMode) {
+      if (isListening) stopListening().catch(() => {});
+      setIsVoiceMode(false);
+      setVoiceError(null);
+    }
+  }, [open, isVoiceMode, isListening, stopListening]);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -78,18 +94,38 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
     }
   }, [handleSend]);
 
-  const handleVoice = useCallback(async () => {
-    if (isListening) {
-      await stopListening();
-      if (currentTranscript) {
-        setInput(currentTranscript);
-      }
+  const handleVoiceMode = useCallback(async () => {
+    if (!voiceAvailable) return;
+    setVoiceError(null);
+    setIsVoiceMode(true);
+    try {
+      await startListening();
+    } catch (e) {
+      setIsVoiceMode(false);
+      toast.error(e instanceof Error ? e.message : 'Could not access microphone.');
+    }
+  }, [voiceAvailable, startListening]);
+
+  const handleVoiceStop = useCallback(async () => {
+    try { await stopListening(); } catch { setIsVoiceMode(false); return; }
+    const text = transcriptRef.current.trim();
+    if (!text) {
+      setVoiceError('Nothing heard — try again');
+      setTimeout(() => setVoiceError(null), 2000);
+      try { await startListening(); } catch { /* ignore */ }
       return;
     }
-    if (voiceAvailable) {
-      await startListening();
-    }
-  }, [isListening, voiceAvailable, startListening, stopListening, currentTranscript]);
+    setIsVoiceMode(false);
+    setLastActions(null);
+    const result = await sendMessage(text);
+    if (result?.actions?.length) setLastActions(result.actions);
+  }, [stopListening, startListening, sendMessage]);
+
+  const handleVoiceCancel = useCallback(async () => {
+    if (isListening) try { await stopListening(); } catch { /* ignore */ }
+    setIsVoiceMode(false);
+    setVoiceError(null);
+  }, [isListening, stopListening]);
 
   const handleClearHistory = useCallback(async () => {
     if (window.confirm('Clear all chat history? This cannot be undone.')) {
@@ -371,51 +407,116 @@ export function ChatAgentPanel({ open, onOpenChange }: ChatAgentPanelProps) {
 
         {/* Input */}
         <div className="border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="flex items-center gap-2">
-            {voiceAvailable && !isSending && (
+          {isVoiceMode ? (
+            <div className="flex flex-col items-center gap-4 py-2">
+              {isListening && <PulseWave className="-mb-1" />}
+
+              <button
+                type="button"
+                onClick={handleVoiceStop}
+                disabled={isSending}
+                className={[
+                  'relative flex h-24 w-24 items-center justify-center rounded-full shadow-card-lg transition-all',
+                  isListening
+                    ? 'bg-destructive text-destructive-foreground ring-[6px] ring-destructive/20'
+                    : 'bg-primary text-primary-foreground',
+                  isSending ? 'opacity-70' : 'hover:scale-105',
+                ].join(' ')}
+                aria-label={isListening ? 'Stop and send' : 'Send voice message'}
+              >
+                {isListening && (
+                  <span className="absolute inset-0 animate-ping rounded-full bg-destructive/25" />
+                )}
+                {isSending ? (
+                  <Loader2 className="relative z-10 h-9 w-9 animate-spin" />
+                ) : isListening ? (
+                  <Square className="relative z-10 h-9 w-9" />
+                ) : (
+                  <Mic className="relative z-10 h-9 w-9" />
+                )}
+              </button>
+
+              <p className="font-display text-base font-medium tracking-tight text-foreground">
+                {isSending
+                  ? 'Sending…'
+                  : isListening
+                    ? 'Listening… tap to send'
+                    : 'Tap to send'}
+              </p>
+
+              {currentTranscript && (
+                <p
+                  className="max-w-sm break-words text-center text-sm italic text-muted-foreground"
+                  role="status"
+                  aria-live="polite"
+                >
+                  "{currentTranscript}"
+                </p>
+              )}
+
+              {voiceError && (
+                <p className="text-sm text-destructive" role="alert">{voiceError}</p>
+              )}
+
               <Button
                 variant="ghost"
-                size="icon"
-                className={cn('h-10 w-10 shrink-0', isListening && 'animate-pulse text-red-500')}
-                onClick={handleVoice}
-                aria-label={isListening ? 'Stop recording' : 'Start voice input'}
+                size="sm"
+                className="h-9 rounded-full px-5 text-muted-foreground"
+                onClick={handleVoiceCancel}
+                disabled={isSending}
+                aria-label="Cancel voice input"
               >
-                <Mic className="h-5 w-5" />
+                <X className="mr-1.5 h-4 w-4" />
+                Cancel
               </Button>
-            )}
-            <input
-              ref={inputRef}
-              type="text"
-              className="flex-1 rounded-full border bg-background px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
-              placeholder={isListening ? 'Listening...' : 'Ask or command...'}
-              value={input}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isSending}
-              dir="auto"
-            />
-            {isSending ? (
-              <Button
-                size="icon"
-                variant="outline"
-                className="h-10 w-10 shrink-0 rounded-full"
-                onClick={() => {/* TODO: abort controller */}}
-                aria-label="Stop generating"
-              >
-                <Square className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                size="icon"
-                className="h-10 w-10 shrink-0 rounded-full"
-                onClick={handleSend}
-                disabled={!input.trim()}
-                aria-label="Send message"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              {voiceAvailable && !isSending && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                  onClick={handleVoiceMode}
+                  aria-label="Start voice input"
+                >
+                  <Mic className="h-5 w-5" />
+                </Button>
+              )}
+              <input
+                ref={inputRef}
+                type="text"
+                className="flex-1 rounded-full border bg-background px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Ask or command..."
+                value={input}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isSending}
+                dir="auto"
+              />
+              {isSending ? (
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-10 w-10 shrink-0 rounded-full"
+                  onClick={() => {/* TODO: abort controller */}}
+                  aria-label="Stop generating"
+                >
+                  <Square className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  size="icon"
+                  className="h-10 w-10 shrink-0 rounded-full"
+                  onClick={handleSend}
+                  disabled={!input.trim()}
+                  aria-label="Send message"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>
