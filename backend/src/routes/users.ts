@@ -121,9 +121,53 @@ async function deleteUser(req: Request, res: Response) {
       return res.status(400).json({ error: 'Cannot delete your own account' });
     }
     const pool = getPool();
-    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id, email', [id]);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
-    await logAction('User deleted', { targetId: id, targetEmail: result.rows[0].email }, req.user!.id);
+    const client = await pool.connect();
+    let deletedEmail: string | undefined;
+    try {
+      await client.query('BEGIN');
+
+      // Clear attribution columns (keep the rows, drop the link).
+      // Each statement is guarded so missing tables don't abort the transaction.
+      const setNullStatements = [
+        `UPDATE app_logs SET user_id = NULL WHERE user_id = $1`,
+        `UPDATE user_activity_log SET user_id = NULL WHERE user_id = $1`,
+        `UPDATE exercises SET created_by = NULL WHERE created_by = $1`,
+        `UPDATE foods SET verified_by = NULL WHERE verified_by = $1`,
+      ];
+      for (const sql of setNullStatements) {
+        try { await client.query(sql, [id]); } catch (err: any) {
+          if (err?.code !== '42P01' && err?.code !== '42703') throw err; // missing table/column ok
+        }
+      }
+
+      // Delete user-owned rows. Most have ON DELETE CASCADE in newer
+      // migrations, but the baseline tables don't, so we clean up here.
+      const deleteStatements = [
+        `DELETE FROM food_entries WHERE user_id = $1`,
+        `DELETE FROM workouts WHERE user_id = $1`,
+        `DELETE FROM goals WHERE user_id = $1`,
+        `DELETE FROM daily_check_ins WHERE user_id = $1`,
+      ];
+      for (const sql of deleteStatements) {
+        try { await client.query(sql, [id]); } catch (err: any) {
+          if (err?.code !== '42P01') throw err;
+        }
+      }
+
+      const result = await client.query('DELETE FROM users WHERE id = $1 RETURNING id, email', [id]);
+      if (result.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'User not found' });
+      }
+      deletedEmail = result.rows[0].email;
+      await client.query('COMMIT');
+    } catch (txErr) {
+      try { await client.query('ROLLBACK'); } catch { /* ignore */ }
+      throw txErr;
+    } finally {
+      client.release();
+    }
+    await logAction('User deleted', { targetId: id, targetEmail: deletedEmail }, req.user!.id);
     res.status(204).send();
   } catch (e: unknown) {
     const err = e as Record<string, unknown>;
