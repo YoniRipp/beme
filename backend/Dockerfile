@@ -25,8 +25,10 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY migrations ./migrations
+COPY scripts ./scripts
 
 EXPOSE 3000
 
 USER node
-CMD ["node", "dist/index.js"]
+CMD ["sh", "-c", "node scripts/migrate-up.cjs && node dist/index.js"]
