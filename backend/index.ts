@@ -3,7 +3,7 @@
  */
 import { config } from './src/config/index.js';
 import { initSchema } from './src/db/index.js';
-import { closePool, ensureDefaultPool } from './src/db/pool.js';
+import { closePool, ensureDefaultPool, getPool } from './src/db/pool.js';
 import { createApp } from './app.js';
 import { closeRedis } from './src/redis/client.js';
 import { closeQueue } from './src/queue/index.js';
@@ -24,6 +24,17 @@ registerStatsAggregatorConsumer(subscribe);
 registerPushNotifierConsumer(subscribe);
 registerStreakUpdaterConsumer(subscribe);
 
+async function applyColumnPatches(db: { query: (sql: string) => Promise<unknown> }) {
+  // Idempotent column additions that must be present regardless of migration state.
+  // ADD COLUMN IF NOT EXISTS is safe to re-run on every startup.
+  await db.query(`
+    ALTER TABLE user_profiles
+      ADD COLUMN IF NOT EXISTS macro_carbs   numeric,
+      ADD COLUMN IF NOT EXISTS macro_fat     numeric,
+      ADD COLUMN IF NOT EXISTS macro_protein numeric
+  `);
+}
+
 async function start() {
   // Initialize database if configured - exit on failure since API requires it
   if (config.isDbConfigured) {
@@ -34,6 +45,9 @@ async function start() {
         logger.info('Database schema initialized');
       }
       // Production uses migrations: run `npm run migrate:up` at deploy; set SKIP_SCHEMA_INIT=true
+      // Ensure critical columns exist regardless of migration state (idempotent patches).
+      await applyColumnPatches(getPool());
+      logger.info('Column patches applied');
     } catch (e) {
       logger.error({ err: e }, 'Database init failed - exiting');
       process.exit(1);
