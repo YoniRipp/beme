@@ -152,7 +152,7 @@ export function Home() {
     toast.success('Food entry added');
   };
 
-  if (!profileLoading && !profile.setupCompleted) {
+  if (!profileLoading && !profile.id && !profile.setupCompleted) {
     return <SetupWizard onComplete={() => window.location.reload()} />;
   }
 
