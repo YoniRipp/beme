@@ -55,7 +55,7 @@ services:
 
   # Optional: local Postgres. Uncomment and set backend DATABASE_URL to postgresql://trackvibe:trackvibe@db:5432/trackvibe
   # db:
-  #   image: postgres:16-alpine
+  #   image: pgvector/pgvector:pg16
   #   environment:
   #     POSTGRES_USER: trackvibe
   #     POSTGRES_PASSWORD: trackvibe
