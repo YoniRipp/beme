@@ -1,5 +1,5 @@
 import { request } from './client';
-import type { PaginatedResponse } from '../../../../shared/api-contracts';
+import type { PaginatedResponse } from '../../types/api';
 
 export interface ApiWorkout {
   id: string;

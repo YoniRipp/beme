@@ -1,5 +1,5 @@
 import { request } from './client';
-import type { MealType, PaginatedResponse } from '../../../../shared/api-contracts';
+import type { MealType, PaginatedResponse } from '../../types/api';
 
 export interface ApiFoodEntry {
   id: string;
