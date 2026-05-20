@@ -25,10 +25,8 @@ function clearTokenCookie(res: Response) {
   res.clearCookie('token', { path: '/' });
 }
 
-function authPayload(req: Request, result: { user: unknown; token: string }) {
-  return req.get('X-Client-Platform') === 'web'
-    ? { user: result.user }
-    : { user: result.user, token: result.token };
+function authPayload(_req: Request, result: { user: unknown; token: string }) {
+  return { user: result.user, token: result.token };
 }
 
 function base64UrlEncode(buf: Buffer) {

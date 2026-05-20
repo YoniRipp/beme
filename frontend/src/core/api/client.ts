@@ -62,6 +62,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     'X-Client-Platform': 'web',
     ...headers,
   } as Record<string, string>;
+  if (inMemoryToken) {
+    requestHeaders['Authorization'] = `Bearer ${inMemoryToken}`;
+  }
   const bodyStr = body != null ? JSON.stringify(body) : null;
 
   // Offline queue: enqueue mutations when offline instead of failing
