@@ -1,0 +1,21 @@
+{
+  "name": "trackvibe-langchain-prototype",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "tsx agent.ts"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.0",
+    "@langchain/google-genai": "^0.2.16",
+    "@langchain/langgraph": "^0.4.8",
+    "@langchain/mcp-adapters": "^0.6.0",
+    "dotenv": "^16.4.5",
+    "tsx": "^4.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1"
+  }
+}

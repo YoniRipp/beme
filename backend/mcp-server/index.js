@@ -6,30 +6,26 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
+import { register as registerFoodEntries } from './tools/food-entries.js';
+import { register as registerWorkouts } from './tools/workouts.js';
+import { register as registerWater } from './tools/water.js';
+import { register as registerWeight } from './tools/weight.js';
+import { register as registerGoals } from './tools/goals.js';
+import { register as registerCheckins } from './tools/checkins.js';
+import { register as registerExercises } from './tools/exercises.js';
+import { register as registerFoodSearch } from './tools/food-search.js';
+import { register as registerProfile } from './tools/profile.js';
+import { register as registerStreaks } from './tools/streaks.js';
 
 const TRACKVIBE_API_URL = process.env.TRACKVIBE_API_URL || 'http://localhost:3000';
 const TRACKVIBE_MCP_TOKEN = process.env.TRACKVIBE_MCP_TOKEN;
 const authHeaders = TRACKVIBE_MCP_TOKEN ? { Authorization: `Bearer ${TRACKVIBE_MCP_TOKEN}` } : {};
 
-async function apiGet(path) {
-  const res = await fetch(`${TRACKVIBE_API_URL}${path}`, { headers: authHeaders });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || res.statusText || `Request failed: ${res.status}`);
-  }
-  return res.json();
-}
-
-async function apiPost(path, body) {
-  const res = await fetch(`${TRACKVIBE_API_URL}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
+async function handleResponse(res) {
+  if (!res.ok && res.status !== 204) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || res.statusText || `Request failed: ${res.status}`);
   }
@@ -37,49 +33,58 @@ async function apiPost(path, body) {
   return res.json();
 }
 
-async function apiDelete(path) {
-  const res = await fetch(`${TRACKVIBE_API_URL}${path}`, { method: 'DELETE', headers: authHeaders });
-  if (!res.ok && res.status !== 204) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || res.statusText || `Request failed: ${res.status}`);
-  }
-  return null;
-}
-
-function textContent(text) {
-  return { content: [{ type: 'text', text }] };
-}
+const api = {
+  async get(p) {
+    const res = await fetch(`${TRACKVIBE_API_URL}${p}`, { headers: authHeaders });
+    return handleResponse(res);
+  },
+  async post(p, body) {
+    const res = await fetch(`${TRACKVIBE_API_URL}${p}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify(body),
+    });
+    return handleResponse(res);
+  },
+  async patch(p, body) {
+    const res = await fetch(`${TRACKVIBE_API_URL}${p}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify(body),
+    });
+    return handleResponse(res);
+  },
+  async put(p, body) {
+    const res = await fetch(`${TRACKVIBE_API_URL}${p}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify(body),
+    });
+    return handleResponse(res);
+  },
+  async delete(p) {
+    const res = await fetch(`${TRACKVIBE_API_URL}${p}`, { method: 'DELETE', headers: authHeaders });
+    return handleResponse(res);
+  },
+};
 
 const server = new McpServer({
   name: 'trackvibe',
-  version: '1.0.0',
+  version: '2.0.0',
 });
 
-// --- Tools ---
+// --- Register all tools ---
 
-server.tool(
-  'add_goal',
-  'Add a goal.',
-  z.object({
-    type: z.enum(['calories', 'workouts', 'sleep']),
-    target: z.number().min(0),
-    period: z.enum(['weekly', 'monthly', 'yearly']),
-  }),
-  async (args) => {
-    const result = await apiPost('/api/goals', args);
-    return textContent(JSON.stringify(result, null, 2));
-  }
-);
-
-server.tool(
-  'list_goals',
-  'List all goals.',
-  z.object({}),
-  async () => {
-    const items = await apiGet('/api/goals');
-    return textContent(JSON.stringify(items, null, 2));
-  }
-);
+registerFoodEntries(server, api);
+registerWorkouts(server, api);
+registerWater(server, api);
+registerWeight(server, api);
+registerGoals(server, api);
+registerCheckins(server, api);
+registerExercises(server, api);
+registerFoodSearch(server, api);
+registerProfile(server, api);
+registerStreaks(server, api);
 
 // --- Resources ---
 
@@ -88,9 +93,45 @@ server.resource(
   'trackvibe://goals',
   { title: 'Current goals' },
   async (uri) => {
-    const items = await apiGet('/api/goals');
+    const items = await api.get('/api/goals');
     return {
       contents: [{ uri: uri.toString(), mimeType: 'application/json', text: JSON.stringify(items, null, 2) }],
+    };
+  }
+);
+
+server.resource(
+  'profile',
+  'trackvibe://profile',
+  { title: 'User profile' },
+  async (uri) => {
+    const data = await api.get('/api/profile');
+    return {
+      contents: [{ uri: uri.toString(), mimeType: 'application/json', text: JSON.stringify(data, null, 2) }],
+    };
+  }
+);
+
+server.resource(
+  'water-today',
+  'trackvibe://water-today',
+  { title: "Today's water intake" },
+  async (uri) => {
+    const data = await api.get('/api/water-entries');
+    return {
+      contents: [{ uri: uri.toString(), mimeType: 'application/json', text: JSON.stringify(data, null, 2) }],
+    };
+  }
+);
+
+server.resource(
+  'streaks',
+  'trackvibe://streaks',
+  { title: 'Current streaks' },
+  async (uri) => {
+    const data = await api.get('/api/streaks');
+    return {
+      contents: [{ uri: uri.toString(), mimeType: 'application/json', text: JSON.stringify(data, null, 2) }],
     };
   }
 );
