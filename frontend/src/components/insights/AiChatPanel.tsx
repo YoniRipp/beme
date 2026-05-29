@@ -4,9 +4,9 @@
  * The agent can take actions (log food, workouts, etc.) and the UI
  * refreshes affected data automatically.
  */
-import { useState, useRef, useEffect, type FormEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, type FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, Trash2, Loader2, MessageCircle } from 'lucide-react';
+import { Send, Trash2, Loader2, MessageCircle, Mic, Square, X } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { chatApi, type ChatMessage, type ChatResponse } from '@/core/api/chat';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { PulseWave } from '@/components/pulse/PulseUI';
 import { cn } from '@/lib/utils';
 
 interface AiChatPanelProps {
@@ -27,6 +29,20 @@ export function AiChatPanel({ open, onOpenChange }: AiChatPanelProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const {
+    isAvailable: voiceAvailable,
+    isListening,
+    isProcessing: voiceProcessing,
+    startListening,
+    stopListening,
+    currentTranscript,
+  } = useSpeechRecognition({ language: navigator.language || 'en-US' });
+
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const transcriptRef = useRef('');
+  useEffect(() => { transcriptRef.current = currentTranscript; }, [currentTranscript]);
 
   // Load history
   const { data: historyData, isLoading: historyLoading } = useQuery({
@@ -86,6 +102,46 @@ export function AiChatPanel({ open, onOpenChange }: AiChatPanelProps) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [open]);
+
+  // Exit voice mode when panel closes
+  useEffect(() => {
+    if (!open && isVoiceMode) {
+      if (isListening) stopListening().catch(() => {});
+      setIsVoiceMode(false);
+      setVoiceError(null);
+    }
+  }, [open, isVoiceMode, isListening, stopListening]);
+
+  const handleVoiceMode = useCallback(async () => {
+    if (!voiceAvailable) return;
+    setVoiceError(null);
+    setIsVoiceMode(true);
+    try {
+      await startListening();
+    } catch (e) {
+      setIsVoiceMode(false);
+      setVoiceError(e instanceof Error ? e.message : 'Could not access microphone.');
+    }
+  }, [voiceAvailable, startListening]);
+
+  const handleVoiceStop = useCallback(async () => {
+    try { await stopListening(); } catch { setIsVoiceMode(false); return; }
+    const text = transcriptRef.current.trim();
+    if (!text) {
+      setVoiceError('Nothing heard — try again');
+      setTimeout(() => setVoiceError(null), 2000);
+      try { await startListening(); } catch { /* ignore */ }
+      return;
+    }
+    setIsVoiceMode(false);
+    sendMutation.mutate(text);
+  }, [stopListening, startListening, sendMutation]);
+
+  const handleVoiceCancel = useCallback(async () => {
+    if (isListening) try { await stopListening(); } catch { /* ignore */ }
+    setIsVoiceMode(false);
+    setVoiceError(null);
+  }, [isListening, stopListening]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -200,39 +256,95 @@ export function AiChatPanel({ open, onOpenChange }: AiChatPanelProps) {
         </div>
 
         {/* Input */}
-        <form
-          onSubmit={handleSubmit}
-          className="border-t px-4 py-3 flex gap-2 items-end shrink-0 bg-background"
-        >
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask your coach..."
-            rows={1}
-            className={cn(
-              'flex-1 resize-none rounded-xl border px-3 py-2 text-sm',
-              'focus:outline-none focus:ring-2 focus:ring-violet-500/50',
-              'max-h-[120px] min-h-[40px]',
-              'bg-background'
+        {isVoiceMode ? (
+          <div className="border-t px-4 py-5 flex flex-col items-center gap-4 shrink-0 bg-background">
+            {isListening && <PulseWave className="-mb-1" />}
+            <button
+              type="button"
+              className={cn(
+                'relative flex h-20 w-20 items-center justify-center rounded-full shadow-lg transition-colors',
+                isListening
+                  ? 'bg-destructive text-destructive-foreground ring-[6px] ring-destructive/20'
+                  : 'bg-violet-600 text-white'
+              )}
+              onClick={handleVoiceStop}
+              disabled={voiceProcessing}
+            >
+              {isListening && (
+                <span className="absolute inset-0 animate-ping rounded-full bg-destructive/25" />
+              )}
+              {voiceProcessing ? (
+                <Loader2 className="h-8 w-8 animate-spin" />
+              ) : isListening ? (
+                <Square className="h-8 w-8" />
+              ) : (
+                <Mic className="h-8 w-8" />
+              )}
+            </button>
+            <p className="text-sm font-medium text-muted-foreground">
+              {voiceProcessing ? 'Processing…' : isListening ? 'Listening… tap to send' : 'Tap to send'}
+            </p>
+            {currentTranscript && (
+              <p className="max-w-xs break-words text-center text-sm italic text-muted-foreground">
+                "{currentTranscript}"
+              </p>
             )}
-            style={{ height: 'auto' }}
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = 'auto';
-              target.style.height = Math.min(target.scrollHeight, 120) + 'px';
-            }}
-          />
-          <Button
-            type="submit"
-            size="sm"
-            disabled={!input.trim() || sendMutation.isPending}
-            className="bg-violet-600 hover:bg-violet-700 text-white h-10 w-10 p-0 rounded-xl shrink-0"
+            {voiceError && (
+              <p className="text-sm text-destructive">{voiceError}</p>
+            )}
+            <Button variant="ghost" size="sm" onClick={handleVoiceCancel} className="text-muted-foreground">
+              <X className="mr-1.5 h-4 w-4" />
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            className="border-t px-4 py-3 flex gap-2 items-end shrink-0 bg-background"
           >
-            <Send className="w-4 h-4" />
-          </Button>
-        </form>
+            {voiceAvailable && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleVoiceMode}
+                disabled={sendMutation.isPending}
+                className="h-10 w-10 p-0 rounded-xl shrink-0 text-muted-foreground hover:text-violet-600"
+                aria-label="Voice input"
+              >
+                <Mic className="w-5 h-5" />
+              </Button>
+            )}
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask your coach..."
+              rows={1}
+              className={cn(
+                'flex-1 resize-none rounded-xl border px-3 py-2 text-sm',
+                'focus:outline-none focus:ring-2 focus:ring-violet-500/50',
+                'max-h-[120px] min-h-[40px]',
+                'bg-background'
+              )}
+              style={{ height: 'auto' }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+              }}
+            />
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!input.trim() || sendMutation.isPending}
+              className="bg-violet-600 hover:bg-violet-700 text-white h-10 w-10 p-0 rounded-xl shrink-0"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
+        )}
       </SheetContent>
     </Sheet>
   );
