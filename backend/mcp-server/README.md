@@ -66,9 +66,69 @@ Use the absolute path for your TrackVibe project in `cwd`. Ensure the TrackVibe 
 
 ## Tools
 
-- **add_goal** — Add a goal (type: calories/workouts, target, period).
-- **list_goals** — List all goals.
+The server exposes 31 domain tools covering all core features, organized by
+domain under `tools/`:
+
+- **Food entries** — `list_food_entries`, `add_food_entry`, `add_food_entries_batch`, `update_food_entry`, `delete_food_entry`, `duplicate_food_day`
+- **Workouts** — `list_workouts`, `add_workout`, `update_workout`, `delete_workout`
+- **Water** — `get_water_today`, `get_water_history`, `add_water_glass`, `remove_water_glass`
+- **Weight** — `list_weight_entries`, `add_weight_entry`, `delete_weight_entry`
+- **Goals** — `list_goals`, `add_goal`, `update_goal`, `delete_goal`
+- **Daily check-ins** — `list_daily_checkins`, `add_daily_checkin`, `update_daily_checkin`
+- **Exercises** — `search_exercises`, `get_exercise`
+- **Food search** — `search_foods`, `lookup_food_barcode`
+- **Profile** — `get_profile`, `update_profile`
+- **Streaks** — `get_streaks`
 
 ## Resources
 
 - **trackvibe://goals** — Current goals (JSON).
+- **trackvibe://profile** — User profile (JSON).
+- **trackvibe://water-today** — Today's water intake (JSON).
+- **trackvibe://streaks** — Current streaks (JSON).
+
+## Test mode (let Claude test the app via MCP)
+
+Setting **`MCP_TEST_MODE=true`** exposes 8 extra tools that let an agent drive
+and verify the running app directly — exploratory/acceptance testing against a
+live backend, complementary to the unit suite. These tools are **never exposed**
+unless the flag is set.
+
+- **run_tests** — run the backend suite (`vitest run`), optional pattern; returns pass/fail + output.
+- **run_typecheck** — run `tsc --noEmit`; returns type errors.
+- **reset_test_data** — delete the test user's food/workouts/weight/goals/check-ins (clean slate).
+- **seed_test_data** — create a known fixture set (food, workout, goal, weight) for predictable state.
+- **get_app_logs** — read backend logs (`error`/`action`); needs an admin test user.
+- **get_metrics** — read per-endpoint request counts/latency, errors, cache; needs an admin test user.
+- **get_admin_stats** — read aggregated business stats; needs an admin test user.
+- **call_raw** — call any endpoint and get `{ status, ok, body }` **without throwing**, to assert on error paths (e.g. that invalid input returns 400).
+
+### Recommended usage
+
+> **Safety:** only enable test mode against a **local backend** with a
+> **dedicated test user**. `reset_test_data` permanently deletes that user's
+> data. For the diagnostic tools (logs/metrics/stats), point
+> `TRACKVIBE_MCP_USER_ID` at an **admin** test user.
+
+The intended loop: drive the live app via the domain tools → use the diagnostic
+tools + `call_raw` to verify behavior and find bugs → fix the code → re-test via
+MCP → **codify the finding as a real test** (`run_tests` to confirm). MCP
+testing *discovers/reproduces*; the suite *locks it in* and is the CI gate.
+
+Enable in your MCP config `env` (or this directory's `.env`):
+
+```json
+{
+  "mcpServers": {
+    "trackvibe": {
+      "command": "node",
+      "args": ["backend/mcp-server/index.js"],
+      "env": {
+        "TRACKVIBE_API_URL": "http://localhost:3000",
+        "TRACKVIBE_MCP_TOKEN": "<same as backend TRACKVIBE_MCP_SECRET>",
+        "MCP_TEST_MODE": "true"
+      }
+    }
+  }
+}
+```

@@ -19,6 +19,7 @@ import { register as registerExercises } from './tools/exercises.js';
 import { register as registerFoodSearch } from './tools/food-search.js';
 import { register as registerProfile } from './tools/profile.js';
 import { register as registerStreaks } from './tools/streaks.js';
+import { register as registerTestMode } from './tools/test-mode.js';
 
 const TRACKVIBE_API_URL = process.env.TRACKVIBE_API_URL || 'http://localhost:3000';
 const TRACKVIBE_MCP_TOKEN = process.env.TRACKVIBE_MCP_TOKEN;
@@ -66,6 +67,25 @@ const api = {
     const res = await fetch(`${TRACKVIBE_API_URL}${p}`, { method: 'DELETE', headers: authHeaders });
     return handleResponse(res);
   },
+  // Non-throwing variant: returns { status, ok, body } instead of throwing on
+  // non-2xx. Used by test-mode tools so Claude can assert on error responses
+  // (e.g. that invalid input returns 400) rather than crashing the tool call.
+  async raw(method, p, body) {
+    const opts = { method, headers: { ...authHeaders } };
+    if (body !== undefined) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    const res = await fetch(`${TRACKVIBE_API_URL}${p}`, opts);
+    const text = await res.text();
+    let parsed;
+    try {
+      parsed = text ? JSON.parse(text) : null;
+    } catch {
+      parsed = text;
+    }
+    return { status: res.status, ok: res.ok, body: parsed };
+  },
 };
 
 const server = new McpServer({
@@ -85,6 +105,14 @@ registerExercises(server, api);
 registerFoodSearch(server, api);
 registerProfile(server, api);
 registerStreaks(server, api);
+
+// Test/diagnostic tools are gated behind MCP_TEST_MODE so they are never
+// exposed in normal operation. Enable only when pointing at a local backend
+// with a dedicated test user (ideally an admin user, so the diagnostic
+// endpoints — logs, metrics, stats — are readable).
+if (process.env.MCP_TEST_MODE === 'true') {
+  registerTestMode(server, api);
+}
 
 // --- Resources ---
 
