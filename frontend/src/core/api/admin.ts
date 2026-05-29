@@ -103,6 +103,80 @@ export interface AdminStatsResponse {
   recentErrors: AdminRecentErrors;
 }
 
+// ─── Observability / Telemetry ──────────────────────────────
+export interface LatencyStats {
+  count?: number;
+  avgMs: number;
+  p50Ms: number;
+  p95Ms: number;
+  p99Ms?: number;
+  maxMs?: number;
+}
+
+export interface RouteMetric {
+  route: string;
+  total: number;
+  statusCounts: Record<string, number>;
+  avgMs: number;
+  p50Ms: number;
+  p95Ms: number;
+  p99Ms: number;
+  maxMs: number;
+}
+
+export interface SlowQuery {
+  sql: string;
+  durationMs: number;
+  timestamp: number;
+}
+
+export interface MetricsResponse {
+  uptime: { seconds: number; startedAt: string };
+  http: { routes: RouteMetric[]; totalRequests: number };
+  db: {
+    totalQueries: number;
+    avgMs: number;
+    p50Ms: number;
+    p95Ms: number;
+    p99Ms: number;
+    maxMs: number;
+    errors: number;
+    slowQueries: SlowQuery[];
+  };
+  errors: { total: number; byCode: Record<string, number> };
+  events: {
+    published: number;
+    processed: number;
+    failed: number;
+    handlers: Record<string, { count: number; avgMs: number; p50Ms: number; p95Ms: number; maxMs: number }>;
+  };
+  cache: { hits: number; misses: number; hitRate: number };
+  voiceJobs: { completed: number; failed: number; latency: LatencyStats };
+  foodLookups: { bySource: Record<string, number>; total: number };
+  gemini: { totalCalls: number; errors: number; latency: LatencyStats };
+  redis: { reconnects: number };
+  system: {
+    memoryMb: { rss: number; heapUsed: number; heapTotal: number; external: number };
+    nodeVersion: string;
+    pid: number;
+    cpuUsage: { user: number; system: number };
+  };
+}
+
+export interface QueueCounts {
+  name: string;
+  waiting?: number;
+  active?: number;
+  completed?: number;
+  failed?: number;
+  delayed?: number;
+}
+
+export interface QueuesResponse {
+  events?: QueueCounts;
+  eventsDlq?: QueueCounts;
+}
+
 export interface AdminGeminiFood {
   id: string;
   name: string;
@@ -139,6 +213,10 @@ export const adminApi = {
     request<ApiUserSearchItem[]>(`/api/admin/users/search?q=${encodeURIComponent(q)}&limit=${limit}`),
 
   getStats: () => request<AdminStatsResponse>('/api/admin/stats'),
+
+  getMetrics: () => request<MetricsResponse>('/api/admin/metrics'),
+
+  getQueues: () => request<QueuesResponse>('/api/admin/queues'),
 
   getGeminiFoods: (status: 'all' | 'verified' | 'unverified' = 'all', limit = 50, offset = 0) =>
     request<GeminiFoodsResponse>(`/api/admin/foods/gemini?status=${status}&limit=${limit}&offset=${offset}`),

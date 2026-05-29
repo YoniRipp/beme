@@ -1,5 +1,5 @@
-import { AdminSystemHealth } from '@/components/admin/AdminSystemHealth';
+import { AdminObservability } from '@/components/admin/observability/AdminObservability';
 
 export default function AdminSystemPage() {
-  return <AdminSystemHealth />;
+  return <AdminObservability />;
 }
