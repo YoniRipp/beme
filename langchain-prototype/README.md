@@ -102,6 +102,59 @@ const llm = new ChatOpenAI({
 // 4. Set OPENAI_API_KEY in your .env instead of GOOGLE_API_KEY
 ```
 
+## Ops Copilot — multi-agent orchestrator (`npm run ops`)
+
+A second entry point (`ops.ts`) demonstrates a **multi-agent** system on top of the
+same MCP machinery: a **supervisor** agent that routes admin questions to five
+specialist **department agents**, each scoped to a subset of read-only analytics
+tools. This is the agentic pattern you'd use for a company-wide "ask the data"
+copilot.
+
+```
+Admin question
+   │
+   ▼
+Supervisor agent (LangGraph ReAct)          ← decides which departments to consult
+   ├──> consult_users_agent                 → ops_business_overview, ops_search_users
+   ├──> consult_usage_agent                 → ops_runtime_metrics, ops_activity
+   ├──> consult_bugs_agent                  → ops_error_logs, ops_action_logs, ops_runtime_metrics
+   ├──> consult_app_retention_agent         → ops_business_overview, ops_activity
+   └──> consult_trainer_retention_agent     → ops_business_overview, ops_activity
+                       │
+                       ▼  (each department agent = its own ReAct agent)
+            Ops MCP tools  (MCP_OPS_MODE, read-only)
+                       │ stdio → HTTP
+            Admin API (/api/admin/stats, /metrics, /logs, /activity) → PostgreSQL
+```
+
+Key ideas demonstrated:
+- **Supervisor / orchestrator** routing to specialists
+- **Agents-as-tools** — each department agent is wrapped as a `DynamicStructuredTool`
+- **Tool scoping** — every department only sees the tools its domain needs
+- **Read-only, admin-scoped data access** via the `MCP_OPS_MODE` toolset
+
+### Run the Ops Copilot
+
+The ops MCP tools wrap **admin** endpoints, so the MCP user must be an **admin**:
+set the backend's `TRACKVIBE_MCP_USER_ID` to an admin user's id (and
+`TRACKVIBE_MCP_SECRET` / `TRACKVIBE_MCP_TOKEN` as usual). Then:
+
+```bash
+npm run ops
+```
+
+Example questions:
+```
+Admin: How is the app doing overall this week?
+Admin: Which features or endpoints are barely used?
+Admin: What's breaking right now?
+Admin: How healthy is trainer retention?
+```
+
+> Note: the agents only use data the existing admin endpoints already expose.
+> Precise per-cohort retention curves would require additional backend
+> aggregation endpoints (a natural next step).
+
 ## Example Conversations
 
 ```

@@ -20,6 +20,7 @@ import { register as registerFoodSearch } from './tools/food-search.js';
 import { register as registerProfile } from './tools/profile.js';
 import { register as registerStreaks } from './tools/streaks.js';
 import { register as registerTestMode } from './tools/test-mode.js';
+import { register as registerOps } from './tools/ops.js';
 
 const TRACKVIBE_API_URL = process.env.TRACKVIBE_API_URL || 'http://localhost:3000';
 const TRACKVIBE_MCP_TOKEN = process.env.TRACKVIBE_MCP_TOKEN;
@@ -112,6 +113,13 @@ registerStreaks(server, api);
 // endpoints — logs, metrics, stats — are readable).
 if (process.env.MCP_TEST_MODE === 'true') {
   registerTestMode(server, api);
+}
+
+// Read-only analytics tools for the ops/analytics agents. Gated behind
+// MCP_OPS_MODE; the impersonated user must be an admin (the wrapped endpoints
+// require admin role).
+if (process.env.MCP_OPS_MODE === 'true') {
+  registerOps(server, api);
 }
 
 // --- Resources ---
