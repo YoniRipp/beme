@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { requireAuth } from './auth.js';
+import { requireAuth, requireAdmin } from './auth.js';
 
 vi.mock('jsonwebtoken', () => ({
   default: {
@@ -17,6 +17,11 @@ vi.mock('../config/index.js', () => ({
 
 vi.mock('../lib/keyValueStore.js', () => ({
   kvGet: vi.fn().mockResolvedValue(null),
+}));
+
+const mockQuery = vi.fn();
+vi.mock('../db/pool.js', () => ({
+  getPool: () => ({ query: (...args: unknown[]) => mockQuery(...args) }),
 }));
 
 const jwt = (await import('jsonwebtoken')).default;
@@ -105,5 +110,79 @@ describe('requireAuth', () => {
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ error: { code: 'UNAUTHORIZED', message: 'Token has been revoked' } });
     expect(next).not.toHaveBeenCalled();
+  });
+});
+
+describe('requireAdmin', () => {
+  let req: any;
+  let res: any;
+  let next: any;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    req = { user: { id: 'user-1', email: 'admin@test.com', role: 'admin' } };
+    res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    };
+    next = vi.fn();
+  });
+
+  it('allows a user the database still records as an admin', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ role: 'admin' }] });
+
+    await requireAdmin(req, res, next);
+
+    expect(mockQuery).toHaveBeenCalledWith('SELECT role FROM users WHERE id = $1', ['user-1']);
+    expect(next).toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it('rejects a token whose admin claim the database no longer backs', async () => {
+    // Tokens last a year, so a demoted admin would otherwise keep admin access for that
+    // long on the strength of a stale role claim.
+    mockQuery.mockResolvedValueOnce({ rows: [{ role: 'user' }] });
+
+    await requireAdmin(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('rejects a deleted user', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await requireAdmin(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-admin claim without querying the database', async () => {
+    req.user.role = 'user';
+
+    await requireAdmin(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when there is no authenticated user', async () => {
+    req.user = undefined;
+
+    await requireAdmin(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('forwards a database failure to the error handler', async () => {
+    const dbError = new Error('connection lost');
+    mockQuery.mockRejectedValueOnce(dbError);
+
+    await requireAdmin(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(dbError);
+    expect(res.status).not.toHaveBeenCalled();
   });
 });

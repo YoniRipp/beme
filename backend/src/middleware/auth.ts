@@ -23,6 +23,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       token.length === config.mcpSecret.length &&
       crypto.timingSafeEqual(Buffer.from(token), Buffer.from(config.mcpSecret))) {
     req.user = { id: config.mcpUserId, email: 'mcp@local', role: 'user' };
+    req.mcpAuth = true;
     return next();
   }
 
@@ -47,14 +48,27 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 }
 
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user) {
     return sendError(res, 401, 'Authentication required', { code: 'UNAUTHORIZED' });
   }
   if (req.user.role !== 'admin') {
     return sendError(res, 403, 'Admin access required', { code: 'FORBIDDEN' });
   }
-  next();
+  // The role claim is only as fresh as the token, and tokens now last a year. Confirm
+  // against the database so demoting an admin takes effect immediately rather than
+  // whenever their current token happens to expire. Admin routes are low-traffic, so the
+  // extra read costs nothing that matters.
+  try {
+    const pool = getPool();
+    const result = await pool.query('SELECT role FROM users WHERE id = $1', [req.user.id]);
+    if (result.rows[0]?.role !== 'admin') {
+      return sendError(res, 403, 'Admin access required', { code: 'FORBIDDEN' });
+    }
+    next();
+  } catch (e) {
+    next(e);
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { authApi } from '@/features/auth/api';
+import { authApi, setToken } from '@/features/auth/api';
 
 /**
  * Handles OAuth callback (e.g. Twitter redirect flow). Exchanges auth code for token
@@ -25,7 +25,10 @@ export function AuthCallback() {
       }
 
       try {
-        await authApi.exchangeCode(code);
+        const res = await authApi.exchangeCode(code);
+        // Keep the token the exchange just handed us. Dropping it meant this flow leaned
+        // entirely on the cookie, so an OAuth sign-in didn't survive a cold start.
+        if (res.token) setToken(res.token);
         if (window.opener) {
           window.opener.postMessage({ type: 'auth' }, window.location.origin);
           window.close();
