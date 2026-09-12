@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer, type Theme as NavigationTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
@@ -11,6 +11,7 @@ import { SleepFormScreen } from '../screens/SleepFormScreen';
 import { GoalFormScreen } from '../screens/GoalFormScreen';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { colors } from '../theme';
+import { useThemeContext } from '../theme/ThemeContext';
 
 const Stack = createNativeStackNavigator();
 
@@ -67,15 +68,39 @@ function LoadingScreen() {
   );
 }
 
+/**
+ * Builds a react-navigation theme matching the app's resolved scheme, layered over
+ * react-navigation's own `DarkTheme`/`DefaultTheme` (Task 3 Step 4) — Paper's
+ * `PaperProvider` (mounted in `ThemeContext.tsx`) does not theme `NavigationContainer`
+ * chrome (screen background during transitions, the native back-gesture edge), so it
+ * needs its own theme object rather than inheriting Paper's.
+ */
+function buildNavigationTheme(scheme: 'light' | 'dark', palette: { primary: string; background: string; surface: string; text: string; border: string; danger: string }): NavigationTheme {
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  return {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: palette.primary,
+      background: palette.background,
+      card: palette.surface,
+      text: palette.text,
+      border: palette.border,
+      notification: palette.danger,
+    },
+  };
+}
+
 export function RootNavigator() {
   const { user, authLoading } = useAuth();
+  const { scheme, colors: resolvedColors } = useThemeContext();
 
   if (authLoading) {
     return <LoadingScreen />;
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={buildNavigationTheme(scheme, resolvedColors)}>
       {user ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );

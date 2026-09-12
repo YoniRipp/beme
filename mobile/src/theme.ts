@@ -1,5 +1,5 @@
-import { MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
-import { lightColors, darkColors, colors, spacing, radii } from '@trackvibe/shared/tokens';
+import { MD3DarkTheme, MD3LightTheme, type MD3Theme } from 'react-native-paper';
+import { lightColors, darkColors, colors, spacing, radii, type ColorRoles } from '@trackvibe/shared/tokens';
 
 /**
  * Design tokens now live in `@trackvibe/shared/tokens` (task 11), transcribed from
@@ -16,36 +16,32 @@ export { lightColors, darkColors, colors, spacing };
 // package's name for the same scale (see packages/shared/src/tokens/spacing.ts).
 export const radius = radii;
 
-export const paperTheme = {
-  ...MD3LightTheme,
-  roundness: radius.md,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: colors.primary,
-    secondary: colors.food,
-    background: colors.background,
-    surface: colors.surface,
-    surfaceVariant: colors.surfaceMuted,
-    outline: colors.border,
-    onSurface: colors.text,
-    onSurfaceVariant: colors.textMuted,
-    error: colors.danger,
-  },
-};
+/**
+ * Maps a `ColorRoles` palette onto a react-native-paper MD3 theme, layered over a base
+ * (`MD3LightTheme`/`MD3DarkTheme`) so every MD3 role this doesn't touch keeps Paper's
+ * own default. Extracted (task 3) so the static `paperTheme`/`paperDarkTheme` below and
+ * `theme/useAppTheme.ts`'s runtime-resolved theme — same base palettes, but with
+ * `primary` swapped for the user's accent-colour choice — share one mapping instead of
+ * two copies that can drift apart.
+ */
+export function buildPaperTheme(base: MD3Theme, palette: ColorRoles): MD3Theme {
+  return {
+    ...base,
+    roundness: radius.md,
+    colors: {
+      ...base.colors,
+      primary: palette.primary,
+      secondary: palette.food,
+      background: palette.background,
+      surface: palette.surface,
+      surfaceVariant: palette.surfaceMuted,
+      outline: palette.border,
+      onSurface: palette.text,
+      onSurfaceVariant: palette.textMuted,
+      error: palette.danger,
+    },
+  };
+}
 
-export const paperDarkTheme = {
-  ...MD3DarkTheme,
-  roundness: radius.md,
-  colors: {
-    ...MD3DarkTheme.colors,
-    primary: darkColors.primary,
-    secondary: darkColors.food,
-    background: darkColors.background,
-    surface: darkColors.surface,
-    surfaceVariant: darkColors.surfaceMuted,
-    outline: darkColors.border,
-    onSurface: darkColors.text,
-    onSurfaceVariant: darkColors.textMuted,
-    error: darkColors.danger,
-  },
-};
+export const paperTheme = buildPaperTheme(MD3LightTheme, colors);
+export const paperDarkTheme = buildPaperTheme(MD3DarkTheme, darkColors);
