@@ -1,9 +1,15 @@
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+import { createTransport } from '@trackvibe/shared/api';
+
+// The HTTP plumbing now lives in @trackvibe/shared/api so the web client and this one run the
+// same transport. Everything auth-shaped stays here: the token lives in SecureStore (so it
+// survives a cold start, unlike the web's in-memory bearer) and the 401 reaction is this
+// app's own. The public surface of this module is unchanged.
+
+export type { RequestOptions } from '@trackvibe/shared/api';
 
 const STORAGE_KEY = 'trackvibe_token';
-
-const DEFAULT_TIMEOUT_MS = 30000;
 
 function getApiBase(): string {
   const extra = Constants.expoConfig?.extra as { apiUrl?: string } | undefined;
@@ -43,46 +49,10 @@ export function handleUnauthorized(): void {
   onUnauthorizedCallback?.();
 }
 
-export interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
-  headers?: HeadersInit;
-  body?: unknown;
-  timeoutMs?: number;
-}
-
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, headers, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  const token = await getToken();
-  const authHeaders: HeadersInit = token
-    ? { ...headers, Authorization: `Bearer ${token}`, 'X-Client-Platform': 'mobile' }
-    : { ...headers, 'X-Client-Platform': 'mobile' };
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  let res: Response;
-  try {
-    res = await fetch(`${getApiBase()}${path}`, {
-      method,
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', ...authHeaders },
-      ...(body != null ? { body: JSON.stringify(body) } : {}),
-    });
-  } catch (e) {
-    clearTimeout(timeoutId);
-    if (e instanceof Error && e.name === 'AbortError') {
-      throw new Error('Request timed out');
-    }
-    throw e;
-  }
-  clearTimeout(timeoutId);
-  if (res.status === 401) {
-    handleUnauthorized();
-    const err = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(err.error ?? 'Session expired');
-  }
-  if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(err.error ?? res.statusText);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
-}
+export const request = createTransport({
+  // Passed as a function, not a value: `Constants.expoConfig` is read per request, as before.
+  baseUrl: getApiBase,
+  getToken,
+  onUnauthorized: handleUnauthorized,
+  platform: 'mobile',
+});
