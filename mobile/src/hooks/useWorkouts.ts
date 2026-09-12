@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Workout } from '../types/workout';
 import { workoutsApi } from '../core/api/workouts';
-import { apiWorkoutToWorkout } from '../features/body/mappers';
+import { apiWorkoutToWorkout, workoutToApiWorkout } from '../features/body/mappers';
 import { queryKeys } from '../lib/queryKeys';
 import { toLocalDateString } from '../lib/dateRanges';
 
@@ -31,15 +31,7 @@ export function useWorkouts() {
   }, [refetchWorkoutsQuery]);
 
   const addMutation = useMutation({
-    mutationFn: (workout: Omit<Workout, 'id'>) =>
-      workoutsApi.add({
-        date: toLocalDateString(workout.date),
-        title: workout.title,
-        type: workout.type,
-        durationMinutes: workout.durationMinutes,
-        exercises: workout.exercises,
-        notes: workout.notes,
-      }),
+    mutationFn: (workout: Omit<Workout, 'id'>) => workoutsApi.add(workoutToApiWorkout(workout)),
     onSuccess: (created) => {
       queryClient.setQueryData(queryKeys.workouts, (prev: Workout[] | undefined) =>
         prev ? [...prev, apiWorkoutToWorkout(created)] : [apiWorkoutToWorkout(created)]

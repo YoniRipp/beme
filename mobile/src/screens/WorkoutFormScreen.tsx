@@ -12,6 +12,26 @@ function newExercise(): Exercise {
   return { name: '', sets: 3, reps: 10, weight: undefined, notes: undefined };
 }
 
+/**
+ * Apply the five fields this form edits on top of the exercise it is holding.
+ *
+ * The spread is the whole point: per-set reps, weights and completion flags
+ * loaded from the API are not editable here yet, and rebuilding the exercise
+ * from the edited fields alone is what used to wipe them on save.
+ *
+ * Exported for tests.
+ */
+export function mergeExerciseEdits(e: Exercise): Exercise {
+  return {
+    ...e,
+    name: e.name.trim(),
+    sets: e.sets || 3,
+    reps: e.reps || 10,
+    weight: e.weight || undefined,
+    notes: e.notes || undefined,
+  };
+}
+
 export function WorkoutFormScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -54,13 +74,7 @@ export function WorkoutFormScreen() {
         type,
         date,
         durationMinutes: parseInt(duration) || 0,
-        exercises: validExercises.map((e) => ({
-          name: e.name.trim(),
-          sets: e.sets || 3,
-          reps: e.reps || 10,
-          weight: e.weight || undefined,
-          notes: e.notes || undefined,
-        })),
+        exercises: validExercises.map(mergeExerciseEdits),
         notes: notes.trim() || undefined,
         completed: existing?.completed ?? false,
       };
