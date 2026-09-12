@@ -1,7 +1,14 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    // The workspace root hoists frontend's @types/react 18.x, but this app is on
+    // React 19.1.0 (RN 0.81.5). react-native is hoisted too, so without this it resolves
+    // React 18's ReactNode while this app resolves React 19's — they differ by `bigint`.
+    // Mapping the specifier at this package's own type copy makes every consumer agree.
+    "paths": {
+      "react": ["./node_modules/@types/react"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"]
+    }
   }
 }
-

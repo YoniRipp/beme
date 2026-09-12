@@ -44,6 +44,30 @@ build before a single file moves.** If Metro cannot be made to resolve the works
 fall back to path aliases rather than fighting it — the goal is one definition of the types,
 not a particular module-resolution strategy.
 
+### npm needs `legacy-peer-deps` for the workspace to install
+
+Discovered during implementation, not shaping. `npm install` at the workspace root crashes:
+
+```
+TypeError: Cannot read properties of null (reading 'edgesOut')
+  at #loadPeerSet (@npmcli/arborist/lib/arborist/build-ideal-tree.js:1289)
+  while resolving idealTree:node_modules/vitest
+```
+
+on npm 10.9.4 / node 22.21.1. It reproduces on a completely clean tree — all four
+`node_modules` deleted — so it is npm's peer-set recursion bug, not stale state. It is
+triggered by hoisting `vitest` across `frontend` and `backend`, which declare identical ranges
+(`vitest ^4.1.8`, `@vitest/coverage-v8 ^4.1.8`), so it is not a version conflict either.
+
+`legacy-peer-deps=true` in a committed root `.npmrc` fixes it: 1,491 packages install and
+`node_modules/@trackvibe/shared` links correctly.
+
+**This is a real cost, not a free workaround.** It disables peer-conflict detection across the
+whole repo, so npm will no longer refuse or warn on genuinely unsatisfiable peer requirements —
+those now surface at runtime instead of install time. It lives in a committed, commented
+`.npmrc` rather than a flag in someone's shell history precisely so the cost is visible.
+Revisit when npm is upgraded: delete the file and try a clean install.
+
 ### What crosses into `packages/shared`
 
 | Subpath | Contents |

@@ -50,7 +50,10 @@ describe('SearchBar', () => {
   });
 
   it('clears value when clear button is clicked', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    // This test exercises a click, not the debounce. Fake timers (set in beforeEach)
+    // deadlock user-event, whose async wrapper runs inside React's act queue.
+    vi.useRealTimers();
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(<SearchBar value="test" onChange={onChange} />);
     

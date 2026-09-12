@@ -2,6 +2,12 @@
   "name": "trackvibe",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "mobile",
+    "packages/*"
+  ],
   "description": "TrackVibe monorepo: frontend (React/Vite) and backend (Node/Express)",
   "license": "MIT",
   "repository": {
