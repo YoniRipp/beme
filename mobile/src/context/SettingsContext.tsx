@@ -24,10 +24,10 @@ export const SettingsContext = createContext<SettingsContextType | undefined>(un
  * blob written by an older build that lacks a field still works. Corrupt JSON (or
  * any read failure) falls back to the defaults rather than throwing.
  *
- * Exported as a plain function — rather than inlined in a useEffect — because this
- * project's jest setup does not wire up react-native component rendering (see the
- * comment in ../../screens/SettingsScreen.tsx): SettingsProvider stays a thin React
- * wrapper around logic that can be unit-tested on its own.
+ * Exported as a plain function — rather than inlined in a useEffect — so the storage
+ * semantics can be pinned directly, without a render. The provider is covered by its
+ * own rendered test as well; both matter, because this function is where the
+ * merge-over-defaults contract lives.
  */
 export async function loadStoredSettings(): Promise<AppSettings> {
   try {

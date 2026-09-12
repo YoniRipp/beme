@@ -11,8 +11,7 @@ const NOTIFICATIONS_TITLE = 'Notifications';
 
 /**
  * Titles of the settings sections this screen renders, in render order. Exported so a test
- * can check the screen's section structure without rendering it — react-native component
- * rendering is not wired up in this project's jest setup.
+ * can check the screen's section structure without rendering it.
  *
  * This list is load-bearing, not decorative: `SettingsCard` accepts only a title drawn from
  * it, so adding a section to the JSX without adding it here is a compile error, and adding

@@ -1,3 +1,6 @@
+import React from 'react';
+import { Text } from 'react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_SETTINGS } from '@trackvibe/shared/settings';
 import {
@@ -5,19 +8,19 @@ import {
   loadStoredSettings,
   mergeSettingsUpdate,
   persistSettings,
+  SettingsProvider,
 } from '../SettingsContext';
+import { useSettings } from '../../hooks/useSettings';
 
 // Mirrors frontend/src/context/AppContext.tsx semantics (merge-over-defaults on every
 // read, partial-update persistence) with one deliberate divergence: AsyncStorage is
 // async where localStorage is not, so SettingsProvider exposes `settingsLoading` and
 // waits for the first read before anything theme-dependent renders.
 //
-// These tests exercise the plain functions SettingsContext.tsx exports for exactly
-// this reason: this project's jest setup does not wire up react-native component
-// rendering (see the comment in SettingsScreen.tsx), so `SettingsProvider` and
-// `useSettings` are kept as thin React wrappers around logic that is unit-testable
-// on its own, the same pattern already used by `mergeExerciseEdits` in
-// WorkoutFormScreen.tsx and `SETTINGS_SECTION_TITLES` in SettingsScreen.tsx.
+// These tests exercise the plain functions SettingsContext.tsx exports, which is where
+// the merge-over-defaults contract lives — the same pattern already used by
+// `mergeExerciseEdits` in WorkoutFormScreen.tsx. The provider that wires them into React
+// is covered separately at the bottom of this file.
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -57,5 +60,52 @@ describe('updateSettings persistence (mergeSettingsUpdate + persistSettings + lo
     // A remount is exactly a fresh call to loadStoredSettings: SettingsProvider's
     // mount effect calls this same function with no other state carried over.
     await expect(loadStoredSettings()).resolves.toEqual(next);
+  });
+});
+
+// The provider itself, rendered for real. Until `test-renderer` (RNTL 14's missing
+// peer) was installed, @testing-library/react-native could not even be imported, which
+// is why the tests above exercise the exported plain functions instead. Those stay —
+// they pin the storage semantics directly — but the wiring between them and React is
+// what actually ships, so it gets its own test.
+//
+// Note `await render(...)`: RNTL 14 made render async for React 19 concurrent
+// rendering. Without the await it returns a bare Promise and every query is undefined.
+describe('SettingsProvider + useSettings', () => {
+  function Probe() {
+    const { settings, updateSettings, settingsLoading } = useSettings();
+    if (settingsLoading) return <Text>loading</Text>;
+    return (
+      <>
+        <Text>{`theme:${settings.theme}`}</Text>
+        <Text>{`currency:${settings.currency}`}</Text>
+        <Text onPress={() => updateSettings({ theme: 'light' })}>go-light</Text>
+      </>
+    );
+  }
+
+  const renderProbe = () =>
+    render(
+      <SettingsProvider>
+        <Probe />
+      </SettingsProvider>
+    );
+
+  it('resolves settingsLoading and exposes the stored settings', async () => {
+    await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ currency: 'EUR' }));
+
+    const r = await renderProbe();
+
+    expect(await r.findByText('currency:EUR')).toBeTruthy();
+    // A field the stored blob omitted still comes through from DEFAULT_SETTINGS.
+    expect(r.getByText(`theme:${DEFAULT_SETTINGS.theme}`)).toBeTruthy();
+  });
+
+  it('updateSettings through the hook persists, so a remount sees it', async () => {
+    const r = await renderProbe();
+    fireEvent.press(await r.findByText('go-light'));
+
+    expect(await r.findByText('theme:light')).toBeTruthy();
+    await expect(loadStoredSettings()).resolves.toMatchObject({ theme: 'light' });
   });
 });
