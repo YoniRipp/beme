@@ -11,7 +11,8 @@
     "./constants": "./src/constants/index.ts",
     "./api": "./src/api/index.ts",
     "./domain": "./src/domain/index.ts",
-    "./tokens": "./src/tokens/index.ts"
+    "./tokens": "./src/tokens/index.ts",
+    "./settings": "./src/settings/index.ts"
   },
   "scripts": {
     "test": "vitest run"
