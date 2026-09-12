@@ -1,7 +1,9 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { Card, Icon, Text } from 'react-native-paper';
-import { colors, radius, spacing } from '../../theme';
+import { radius, spacing } from '../../theme';
+import { useThemeContext } from '../../theme/ThemeContext';
+import { useThemedStyles } from '../../theme/useThemedStyles';
 
 interface MetricCardProps {
   icon: string;
@@ -11,21 +13,56 @@ interface MetricCardProps {
   tone?: 'primary' | 'food' | 'workout' | 'sleep';
 }
 
-const toneColor = {
-  primary: colors.primary,
-  food: colors.food,
-  workout: colors.workout,
-  sleep: colors.sleep,
-};
-
-const toneBg = {
-  primary: colors.primarySoft,
-  food: colors.foodSoft,
-  workout: colors.workoutSoft,
-  sleep: colors.sleepSoft,
-};
-
 export function MetricCard({ icon, label, value, meta, tone = 'primary' }: MetricCardProps) {
+  const { colors } = useThemeContext();
+
+  const toneColor = {
+    primary: colors.primary,
+    food: colors.food,
+    workout: colors.workout,
+    sleep: colors.sleep,
+  };
+
+  const toneBg = {
+    primary: colors.primarySoft,
+    food: colors.foodSoft,
+    workout: colors.workoutSoft,
+    sleep: colors.sleepSoft,
+  };
+
+  const styles = useThemedStyles((colors) => ({
+    card: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    content: {
+      gap: spacing.xs,
+    },
+    iconWrap: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.xs,
+    },
+    value: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    label: {
+      color: colors.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+    },
+    meta: {
+      color: colors.textMuted,
+    },
+  }));
+
   return (
     <Card mode="contained" style={styles.card}>
       <Card.Content style={styles.content}>
@@ -39,36 +76,3 @@ export function MetricCard({ icon, label, value, meta, tone = 'primary' }: Metri
     </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  content: {
-    gap: spacing.xs,
-  },
-  iconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  value: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  label: {
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  meta: {
-    color: colors.textMuted,
-  },
-});
