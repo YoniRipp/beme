@@ -1631,11 +1631,35 @@ git commit -m "Move design tokens into the shared package and adopt them on mobi
 
 ---
 
-### Task 12: Drop the unused expo-linear-gradient dependency
+### Task 12: Drop the unused expo-linear-gradient dependency — ❌ WITHDRAWN, PREMISE FALSE
 
-`expo-linear-gradient` was pinned at `^55.0.8` — a version that does not exist for this SDK
+> **Do not attempt this task. The dependency is NOT unused; removing it crashes the app.**
+>
+> The premise below is wrong and is kept only so the reasoning is visible. It is true that
+> nothing in `mobile/src` imports `expo-linear-gradient` — that was verified twice. But
+> `react-native-gifted-charts` declares it as a **peer dependency** and imports it from
+> `dist/Components/common/LinearGradient.js`. A peer dependency of a native module is
+> invisible to a grep of application source.
+>
+> This was attempted on 2026-09-12. Every gate passed — 396 tests across three packages,
+> three typechecks, the frontend production build, and a successful Metro bundle of 1745
+> modules — and the app then failed at launch with:
+>
+> ```
+> [runtime not ready]: Error: Gradient package was not found.
+> Make sure "react-native-linear-gradient" or "expo-linear-gradient" is installed
+> ```
+>
+> `legacy-peer-deps=true` in the root `.npmrc` is why npm gave no warning when a package
+> satisfying a live peer requirement was removed — a cost that file documents explicitly.
+>
+> Reverted with `npx expo install expo-linear-gradient`. If this dependency is ever to be
+> dropped, `react-native-gifted-charts` must be replaced or shown not to need a gradient
+> backend first, and the check must be an app launch, not a grep.
+
+~~`expo-linear-gradient` was pinned at `^55.0.8` — a version that does not exist for this SDK
 line — and `npx expo install --fix` corrected it to `~15.0.8`. Nothing in `mobile/src` imports
-it. Remove it rather than carrying a dependency nobody uses.
+it. Remove it rather than carrying a dependency nobody uses.~~
 
 **Files:**
 - Modify: `mobile/package.json`
