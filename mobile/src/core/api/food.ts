@@ -1,4 +1,5 @@
 import { request } from './client';
+import { requestAllPages } from './pagination';
 import type { MealType, PaginatedResponse } from '../../types/api';
 
 export interface ApiFoodEntry {
@@ -17,8 +18,27 @@ export interface ApiFoodEntry {
   mealType?: MealType;
 }
 
-export const foodEntriesApi = {
-  list: () => request<PaginatedResponse<ApiFoodEntry>>('/api/food-entries'),
+const DEFAULT_LIST_LIMIT = 200;
+
+export const foodApi = {
+  list: (params: { limit?: number; offset?: number } = {}) => {
+    const limit = params.limit ?? DEFAULT_LIST_LIMIT;
+    const offset = params.offset ?? 0;
+    return request<PaginatedResponse<ApiFoodEntry>>(
+      `/api/food-entries?limit=${limit}&offset=${offset}`,
+    );
+  },
+
+  /**
+   * Fetch every food entry, following pagination (bounded — see pagination.ts's MAX_PAGES).
+   * Used by totals and trend views that need the complete dataset. A view that genuinely
+   * wants a single page should call `list()` directly instead.
+   */
+  listAll: async (): Promise<ApiFoodEntry[]> => {
+    const result = await requestAllPages<ApiFoodEntry>('/api/food-entries');
+    return result.data;
+  },
+
   add: (e: {
     date?: string;
     name: string;
