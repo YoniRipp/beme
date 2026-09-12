@@ -5,10 +5,23 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEnergy } from '../hooks/useEnergy';
 import { useDebounce } from '../hooks/useDebounce';
 import { searchFoods, FoodSearchResult } from '../core/api/food';
+import {
+  scalePortion,
+  defaultPortionFor,
+  servingSizesInMl,
+  type PortionUnit,
+} from '@trackvibe/shared/domain';
 import Toast from 'react-native-toast-message';
 import { colors, spacing } from '../theme';
 
-const PORTION_PRESETS = [50, 100, 150, 200];
+const DEFAULT_REFERENCE_GRAMS = 100;
+/** Gram presets for an ordinary per-100g solid; also the fallback before a food is picked. */
+const DEFAULT_GRAM_PRESETS = [50, 100, 150, 200];
+/** Glass / can / bottle, for a drink that publishes no serving sizes of its own. */
+const DEFAULT_ML_PRESETS = [250, 330, 500];
+/** Counts offered for a countable food (eggs, slices, drumsticks). */
+const UNIT_PRESETS = [1, 2, 3, 4];
+
 const MEAL_OPTIONS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 type MealType = typeof MEAL_OPTIONS[number];
 
@@ -25,6 +38,51 @@ function inferMealType(): MealType {
   if (hour < 14) return 'lunch';
   if (hour < 17) return 'snack';
   return 'dinner';
+}
+
+/**
+ * The portion chips to offer for a food, and the unit they are measured in.
+ *
+ * Grams are only right for a per-100g solid. A drink is offered its own published
+ * serving sizes in millilitres, and a countable food is offered whole counts of its own
+ * unit — showing "50 g / 100 g" for milk or for an egg is what made the logged macros
+ * wrong in the first place.
+ */
+export function portionPresetsFor(
+  food: FoodSearchResult | null | undefined,
+  currentUnit: PortionUnit = 'g',
+): { unit: PortionUnit; presets: number[] } {
+  if (!food) {
+    // Editing an existing entry: there is no food row to consult, so the unit already on
+    // the entry decides the shape of the chips. Offering "50 g / 100 g" while the field
+    // reads "ml" is the same confusion this screen used to save into the database.
+    if (currentUnit === 'ml') return { unit: 'ml', presets: [...DEFAULT_ML_PRESETS] };
+    if (currentUnit !== 'g') return { unit: currentUnit, presets: [...UNIT_PRESETS] };
+    return { unit: 'g', presets: [...DEFAULT_GRAM_PRESETS] };
+  }
+  if (food.defaultUnit && food.unitWeightGrams) {
+    return { unit: food.defaultUnit, presets: [...UNIT_PRESETS] };
+  }
+  if (food.isLiquid) {
+    const sizes = servingSizesInMl(food);
+    return { unit: 'ml', presets: sizes.length > 0 ? sizes : [...DEFAULT_ML_PRESETS] };
+  }
+  const ref =
+    food.referenceGrams && food.referenceGrams > 0 ? food.referenceGrams : DEFAULT_REFERENCE_GRAMS;
+  const presets = [
+    ...new Set([Math.round(ref / 2), ref, Math.round(ref * 1.5), ref * 2]),
+  ].sort((a, b) => a - b);
+  return { unit: 'g', presets };
+}
+
+/** How a food's own nutrition is summarised in the search results list. */
+function searchResultMeta(food: FoodSearchResult): string {
+  const ref =
+    food.referenceGrams && food.referenceGrams > 0 ? food.referenceGrams : DEFAULT_REFERENCE_GRAMS;
+  if (food.defaultUnit && food.unitWeightGrams) {
+    return `${Math.round((food.calories * food.unitWeightGrams) / ref)} cal/${food.defaultUnit}`;
+  }
+  return `${Math.round(food.calories)} cal/${ref}${food.isLiquid ? 'ml' : 'g'}`;
 }
 
 export function FoodEntryFormScreen() {
@@ -46,9 +104,14 @@ export function FoodEntryFormScreen() {
   const [carbs, setCarbs] = useState(existing?.carbs?.toString() || '');
   const [fats, setFats] = useState(existing?.fats?.toString() || '');
   const [portionAmount, setPortionAmount] = useState(existing?.portionAmount?.toString() || '100');
+  /** 'g', 'ml', or the food's own countable unit. Never assumed — it comes from the food. */
+  const [portionUnit, setPortionUnit] = useState<PortionUnit>(existing?.portionUnit || 'g');
   const [mealType, setMealType] = useState<MealType>(existing?.mealType || routeMealType || inferMealType());
-  const [basePer100g, setBasePer100g] = useState<FoodSearchResult | null>(null);
+  /** The food the macros are being scaled from, with its own reference basis and unit. */
+  const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const { presets } = portionPresetsFor(selectedFood, portionUnit);
 
   useEffect(() => {
     navigation.setOptions({ title: existing ? 'Edit Food Entry' : 'Log Food' });
@@ -66,28 +129,42 @@ export function FoodEntryFormScreen() {
     }
   }, [debouncedSearch]);
 
+  /** Write the macros for `amount` of `unit` of `food` into the nutrition fields. */
+  const applyMacros = (food: FoodSearchResult, amount: number, unit: PortionUnit) => {
+    const scaled = scalePortion(food, amount, unit);
+    setCalories(scaled.calories.toString());
+    setProtein(scaled.protein.toString());
+    setCarbs(scaled.carbs.toString());
+    setFats(scaled.fats.toString());
+  };
+
   const selectFood = (food: FoodSearchResult) => {
-    setBasePer100g(food);
+    setSelectedFood(food);
     setName(food.name);
-    const portion = parseFloat(portionAmount) || 100;
-    const scale = portion / 100;
-    setCalories(Math.round(food.calories * scale).toString());
-    setProtein(Math.round(food.protein * scale).toString());
-    setCarbs(Math.round(food.carbs * scale).toString());
-    setFats(Math.round(food.fat * scale).toString());
+    // The food decides its own portion: a glass for a drink, one item for a countable
+    // food, its reference quantity for a solid. Carrying over whatever number happened
+    // to be in the field is how "250" ended up being read as 250 grams of milk.
+    const { amount, unit } = defaultPortionFor(food);
+    setPortionAmount(amount.toString());
+    setPortionUnit(unit);
+    applyMacros(food, amount, unit);
     setShowResults(false);
     setSearchQuery('');
   };
 
-  const applyPortion = (grams: number) => {
-    setPortionAmount(grams.toString());
-    if (basePer100g) {
-      const scale = grams / 100;
-      setCalories(Math.round(basePer100g.calories * scale).toString());
-      setProtein(Math.round(basePer100g.protein * scale).toString());
-      setCarbs(Math.round(basePer100g.carbs * scale).toString());
-      setFats(Math.round(basePer100g.fat * scale).toString());
-    }
+  const applyPortion = (amount: number) => {
+    setPortionAmount(amount.toString());
+    if (selectedFood) applyMacros(selectedFood, amount, portionUnit);
+  };
+
+  const handleAmountChange = (value: string) => {
+    setPortionAmount(value);
+    if (!selectedFood) return;
+    const parsed = parseFloat(value);
+    // A half-typed or cleared field falls back to the food's own default portion, not to
+    // a flat 100 — 100 of a countable unit would be 100 eggs.
+    const amount = Number.isFinite(parsed) && parsed > 0 ? parsed : defaultPortionFor(selectedFood).amount;
+    applyMacros(selectedFood, amount, portionUnit);
   };
 
   const handleSave = async () => {
@@ -105,7 +182,7 @@ export function FoodEntryFormScreen() {
         carbs: parseFloat(carbs) || 0,
         fats: parseFloat(fats) || 0,
         portionAmount: parseFloat(portionAmount) || undefined,
-        portionUnit: 'g' as const,
+        portionUnit,
         mealType,
         startTime: existing?.startTime || MEAL_START_TIMES[mealType],
       };
@@ -141,7 +218,7 @@ export function FoodEntryFormScreen() {
                 {searchResults.slice(0, 8).map((food, i) => (
                   <TouchableOpacity key={i} onPress={() => selectFood(food)} style={styles.resultItem}>
                     <Text variant="bodyMedium" numberOfLines={1}>{food.name}</Text>
-                    <Text variant="bodySmall" style={styles.resultMeta}>{food.calories} cal/100g</Text>
+                    <Text variant="bodySmall" style={styles.resultMeta}>{searchResultMeta(food)}</Text>
                   </TouchableOpacity>
                 ))}
               </Card>
@@ -168,15 +245,15 @@ export function FoodEntryFormScreen() {
             mode="outlined"
             label="Amount"
             value={portionAmount}
-            onChangeText={(v) => { setPortionAmount(v); if (basePer100g) applyPortion(parseFloat(v) || 100); }}
+            onChangeText={handleAmountChange}
             keyboardType="numeric"
-            right={<TextInput.Affix text="g" />}
+            right={<TextInput.Affix text={portionUnit} />}
             style={styles.portionInput}
           />
           <View style={styles.presets}>
-            {PORTION_PRESETS.map((g) => (
-              <Chip key={g} compact onPress={() => applyPortion(g)} selected={portionAmount === g.toString()} style={styles.presetChip}>
-                {g}g
+            {presets.map((amount) => (
+              <Chip key={amount} compact onPress={() => applyPortion(amount)} selected={portionAmount === amount.toString()} style={styles.presetChip}>
+                {amount}{portionUnit === 'g' || portionUnit === 'ml' ? portionUnit : ` ${portionUnit}`}
               </Chip>
             ))}
           </View>

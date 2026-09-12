@@ -84,15 +84,29 @@ export const dailyCheckInsApi = {
   delete: (id: string) => request<void>(`/api/daily-check-ins/${id}`, { method: 'DELETE' }),
 };
 
+/**
+ * A row from `/api/food/search`. Mirrors `rowToResult` in
+ * `backend/src/models/foodSearch.ts` and the web client's own type in
+ * `frontend/src/core/api/food.ts` — the server has always sent `defaultUnit`,
+ * `unitWeightGrams`, `preparation` and `imageUrl`; this type used to hide them, which
+ * is why the entry form could not tell a drink or an egg from a per-100g solid.
+ */
 export interface FoodSearchResult {
   name: string;
   calories: number;
   protein: number;
   carbs: number;
   fat: number;
+  /** Quantity the macros above are published against. Not always 100. */
   referenceGrams?: number;
   isLiquid?: boolean;
   servingSizesMl?: { can?: number; bottle?: number; glass?: number } | null;
+  preparation?: string;
+  /** The food's own countable unit — 'egg', 'slice', 'drumstick' — when it has one. */
+  defaultUnit?: string | null;
+  /** Grams in one `defaultUnit`. */
+  unitWeightGrams?: number | null;
+  imageUrl?: string | null;
 }
 
 export function searchFoods(query: string, limit = 10): Promise<FoodSearchResult[]> {
