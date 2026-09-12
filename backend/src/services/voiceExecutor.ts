@@ -10,6 +10,7 @@ import * as weightModel from '../models/weight.js';
 import * as waterModel from '../models/water.js';
 import * as cycleModel from '../models/cycle.js';
 import * as profileModel from '../models/profile.js';
+import { toDateString } from '../utils/date.js';
 import { isDbConfigured } from '../db/index.js';
 import { getPool } from '../db/pool.js';
 import { voiceContext } from '../lib/voiceContext.js';
@@ -58,7 +59,7 @@ async function queryUserData(userId: string, dataType: string, dateFrom?: string
         const exList = exercises
           ? exercises.map(e => `  - ${e.name}${e.sets ? ` ${e.sets}x${e.reps ?? '?'}` : ''}${e.weight ? ` @ ${e.weight}kg` : ''}`).join('\n')
           : '';
-        return `${(w.date as Date).toISOString?.().slice(0, 10) ?? w.date}: ${w.title} (${w.type}, ${w.duration_minutes}min)${exList ? '\n' + exList : ''}`;
+        return `${toDateString(w.date)}: ${w.title} (${w.type}, ${w.duration_minutes}min)${exList ? '\n' + exList : ''}`;
       }).join('\n');
     }
     case 'food': {
@@ -71,7 +72,7 @@ async function queryUserData(userId: string, dataType: string, dateFrom?: string
       if (r.rows.length === 0) return `No food entries found between ${from} and ${to}.`;
       return r.rows.map((f: Record<string, unknown>) => {
         const portion = f.portion_amount ? ` (${f.portion_amount}${f.portion_unit || 'g'})` : '';
-        return `${(f.date as Date).toISOString?.().slice(0, 10) ?? f.date}: ${f.name}${portion} — ${f.calories} kcal, ${f.protein}g P, ${f.carbs}g C, ${f.fats}g F`;
+        return `${toDateString(f.date)}: ${f.name}${portion} — ${f.calories} kcal, ${f.protein}g P, ${f.carbs}g C, ${f.fats}g F`;
       }).join('\n');
     }
     case 'sleep': {
@@ -83,7 +84,7 @@ async function queryUserData(userId: string, dataType: string, dateFrom?: string
       );
       if (r.rows.length === 0) return `No sleep data found between ${from} and ${to}.`;
       return r.rows.map((s: Record<string, unknown>) =>
-        `${(s.date as Date).toISOString?.().slice(0, 10) ?? s.date}: ${s.sleep_hours} hours`
+        `${toDateString(s.date)}: ${s.sleep_hours} hours`
       ).join('\n');
     }
     case 'goals': {
@@ -103,7 +104,7 @@ async function queryUserData(userId: string, dataType: string, dateFrom?: string
       );
       if (r.rows.length === 0) return `No weight entries found between ${from} and ${to}.`;
       return r.rows.map((w: Record<string, unknown>) =>
-        `${(w.date as Date).toISOString?.().slice(0, 10) ?? w.date}: ${w.weight}kg`
+        `${toDateString(w.date)}: ${w.weight}kg`
       ).join('\n');
     }
     default:
@@ -118,8 +119,11 @@ function todayUtc(): string {
 function parseDate(v: unknown, fallbackToday: string): string {
   if (v == null || v === '') return fallbackToday;
   if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  // A free-text date ("Feb 14 2025") parses to *local* midnight; render its
+  // local calendar parts rather than converting to UTC, which drops a day
+  // in every timezone ahead of UTC.
   const d = new Date(v as string);
-  return isNaN(d.getTime()) ? fallbackToday : d.toISOString().slice(0, 10);
+  return isNaN(d.getTime()) ? fallbackToday : toDateString(d);
 }
 
 function parseMealType(v: unknown): MealType | undefined {

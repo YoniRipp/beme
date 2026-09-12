@@ -3,6 +3,7 @@
  */
 import pg from 'pg';
 import { getPool } from '../db/pool.js';
+import { toDateString } from '../utils/date.js';
 import { buildUpdateQuery, type UpdateBuilder } from '../db/queryBuilder.js';
 import type { CycleEntry, CreateCycleEntryInput, UpdateCycleEntryInput } from '../types/domain.js';
 
@@ -11,7 +12,7 @@ const RETURNING = 'id, date, period_start, period_end, flow, symptoms, notes';
 function rowToEntry(row: Record<string, unknown>): CycleEntry {
   return {
     id: row.id as string,
-    date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date),
+    date: toDateString(row.date),
     periodStart: Boolean(row.period_start),
     periodEnd: Boolean(row.period_end),
     flow: (row.flow as string) ?? undefined,

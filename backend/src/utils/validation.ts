@@ -2,6 +2,7 @@
  * Validation and normalization helpers.
  */
 import type { z } from 'zod';
+import { toDateString } from './date.js';
 
 /** Format the first issue of a ZodError as "path: message" — shared by body and query validation. */
 export function firstZodErrorMessage(error: z.ZodError, fallback = 'Validation failed'): string {
@@ -61,21 +62,26 @@ export function normCat(cat: string | undefined | null | unknown, list: readonly
  * @returns {string}
  */
 export function parseDate(d: string | Date | undefined | null | unknown): string {
+  // A Date here comes from a DATE column, which pg parses at *local* midnight —
+  // read its local calendar parts, never .toISOString() (that shifts UTC+ back a day).
+  if (d instanceof Date) {
+    return Number.isFinite(d.getTime()) ? toDateString(d) : toDateString(new Date());
+  }
   const str = d == null ? '' : String(d).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
     const [y, m, d_] = str.split('-').map(Number);
     const month = m - 1;
     const date = new Date(y, month, d_);
     if (date.getFullYear() !== y || date.getMonth() !== month || date.getDate() !== d_) {
-      return new Date().toISOString().slice(0, 10);
+      return toDateString(new Date());
     }
     return str;
   }
-  const date = str ? new Date(d as string) : new Date();
+  const date = str ? new Date(str) : new Date();
   if (!Number.isFinite(date.getTime())) {
-    return new Date().toISOString().slice(0, 10);
+    return toDateString(new Date());
   }
-  return date.toISOString().slice(0, 10);
+  return toDateString(date);
 }
 
 import { ValidationError } from '../errors.js';

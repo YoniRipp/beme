@@ -3,6 +3,7 @@
  */
 import pg from 'pg';
 import { getPool } from '../db/pool.js';
+import { toDateString } from '../utils/date.js';
 import { buildUpdateQuery, type UpdateBuilder } from '../db/queryBuilder.js';
 import { escapeLike } from '../utils/escapeLike.js';
 import type { FoodEntry, CreateFoodEntryInput, UpdateFoodEntryInput, PaginationParams } from '../types/domain.js';
@@ -12,7 +13,7 @@ const RETURNING = 'id, date, name, calories, protein, carbs, fats, portion_amoun
 function rowToEntry(row: Record<string, unknown>): FoodEntry {
   return {
     id: row.id as string,
-    date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date),
+    date: toDateString(row.date),
     name: row.name as string,
     calories: Number(row.calories),
     protein: Number(row.protein),
@@ -120,5 +121,5 @@ export async function deleteById(id: string, userId: string, client?: pg.Pool | 
   const result = await db.query('DELETE FROM food_entries WHERE id = $1 AND user_id = $2 RETURNING date', [id, userId]);
   const row = result.rows[0];
   if (!row) return null;
-  return { date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date) };
+  return { date: toDateString(row.date) };
 }

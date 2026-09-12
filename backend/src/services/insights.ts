@@ -8,6 +8,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { config } from '../config/index.js';
 import { getPool } from '../db/pool.js';
 import { logger } from '../lib/logger.js';
+import { toDateString } from '../utils/date.js';
 
 export function getGemini() {
   if (!config.geminiApiKey) throw new Error('GEMINI_API_KEY not configured');
@@ -230,7 +231,7 @@ function buildDataBlock(ctx: UserContext): string {
   if (ctx.cycle.length > 0) {
     const lastPeriodStart = ctx.cycle.find((c: Record<string, unknown>) => c.period_start);
     cycleLine = lastPeriodStart
-      ? `Cycle: Last period started ${(lastPeriodStart.date as Date).toISOString?.().slice(0, 10) ?? lastPeriodStart.date}`
+      ? `Cycle: Last period started ${toDateString(lastPeriodStart.date)}`
       : 'Cycle: Tracking enabled, no recent period data';
   }
 
