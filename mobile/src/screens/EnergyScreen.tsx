@@ -14,6 +14,7 @@ import { MobileFoodCard } from '../components/shared/MobileFoodCard';
 import { MetricCard } from '../components/shared/MetricCard';
 import { colors, radius, spacing } from '../theme';
 import { getPeriodRange, PeriodKey } from '../lib/dateRanges';
+import { inferMealTypeFromHour } from '@trackvibe/shared/domain';
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -24,14 +25,16 @@ const MEALS: Array<{ key: MealType; label: string; icon: string }> = [
   { key: 'snack', label: 'Snack', icon: 'cookie-outline' },
 ];
 
+/**
+ * Which meal an entry belongs to. The stored `mealType` wins; otherwise the hour comes
+ * from `startTime`/`endTime` when present and the entry date otherwise. Only the
+ * hour-to-meal bucketing is shared -- this field precedence is unchanged.
+ */
 function inferMeal(entry: FoodEntry): MealType {
   if (entry.mealType) return entry.mealType;
   const time = entry.startTime || entry.endTime;
   const hour = time ? Number(time.split(':')[0]) : entry.date.getHours();
-  if (hour < 11) return 'breakfast';
-  if (hour < 14) return 'lunch';
-  if (hour < 17) return 'snack';
-  return 'dinner';
+  return inferMealTypeFromHour(hour);
 }
 
 export function EnergyScreen() {

@@ -9,6 +9,7 @@ import {
   scalePortion,
   defaultPortionFor,
   servingSizesInMl,
+  inferMealTypeFromHour,
   type PortionUnit,
 } from '@trackvibe/shared/domain';
 import Toast from 'react-native-toast-message';
@@ -31,14 +32,6 @@ const MEAL_START_TIMES: Record<MealType, string> = {
   dinner: '18:00',
   snack: '15:00',
 };
-
-function inferMealType(): MealType {
-  const hour = new Date().getHours();
-  if (hour < 11) return 'breakfast';
-  if (hour < 14) return 'lunch';
-  if (hour < 17) return 'snack';
-  return 'dinner';
-}
 
 /**
  * The portion chips to offer for a food, and the unit they are measured in.
@@ -106,7 +99,7 @@ export function FoodEntryFormScreen() {
   const [portionAmount, setPortionAmount] = useState(existing?.portionAmount?.toString() || '100');
   /** 'g', 'ml', or the food's own countable unit. Never assumed — it comes from the food. */
   const [portionUnit, setPortionUnit] = useState<PortionUnit>(existing?.portionUnit || 'g');
-  const [mealType, setMealType] = useState<MealType>(existing?.mealType || routeMealType || inferMealType());
+  const [mealType, setMealType] = useState<MealType>(existing?.mealType || routeMealType || inferMealTypeFromHour(new Date().getHours()));
   /** The food the macros are being scaled from, with its own reference basis and unit. */
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null);
   const [saving, setSaving] = useState(false);
