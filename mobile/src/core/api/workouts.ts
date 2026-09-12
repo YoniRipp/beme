@@ -1,4 +1,5 @@
 import { request } from './client';
+import { requestAllPages } from './pagination';
 import type { PaginatedResponse } from '../../types/api';
 
 /**
@@ -32,6 +33,17 @@ export interface ApiWorkout {
 
 export const workoutsApi = {
   list: () => request<PaginatedResponse<ApiWorkout>>('/api/workouts'),
+
+  /**
+   * Fetch every workout, following pagination (bounded — see pagination.ts's MAX_PAGES).
+   * Used by views that need the complete dataset. A view that genuinely wants a single
+   * page should call `list()` directly instead.
+   */
+  listAll: async (): Promise<ApiWorkout[]> => {
+    const result = await requestAllPages<ApiWorkout>('/api/workouts');
+    return result.data;
+  },
+
   add: (w: {
     date?: string;
     title: string;

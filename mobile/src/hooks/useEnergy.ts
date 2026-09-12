@@ -12,8 +12,8 @@ export function useEnergy() {
   const checkInsQuery = useQuery({
     queryKey: queryKeys.checkIns,
     queryFn: async () => {
-      const result = await dailyCheckInsApi.list();
-      return result.data.map(apiCheckInToDailyCheckIn);
+      const checkIns = await dailyCheckInsApi.listAll();
+      return checkIns.map(apiCheckInToDailyCheckIn);
     },
   });
 

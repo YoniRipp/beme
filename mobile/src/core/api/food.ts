@@ -66,6 +66,17 @@ export interface ApiDailyCheckIn {
 
 export const dailyCheckInsApi = {
   list: () => request<PaginatedResponse<ApiDailyCheckIn>>('/api/daily-check-ins'),
+
+  /**
+   * Fetch every daily check-in, following pagination (bounded — see pagination.ts's MAX_PAGES).
+   * Used by views that need the complete dataset. A view that genuinely wants a single
+   * page should call `list()` directly instead.
+   */
+  listAll: async (): Promise<ApiDailyCheckIn[]> => {
+    const result = await requestAllPages<ApiDailyCheckIn>('/api/daily-check-ins');
+    return result.data;
+  },
+
   add: (c: { date?: string; sleepHours?: number }) =>
     request<ApiDailyCheckIn>('/api/daily-check-ins', { method: 'POST', body: c }),
   update: (id: string, updates: Partial<Omit<ApiDailyCheckIn, 'id'>>) =>

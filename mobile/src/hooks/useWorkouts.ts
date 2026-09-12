@@ -17,8 +17,8 @@ export function useWorkouts() {
   } = useQuery({
     queryKey: queryKeys.workouts,
     queryFn: async () => {
-      const result = await workoutsApi.list();
-      return result.data.map(apiWorkoutToWorkout);
+      const workouts = await workoutsApi.listAll();
+      return workouts.map(apiWorkoutToWorkout);
     },
   });
 
