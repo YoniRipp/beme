@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./types": "./src/types/index.ts",
     "./schemas": "./src/schemas/index.ts",
+    "./constants": "./src/constants/index.ts",
     "./api": "./src/api/index.ts",
     "./domain": "./src/domain/index.ts",
     "./tokens": "./src/tokens/index.ts"
