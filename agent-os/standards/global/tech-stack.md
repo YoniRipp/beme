@@ -2,7 +2,7 @@
 
 ## Frontend
 
-- React 18 + TypeScript, Vite
+- React 19 + TypeScript, Vite
 - Tailwind CSS + shadcn/ui (`src/components/ui/`)
 - TanStack Query for all server state
 - React Router (`src/routes.tsx`)

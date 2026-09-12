@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, type JSX } from 'react';
 import { Input } from '@/components/ui/input';
 import type { DateFormat } from '@/types/settings';
 

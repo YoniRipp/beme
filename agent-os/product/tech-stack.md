@@ -4,7 +4,7 @@ Same as the org standard in `agent-os/standards/global/tech-stack.md`, plus the 
 
 ## Frontend
 
-React 18 + TypeScript, Vite, Tailwind + shadcn/ui, TanStack Query, React Router. PWA with service worker and offline mutation queue.
+React 19 + TypeScript, Vite, Tailwind + shadcn/ui, TanStack Query, React Router. PWA with service worker and offline mutation queue.
 
 ## Backend
 
