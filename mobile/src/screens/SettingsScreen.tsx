@@ -10,14 +10,18 @@ const UNITS_TITLE = 'Units';
 const NOTIFICATIONS_TITLE = 'Notifications';
 
 /**
- * Titles of the settings sections this screen renders, in the order they render, sourced
- * by the JSX below rather than duplicated from it. Exported so a test can check the
- * screen's actual section structure without rendering it (react-native component
- * rendering isn't wired up in this project's jest setup): in particular, that there is no
- * "Data" section, which used to exist solely to host a Clear All Data control whose
- * confirm handler deleted nothing.
+ * Titles of the settings sections this screen renders, in render order. Exported so a test
+ * can check the screen's section structure without rendering it — react-native component
+ * rendering is not wired up in this project's jest setup.
+ *
+ * This list is load-bearing, not decorative: `SettingsCard` accepts only a title drawn from
+ * it, so adding a section to the JSX without adding it here is a compile error, and adding
+ * it here fails the test. That closes the loop on the "Data" section, which existed solely
+ * to host a Clear All Data control whose confirm handler deleted nothing.
  */
-export const SETTINGS_SECTION_TITLES: string[] = [ACCOUNT_TITLE, UNITS_TITLE, NOTIFICATIONS_TITLE];
+export const SETTINGS_SECTION_TITLES = [ACCOUNT_TITLE, UNITS_TITLE, NOTIFICATIONS_TITLE] as const;
+
+type SettingsSectionTitle = (typeof SETTINGS_SECTION_TITLES)[number];
 
 export function SettingsScreen() {
   const { user, logout } = useAuth();
@@ -54,7 +58,7 @@ export function SettingsScreen() {
   );
 }
 
-function SettingsCard({ title, children }: { title: string; children: React.ReactNode }) {
+function SettingsCard({ title, children }: { title: SettingsSectionTitle; children: React.ReactNode }) {
   return (
     <Card mode="contained" style={styles.card}>
       <Card.Content>
