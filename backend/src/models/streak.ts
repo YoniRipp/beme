@@ -3,6 +3,7 @@
  */
 import pg from 'pg';
 import { getPool } from '../db/pool.js';
+import { toDateString, addDays } from '../utils/date.js';
 import type { Streak } from '../types/domain.js';
 
 const RETURNING = 'id, type, current_count, best_count, last_date, created_at';
@@ -15,7 +16,7 @@ function rowToStreak(row: Record<string, unknown>): Streak {
     type: row.type as Streak['type'],
     currentCount: Number(row.current_count),
     bestCount: Number(row.best_count),
-    lastDate: row.last_date ? String(row.last_date) : null,
+    lastDate: row.last_date ? toDateString(row.last_date) : null,
     createdAt: String(row.created_at),
   };
 }
@@ -56,12 +57,11 @@ export async function upsertActivity(userId: string, type: string, date: string,
     streak = rowToStreak(result.rows[0]);
   } else {
     const row = existing.rows[0];
-    const lastDate = row.last_date ? new Date(row.last_date as string) : null;
-    const activityDate = new Date(date);
-
-    // Normalize to UTC date strings for comparison
-    const lastDateStr = lastDate ? lastDate.toISOString().slice(0, 10) : null;
-    const activityDateStr = activityDate.toISOString().slice(0, 10);
+    // Compare as calendar-day strings. Going through a Date would shift the day:
+    // pg gives last_date as a Date at *local* midnight, and .toISOString() rolls
+    // that back one day in every timezone ahead of UTC.
+    const lastDateStr = row.last_date ? toDateString(row.last_date) : null;
+    const activityDateStr = toDateString(date);
 
     if (lastDateStr === activityDateStr) {
       // Same day — no-op
@@ -74,9 +74,7 @@ export async function upsertActivity(userId: string, type: string, date: string,
     }
 
     // Check if activity date is yesterday + 1 (consecutive)
-    const yesterday = new Date(activityDate);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+    const yesterdayStr = addDays(activityDateStr, -1);
 
     let newCount: number;
     if (lastDateStr === yesterdayStr) {

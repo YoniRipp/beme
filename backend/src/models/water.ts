@@ -3,6 +3,7 @@
  */
 import pg from 'pg';
 import { getPool } from '../db/pool.js';
+import { toDateString } from '../utils/date.js';
 import type { WaterEntry, UpsertWaterEntryInput, PaginationParams } from '../types/domain.js';
 
 const RETURNING = 'id, date, glasses, ml_total';
@@ -10,7 +11,7 @@ const RETURNING = 'id, date, glasses, ml_total';
 function rowToEntry(row: Record<string, unknown>): WaterEntry {
   return {
     id: row.id as string,
-    date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date),
+    date: toDateString(row.date),
     glasses: Number(row.glasses ?? 0),
     mlTotal: Number(row.ml_total ?? 0),
   };

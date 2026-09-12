@@ -34,6 +34,13 @@ describe('parseQuery', () => {
 });
 
 
+/** Today as a local calendar day, matching the app's date convention. */
+const localToday = () => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 describe('validation', () => {
   describe('normTime', () => {
     it('returns normalized time for valid HH:MM', () => {
@@ -74,18 +81,26 @@ describe('validation', () => {
     it('returns valid YYYY-MM-DD as-is', () => {
       expect(parseDate('2025-01-15')).toBe('2025-01-15');
     });
+    // Dates are local calendar days, not UTC instants — see
+    // agent-os/standards/global/domain-conventions. Computing the expectation
+    // with toISOString() would make these disagree with the local day (and so
+    // fail) whenever the host is ahead of UTC and it is past midnight locally.
     it('returns today for null/undefined/empty', () => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localToday();
       expect(parseDate(null)).toBe(today);
       expect(parseDate(undefined)).toBe(today);
       expect(parseDate('')).toBe(today);
     });
     it('returns today for invalid date string', () => {
-      const today = new Date().toISOString().slice(0, 10);
-      expect(parseDate('not-a-date')).toBe(today);
+      expect(parseDate('not-a-date')).toBe(localToday());
     });
-    it('parses Date object to YYYY-MM-DD', () => {
-      expect(parseDate(new Date('2025-02-14'))).toBe('2025-02-14');
+    it('parses a DATE-column Date to its local calendar day', () => {
+      // pg hands back a DATE as a Date at *local* midnight — build the fixture
+      // the same way, so the assertion holds in every timezone.
+      expect(parseDate(new Date(2025, 1, 14))).toBe('2025-02-14');
+    });
+    it('leaves an ISO date string untouched regardless of timezone', () => {
+      expect(parseDate('2025-02-14')).toBe('2025-02-14');
     });
   });
 

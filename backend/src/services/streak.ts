@@ -3,6 +3,7 @@
  */
 import * as streakModel from '../models/streak.js';
 import { publishEvent } from '../events/publish.js';
+import { toDateString } from '../utils/date.js';
 import type { Streak } from '../types/domain.js';
 
 export async function list(userId: string): Promise<Streak[]> {
@@ -10,7 +11,9 @@ export async function list(userId: string): Promise<Streak[]> {
 }
 
 export async function recordActivity(userId: string, type: string, date?: string): Promise<Streak> {
-  const effectiveDate = date ?? new Date().toISOString().slice(0, 10);
+  // Local calendar day — upsertActivity compares calendar days, and a UTC-derived
+  // "today" is the previous day for the first hours of the morning in any UTC+ zone.
+  const effectiveDate = date ?? toDateString(new Date());
   const { streak, milestone } = await streakModel.upsertActivity(userId, type, effectiveDate);
 
   if (milestone) {
