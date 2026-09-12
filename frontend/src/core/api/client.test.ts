@@ -113,3 +113,57 @@ describe('token persistence', () => {
     expect(getToken()).toBe(JWT);
   });
 });
+
+/**
+ * The status has to survive onto the thrown error, otherwise a caller deciding whether to
+ * retry has only the server's message string to go on -- and that string is whatever the
+ * endpoint happened to write.
+ */
+describe('error status', () => {
+  beforeEach(() => {
+    useStorage(createStorage());
+  });
+
+  afterAll(() => {
+    useStorage(originalLocalStorage);
+    vi.unstubAllGlobals();
+  });
+
+  function respondWith(status: number, body: unknown) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(body), {
+          status,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    );
+  }
+
+  it('marks a 401 as unauthorized while keeping the server message', async () => {
+    respondWith(401, { error: 'Session expired' });
+    const { request, isUnauthorized } = await importClient();
+
+    const error = await request('/api/profile').catch((e: unknown) => e);
+
+    expect(isUnauthorized(error)).toBe(true);
+    expect((error as Error).message).toBe('Session expired');
+  });
+
+  it('does not mark a server error as unauthorized', async () => {
+    respondWith(500, { error: 'Internal Server Error' });
+    const { request, isUnauthorized } = await importClient();
+
+    const error = await request('/api/profile').catch((e: unknown) => e);
+
+    expect(isUnauthorized(error)).toBe(false);
+    expect((error as Error).message).toBe('Internal Server Error');
+  });
+
+  it('does not mark a plain network failure as unauthorized', async () => {
+    const { isUnauthorized } = await importClient();
+
+    expect(isUnauthorized(new Error('Failed to fetch'))).toBe(false);
+  });
+});

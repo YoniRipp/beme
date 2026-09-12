@@ -5,6 +5,25 @@ const STORAGE_KEY = 'trackvibe_token';
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
+/**
+ * Carries the HTTP status alongside the message. Still an `Error`, so every existing
+ * `catch` and `instanceof Error` check behaves exactly as before; the status is what lets
+ * a caller tell "retrying might help" from "retrying definitely won't".
+ */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+export function isUnauthorized(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
 function getApiBase(): string {
   const extra = Constants.expoConfig?.extra as { apiUrl?: string } | undefined;
   return extra?.apiUrl ?? process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -77,11 +96,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   if (res.status === 401) {
     handleUnauthorized();
     const err = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(err.error ?? 'Session expired');
+    throw new ApiError(err.error ?? 'Session expired', 401);
   }
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(err.error ?? res.statusText);
+    throw new ApiError(err.error ?? res.statusText, res.status);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
