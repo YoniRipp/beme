@@ -1,10 +1,13 @@
-import React, { createContext, useCallback, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import { User } from '@/types/user';
 import { authApi, setToken } from '@/features/auth/api';
 import { queryClient } from '@/lib/queryClient';
 import { clearOfflineQueue } from '@/lib/syncQueue';
 
 type AuthProviderName = 'google' | 'facebook' | 'twitter';
+
+/** Don't re-roll the session more than once an hour, however often the app is resumed. */
+const SESSION_ROLL_INTERVAL_MS = 60 * 60 * 1000;
 
 interface AuthContextType {
   user: User | null;
@@ -36,10 +39,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  const lastRolledAt = useRef(0);
+
+  // refresh() validates the session and mints a token with a fresh expiry, so the launch
+  // path rolls the session in the same round trip that loads the user -- /auth/me would
+  // have cost a second authenticated request for data this one already returns.
   const loadUser = useCallback(async () => {
     try {
-      const me = await authApi.me();
-      setUser(apiUserToUser(me));
+      const res = await authApi.refresh();
+      if (res.token) setToken(res.token);
+      setUser(apiUserToUser(res.user));
+      lastRolledAt.current = Date.now();
     } catch {
       setToken(null);
       setUser(null);
@@ -51,6 +61,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadUser();
   }, [loadUser]);
+
+  // Keep pushing the expiry forward on resume. A PWA or native shell can sit backgrounded
+  // for weeks, and loadUser only rolls the session on a full launch. Best-effort by design:
+  // it never touches user state, so a failed roll leaves the user signed in and a session
+  // that really is dead surfaces through the next request's 401.
+  useEffect(() => {
+    if (!user) return;
+
+    const roll = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+      if (Date.now() - lastRolledAt.current < SESSION_ROLL_INTERVAL_MS) return;
+      lastRolledAt.current = Date.now();
+      authApi
+        .refresh()
+        .then((res) => {
+          if (res.token) setToken(res.token);
+        })
+        .catch(() => {
+          // Leave the session as-is; the next real request decides whether it is gone.
+        });
+    };
+
+    document.addEventListener('visibilitychange', roll);
+    return () => document.removeEventListener('visibilitychange', roll);
+  }, [user?.id]);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await authApi.login(email, password);

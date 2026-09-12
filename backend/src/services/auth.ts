@@ -22,7 +22,9 @@ import {
 import type { User } from '../models/user.js';
 
 const SALT_ROUNDS = 10;
-const TOKEN_EXPIRY = '1h';
+// Seconds, because jsonwebtoken reads a bare number as seconds. Sourced from config so the
+// JWT `exp` and the cookie's maxAge can never drift apart.
+const TOKEN_EXPIRY_SECONDS = Math.floor(config.sessionTtlMs / 1000);
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000;
 const PKCE_TTL_MS = 5 * 60 * 1000;
 const AUTH_CODE_TTL_MS = 60 * 1000;
@@ -34,7 +36,7 @@ export function generateToken(user: User): string {
   return jwt.sign(
     { sub: user.id, email: user.email, role: user.role },
     config.jwtSecret!,
-    { expiresIn: TOKEN_EXPIRY }
+    { expiresIn: TOKEN_EXPIRY_SECONDS }
   );
 }
 

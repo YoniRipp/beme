@@ -13,7 +13,9 @@ const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'strict' as const,
-  maxAge: 60 * 60 * 1000,
+  // Same TTL as the JWT `exp` (config.sessionTtlMs). A shorter cookie would expire the
+  // session while the token was still valid, which is what used to log people out hourly.
+  maxAge: config.sessionTtlMs,
   path: '/',
 };
 
@@ -120,9 +122,21 @@ export const exchangeCode = asyncHandler(async (req: Request, res: Response) => 
   sendJson(res, authPayload(req, result));
 });
 
+/**
+ * Roll the session forward. The client calls this on launch and on resume, so an active
+ * user's expiry keeps moving and they never reach the login screen. This used to return
+ * the user without minting anything, which made the session un-renewable.
+ */
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
-  const user = await authService.getUser(req.user!.id);
-  sendJson(res, { user });
+  // The MCP shared secret authenticates as a user but is not a login session. Minting a
+  // token for it would turn a rotatable server-side secret into a year-long bearer token
+  // that survives rotation of that secret.
+  if (req.mcpAuth) {
+    throw new ValidationError('Refresh is not available for MCP-authenticated requests');
+  }
+  const result = await authService.refreshToken(req.user!.id);
+  setTokenCookie(res, result.token);
+  sendJson(res, authPayload(req, result));
 });
 
 export const logout = asyncHandler(async (req: Request, res: Response) => {

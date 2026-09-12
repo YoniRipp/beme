@@ -9,5 +9,7 @@ declare namespace Express {
       role: string;
     };
     effectiveUserId?: string;
+    /** True when the caller authenticated with the MCP shared secret, not a user session. */
+    mcpAuth?: boolean;
   }
 }
