@@ -41,7 +41,16 @@ const exerciseFormSchema = z
 export const workoutFormSchema = z.object({
   title: z.string().min(1, 'Title is required').max(100, 'Title cannot exceed 100 characters'),
   type: z.enum(WORKOUT_TYPES),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
+  // The server also refines away impossible calendar dates (2026-02-31), so the regex
+  // alone would let a value through the form that the API then rejects.
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date')
+    .refine((s) => {
+      const [y, m, d] = s.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
+    }, 'Invalid calendar date'),
   durationMinutes: z.string().min(1, 'Duration is required').refine(
     (v) => {
       const n = parseInt(v, 10);
@@ -49,7 +58,10 @@ export const workoutFormSchema = z.object({
     },
     { message: `Duration must be between ${LIMITS.MIN_WORKOUT_DURATION} and ${LIMITS.MAX_WORKOUT_DURATION} minutes` }
   ),
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .max(LIMITS.MAX_WORKOUT_NOTES, `Notes cannot exceed ${LIMITS.MAX_WORKOUT_NOTES} characters`)
+    .optional(),
   exercises: z.array(exerciseFormSchema).min(1, 'Add at least one exercise'),
 });
 

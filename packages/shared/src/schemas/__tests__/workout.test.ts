@@ -59,4 +59,18 @@ describe('workoutFormSchema exercise limits', () => {
   it('rejects a workout type the server does not accept', () => {
     expect(workoutFormSchema.safeParse({ ...workoutWith({}), type: 'yoga' }).success).toBe(false);
   });
+  it('bounds workout notes, which the server caps at 2000 characters', () => {
+    const base = workoutWith({});
+    expect(workoutFormSchema.safeParse({ ...base, notes: 'x'.repeat(LIMITS.MAX_WORKOUT_NOTES) }).success).toBe(true);
+    expect(workoutFormSchema.safeParse({ ...base, notes: 'x'.repeat(LIMITS.MAX_WORKOUT_NOTES + 1) }).success).toBe(false);
+  });
+
+  it('rejects impossible calendar dates the server refines away', () => {
+    const base = workoutWith({});
+    expect(workoutFormSchema.safeParse({ ...base, date: '2026-02-28' }).success).toBe(true);
+    // 2026 is not a leap year, so the 29th does not exist either.
+    expect(workoutFormSchema.safeParse({ ...base, date: '2026-02-29' }).success).toBe(false);
+    expect(workoutFormSchema.safeParse({ ...base, date: '2026-02-31' }).success).toBe(false);
+    expect(workoutFormSchema.safeParse({ ...base, date: '2026-13-01' }).success).toBe(false);
+  });
 });

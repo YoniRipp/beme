@@ -30,6 +30,8 @@ export const LIMITS = {
   // been told the value was valid.
   MAX_EXERCISE_REPS: 999,
   MAX_EXERCISE_WEIGHT: 1000, // lbs/kg
+  // Server caps workout notes at 2000 (backend exerciseSchema's parent schemas); keep in step.
+  MAX_WORKOUT_NOTES: 2000,
 } as const;
 
 // Rows fetched per exercise-catalog request (matches the server's max limit)
