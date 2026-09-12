@@ -12,6 +12,9 @@
     "./domain": "./src/domain/index.ts",
     "./tokens": "./src/tokens/index.ts"
   },
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
     "zod": "^4.3.6"
   }

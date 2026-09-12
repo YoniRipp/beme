@@ -1,14 +1,3 @@
-export type UserRole = 'admin' | 'user';
-export type SubscriptionStatus = 'free' | 'pro' | 'past_due' | 'canceled' | 'paused' | 'expired';
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  createdAt?: string;
-  subscriptionStatus?: SubscriptionStatus;
-  subscriptionPlan?: 'monthly' | 'yearly' | null;
-  subscriptionCurrentPeriodEnd?: string;
-  aiCallsRemaining?: number; // -1 = unlimited (pro), 0-10 for free tier
-}
+// Domain types now live in @trackvibe/shared so both clients share one definition.
+// This module stays as a re-export so existing import sites keep working.
+export * from '@trackvibe/shared/types';

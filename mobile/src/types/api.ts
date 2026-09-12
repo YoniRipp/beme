@@ -1,17 +1,3 @@
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  limit: number;
-  offset: number;
-  hasMore: boolean;
-}
-
-export interface ApiErrorResponse {
-  error: {
-    code: string;
-    message: string;
-    details?: unknown;
-  };
-}
-
-export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+// Domain types now live in @trackvibe/shared so both clients share one definition.
+// This module stays as a re-export so existing import sites keep working.
+export * from '@trackvibe/shared/types';
