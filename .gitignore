@@ -30,3 +30,6 @@ dist-ssr
 # Playwright
 playwright-report/
 test-results/
+
+# Subagent-driven development scratch workspace
+.superpowers/
