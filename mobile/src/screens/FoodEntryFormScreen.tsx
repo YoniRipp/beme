@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, FlatList } from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, FlatList } from 'react-native';
 import { TextInput, Button, Text, Card, Chip, SegmentedButtons } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEnergy } from '../hooks/useEnergy';
@@ -13,7 +13,8 @@ import {
   type PortionUnit,
 } from '@trackvibe/shared/domain';
 import Toast from 'react-native-toast-message';
-import { colors, spacing } from '../theme';
+import { spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
 
 const DEFAULT_REFERENCE_GRAMS = 100;
 /** Gram presets for an ordinary per-100g solid; also the fallback before a food is picked. */
@@ -79,6 +80,25 @@ function searchResultMeta(food: FoodSearchResult): string {
 }
 
 export function FoodEntryFormScreen() {
+  const styles = useThemedStyles((colors) => ({
+    flex: { flex: 1 },
+    container: { flex: 1, backgroundColor: colors.background },
+    content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+    searchSection: { marginBottom: spacing.sm },
+    input: { marginBottom: spacing.md },
+    label: { marginTop: spacing.sm, marginBottom: spacing.sm, fontWeight: '600', color: colors.text },
+    segment: { marginBottom: spacing.md },
+    resultsCard: { marginTop: -spacing.sm, marginBottom: spacing.md, backgroundColor: colors.surface },
+    resultItem: { paddingHorizontal: spacing.lg, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+    resultMeta: { color: colors.textMuted },
+    portionRow: { marginBottom: spacing.md },
+    portionInput: { marginBottom: spacing.sm },
+    presets: { flexDirection: 'row', gap: spacing.sm },
+    presetChip: { marginRight: 4 },
+    nutritionRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
+    nutritionInput: { flex: 1 },
+    saveButton: { marginTop: spacing.sm, backgroundColor: colors.primary },
+  }));
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const entryId = route.params?.entryId;
@@ -268,22 +288,3 @@ export function FoodEntryFormScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  searchSection: { marginBottom: spacing.sm },
-  input: { marginBottom: spacing.md },
-  label: { marginTop: spacing.sm, marginBottom: spacing.sm, fontWeight: '600', color: colors.text },
-  segment: { marginBottom: spacing.md },
-  resultsCard: { marginTop: -spacing.sm, marginBottom: spacing.md, backgroundColor: colors.surface },
-  resultItem: { paddingHorizontal: spacing.lg, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
-  resultMeta: { color: colors.textMuted },
-  portionRow: { marginBottom: spacing.md },
-  portionInput: { marginBottom: spacing.sm },
-  presets: { flexDirection: 'row', gap: spacing.sm },
-  presetChip: { marginRight: 4 },
-  nutritionRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
-  nutritionInput: { flex: 1 },
-  saveButton: { marginTop: spacing.sm, backgroundColor: colors.primary },
-});

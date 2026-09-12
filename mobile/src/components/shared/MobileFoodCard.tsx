@@ -1,8 +1,10 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { Card, Icon, IconButton, Text } from 'react-native-paper';
 import { FoodEntry } from '../../types/energy';
-import { colors, radius, spacing } from '../../theme';
+import { radius, spacing } from '../../theme';
+import { useThemeContext } from '../../theme/ThemeContext';
+import { useThemedStyles } from '../../theme/useThemedStyles';
 
 interface MobileFoodCardProps {
   entry: FoodEntry;
@@ -11,6 +13,58 @@ interface MobileFoodCardProps {
 }
 
 export function MobileFoodCard({ entry, onEdit, onDelete }: MobileFoodCardProps) {
+  const { colors } = useThemeContext();
+  const styles = useThemedStyles((colors) => ({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    content: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: spacing.md,
+    },
+    image: {
+      width: 52,
+      height: 52,
+      borderRadius: radius.md,
+      backgroundColor: colors.foodSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    body: {
+      flex: 1,
+      minWidth: 0,
+    },
+    name: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    meta: {
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    macro: {
+      color: colors.textMuted,
+      marginTop: 3,
+    },
+    calorieBlock: {
+      alignItems: 'flex-end',
+      minWidth: 52,
+    },
+    calories: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    kcal: {
+      color: colors.textMuted,
+      letterSpacing: 0.7,
+    },
+  }));
+
   const portion = entry.portionAmount != null
     ? `${entry.portionAmount}${entry.portionUnit ? ` ${entry.portionUnit}` : ''}`
     : undefined;
@@ -39,54 +93,3 @@ export function MobileFoodCard({ entry, onEdit, onDelete }: MobileFoodCardProps)
     </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  image: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.md,
-    backgroundColor: colors.foodSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  body: {
-    flex: 1,
-    minWidth: 0,
-  },
-  name: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  meta: {
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  macro: {
-    color: colors.textMuted,
-    marginTop: 3,
-  },
-  calorieBlock: {
-    alignItems: 'flex-end',
-    minWidth: 52,
-  },
-  calories: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  kcal: {
-    color: colors.textMuted,
-    letterSpacing: 0.7,
-  },
-});

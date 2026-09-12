@@ -1,7 +1,8 @@
 import React from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView } from 'react-native';
 import { Chip } from 'react-native-paper';
-import { colors, spacing } from '../../theme';
+import { spacing } from '../../theme';
+import { useThemedStyles } from '../../theme/useThemedStyles';
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -21,6 +22,12 @@ const DEFAULT_LABELS: Record<Period, string> = {
 const PERIODS: Period[] = ['daily', 'weekly', 'monthly', 'yearly'];
 
 export function PeriodSelector({ value, onChange, labels = DEFAULT_LABELS }: PeriodSelectorProps) {
+  const styles = useThemedStyles((colors) => ({
+    container: { flexDirection: 'row', marginVertical: spacing.sm },
+    chip: { marginRight: spacing.sm },
+    selectedChip: { backgroundColor: colors.primary },
+    selectedText: { color: '#fff' },
+  }));
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.container}>
       {PERIODS.map((period) => (
@@ -39,9 +46,4 @@ export function PeriodSelector({ value, onChange, labels = DEFAULT_LABELS }: Per
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flexDirection: 'row', marginVertical: spacing.sm },
-  chip: { marginRight: spacing.sm },
-  selectedChip: { backgroundColor: colors.primary },
-  selectedText: { color: '#fff' },
-});
+

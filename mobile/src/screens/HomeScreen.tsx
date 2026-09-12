@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { Button, Card, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { format, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
@@ -10,7 +10,8 @@ import { useEnergy } from '../hooks/useEnergy';
 import { LoadingView } from '../components/shared/LoadingView';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { MetricCard } from '../components/shared/MetricCard';
-import { colors, radius, spacing } from '../theme';
+import { radius, spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
 import { getPeriodRange } from '../lib/dateRanges';
 
 function getGreeting(): string {
@@ -21,6 +22,70 @@ function getGreeting(): string {
 }
 
 export function HomeScreen() {
+  const styles = useThemedStyles((colors) => ({
+    heroCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    heroContent: {
+      gap: spacing.lg,
+    },
+    eyebrow: {
+      color: colors.primary,
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+    },
+    heroValue: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    heroMeta: {
+      color: colors.textMuted,
+    },
+    heroBar: {
+      height: 10,
+      borderRadius: radius.sm,
+      backgroundColor: colors.surfaceMuted,
+      overflow: 'hidden',
+    },
+    heroFill: {
+      height: '100%',
+      borderRadius: radius.sm,
+      backgroundColor: colors.primary,
+    },
+    metrics: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    actions: {
+      gap: spacing.sm,
+    },
+    primaryAction: {
+      borderRadius: radius.lg,
+    },
+    secondaryAction: {
+      borderRadius: radius.lg,
+      borderColor: colors.border,
+    },
+    prompt: {
+      backgroundColor: colors.primarySoft,
+      borderRadius: radius.lg,
+    },
+    promptContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    promptTitle: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    promptText: {
+      color: colors.textMuted,
+    },
+  }));
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { goals, goalsLoading } = useGoals();
@@ -147,67 +212,4 @@ export function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  heroCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  heroContent: {
-    gap: spacing.lg,
-  },
-  eyebrow: {
-    color: colors.primary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  heroValue: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  heroMeta: {
-    color: colors.textMuted,
-  },
-  heroBar: {
-    height: 10,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceMuted,
-    overflow: 'hidden',
-  },
-  heroFill: {
-    height: '100%',
-    borderRadius: radius.sm,
-    backgroundColor: colors.primary,
-  },
-  metrics: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  actions: {
-    gap: spacing.sm,
-  },
-  primaryAction: {
-    borderRadius: radius.lg,
-  },
-  secondaryAction: {
-    borderRadius: radius.lg,
-    borderColor: colors.border,
-  },
-  prompt: {
-    backgroundColor: colors.primarySoft,
-    borderRadius: radius.lg,
-  },
-  promptContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  promptTitle: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  promptText: {
-    color: colors.textMuted,
-  },
-});
+

@@ -9,9 +9,9 @@ import { WorkoutFormScreen } from '../screens/WorkoutFormScreen';
 import { FoodEntryFormScreen } from '../screens/FoodEntryFormScreen';
 import { SleepFormScreen } from '../screens/SleepFormScreen';
 import { GoalFormScreen } from '../screens/GoalFormScreen';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { colors } from '../theme';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { useThemeContext } from '../theme/ThemeContext';
+import { useThemedStyles } from '../theme/useThemedStyles';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,6 +25,8 @@ function AuthStack() {
 }
 
 function AppStack() {
+  const { colors } = useThemeContext();
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -60,6 +62,20 @@ function AppStack() {
 }
 
 function LoadingScreen() {
+  const styles = useThemedStyles((colors) => ({
+    loading: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 16,
+      color: colors.textMuted,
+    },
+  }));
+
   return (
     <View style={styles.loading}>
       <ActivityIndicator size="large" />
@@ -105,17 +121,3 @@ export function RootNavigator() {
     </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: colors.textMuted,
-  },
-});

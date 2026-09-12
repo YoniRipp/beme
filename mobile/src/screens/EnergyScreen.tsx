@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { Button, Card, Icon, IconButton, SegmentedButtons, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { format, isWithinInterval } from 'date-fns';
@@ -12,7 +12,9 @@ import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { MobileFoodCard } from '../components/shared/MobileFoodCard';
 import { MetricCard } from '../components/shared/MetricCard';
-import { colors, radius, spacing } from '../theme';
+import { radius, spacing } from '../theme';
+import { useThemeContext } from '../theme/ThemeContext';
+import { useThemedStyles } from '../theme/useThemedStyles';
 import { getPeriodRange, PeriodKey } from '../lib/dateRanges';
 import { inferMealTypeFromHour } from '@trackvibe/shared/domain';
 
@@ -39,6 +41,102 @@ function inferMeal(entry: FoodEntry): MealType {
 
 export function EnergyScreen() {
   const navigation = useNavigation<any>();
+  const { colors } = useThemeContext();
+  const styles = useThemedStyles((colors) => ({
+    summaryCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    summaryContent: {
+      gap: spacing.sm,
+    },
+    eyebrow: {
+      color: colors.primary,
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+    },
+    total: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    macroRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    macro: {
+      color: colors.textMuted,
+      fontWeight: '700',
+    },
+    metricRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    sectionStack: {
+      gap: spacing.xl,
+    },
+    mealSection: {
+      gap: spacing.sm,
+    },
+    mealHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    mealTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    mealIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primarySoft,
+    },
+    sectionTitle: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    muted: {
+      color: colors.textMuted,
+    },
+    cardStack: {
+      gap: spacing.sm,
+    },
+    emptyMealCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: colors.border,
+    },
+    emptyMealContent: {
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+    logCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    logRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    logTitle: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    actionRow: {
+      flexDirection: 'row',
+    },
+  }));
   const { foodEntries, checkIns, energyLoading, deleteFoodEntry, deleteCheckIn } = useEnergy();
   const [tab, setTab] = useState('food');
   const [period, setPeriod] = useState<PeriodKey>('daily');
@@ -209,99 +307,3 @@ export function EnergyScreen() {
     </MobileScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  summaryCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  summaryContent: {
-    gap: spacing.sm,
-  },
-  eyebrow: {
-    color: colors.primary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  total: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  macroRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  macro: {
-    color: colors.textMuted,
-    fontWeight: '700',
-  },
-  metricRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  sectionStack: {
-    gap: spacing.xl,
-  },
-  mealSection: {
-    gap: spacing.sm,
-  },
-  mealHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  mealTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  mealIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  muted: {
-    color: colors.textMuted,
-  },
-  cardStack: {
-    gap: spacing.sm,
-  },
-  emptyMealCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-  },
-  emptyMealContent: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  logCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  logRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  logTitle: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  actionRow: {
-    flexDirection: 'row',
-  },
-});

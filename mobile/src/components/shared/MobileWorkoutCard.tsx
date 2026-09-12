@@ -1,9 +1,11 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { Card, Chip, Icon, IconButton, Text } from 'react-native-paper';
 import { format } from 'date-fns';
 import { Workout } from '../../types/workout';
-import { colors, radius, spacing } from '../../theme';
+import { radius, spacing } from '../../theme';
+import { useThemeContext } from '../../theme/ThemeContext';
+import { useThemedStyles } from '../../theme/useThemedStyles';
 
 interface MobileWorkoutCardProps {
   workout: Workout;
@@ -14,6 +16,80 @@ interface MobileWorkoutCardProps {
 }
 
 export function MobileWorkoutCard({ workout, expanded, onPress, onEdit, onDelete }: MobileWorkoutCardProps) {
+  const { colors } = useThemeContext();
+  const styles = useThemedStyles((colors) => ({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    content: {
+      gap: spacing.md,
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    iconWrap: {
+      width: 48,
+      height: 48,
+      borderRadius: radius.md,
+      backgroundColor: colors.workoutSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    titleBlock: {
+      flex: 1,
+      minWidth: 0,
+    },
+    title: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    meta: {
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    chip: {
+      backgroundColor: colors.surfaceMuted,
+    },
+    chipText: {
+      color: colors.textMuted,
+      fontSize: 11,
+    },
+    exerciseList: {
+      gap: spacing.sm,
+    },
+    exerciseRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: spacing.md,
+      borderRadius: radius.sm,
+      backgroundColor: colors.surfaceMuted,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    exerciseName: {
+      flex: 1,
+      color: colors.text,
+      fontWeight: '700',
+    },
+    exerciseMeta: {
+      color: colors.textMuted,
+    },
+    more: {
+      color: colors.textMuted,
+      fontWeight: '700',
+      paddingHorizontal: spacing.sm,
+    },
+    actions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
+  }));
+
   return (
     <Card mode="contained" style={styles.card} onPress={onPress}>
       <Card.Content style={styles.content}>
@@ -54,76 +130,3 @@ export function MobileWorkoutCard({ workout, expanded, onPress, onEdit, onDelete
     </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  content: {
-    gap: spacing.md,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.workoutSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  titleBlock: {
-    flex: 1,
-    minWidth: 0,
-  },
-  title: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  meta: {
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  chip: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  chipText: {
-    color: colors.textMuted,
-    fontSize: 11,
-  },
-  exerciseList: {
-    gap: spacing.sm,
-  },
-  exerciseRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  exerciseName: {
-    flex: 1,
-    color: colors.text,
-    fontWeight: '700',
-  },
-  exerciseMeta: {
-    color: colors.textMuted,
-  },
-  more: {
-    color: colors.textMuted,
-    fontWeight: '700',
-    paddingHorizontal: spacing.sm,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-});

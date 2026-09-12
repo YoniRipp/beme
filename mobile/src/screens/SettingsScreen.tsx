@@ -3,7 +3,9 @@ import { StyleSheet, View } from 'react-native';
 import { Button, Card, List, RadioButton, Switch, Text } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { MobileScreen } from '../components/shared/MobileScreen';
-import { colors, radius, spacing } from '../theme';
+import { radius, spacing } from '../theme';
+import { useThemeContext } from '../theme/ThemeContext';
+import { useThemedStyles } from '../theme/useThemedStyles';
 
 const ACCOUNT_TITLE = 'Account';
 const UNITS_TITLE = 'Units';
@@ -24,6 +26,7 @@ type SettingsSectionTitle = (typeof SETTINGS_SECTION_TITLES)[number];
 
 export function SettingsScreen() {
   const { user, logout } = useAuth();
+  const { colors } = useThemeContext();
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>('kg');
   const [notifications, setNotifications] = useState(false);
 
@@ -58,6 +61,23 @@ export function SettingsScreen() {
 }
 
 function SettingsCard({ title, children }: { title: SettingsSectionTitle; children: React.ReactNode }) {
+  const styles = useThemedStyles((colors) => ({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    sectionTitle: {
+      color: colors.text,
+      fontWeight: '800',
+      marginBottom: spacing.sm,
+    },
+    sectionBody: {
+      marginHorizontal: -spacing.sm,
+    },
+  }));
+
   return (
     <Card mode="contained" style={styles.card}>
       <Card.Content>
@@ -68,21 +88,10 @@ function SettingsCard({ title, children }: { title: SettingsSectionTitle; childr
   );
 }
 
+// `signOutButton` has no colour dependency (only `spacing`), so — unlike `SettingsCard`'s
+// styles above — it doesn't need to move off `StyleSheet.create`; the frozen-palette bug
+// this migration fixes only affects styles that read `colors`.
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontWeight: '800',
-    marginBottom: spacing.sm,
-  },
-  sectionBody: {
-    marginHorizontal: -spacing.sm,
-  },
   signOutButton: {
     marginTop: spacing.sm,
   },
