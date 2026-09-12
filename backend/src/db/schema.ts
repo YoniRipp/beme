@@ -40,7 +40,7 @@ export async function initSchema() {
         ai_calls_reset_month text,
         phone_number text UNIQUE,
         locked_until timestamptz,
-        failed_login_attempts int DEFAULT 0,
+        failed_login_attempts int NOT NULL DEFAULT 0,
         created_at timestamptz DEFAULT now()
       );
     `);
@@ -225,10 +225,10 @@ export async function initSchema() {
         current_weight numeric,
         target_weight numeric,
         activity_level text,
-        water_goal_glasses int DEFAULT 8,
-        cycle_tracking_enabled boolean DEFAULT false,
-        average_cycle_length int DEFAULT 28,
-        setup_completed boolean DEFAULT false,
+        water_goal_glasses int NOT NULL DEFAULT 8,
+        cycle_tracking_enabled boolean NOT NULL DEFAULT false,
+        average_cycle_length int,
+        setup_completed boolean NOT NULL DEFAULT false,
         macro_carbs numeric,
         macro_fat numeric,
         macro_protein numeric,
@@ -272,8 +272,8 @@ export async function initSchema() {
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         date date NOT NULL,
-        glasses int DEFAULT 0,
-        ml_total int DEFAULT 0,
+        glasses int NOT NULL DEFAULT 0,
+        ml_total numeric NOT NULL DEFAULT 0,
         created_at timestamptz DEFAULT now(),
         updated_at timestamptz DEFAULT now(),
         UNIQUE (user_id, date)
@@ -285,10 +285,10 @@ export async function initSchema() {
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         date date NOT NULL,
-        period_start boolean DEFAULT false,
-        period_end boolean DEFAULT false,
+        period_start boolean NOT NULL DEFAULT false,
+        period_end boolean NOT NULL DEFAULT false,
         flow text,
-        symptoms jsonb DEFAULT '[]',
+        symptoms jsonb NOT NULL DEFAULT '[]',
         notes text,
         created_at timestamptz DEFAULT now(),
         UNIQUE (user_id, date)
@@ -369,15 +369,15 @@ export async function initSchema() {
       CREATE TABLE IF NOT EXISTS ai_insights (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        summary text,
-        highlights jsonb,
-        suggestions jsonb,
-        score int,
-        today_workout text,
-        today_sleep text,
-        today_nutrition text,
-        today_focus text,
-        period_days int DEFAULT 30,
+        summary text NOT NULL DEFAULT '',
+        highlights jsonb NOT NULL DEFAULT '[]',
+        suggestions jsonb NOT NULL DEFAULT '[]',
+        score int NOT NULL DEFAULT 0,
+        today_workout text DEFAULT '',
+        today_sleep text DEFAULT '',
+        today_nutrition text DEFAULT '',
+        today_focus text DEFAULT '',
+        period_days int NOT NULL DEFAULT 30,
         created_at timestamptz DEFAULT now()
       );
     `);

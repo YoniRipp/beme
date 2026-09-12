@@ -47,44 +47,50 @@ export async function findByUserId(userId: string, client?: pg.Pool | pg.PoolCli
   return result.rows.length > 0 ? rowToProfile(result.rows[0]) : null;
 }
 
+/**
+ * Optional input field → column, in table order. Drives both halves of the upsert.
+ */
+const UPSERT_COLUMNS: ReadonlyArray<[Exclude<keyof UpsertProfileInput, 'userId'>, string]> = [
+  ['dateOfBirth', 'date_of_birth'],
+  ['sex', 'sex'],
+  ['heightCm', 'height_cm'],
+  ['currentWeight', 'current_weight'],
+  ['targetWeight', 'target_weight'],
+  ['activityLevel', 'activity_level'],
+  ['waterGoalGlasses', 'water_goal_glasses'],
+  ['cycleTrackingEnabled', 'cycle_tracking_enabled'],
+  ['averageCycleLength', 'average_cycle_length'],
+  ['setupCompleted', 'setup_completed'],
+  ['macroCarbs', 'macro_carbs'],
+  ['macroFat', 'macro_fat'],
+  ['macroProtein', 'macro_protein'],
+];
+
+/**
+ * Create or patch the caller's profile. Only the fields actually supplied are written:
+ * an omitted field keeps its stored value on update, and on insert it is left out of the
+ * statement so the column DEFAULT applies. Binding it as an explicit NULL instead would
+ * bypass that DEFAULT, which a NOT NULL column (water_goal_glasses, cycle_tracking_enabled
+ * and setup_completed on a migration-built database) rejects with 23502 -- the first
+ * profile write of a brand-new user is exactly the one that omits fields.
+ */
 export async function upsert(input: UpsertProfileInput, client?: pg.Pool | pg.PoolClient): Promise<UserProfile> {
   const db = client ?? getPool();
+  const provided = UPSERT_COLUMNS.filter(([field]) => input[field] != null);
+
+  const columns = ['user_id', ...provided.map(([, column]) => column)];
+  const values = [input.userId, ...provided.map(([field]) => input[field])];
+  // updated_at keeps the SET clause non-empty when userId is the only field supplied.
+  const assignments = [...provided.map(([, c]) => `${c} = EXCLUDED.${c}`), 'updated_at = NOW()'];
+
   const result = await db.query(
-    `INSERT INTO user_profiles (user_id, date_of_birth, sex, height_cm, current_weight, target_weight, activity_level, water_goal_glasses, cycle_tracking_enabled, average_cycle_length, setup_completed, macro_carbs, macro_fat, macro_protein)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    `INSERT INTO user_profiles (${columns.join(', ')})
+     VALUES (${columns.map((_, i) => `$${i + 1}`).join(', ')})
      ON CONFLICT (user_id)
      DO UPDATE SET
-       date_of_birth = COALESCE($2, user_profiles.date_of_birth),
-       sex = COALESCE($3, user_profiles.sex),
-       height_cm = COALESCE($4, user_profiles.height_cm),
-       current_weight = COALESCE($5, user_profiles.current_weight),
-       target_weight = COALESCE($6, user_profiles.target_weight),
-       activity_level = COALESCE($7, user_profiles.activity_level),
-       water_goal_glasses = COALESCE($8, user_profiles.water_goal_glasses),
-       cycle_tracking_enabled = COALESCE($9, user_profiles.cycle_tracking_enabled),
-       average_cycle_length = COALESCE($10, user_profiles.average_cycle_length),
-       setup_completed = COALESCE($11, user_profiles.setup_completed),
-       macro_carbs = COALESCE($12, user_profiles.macro_carbs),
-       macro_fat = COALESCE($13, user_profiles.macro_fat),
-       macro_protein = COALESCE($14, user_profiles.macro_protein),
-       updated_at = NOW()
+       ${assignments.join(',\n       ')}
      RETURNING ${RETURNING}`,
-    [
-      input.userId,
-      input.dateOfBirth ?? null,
-      input.sex ?? null,
-      input.heightCm ?? null,
-      input.currentWeight ?? null,
-      input.targetWeight ?? null,
-      input.activityLevel ?? null,
-      input.waterGoalGlasses ?? null,
-      input.cycleTrackingEnabled ?? null,
-      input.averageCycleLength ?? null,
-      input.setupCompleted ?? null,
-      input.macroCarbs ?? null,
-      input.macroFat ?? null,
-      input.macroProtein ?? null,
-    ],
+    values,
   );
   return rowToProfile(result.rows[0]);
 }
