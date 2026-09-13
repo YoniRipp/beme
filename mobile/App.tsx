@@ -1,6 +1,8 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useFonts, Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
+import { Fraunces_500Medium } from '@expo-google-fonts/fraunces';
 import { AuthProvider } from './src/context/AuthContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import { ThemeProvider, useThemeContext } from './src/theme/ThemeContext';
@@ -11,6 +13,20 @@ import Toast from 'react-native-toast-message';
 const queryClient = new QueryClient();
 
 export default function App() {
+  // The exact three family names `theme.ts` references (`Inter_400Regular`,
+  // `Inter_500Medium`, `Fraunces_500Medium`) — see that file's own doc comment for why
+  // those specific weights. Gated the same way `ThemeProvider` gates on
+  // `settingsLoading` just below: render nothing until ready, so no screen ever paints
+  // with the platform's system font and then reflows onto Inter/Fraunces a moment
+  // later.
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Fraunces_500Medium,
+  });
+
+  if (!fontsLoaded) return null;
+
   return (
     <QueryClientProvider client={queryClient}>
       <SettingsProvider>
