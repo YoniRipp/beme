@@ -32,9 +32,22 @@ export const radius = radii;
  * retargets which file renders — the weight you want has to be the specific family
  * name you loaded and reference here.
  */
-const INTER_REGULAR = 'Inter_400Regular';
-const INTER_MEDIUM = 'Inter_500Medium';
-const FRAUNCES_DISPLAY = 'Fraunces_500Medium';
+/**
+ * Exported because Paper's typescale only reaches Paper's own `<Text>`. The three
+ * pre-auth surfaces — `LoginScreen`, `SignupScreen` and `RootNavigator`'s loading
+ * screen — are built from raw react-native primitives, so they have to name the font
+ * themselves or they silently render in the system face. Those are the first screens a
+ * new user ever sees, so "silently" would have meant "always", for them.
+ */
+export const fonts = {
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  display: 'Fraunces_500Medium',
+} as const;
+
+const INTER_REGULAR = fonts.regular;
+const INTER_MEDIUM = fonts.medium;
+const FRAUNCES_DISPLAY = fonts.display;
 
 const regularType = { fontFamily: INTER_REGULAR, fontWeight: '400' as const };
 const mediumType = { fontFamily: INTER_MEDIUM, fontWeight: '500' as const };

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { radius, spacing } from '../theme';
+import { fonts, radius, spacing } from '../theme';
 import { useThemedStyles } from '../theme/useThemedStyles';
 
 export function LoginScreen() {
@@ -35,20 +35,23 @@ export function LoginScreen() {
     },
     title: {
       fontSize: 28,
-      fontWeight: '800',
+      fontFamily: fonts.display,
       marginBottom: spacing.xs,
       color: colors.text,
     },
     subtitle: {
+      fontFamily: fonts.regular,
       fontSize: 16,
       color: colors.textMuted,
       marginBottom: spacing.xl,
     },
     error: {
+      fontFamily: fonts.regular,
       color: colors.danger,
       marginBottom: spacing.md,
     },
     input: {
+      fontFamily: fonts.regular,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.md,
@@ -70,11 +73,13 @@ export function LoginScreen() {
       opacity: 0.7,
     },
     buttonText: {
+      fontFamily: fonts.regular,
       color: '#fff',
       fontSize: 16,
       fontWeight: '600',
     },
     link: {
+      fontFamily: fonts.regular,
       color: colors.primary,
       fontSize: 14,
     },

@@ -10,6 +10,7 @@ import { FoodEntryFormScreen } from '../screens/FoodEntryFormScreen';
 import { SleepFormScreen } from '../screens/SleepFormScreen';
 import { GoalFormScreen } from '../screens/GoalFormScreen';
 import { View, Text, ActivityIndicator } from 'react-native';
+import { fonts } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
 
@@ -72,6 +73,7 @@ function LoadingScreen() {
     loadingText: {
       marginTop: 12,
       fontSize: 16,
+      fontFamily: fonts.regular,
       color: colors.textMuted,
     },
   }));
