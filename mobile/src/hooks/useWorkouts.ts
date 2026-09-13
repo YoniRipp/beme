@@ -6,6 +6,26 @@ import { apiWorkoutToWorkout, workoutToApiWorkout } from '../features/body/mappe
 import { queryKeys } from '../lib/queryKeys';
 import { toLocalDateString } from '../lib/dateRanges';
 
+/**
+ * The request body for a workout update.
+ *
+ * Forwards every field the caller actually set, rather than an allowlist. The allowlist
+ * this replaced omitted `completed`, so a caller could set it, get no error, and find the
+ * change had never been sent — the same field-dropping bug the exercise mapper had
+ * (`src/features/body/mappers.ts`). `date` is the one field needing a shape change on the
+ * way out (Date → local YYYY-MM-DD); everything else passes through untouched.
+ *
+ * Exported as a plain function so the contract can be pinned without rendering the hook:
+ * a React Query client in a test leaves a notifyManager batch timer that outlives the run
+ * and hangs jest, and the logic here is pure anyway.
+ */
+export function buildWorkoutUpdateBody(updates: Partial<Workout>): Record<string, unknown> {
+  const { date, ...rest } = updates;
+  const body: Record<string, unknown> = { ...rest };
+  if (date !== undefined) body.date = toLocalDateString(date);
+  return body;
+}
+
 export function useWorkouts() {
   const queryClient = useQueryClient();
 
@@ -40,16 +60,8 @@ export function useWorkouts() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<Workout> }) => {
-      const body: Record<string, unknown> = {};
-      if (updates.date !== undefined) body.date = toLocalDateString(updates.date);
-      if (updates.title !== undefined) body.title = updates.title;
-      if (updates.type !== undefined) body.type = updates.type;
-      if (updates.durationMinutes !== undefined) body.durationMinutes = updates.durationMinutes;
-      if (updates.exercises !== undefined) body.exercises = updates.exercises;
-      if (updates.notes !== undefined) body.notes = updates.notes;
-      return workoutsApi.update(id, body);
-    },
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<Workout> }) =>
+      workoutsApi.update(id, buildWorkoutUpdateBody(updates)),
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.workouts, (prev: Workout[] | undefined) =>
         prev ? prev.map((w) => (w.id === updated.id ? apiWorkoutToWorkout(updated) : w)) : [apiWorkoutToWorkout(updated)]

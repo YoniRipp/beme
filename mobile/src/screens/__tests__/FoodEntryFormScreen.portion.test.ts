@@ -26,8 +26,12 @@ describe('food entry portion defaults', () => {
     expect(defaultPortionFor(chicken)).toEqual({ amount: 100, unit: 'g' });
   });
 
-  it('seeds a drink with millilitres, not grams', () => {
-    expect(defaultPortionFor(milk)).toEqual({ amount: 250, unit: 'ml' });
+  // Millilitres, and the reference quantity — not a serving size. The web's seeding path
+  // (frontend/src/components/energy/FoodEntryModal.tsx:293-298) has no liquid branch, and
+  // its own footer says "Values scaled from 100 ml" (:703). This test previously asserted
+  // 250, which meant picking a drink on mobile logged 2.5x the calories it logs on the web.
+  it('seeds a drink with millilitres at the reference quantity, as the web does', () => {
+    expect(defaultPortionFor(milk)).toEqual({ amount: 100, unit: 'ml' });
   });
 
   it('seeds a countable food with one of its own units', () => {

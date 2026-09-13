@@ -2,8 +2,12 @@ import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import { createTransport } from '@trackvibe/shared/api';
 
-// The HTTP plumbing now lives in @trackvibe/shared/api so the web client and this one run the
-// same transport. Everything auth-shaped stays here: the token lives in SecureStore (so it
+// The HTTP plumbing lives in @trackvibe/shared/api. NOTE: this client is currently its only
+// consumer -- the web client deliberately keeps its own `request`, because it carries an
+// offline sync queue, cookie credentials and a logout event with no mobile counterpart (see
+// frontend/src/core/api/client.ts:121-127). The two clients share the PAGING algorithm, not
+// the transport, so a change here does not change web behaviour and is not covered by the
+// web's tests. Everything auth-shaped stays here: the token lives in SecureStore (so it
 // survives a cold start, unlike the web's in-memory bearer) and the 401 reaction is this
 // app's own. The public surface of this module is unchanged.
 

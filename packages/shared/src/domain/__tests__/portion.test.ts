@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scalePortion, defaultPortionFor } from '../portion';
+import { scalePortion, defaultPortionFor, servingSizesInMl } from '../portion';
 
 const milk = { name: 'Milk', calories: 64, protein: 3.3, carbs: 4.8, fat: 3.6,
   referenceGrams: 100, isLiquid: true, servingSizesMl: [250], defaultUnit: null, unitWeightGrams: null };
@@ -28,8 +28,17 @@ describe('scalePortion', () => {
 });
 
 describe('defaultPortionFor', () => {
-  it('defaults a liquid to its first serving size in ml', () => {
-    expect(defaultPortionFor(milk)).toEqual({ amount: 250, unit: 'ml' });
+  // The web seeds a drink at the reference quantity, NOT at a published serving size:
+  // FoodEntryModal.tsx:293-298 has no liquid branch, and its footer reads "Values scaled
+  // from 100 ml". Seeding 250 here made mobile log 2.5x the web's calories for the same
+  // pick-and-save. Serving sizes stay available through servingSizesInMl, which feeds the
+  // can/bottle/glass picker the user chooses from explicitly.
+  it('defaults a liquid to the reference quantity in ml, matching the web', () => {
+    expect(defaultPortionFor(milk)).toEqual({ amount: 100, unit: 'ml' });
+  });
+
+  it('still exposes the published serving sizes for the picker', () => {
+    expect(servingSizesInMl(milk)).toEqual([250]);
   });
 
   it('defaults a per-unit food to one unit', () => {
@@ -103,17 +112,26 @@ describe('scalePortion — real API shapes', () => {
 });
 
 describe('defaultPortionFor — real API shapes', () => {
-  it('defaults a drink with object serving sizes to a glass', () => {
-    expect(defaultPortionFor(cola)).toEqual({ amount: 250, unit: 'ml' });
+  // A published serving size is never the DEFAULT — it is an option the user picks.
+  // The web's seeding path (FoodEntryModal.tsx:293-298) has no liquid branch at all, and
+  // its footer states the contract: "Values scaled from 100 ml" (:703). These three cases
+  // previously asserted a glass/can/bottle default, which made mobile write 2.5x-3.3x the
+  // web's calories for the same pick-and-save.
+  it('seeds a drink at its reference quantity regardless of published serving sizes', () => {
+    expect(defaultPortionFor(cola)).toEqual({ amount: 100, unit: 'ml' });
+    expect(defaultPortionFor({ ...cola, servingSizesMl: { can: 330 } })).toEqual({ amount: 100, unit: 'ml' });
+    expect(defaultPortionFor({ ...cola, servingSizesMl: null })).toEqual({ amount: 100, unit: 'ml' });
   });
 
-  it('falls back to a can, then a bottle, when no glass size is published', () => {
-    expect(defaultPortionFor({ ...cola, servingSizesMl: { can: 330 } })).toEqual({ amount: 330, unit: 'ml' });
-    expect(defaultPortionFor({ ...cola, servingSizesMl: { bottle: 500 } })).toEqual({ amount: 500, unit: 'ml' });
+  it('honours a non-100 reference basis for a drink too', () => {
+    expect(defaultPortionFor({ ...cola, referenceGrams: 330 })).toEqual({ amount: 330, unit: 'ml' });
   });
 
-  it('defaults a drink with no serving sizes at all to 250 ml', () => {
-    expect(defaultPortionFor({ ...cola, servingSizesMl: null })).toEqual({ amount: 250, unit: 'ml' });
+  // The sizes themselves remain available — this is what feeds the can/bottle/glass
+  // picker the web offers at FoodEntryModal.tsx:639-646.
+  it('still publishes every serving size for the picker, smallest first', () => {
+    expect(servingSizesInMl(cola)).toEqual([250, 330, 500]);
+    expect(servingSizesInMl({ ...cola, servingSizesMl: null })).toEqual([]);
   });
 
   it('defaults a countable food to one of its own units', () => {

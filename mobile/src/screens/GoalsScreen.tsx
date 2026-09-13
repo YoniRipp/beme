@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { MobileGoalCard } from '../components/shared/MobileGoalCard';
 import { spacing } from '../theme';
+import Toast from 'react-native-toast-message';
 
 export function GoalsScreen() {
   const navigation = useNavigation<any>();
@@ -50,9 +51,15 @@ export function GoalsScreen() {
         message="Are you sure you want to delete this goal?"
         confirmLabel="Delete"
         destructive
-        onConfirm={() => {
-          if (deleteId) deleteGoal(deleteId);
+        onConfirm={async () => {
+          const id = deleteId;
           setDeleteId(null);
+          if (!id) return;
+          try {
+            await deleteGoal(id);
+          } catch {
+            Toast.show({ type: 'error', text1: 'Failed to delete goal' });
+          }
         }}
       />
     </MobileScreen>

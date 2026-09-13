@@ -52,8 +52,6 @@ export interface ScaledPortion {
 const round = (n: number) => Math.round(n * 10) / 10;
 
 const DEFAULT_REFERENCE_GRAMS = 100;
-/** A glass — the portion a drink is most often logged in. */
-const DEFAULT_SERVING_ML = 250;
 
 /** The reference quantity a food's macros are published against, guarded against bad data. */
 function referenceOf(food: PortionSource): number {
@@ -99,28 +97,26 @@ export function scalePortion(
   };
 }
 
-/** First published serving size for a drink, preferring a glass. */
-function firstServingMl(sizes: ServingSizesMl | undefined): number | null {
-  if (!sizes) return null;
-  if (Array.isArray(sizes)) {
-    const first = sizes.find((n) => typeof n === 'number' && n > 0);
-    return first ?? null;
-  }
-  for (const size of [sizes.glass, sizes.can, sizes.bottle]) {
-    if (typeof size === 'number' && size > 0) return size;
-  }
-  return null;
-}
-
-/** The portion a food should be seeded with when it is picked from search. */
+/**
+ * The portion a food should be seeded with when it is picked from search.
+ *
+ * Mirrors `FoodEntryModal.tsx:293-298` exactly, including for drinks. The web has only
+ * TWO branches: a countable food seeds at one unit (`initialGrams = unitWeightGrams`),
+ * and everything else — drinks included — seeds at the reference quantity. Its own UI
+ * says so: "Values scaled from 100 ml." (`FoodEntryModal.tsx:703`).
+ *
+ * A drink is NOT seeded at a published serving size. The web offers can/bottle/glass as
+ * an explicit choice (`FoodEntryModal.tsx:639-646`) starting from an empty selection, so
+ * the serving size is something the user picks, never a default. Seeding 250ml here
+ * instead of 100ml made mobile log 2.5x the calories of the web for the same
+ * "pick a drink, save" action — see `servingSizesInMl` below, which still feeds that
+ * picker.
+ */
 export function defaultPortionFor(food: PortionSource): { amount: number; unit: PortionUnit } {
   if (food.defaultUnit && food.unitWeightGrams) {
     return { amount: 1, unit: food.defaultUnit };
   }
-  if (food.isLiquid) {
-    return { amount: firstServingMl(food.servingSizesMl) ?? DEFAULT_SERVING_ML, unit: 'ml' };
-  }
-  return { amount: referenceOf(food), unit: 'g' };
+  return { amount: referenceOf(food), unit: food.isLiquid ? 'ml' : 'g' };
 }
 
 /** Every serving size a drink publishes, smallest first, deduped. */

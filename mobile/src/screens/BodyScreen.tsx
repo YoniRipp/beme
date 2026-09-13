@@ -14,6 +14,7 @@ import { MobileWorkoutCard } from '../components/shared/MobileWorkoutCard';
 import { MetricCard } from '../components/shared/MetricCard';
 import { spacing } from '../theme';
 import { useThemedStyles } from '../theme/useThemedStyles';
+import Toast from 'react-native-toast-message';
 
 function groupWorkouts(workouts: Workout[]) {
   const sorted = [...workouts].sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -138,7 +139,16 @@ export function BodyScreen() {
         message="Are you sure you want to delete this workout?"
         confirmLabel="Delete"
         destructive
-        onConfirm={() => { if (deleteId) deleteWorkout(deleteId); setDeleteId(null); }}
+        onConfirm={async () => {
+          const id = deleteId;
+          setDeleteId(null);
+          if (!id) return;
+          try {
+            await deleteWorkout(id);
+          } catch {
+            Toast.show({ type: 'error', text1: 'Failed to delete workout' });
+          }
+        }}
       />
     </MobileScreen>
   );

@@ -17,6 +17,7 @@ import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import { getPeriodRange, PeriodKey } from '../lib/dateRanges';
 import { inferMealTypeFromHour } from '@trackvibe/shared/domain';
+import Toast from 'react-native-toast-message';
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -296,12 +297,19 @@ export function EnergyScreen() {
         message="Are you sure you want to delete this entry?"
         confirmLabel="Delete"
         destructive
-        onConfirm={() => {
-          if (deleteTarget) {
-            if (deleteTarget.type === 'food') deleteFoodEntry(deleteTarget.id);
-            else deleteCheckIn(deleteTarget.id);
-          }
+        onConfirm={async () => {
+          const target = deleteTarget;
           setDeleteTarget(null);
+          if (!target) return;
+          try {
+            if (target.type === 'food') await deleteFoodEntry(target.id);
+            else await deleteCheckIn(target.id);
+          } catch {
+            Toast.show({
+              type: 'error',
+              text1: target.type === 'food' ? 'Failed to delete entry' : 'Failed to delete check-in',
+            });
+          }
         }}
       />
     </MobileScreen>
