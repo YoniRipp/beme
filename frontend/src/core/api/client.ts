@@ -16,23 +16,50 @@ export function getApiBase(): string {
   return API_BASE;
 }
 
-let inMemoryToken: string | null = null;
+/**
+ * A JWT, not the literal '1' that a much older build stored here as a mere "has session"
+ * flag. Sending that as a bearer token shadows a perfectly good cookie and 401s.
+ */
+function looksLikeJwt(value: string): boolean {
+  return value.split('.').length === 3;
+}
+
+function readStoredToken(): string | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    if (!stored || !looksLikeJwt(stored)) {
+      if (stored) localStorage.removeItem(STORAGE_KEYS.TOKEN);
+      return null;
+    }
+    return stored;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Mirrored to localStorage so a cold start can attach the Authorization header before the
+ * first request goes out. The httpOnly cookie is still the primary carrier, but it is
+ * dropped whenever the app and the API are not same-site -- the Capacitor shell, and the
+ * cross-origin dev/cloud domains that caused the login-logout bug in 47a869f -- which left
+ * an in-memory-only token meaning a fresh login on every launch.
+ */
+let inMemoryToken: string | null = readStoredToken();
 
 export function getToken(): string | null {
   return inMemoryToken;
 }
 
-/** Cookie sessions cannot be inspected from JS; callers should verify via /auth/me. */
-export function hasSession(): boolean {
-  return true;
-}
-
 export function setToken(token: string | null): void {
   inMemoryToken = token;
   try {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    if (token) {
+      localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    }
   } catch {
-    // ignore
+    // Private mode or a full quota -- the in-memory token still covers this session.
   }
 }
 
@@ -53,24 +80,36 @@ export interface RequestOptions {
   body?: unknown;
   timeoutMs?: number;
   suppressUnauthorizedEvent?: boolean;
+  /**
+   * Keep this request out of the offline replay queue. Auth calls must never be queued:
+   * `flush` replays without an Authorization header and breaks out of the loop on a 401
+   * without incrementing retries, so a stuck auth entry blocks every real mutation behind it.
+   */
+  skipOfflineQueue?: boolean;
 }
 
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, headers, timeoutMs = DEFAULT_TIMEOUT_MS, suppressUnauthorizedEvent } = options;
-  const isMutation = method !== 'GET';
+export async function request<T>(
+  path: string,
+  options: RequestOptions = {},
+  /** Internal: this attempt deliberately omits the bearer token. Callers never pass it. */
+  isCookieRetry = false,
+): Promise<T> {
+  const { method = 'GET', body, headers, timeoutMs = DEFAULT_TIMEOUT_MS, suppressUnauthorizedEvent, skipOfflineQueue } = options;
+  const isWrite = method !== 'GET';
+  const canQueueOffline = isWrite && !skipOfflineQueue;
   const fullUrl = `${API_BASE}${path}`;
   const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-Client-Platform': 'web',
     ...headers,
   } as Record<string, string>;
-  if (inMemoryToken) {
+  if (inMemoryToken && !isCookieRetry) {
     requestHeaders['Authorization'] = `Bearer ${inMemoryToken}`;
   }
   const bodyStr = body != null ? JSON.stringify(body) : null;
 
   // Offline queue: enqueue mutations when offline instead of failing
-  if (isMutation && !navigator.onLine && FEATURE_FLAGS.PWA_OFFLINE_SYNC) {
+  if (canQueueOffline && !navigator.onLine && FEATURE_FLAGS.PWA_OFFLINE_SYNC) {
     await enqueue(fullUrl, method, bodyStr, requestHeaders);
     // Return a placeholder so callers don't break. React Query will refetch on reconnect.
     return (body ?? {}) as T;
@@ -93,7 +132,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       throw new Error('Request timed out');
     }
     // If online request fails due to network and offline sync is enabled, queue it
-    if (isMutation && FEATURE_FLAGS.PWA_OFFLINE_SYNC) {
+    if (canQueueOffline && FEATURE_FLAGS.PWA_OFFLINE_SYNC) {
       await enqueue(fullUrl, method, bodyStr, requestHeaders);
       return (body ?? {}) as T;
     }
@@ -101,6 +140,13 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
   clearTimeout(timeoutId);
   if (res.status === 401) {
+    // The server reads the Authorization header in preference to the cookie, so a stored
+    // token that has gone stale shadows a session that would still work. Drop it and let
+    // the cookie answer once. Reads only -- retrying a write risks applying it twice.
+    if (!isCookieRetry && !isWrite && requestHeaders['Authorization']) {
+      setToken(null);
+      return request<T>(path, options, true);
+    }
     handleUnauthorized({ suppressEvent: suppressUnauthorizedEvent });
     const err = (await res.json().catch(() => ({}))) as { error?: string | { message?: string } };
     const errMsg = typeof err.error === 'string' ? err.error : err.error?.message;

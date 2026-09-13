@@ -5,6 +5,11 @@ Non-obvious rules that cause real bugs when missed.
 ## Units and time
 
 - **Dates** — local calendar `YYYY-MM-DD`. Not UTC, not ISO timestamps, for anything day-scoped.
+- **Rendering a `DATE` column** — use `toDateString()` from `backend/src/utils/date.ts`.
+  `pg` parses a `DATE` into a JS `Date` at *local* midnight, so `.toISOString()`
+  converts to UTC and rolls the day back in every timezone ahead of UTC
+  (UTC+1..UTC+14). Never `.toISOString().slice(0, 10)` a DATE-derived `Date`.
+  Shift day strings with `addDays()` rather than `Date` arithmetic.
 - **Week** — Sunday to Saturday.
 - **Weight** — kilograms, in workouts and in voice parsing.
 

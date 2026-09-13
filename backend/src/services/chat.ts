@@ -8,6 +8,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { config } from '../config/index.js';
 import { getPool } from '../db/pool.js';
 import { logger } from '../lib/logger.js';
+import { toDateString } from '../utils/date.js';
 import { fetchUserContext } from './insights.js';
 import { VOICE_TOOLS } from '../../voice/tools.js';
 import { executeActions, type ExecuteResult } from './voiceExecutor.js';
@@ -89,7 +90,7 @@ async function buildDetailedWorkouts(userId: string): Promise<string> {
     const exerciseList = exercises
       ? exercises.map(e => `  - ${e.name}${e.sets ? ` ${e.sets}x${e.reps ?? '?'}` : ''}${e.weight ? ` @ ${e.weight}kg` : ''}`).join('\n')
       : '  (no exercise details)';
-    return `${(w.date as Date).toISOString?.().slice(0, 10) ?? w.date}: ${w.title} (${w.type}, ${w.duration_minutes}min)\n${exerciseList}`;
+    return `${toDateString(w.date)}: ${w.title} (${w.type}, ${w.duration_minutes}min)\n${exerciseList}`;
   });
   return `Recent workouts (last 7 days):\n${lines.join('\n')}`;
 }
@@ -107,7 +108,7 @@ async function buildDetailedFood(userId: string): Promise<string> {
   if (result.rows.length === 0) return 'Recent nutrition (last 7 days): No food logged.';
 
   const lines = result.rows.map((d: Record<string, unknown>) =>
-    `${(d.date as Date).toISOString?.().slice(0, 10) ?? d.date}: ${d.cal} kcal, ${d.protein}g protein, ${d.carbs}g carbs, ${d.fats}g fat`
+    `${toDateString(d.date)}: ${d.cal} kcal, ${d.protein}g protein, ${d.carbs}g carbs, ${d.fats}g fat`
   );
   return `Recent daily nutrition (last 7 days):\n${lines.join('\n')}`;
 }
@@ -185,7 +186,7 @@ export async function buildChatSystemPrompt(userId: string): Promise<string> {
   if (ctx.cycle.length > 0) {
     const lastStart = ctx.cycle.find((c: Record<string, unknown>) => c.period_start);
     if (lastStart) {
-      const startDate = (lastStart.date as Date).toISOString?.().slice(0, 10) ?? lastStart.date;
+      const startDate = toDateString(lastStart.date);
       const daysSince = Math.floor((Date.now() - new Date(startDate as string).getTime()) / (24 * 60 * 60 * 1000));
       const cycleLen = Number(p.average_cycle_length ?? 28);
       let phase = 'unknown';

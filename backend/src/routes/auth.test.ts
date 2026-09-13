@@ -42,6 +42,9 @@ vi.mock('../services/auth.js', () => ({
 vi.mock('../config/index.js', () => ({
   config: {
     jwtSecret: 'test-jwt-secret',
+    // Inlined rather than shared with SESSION_TTL_MS below: this factory is hoisted above
+    // the module's consts and the controller reads config at import time.
+    sessionTtlMs: 365 * 24 * 60 * 60 * 1000,
     googleClientId: null,
     facebookAppId: null,
     twitterClientId: null,
@@ -52,9 +55,14 @@ vi.mock('../config/index.js', () => ({
 vi.mock('../middleware/auth.js', () => ({
   requireAuth: (req: any, res: any, next: any) => {
     req.user = { id: 'user-1', email: 'user@test.com', role: 'user' };
+    // Stands in for the MCP shared-secret branch of the real middleware.
+    req.mcpAuth = req.headers['x-test-mcp-auth'] === '1';
     next();
   },
 }));
+
+/** Mirrors sessionTtlMs in the config mock above. */
+const SESSION_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 import authRouter from './auth.js';
 import { errorHandler } from '../middleware/errorHandler.js';
@@ -319,6 +327,67 @@ describe('auth routes', () => {
       const res = await request(app)
         .get('/api/auth/me')
         .set('Authorization', 'Bearer test-token')
+        .expect(404);
+
+      expect(res.body.error.message).toBe('User not found');
+    });
+  });
+
+  describe('POST /api/auth/refresh', () => {
+    const user = {
+      id: 'user-1',
+      email: 'user@test.com',
+      name: 'Test User',
+      role: 'user',
+    };
+
+    it('mints a fresh token so an in-use session never expires', async () => {
+      mockRefreshToken.mockResolvedValueOnce({ user, token: 'fresh-jwt-token' });
+
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .set('Authorization', 'Bearer stale-jwt-token')
+        .expect(200);
+
+      expect(mockRefreshToken).toHaveBeenCalledWith('user-1');
+      expect(res.body.token).toBe('fresh-jwt-token');
+      expect(res.body.user).toMatchObject({ id: 'user-1', email: 'user@test.com' });
+    });
+
+    it('re-sets the token cookie with the full session lifetime', async () => {
+      mockRefreshToken.mockResolvedValueOnce({ user, token: 'fresh-jwt-token' });
+
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .set('Authorization', 'Bearer stale-jwt-token')
+        .expect(200);
+
+      const cookie = (res.headers['set-cookie'] as unknown as string[])[0];
+      expect(cookie).toContain('token=fresh-jwt-token');
+      // A cookie shorter than the JWT would end the session early -- that mismatch is
+      // what used to log people out after an hour.
+      expect(cookie).toContain(`Max-Age=${SESSION_TTL_MS / 1000}`);
+      expect(cookie).toContain('HttpOnly');
+    });
+
+    it('refuses to mint a token for an MCP-authenticated caller', async () => {
+      // The MCP shared secret is a rotatable server-side credential, not a login session.
+      // Exchanging it for a year-long JWT would let a token outlive the secret's rotation.
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .set('x-test-mcp-auth', '1')
+        .expect(400);
+
+      expect(res.body.error.message).toContain('MCP');
+      expect(mockRefreshToken).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when the user behind the token is gone', async () => {
+      mockRefreshToken.mockRejectedValueOnce(new NotFoundError('User not found'));
+
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .set('Authorization', 'Bearer stale-jwt-token')
         .expect(404);
 
       expect(res.body.error.message).toBe('User not found');

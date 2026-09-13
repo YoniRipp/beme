@@ -7,11 +7,15 @@
 import { logger } from '../../lib/logger.js';
 import { EventEnvelope } from '../dispatcher.js';
 import * as streakService from '../../services/streak.js';
+import { toDateString } from '../../utils/date.js';
 
 /** Extract date from event payload (falls back to today). */
 function eventDate(event: EventEnvelope): string {
-  const d = event.payload?.date ?? (event.metadata?.timestamp?.slice(0, 10) as string | undefined);
-  return d && typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : new Date().toISOString().slice(0, 10);
+  // The event timestamp is a UTC instant: read its local calendar day rather than
+  // slicing the UTC date off it, so the streak lands on the same day as the entry.
+  const ts = event.metadata?.timestamp;
+  const d = event.payload?.date ?? (ts ? toDateString(new Date(ts)) : undefined);
+  return d && typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : toDateString(new Date());
 }
 
 type SubscribeFn = (eventType: string, handler: (event: EventEnvelope) => Promise<void> | void) => void;

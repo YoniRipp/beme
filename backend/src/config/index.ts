@@ -19,6 +19,25 @@ dotenv.config({ path: path.join(backendRoot, `.env.${mode}`) });
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+const SESSION_TTL_DEFAULT_DAYS = 365;
+const SESSION_TTL_DEFAULT_MS = SESSION_TTL_DEFAULT_DAYS * 24 * 60 * 60 * 1000;
+const SESSION_TTL_DAYS = process.env.SESSION_TTL_DAYS;
+
+/**
+ * Zod would reject a bad value as `sessionTtlMs: expected number, received nan` -- a field
+ * name that appears nowhere in the operator's env file. Fail by the name they actually set.
+ */
+function resolveSessionTtlMs(): number {
+  if (!SESSION_TTL_DAYS) return SESSION_TTL_DEFAULT_MS;
+  const days = Number(SESSION_TTL_DAYS);
+  if (!Number.isFinite(days) || days <= 0) {
+    throw new Error(
+      `SESSION_TTL_DAYS must be a positive number of days, got "${SESSION_TTL_DAYS}"`
+    );
+  }
+  return days * 24 * 60 * 60 * 1000;
+}
+
 const configSchema = z.object({
   port: z.coerce.number().int().min(1).max(65535),
   host: z.string().optional(),
@@ -30,6 +49,11 @@ const configSchema = z.object({
   jwtSecret: z.string().nullable().refine((v) => !isProduction || (v != null && v.length > 0), {
     message: 'JWT_SECRET must be set in production',
   }),
+  // How long a login lasts. One value drives both the JWT `exp` claim and the token
+  // cookie's maxAge -- when they disagree the shorter one silently wins and users get
+  // logged out early. Long by design: the session rolls forward on every app open
+  // (POST /api/auth/refresh), so an active user never sees the login screen again.
+  sessionTtlMs: z.coerce.number().int().min(60 * 1000).default(SESSION_TTL_DEFAULT_MS),
   corsOrigin: isProduction
     ? z.string().min(1, 'CORS_ORIGIN must be set to an explicit origin in production')
     : z.union([z.string(), z.boolean(), z.undefined()]),
@@ -115,6 +139,7 @@ const rawConfig = {
   geminiApiKey: process.env.GEMINI_API_KEY,
   geminiModel: process.env.GEMINI_MODEL,
   jwtSecret: JWT_SECRET,
+  sessionTtlMs: resolveSessionTtlMs(),
   corsOrigin: CORS_ORIGIN,
   frontendOrigin: FRONTEND_ORIGIN,
   googleClientId: process.env.GOOGLE_CLIENT_ID,

@@ -6,6 +6,13 @@
  * `42703 column "x" does not exist` from whichever model selects the missing column --
  * which surfaces as a broken feature, not as a schema error anyone can read.
  *
+ * A column existing on both sides is not enough. When the two paths disagree on
+ * nullability, type or default, every query still compiles and the drift only shows up as
+ * a write that succeeds in dev and fails in production -- e.g. user_profiles was NOT NULL
+ * on the migrated path and nullable under initSchema, so an insert that omitted
+ * water_goal_glasses 500'd with `23502` for production users and passed every dev test.
+ * So compare the full column definition, not just its name.
+ *
  * Usage:
  *   MIGRATED_DATABASE_URL=... INIT_DATABASE_URL=... node scripts/check-schema-drift.mjs
  *
@@ -19,21 +26,49 @@ import pg from 'pg';
 const IGNORED_TABLES = new Set(['pgmigrations']);
 
 const COLUMNS_SQL = `
-  SELECT table_name, column_name
+  SELECT table_name, column_name, is_nullable, data_type, udt_name, column_default,
+         character_maximum_length, numeric_precision, numeric_scale
   FROM information_schema.columns
   WHERE table_schema = 'public'
   ORDER BY table_name, column_name
 `;
+
+/** `numeric(3,1)`, `varchar(255)`, `integer` -- precision is part of the contract too. */
+function typeOf(row) {
+  // data_type flattens every array to the literal 'ARRAY' and every enum/composite to
+  // 'USER-DEFINED', which would make text[] and int[] compare equal. udt_name keeps the
+  // element type (`_text`, `_int4`) and the enum's name.
+  if (row.data_type === 'ARRAY' || row.data_type === 'USER-DEFINED') return row.udt_name;
+  if (row.character_maximum_length != null) return `${row.data_type}(${row.character_maximum_length})`;
+  // numeric_precision is also set for int/bigint, where it is implied by the type name.
+  if (row.data_type === 'numeric' && row.numeric_precision != null) {
+    return `${row.data_type}(${row.numeric_precision},${row.numeric_scale})`;
+  }
+  return row.data_type;
+}
+
+/** The attributes of a column that a write can trip over, as a comparable object. */
+function definitionOf(row) {
+  return {
+    type: typeOf(row),
+    nullable: row.is_nullable === 'YES',
+    default: row.column_default ?? null,
+  };
+}
+
+function describe(def) {
+  return `${def.type}${def.nullable ? '' : ' NOT NULL'}${def.default === null ? '' : ` DEFAULT ${def.default}`}`;
+}
 
 async function columnsOf(connectionString) {
   const client = new pg.Client({ connectionString, ssl: false });
   await client.connect();
   try {
     const { rows } = await client.query(COLUMNS_SQL);
-    return new Set(
+    return new Map(
       rows
         .filter((r) => !IGNORED_TABLES.has(r.table_name))
-        .map((r) => `${r.table_name}.${r.column_name}`),
+        .map((r) => [`${r.table_name}.${r.column_name}`, definitionOf(r)]),
     );
   } finally {
     await client.end();
@@ -49,8 +84,15 @@ if (!migratedUrl || !initUrl) {
 
 const [migrated, init] = await Promise.all([columnsOf(migratedUrl), columnsOf(initUrl)]);
 
-const missingFromMigrations = [...init].filter((c) => !migrated.has(c)).sort();
-const missingFromInitSchema = [...migrated].filter((c) => !init.has(c)).sort();
+const missingFromMigrations = [...init.keys()].filter((c) => !migrated.has(c)).sort();
+const missingFromInitSchema = [...migrated.keys()].filter((c) => !init.has(c)).sort();
+
+// Columns both paths create, but define differently.
+const mismatched = [...migrated.keys()]
+  .filter((c) => init.has(c))
+  .map((c) => [c, migrated.get(c), init.get(c)])
+  .filter(([, m, i]) => describe(m) !== describe(i))
+  .sort(([a], [b]) => a.localeCompare(b));
 
 if (missingFromMigrations.length) {
   console.error('\nDeclared by src/db/schema.ts but MISSING from migrations/');
@@ -68,8 +110,23 @@ if (missingFromInitSchema.length) {
   console.error('  no-op on databases that predate them).');
 }
 
-if (missingFromMigrations.length || missingFromInitSchema.length) {
-  console.error(`\nSchema drift: ${missingFromMigrations.length + missingFromInitSchema.length} column(s).`);
+if (mismatched.length) {
+  console.error('\nDefined differently by migrations/ and src/db/schema.ts');
+  console.error('  -> queries still compile, so this surfaces as a write that works in dev');
+  console.error('     and fails in production (or the reverse):');
+  for (const [column, m, i] of mismatched) {
+    console.error(`     ${column}`);
+    console.error(`       migrations/    ${describe(m)}`);
+    console.error(`       schema.ts      ${describe(i)}`);
+  }
+  console.error('  Fix: migrations/ is what production runs, so it is the source of truth --');
+  console.error('  bring schema.ts in line, and add a migration when the intended contract is');
+  console.error('  the tighter one (backfill first; SET NOT NULL fails on existing NULLs).');
+}
+
+const drifted = missingFromMigrations.length + missingFromInitSchema.length + mismatched.length;
+if (drifted) {
+  console.error(`\nSchema drift: ${drifted} column(s).`);
   process.exit(1);
 }
 

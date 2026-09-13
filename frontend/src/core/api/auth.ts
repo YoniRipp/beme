@@ -31,5 +31,17 @@ export const authApi = {
   exchangeCode: (code: string) =>
     request<AuthResponse>('/api/auth/exchange', { method: 'POST', body: { code } }),
   me: () => request<ApiUser>('/api/auth/me', { suppressUnauthorizedEvent: true }),
-  logout: () => request<void>('/api/auth/logout', { method: 'POST', suppressUnauthorizedEvent: true }),
+  /** Validates the session and mints a token with a fresh expiry. */
+  refresh: () =>
+    request<AuthResponse>('/api/auth/refresh', {
+      method: 'POST',
+      suppressUnauthorizedEvent: true,
+      skipOfflineQueue: true,
+    }),
+  logout: () =>
+    request<void>('/api/auth/logout', {
+      method: 'POST',
+      suppressUnauthorizedEvent: true,
+      skipOfflineQueue: true,
+    }),
 };
