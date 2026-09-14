@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { Card, Text } from 'react-native-paper';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { useEnergy } from '../hooks/useEnergy';
@@ -12,9 +12,28 @@ import {
   getCalorieTrendData,
   CHART_COLORS,
 } from '../lib/analytics';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import { useThemeContext } from '../theme/ThemeContext';
 import { BarChart, LineChart, PieChart } from 'react-native-gifted-charts';
 
 export function InsightsScreen() {
+  const { colors } = useThemeContext();
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, backgroundColor: colors.background },
+    content: { padding: 16, paddingBottom: 32 },
+    card: { marginBottom: 16 },
+    cardTitle: { fontWeight: '600', marginBottom: 4 },
+    subtitle: { color: colors.textMuted, marginBottom: 12 },
+    chartLabel: { fontSize: 8, color: colors.textMuted },
+    pieContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
+    legend: { gap: 4 },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    legendDot: { width: 10, height: 10, borderRadius: 5 },
+    statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+    statItem: { width: '50%', paddingVertical: 8, alignItems: 'center' },
+    statValue: { fontWeight: '700', color: colors.text },
+    statLabel: { color: colors.textMuted, textAlign: 'center' },
+  }));
   const { workouts, workoutsLoading } = useWorkouts();
   const { foodEntries, checkIns, energyLoading } = useEnergy();
   const loading = workoutsLoading || energyLoading;
@@ -39,7 +58,7 @@ export function InsightsScreen() {
     return <EmptyState icon="chart-line" title="No data yet" subtitle="Log workouts and food to see insights" />;
   }
 
-  const barData = freqData.map((d) => ({ value: d.count, label: d.week, frontColor: '#3b82f6' }));
+  const barData = freqData.map((d) => ({ value: d.count, label: d.week, frontColor: colors.primary }));
   const lineData = calorieData.map((d) => ({ value: d.calories, label: d.date }));
 
   return (
@@ -129,20 +148,3 @@ export function InsightsScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 16, paddingBottom: 32 },
-  card: { marginBottom: 16 },
-  cardTitle: { fontWeight: '600', marginBottom: 4 },
-  subtitle: { color: '#6b7280', marginBottom: 12 },
-  chartLabel: { fontSize: 8, color: '#9ca3af' },
-  pieContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
-  legend: { gap: 4 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  statItem: { width: '50%', paddingVertical: 8, alignItems: 'center' },
-  statValue: { fontWeight: '700', color: '#111827' },
-  statLabel: { color: '#6b7280', textAlign: 'center' },
-});

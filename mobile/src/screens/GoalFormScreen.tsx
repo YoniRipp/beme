@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Button, SegmentedButtons, RadioButton, Text } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useGoals } from '../hooks/useGoals';
 import { GoalType, GoalPeriod, GOAL_TYPES, GOAL_PERIODS } from '../types/goals';
+import { useThemedStyles } from '../theme/useThemedStyles';
 import Toast from 'react-native-toast-message';
 
 export function GoalFormScreen() {
+  const styles = useThemedStyles((colors) => ({
+    flex: { flex: 1 },
+    container: { flex: 1, backgroundColor: colors.background },
+    content: { padding: 16 },
+    label: { marginTop: 16, marginBottom: 8, fontWeight: '600' },
+    segment: { marginBottom: 8 },
+    input: { marginBottom: 8 },
+    saveButton: { marginTop: 24, backgroundColor: colors.primary },
+  }));
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const goalId = route.params?.goalId;
@@ -91,13 +101,3 @@ export function GoalFormScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 16 },
-  label: { marginTop: 16, marginBottom: 8, fontWeight: '600' },
-  segment: { marginBottom: 8 },
-  input: { marginBottom: 8 },
-  saveButton: { marginTop: 24, backgroundColor: '#3b82f6' },
-});
