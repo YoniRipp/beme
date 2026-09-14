@@ -3,7 +3,7 @@
  */
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { requirePro } from '../middleware/requirePro.js';
+import { requireAiQuota } from '../middleware/aiAccess.js';
 import { validateBody } from '../middleware/validateBody.js';
 import { lookupOrCreateFoodSchema } from '../schemas/food.js';
 import * as foodSearchController from '../controllers/foodSearch.js';
@@ -13,6 +13,6 @@ const router = Router();
 
 router.get('/api/food/search', foodSearchController.search);
 router.get('/api/food/barcode/:code', barcodeController.lookupBarcode);
-router.post('/api/food/lookup-or-create', requireAuth, requirePro, validateBody(lookupOrCreateFoodSchema), foodSearchController.lookupOrCreate);
+router.post('/api/food/lookup-or-create', requireAuth, requireAiQuota, validateBody(lookupOrCreateFoodSchema), foodSearchController.lookupOrCreate);
 
 export default router;
