@@ -91,14 +91,15 @@ export function MobileGoalCard({ goal, current = 0, percentage, onEdit, onDelete
     // The unfilled remainder of the bar. `surfaceMuted` — what this was — maps to the web's
     // `--paper-2`, NOT to the `--muted` the web draws its tracks with, and against this
     // card's own `surface` it comes to 1.03:1 in dark, the default theme: the remainder
-    // vanishes and a 20% bar reads as full. `border` is 1.27:1 dark / 1.37:1 light, the best
-    // of the existing roles in both. See ProgressRing.tsx for the full table; both move to
-    // the real `muted` role when PR #308 adds one.
+    // vanishes and a 20% bar reads as full. `muted` is that role (1.19:1 dark / 1.17:1
+    // light) and is what the web's own bars use — `home/WaterTracker.tsx`'s
+    // `h-1.5 bg-muted rounded-full`, not the unrendered `ui/progress.tsx` primitive the
+    // spec cites (that one is `bg-secondary`). See ProgressRing.tsx for the full table.
     progress: {
       height: 6,
       borderRadius: radius.sm,
       marginTop: spacing.sm,
-      backgroundColor: colors.border,
+      backgroundColor: colors.muted,
     },
     actions: {
       flexDirection: 'row',
