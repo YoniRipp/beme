@@ -21,4 +21,4 @@ Expo (React Native) app for TrackVibe. Uses the same backend API as the web app.
 
 ## Auth
 
-Login and signup use the same backend as the web app. Token is stored in AsyncStorage. After login, all API requests send `Authorization: Bearer <token>`.
+Login and signup use the same backend as the web app. The token is stored in `expo-secure-store` (Keychain on iOS, EncryptedSharedPreferences on Android), not AsyncStorage. After login, all API requests send `Authorization: Bearer <token>`.
