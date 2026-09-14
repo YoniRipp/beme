@@ -1,19 +1,29 @@
 version: 2
 updates:
+  # This monorepo is npm workspaces, so there is exactly one lockfile and it lives at
+  # the repo root -- `backend/`, `frontend/` and `mobile/` have package.json files but
+  # no package-lock.json of their own.
+  #
+  # Dependabot was pointed at those three directories. It would bump the workspace's
+  # package.json, find no lockfile beside it to update, and leave the root lockfile
+  # holding the old version. `npm ci` refuses to run when the two disagree, and it is
+  # the first step of every ci.yml job that installs anything -- so the blast radius
+  # of a bump is not the workspace it names. A mobile-only bump took down backend,
+  # frontend, shared, migrations and the security audits along with it. That is why
+  # #271 through #284 are red on nearly every check.
+  #
+  # Pointed at the root, Dependabot resolves the workspaces itself and updates both
+  # files in the same commit.
   - package-ecosystem: npm
-    directory: backend
+    directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
 
+  # Ships separately from the monorepo and carries its own lockfile, so it needs its
+  # own entry -- the root workspace resolution does not reach it.
   - package-ecosystem: npm
-    directory: frontend
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-
-  - package-ecosystem: npm
-    directory: mobile
+    directory: backend/mcp-server
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
