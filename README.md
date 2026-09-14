@@ -151,7 +151,7 @@ flowchart TB
 | **Event Bus** | BullMQ (Redis) or AWS SQS. Zod-validated event envelopes |
 | **File Storage** | AWS S3 with pre-signed URLs |
 | **Testing** | Vitest (backend), React Testing Library (frontend), Playwright (E2E) |
-| **Mobile** | Expo React Native, Capacitor |
+| **Mobile** | Expo React Native (SDK 54) — the native client. The Capacitor shell in `frontend/` is retired; nothing in CI builds it. |
 | **CI/CD** | GitHub Actions (lint, test, build, Docker, Lighthouse PWA checks) |
 
 ---
@@ -969,6 +969,7 @@ Full engineering standards (API layering, data access, events, frontend data fet
 | Document | Description |
 |----------|-------------|
 | [docs/README.md](docs/README.md) | Documentation index |
+| [docs/HANDOFF.md](docs/HANDOFF.md) | Work in flight: open PRs, landing order, owner actions |
 | [docs/RUNNING.md](docs/RUNNING.md) | Running locally, Railway, AWS |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | Git workflow (branches, tags, promotion) |
 | [docs/AGENT-OS.md](docs/AGENT-OS.md) | Agent OS: standards, specs, and AI agent workflow |
