@@ -42,6 +42,74 @@ say those five RGB values are `primary40`/`primary80` composited over the surfac
 Native's shadow handling doesn't break. There is no way to inherit them and not inherit
 Material purple.
 
+## The seventh, and the only one that is our own fault
+
+Everything above is Paper's default leaking through. This one is a value **we wrote**, and
+it is the highest-priority item in this spec because it is the only defect here that a user
+can see that nobody else can be blamed for.
+
+`mobile/src/components/shared/ProgressRing.tsx:44` hardcodes the unfilled ring track:
+
+```tsx
+<Circle … stroke="#e5e7eb" … />
+```
+
+`#e5e7eb` is Tailwind's `gray-200` — a cool light grey that appears nowhere in the app's
+warm palette in either theme. Every other colour in that component is correctly themed
+through `useThemedStyles`; the track is the one that was missed.
+
+It sat on the frozen-hex allowlist in `noFrozenPaletteImports.test.ts` with a justification
+that was **true when written**:
+
+> the component has no current call sites (`"<ProgressRing"` greps empty), so it is not a
+> live dark-mode defect today
+
+PR #303 gives it its first call site — the weekly goal ring on `BodyScreen` — inside a card
+whose background is `colors.surface`. Dark is the default theme, so `#e5e7eb` on `#191715`
+is a **14.44:1** light-grey hoop on a near-black card. The #303 agent correctly declined to
+touch the component (the palette is this spec's) and rewrote the justification so the tree
+does not carry a false claim.
+
+### The proposed fix is wrong, and the numbers say so
+
+#303 names `colors.surfaceMuted`. Checked against the web rather than taken as given, and
+it does not hold up. The web has **five** ring/track call sites and every one of them uses
+the same thing:
+
+```
+ui/progress-ring.tsx:46        stroke="hsl(var(--muted))"
+insights/AiInsightsSection.tsx:57   stroke="hsl(var(--muted))"
+goals/GoalCard.tsx:57          stroke="hsl(var(--muted))"
+home/MacroCircles.tsx:49       stroke="hsl(var(--muted))"
+pages/Energy.tsx:396           stroke="hsl(var(--muted))"
+```
+
+`--muted` is not `--paper-2`. `ColorRoles.surfaceMuted` maps to `--paper-2`, and in dark
+mode the two are five lightness points apart — which is the whole ballgame, because the
+track has to be visible against the card it sits on:
+
+| track candidate | dark value | on `surface` `#191715` | light value | on `#ffffff` |
+|---|---|---|---|---|
+| `surfaceMuted` (`--paper-2`) — **as proposed** | `#1b1a18` | **1.03** | `#f5f0eb` | 1.13 |
+| `--muted` — **what the web uses** | `#292624` | 1.19 | `#f0edea` | 1.17 |
+| `border` (`--hairline`) | `#2e2b28` | 1.27 | `#e0dcd6` | 1.37 |
+| `#e5e7eb` — today | `#e5e7eb` | 14.44 | `#e5e7eb` | 1.24 |
+
+At **1.03:1** the proposed track differs from the card by five units per channel. It would
+trade a too-loud wrong colour for an invisible one — a ring with no visible remainder, which
+reads as "complete" at every value. That is arguably a worse bug than the one it fixes,
+because it fails silently.
+
+### So `ColorRoles` needs a `muted` role
+
+There is no role for `--muted` today, which is exactly why #303 reached for the nearest
+neighbour. Add it alongside `scrim` and `shadow` (see Gaps) and point the track at it.
+
+If adding a third role is judged too much for this pass, **`border` is the correct interim**
+— it is closer to `--muted` than `surfaceMuted` is in *both* themes, and it is the one
+existing role that stays visible on a dark card. `surfaceMuted` is the single choice that
+fails in the theme that ships as the default.
+
 ## Why the existing guards didn't catch it
 
 `mobile/src/theme/__tests__/noFrozenPaletteImports.test.ts` and `rawTextNamesItsFont.test.ts`
@@ -53,6 +121,18 @@ catch this one, for a structural reason worth writing down:
   offending token anywhere in `mobile/src` to find.
 - The offending colour values live in `node_modules/react-native-paper/lib/.../v3/tokens.js`,
   which `collectSourceFiles` explicitly skips.
+
+There is a second, narrower blind spot, and `ProgressRing` is a worked example of it: **an
+allowlist entry justified by "nothing uses this yet" expires silently.** The frozen-hex
+guard's allowlist is a `Record<file, Record<hex, reason>>` where the reason is a free-text
+string nothing reads. `ProgressRing`'s entry said "the component has no current call sites
+(`"<ProgressRing"` greps empty)" — a claim that was true, is now false, and that no test
+re-checked when #303 added the call site. The guard stayed green through the exact
+transition that invalidated it.
+
+That particular claim is *mechanically checkable*: "this component has no call sites" is a
+grep. An allowlist entry whose stated reason has stopped being true is a defect the guard
+can catch on itself.
 
 A sharper irony: `useAppTheme.test.tsx` already contains exactly the right *shape* of
 assertion — a numeric WCAG check over the resolved value, written after a near-identical
@@ -186,6 +266,12 @@ Small, and all mechanical transcriptions of CSS that already exists:
 - **`scrim`** — the web has `--scrim` (`20 14% 8%` light = `#171312`, `0 0% 0%` dark) and
   both `dialog.tsx` and `sheet.tsx` overlay with `bg-scrim/50`. `ColorRoles` has no
   equivalent. Add it.
+- **`muted`** — `--muted` (`32 18% 93%` = `#f0edea` light, `30 7% 15%` = `#292624` dark).
+  Distinct from `surfaceMuted`/`--paper-2`, and the web spends it on every progress-ring
+  track (5 call sites) plus `progress.tsx`'s bar. This is the role `ProgressRing` needs and
+  the reason its fix was mis-aimed. Note in the header comment that `--muted` and
+  `--paper-2` are *different colours* and which one is which — the near-identical names are
+  what made the wrong one look right.
 - **`shadow`** — the web's light shadows are `hsl(28 20% 20% / …)` (a warm near-black,
   `#3d3229`), dark is pure black. Add it, so Android elevation is not hardcoded to `#000`.
 - **An alpha helper.** Six of the mappings above are "role at N%". Put one

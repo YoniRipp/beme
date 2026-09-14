@@ -16,7 +16,15 @@
   in a component is a bug — and an unmapped MD3 role is a one-off colour that somebody
   else chose.
 - **Never inline a hex colour** (`mobile/CLAUDE.md`). The AST guards enforce this and must
-  stay green; the new mappings all read from `palette.*`, so none of them trip it.
+  stay green; the new mappings all read from `palette.*`, so none of them trip it. The one
+  live violation, `ProgressRing`'s `#e5e7eb` track, comes off the allowlist in Task 1b
+  rather than being re-justified.
+- **An allowlist entry is a claim about the codebase, not a note.** `ProgressRing`'s
+  exemption was justified by "no current call sites", which quietly stopped being true. A
+  claim nothing re-evaluates is a comment; Task 5b makes the checkable ones checked.
+- **Pick the role the web actually spends, not the nearest name.** `surfaceMuted`
+  (`--paper-2`) and `muted` (`--muted`) read as synonyms and are not: at 1.03:1 on a dark
+  card the first is invisible. Trace the web call site before choosing a role.
 - **The web is the reference.** Every target value traces to `frontend/src/index.css` or a
   `frontend/src/components/ui/` primitive. Where the web has no counterpart
   (`workoutSoft`, `sleepSoft`, MD3's `tertiary` family) that is stated rather than papered

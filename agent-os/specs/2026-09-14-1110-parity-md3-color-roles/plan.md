@@ -18,6 +18,13 @@ ships visibly off-brand and gets re-touched later.
 None of their findings are restated here; the dependency runs one way. This spec changes no
 screen's structure, only what the theme resolves underneath it.
 
+**#303 is the exception — it has already made one of these visible.** Its weekly goal ring
+on `BodyScreen` is the first call site `ProgressRing` has ever had, which turned a dormant
+hardcoded `#e5e7eb` into a light-grey hoop on a near-black card. #303 correctly left the
+component alone and rewrote the stale allowlist justification instead. Task 1b is that fix,
+pulled to the front of this plan; it is independent of the rest of the mapping and can land
+on its own.
+
 ## Task 1 — Make mobile and shared tests actually run
 
 - [ ] `.github/workflows/ci.yml`, `mobile` job: add a `npm test` step after the typecheck,
@@ -34,14 +41,45 @@ screen's structure, only what the theme resolves underneath it.
       `__tests__/`. The standard predates mobile coming back and should be widened rather
       than mobile being reorganised — raise it, don't silently diverge.
 
-## Task 2 — Add the two missing colour roles and the alpha helper
+## Task 1b — `ProgressRing`'s track (do this first of the colour work)
 
-- [ ] `packages/shared/src/tokens/colors.ts`: add `scrim` and `shadow` to `ColorRoles`,
-      `lightColors` and `darkColors`.
+Ranked ahead of the rest of the mapping: every other item in this spec is Paper's default
+leaking through, and this is a value we wrote that is now painting wrong on the default
+theme. It is also the smallest diff here.
+
+- [ ] `mobile/src/components/shared/ProgressRing.tsx:44` — replace `stroke="#e5e7eb"` with
+      the resolved theme value. The component already calls `useThemeContext()`, so
+      `colors.muted` is one identifier away; no new plumbing.
+- [ ] **Use `colors.muted` (added in Task 2), not `colors.surfaceMuted`.** #303's write-up
+      names `surfaceMuted`; that was a reasonable nearest-neighbour guess and it is wrong.
+      `surfaceMuted` is `--paper-2`; the web's five ring tracks are all `hsl(var(--muted))`,
+      and in dark mode `--paper-2` (`#1b1a18`) against the `colors.surface` card
+      (`#191715`) is **1.03:1** — a five-unit difference, i.e. a ring with no visible
+      remainder. `--muted` (`#292624`) gives 1.19. Put that number in the commit message so
+      nobody re-simplifies it back.
+- [ ] If Task 2's `muted` role is deferred, use `colors.border` — 1.27 dark / 1.37 light,
+      closer to `--muted` than `surfaceMuted` in both themes. Do **not** ship `surfaceMuted`.
+- [ ] Delete the `ProgressRing.tsx` entry from `ALLOWED_HEX_LITERALS` in
+      `noFrozenPaletteImports.test.ts`. The guard should go red if the hex comes back.
+- [ ] Sanity-check the sibling: `#303` reached for `surfaceMuted` because the role names are
+      confusable. Grep for other `surfaceMuted` uses that are really "the muted track/fill"
+      rather than "a muted section background" and fix them in the same pass.
+- [ ] This is the one item here worth landing ahead of #303's merge if the sequencing allows
+      — it is #303's screen that makes it visible.
+
+## Task 2 — Add the three missing colour roles and the alpha helper
+
+- [ ] `packages/shared/src/tokens/colors.ts`: add `scrim`, `shadow` and `muted` to
+      `ColorRoles`, `lightColors` and `darkColors`.
       - `scrim`: `--scrim` = `20 14% 8%` → `#171312` light, `0 0% 0%` → `#000000` dark
       - `shadow`: the shadow colour the web composites with — `hsl(28 20% 20%)` →
         `#3d3229` light, `#000000` dark (`.dark`'s `--shadow-*` are all `hsl(0 0% 0% / …)`)
-      - Extend the file's `role -> css custom property` header comment with both.
+      - `muted`: `--muted` = `32 18% 93%` → `#f0edea` light, `30 7% 15%` → `#292624` dark.
+        The web's track/fill role — 5 ring `stroke`s plus `progress.tsx`'s bar.
+      - Extend the file's `role -> css custom property` header comment with all three, and
+        state explicitly that `muted` (`--muted`) and `surfaceMuted` (`--paper-2`) are
+        **different colours**. The names are near-identical and that is what made the wrong
+        one look right; the comment is the only place that confusion gets headed off.
 - [ ] Add `withAlpha(hex: string, alpha: number): string` to the tokens package, returning
       eight-digit `#RRGGBBAA`. Must be a function: `primary` is accent-resolved at runtime,
       so a precomputed constant would freeze the default accent.
@@ -91,6 +129,28 @@ screen's structure, only what the theme resolves underneath it.
       the existing guards' messages are the bar to clear.
 - [ ] Iterate the **base theme's** keys, not a hardcoded list, so a role added in a future
       Paper minor fails the build instead of appearing silently in purple.
+
+## Task 5b — Make the frozen-hex allowlist expire on its own
+
+`ProgressRing` is the worked example: its entry was justified by "the component has no
+current call sites", that stopped being true when #303 added one, and nothing re-checked it.
+The guard stayed green through the exact transition that invalidated its own exemption.
+
+- [ ] In `noFrozenPaletteImports.test.ts`, give `ALLOWED_HEX_LITERALS` entries an optional
+      machine-checkable condition rather than only a free-text reason — start with the one
+      shape that has already bitten: `unusedComponent: 'ProgressRing'`, asserted by scanning
+      `mobile/src` for a JSX usage of that identifier and **failing if any is found**.
+- [ ] Failure message should say the exemption expired and why, not that a hex is
+      disallowed — the author needs to know the *justification* died, not just the symptom.
+- [ ] Keep free-text reasons for entries that genuinely aren't checkable — the categorical
+      chart colours in `lib/analytics.ts` are a real permanent exception and shouldn't be
+      forced into a condition shape.
+- [ ] After Task 1b there should be **no** `unusedComponent` entries left. That is fine and
+      is the point: the mechanism exists so the next one expires loudly. Add the fixture
+      regression case both existing guards use, so the rule is pinned even with zero live
+      entries.
+- [ ] Worth a line in the guard's docblock: an allowlist entry is a claim about the
+      codebase, and a claim nothing re-evaluates is a comment, not a guard.
 
 ## Task 6 — Contrast on the pairs Paper renders
 
@@ -150,4 +210,8 @@ screen's structure, only what the theme resolves underneath it.
       food-search results card in `FoodEntryFormScreen`, and the `Divider` in
       `WorkoutFormScreen` — in dark mode with the default green accent, then again in
       light mode.
+- [ ] `BodyScreen`'s weekly goal ring specifically, in **dark** mode, at a partial value
+      (say 2 of 5) so the unfilled arc is on screen. The whole question is whether the
+      track is visible against the card without shouting; 1.19:1 is a deliberately quiet
+      contrast and this is the one number in the spec that a screenshot can overrule.
 </content>
