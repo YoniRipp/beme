@@ -88,11 +88,17 @@ export function MobileGoalCard({ goal, current = 0, percentage, onEdit, onDelete
       color: colors.textMuted,
       marginTop: 2,
     },
+    // The unfilled remainder of the bar. `surfaceMuted` — what this was — maps to the web's
+    // `--paper-2`, NOT to the `--muted` the web draws its tracks with, and against this
+    // card's own `surface` it comes to 1.03:1 in dark, the default theme: the remainder
+    // vanishes and a 20% bar reads as full. `border` is 1.27:1 dark / 1.37:1 light, the best
+    // of the existing roles in both. See ProgressRing.tsx for the full table; both move to
+    // the real `muted` role when PR #308 adds one.
     progress: {
       height: 6,
       borderRadius: radius.sm,
       marginTop: spacing.sm,
-      backgroundColor: colors.surfaceMuted,
+      backgroundColor: colors.border,
     },
     actions: {
       flexDirection: 'row',

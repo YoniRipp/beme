@@ -89,6 +89,15 @@ change.
 - [x] While adopting `ProgressRing`: replace its hard-coded `stroke="#e5e7eb"` with the theme's
       muted surface. It is the one colour change in this spec and it is a rule violation, not
       taste.
+      **Correction, at implementation:** "the theme's muted surface" reads as
+      `ColorRoles.surfaceMuted`, and that is the one candidate that fails. `surfaceMuted` maps
+      to the web's `--paper-2`, not to the `--muted` the web's five ring tracks actually use;
+      against the card it is 1.03:1 in dark, the default theme, so the unfilled remainder
+      disappears and the ring reads as complete at every value. Landed as `colors.border`
+      (1.27:1 dark / 1.37:1 light, best of the existing roles in both) as an interim, until
+      PR #308 adds a real `muted` role. The linear `ProgressBar` on `MobileGoalCard` had the
+      same wrong token and moved with it. `ProgressRing.test.tsx` pins the track to a themed
+      role that repaints with the theme, which the hex-only palette guard cannot catch.
 
 ### Task 5 — Same defaults, same coupling
 

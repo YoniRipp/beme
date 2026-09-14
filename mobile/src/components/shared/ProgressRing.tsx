@@ -24,12 +24,33 @@ export function ProgressRing({
 }: ProgressRingProps) {
   const { colors } = useThemeContext();
   const resolvedColor = color ?? colors.primary;
-  // The unfilled track was a hardcoded '#e5e7eb' — a light-mode grey frozen at write time,
-  // invisible against the dark palette's surfaces and unreachable by the user's accent
-  // choice. `surfaceMuted` is the role the rest of the app already draws progress tracks
-  // with (see MobileGoalCard's ProgressBar) and is the mobile counterpart of the web ring's
-  // `hsl(var(--muted))`.
-  const trackColor = colors.surfaceMuted;
+  /**
+   * The unfilled remainder of the ring.
+   *
+   * This was a hardcoded '#e5e7eb': a light-mode grey, frozen at write time, unreachable by
+   * the user's accent choice and far too loud against the dark palette (14.44:1 on a
+   * `#191715` card).
+   *
+   * `border` is an INTERIM. The web draws every one of its five ring tracks with
+   * `hsl(var(--muted))` — `ui/progress-ring.tsx`, `insights/AiInsightsSection.tsx`,
+   * `goals/GoalCard.tsx`, `home/MacroCircles.tsx`, `pages/Energy.tsx` — and `ColorRoles` has
+   * no `muted` role to map that to yet; PR #308 adds one (with `scrim` and `shadow`), and
+   * this should move to it when it lands.
+   *
+   * THE TRAP, and why this is not `surfaceMuted`: the names read as synonyms and are not the
+   * same value. `ColorRoles.surfaceMuted` maps to the web's `--paper-2` (see
+   * packages/shared/src/tokens/colors.ts), not to `--muted`. Contrast against the card
+   * surface this ring sits on, WCAG, dark / light:
+   *
+   *   surfaceMuted  1.03:1 / 1.13:1   <- ~5 units per channel apart from the card in dark
+   *   border        1.27:1 / 1.37:1   <- best of the existing roles, in BOTH themes
+   *   web --muted   1.19:1 / 1.16:1
+   *
+   * Dark ships as the default theme, so `surfaceMuted` would make the unfilled remainder
+   * disappear and the ring read as 100% at every value — a silent failure, and worse than
+   * the loud grey it replaces.
+   */
+  const trackColor = colors.border;
   const styles = useThemedStyles((colors) => ({
     container: { alignItems: 'center' },
     textContainer: { position: 'absolute', top: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
@@ -45,6 +66,7 @@ export function ProgressRing({
     <View style={[styles.container, { width: size }]}>
       <Svg width={size} height={size}>
         <Circle
+          testID="progress-ring-track"
           cx={size / 2}
           cy={size / 2}
           r={radius}
