@@ -96,6 +96,18 @@ export function useWorkouts() {
     [deleteMutation]
   );
 
+  /**
+   * Ticks a workout off, or un-ticks it. Same signature as the web hook's
+   * (`frontend/src/hooks/useWorkouts.ts`) so the shared card contract is identical on
+   * both clients, and it rides the existing update mutation — `buildWorkoutUpdateBody`
+   * already forwards `completed`, so there is no wire work here.
+   */
+  const toggleWorkoutCompleted = useCallback(
+    (id: string, completed: boolean): Promise<void> =>
+      updateMutation.mutateAsync({ id, updates: { completed } }).then(() => undefined),
+    [updateMutation]
+  );
+
   const getWorkoutById = useCallback(
     (id: string) => workouts.find((w) => w.id === id),
     [workouts]
@@ -109,6 +121,7 @@ export function useWorkouts() {
     addWorkout,
     updateWorkout,
     deleteWorkout,
+    toggleWorkoutCompleted,
     getWorkoutById,
   };
 }

@@ -71,7 +71,7 @@ const ALLOWED_HEX_LITERALS: Record<string, Record<string, string>> = {
     '#ef4444': 'LineChart series colour (calorie trend) — categorical chart accent, same class as CHART_COLORS',
   },
   [path.join('components', 'shared', 'ProgressRing.tsx')]: {
-    '#e5e7eb': 'unfilled ring track — not in this task\'s enumerated fix list for this file, and the component has no current call sites ("<ProgressRing" greps empty), so it is not a live dark-mode defect today. Flagged here deliberately rather than silently left off this allowlist.',
+    '#e5e7eb': 'unfilled ring track. NOW A LIVE DEFECT: this entry was written when the component had no call sites, but BodyScreen\'s weekly goal ring is one as of the workouts-parity port, and `dark` is the DEFAULT theme — so a light-grey track is painted on a near-black card for every default user. Left in place only because the palette of this component is the design-system agent\'s to change (see agent-os/specs/2026-09-14-1140-parity-workouts-week-summary/shape.md, "Constraints"); the fix is `colors.surfaceMuted` via useThemedStyles, after which this entry should be deleted.',
   },
 };
 

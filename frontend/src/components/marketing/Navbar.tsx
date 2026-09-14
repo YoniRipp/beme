@@ -26,7 +26,7 @@ export function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/95 backdrop-blur-[12px] transition-shadow duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/95 backdrop-blur-[12px] pt-safe px-safe transition-shadow duration-300 ${
         scrolled ? 'shadow-sm' : ''
       }`}
     >
