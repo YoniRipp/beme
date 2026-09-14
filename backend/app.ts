@@ -90,8 +90,22 @@ export async function createApp() {
   app.use(requestIdMiddleware);
   app.use(metricsMiddleware);
 
-  // Health (not rate-limited)
-  app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
+  // Health (not rate-limited).
+  //
+  // With E2E_IDENTITY set the payload also carries `checkout`: the directory this process was
+  // started in. Nothing in the product reads it. It exists because the repo is worked in many
+  // git worktrees at once and Playwright reuses whatever already listens on a port — without
+  // this, an E2E run could not tell its own API server from another worktree's and would
+  // report that tree's behaviour against your branch. See `frontend/e2e/support/servers.ts`.
+  //
+  // Only the Playwright `webServer` sets it. Gating on `!isProduction` instead would leak an
+  // absolute path — and with it the OS username — from every developer machine: `/health` is
+  // unauthenticated and dev CORS is `origin: true`, so any page you happen to visit could
+  // read it off localhost:3000. The production response is unchanged either way.
+  const reportCheckout = !config.isProduction && !!process.env.E2E_IDENTITY;
+  app.get('/health', (req, res) =>
+    res.status(200).json(reportCheckout ? { status: 'ok', checkout: process.cwd() } : { status: 'ok' })
+  );
 
   // Ready: 200 if DB (and Redis when configured) reachable, 503 otherwise (not rate-limited)
   app.get('/ready', async (req, res) => {
