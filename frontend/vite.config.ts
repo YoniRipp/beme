@@ -12,11 +12,19 @@ import path from 'path';
  * process from taking one — so the E2E global setup asks the server who it is and refuses to
  * run on a mismatch. See `e2e/support/servers.ts`.
  *
- * Dev only (`apply: 'serve'`); it is not part of a build. Loopback only, too: `npm run dev`
- * is `vite --host`, which binds 0.0.0.0, and the answer is an absolute path on the
- * developer's disk. Playwright always asks over localhost, so nothing else needs it.
+ * Dev only (`apply: 'serve'`); it is not part of a build. It also answers only a loopback
+ * caller asking for a loopback host, because `npm run dev` is `vite --host` — bound to
+ * 0.0.0.0 — and the answer is an absolute path on the developer's disk.
+ *
+ * Both halves are needed. The peer address alone stops a machine on the LAN; the `Host`
+ * header stops DNS rebinding, where the request really does come from 127.0.0.1 (the
+ * developer's own browser) but carries an attacker's hostname. That is the check Vite's own
+ * `allowedHosts` middleware performs, and this middleware is deliberately registered ahead
+ * of Vite's internal stack — a post hook would sit behind the SPA fallback and never be
+ * reached — so it has to make the check itself.
  */
-const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+const LOOPBACK_ADDRS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 
 function e2eIdentity(): Plugin {
   return {
@@ -25,7 +33,9 @@ function e2eIdentity(): Plugin {
     configureServer(server) {
       server.middlewares.use('/__e2e/identity', (req, res, next) => {
         const from = req.socket.remoteAddress ?? '';
-        if (!LOOPBACK.has(from)) return next();
+        // `host` is "<hostname>:<port>"; an IPv6 literal keeps its brackets.
+        const host = (req.headers.host ?? '').replace(/:\d+$/, '');
+        if (!LOOPBACK_ADDRS.has(from) || !LOOPBACK_HOSTS.has(host)) return next();
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Cache-Control', 'no-store');
         res.end(JSON.stringify({ root: __dirname }));

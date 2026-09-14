@@ -113,6 +113,13 @@ export const backendBaseURL = `http://localhost:${backendPort}`;
 export const IDENTITY_PATH = '/__e2e/identity';
 
 /**
+ * Where the app sends its API calls when nothing sets `VITE_API_URL` — the dev fallback in
+ * `src/core/api/client.ts`. Under `SKIP_BACKEND` that is what the suite talks to, and this
+ * run neither starts it nor knows whose it is.
+ */
+export const UNMANAGED_API_BASE_URL = 'http://localhost:3000';
+
+/**
  * Only `1` and `true` enable a flag, matching `backend/src/config/index.ts`. A bare `!!` reads
  * `E2E_ALLOW_FOREIGN_SERVER=0` as "yes, allow it" and silently downgrades a real mismatch to a
  * warning — the precise failure this file exists to prevent, re-entered through the off switch.
@@ -239,11 +246,30 @@ async function assertBackendIsOurs(): Promise<void> {
     return;
   }
 
-  // `checkout` is dev-only (see `backend/app.ts`). A production build omits it, and so does
-  // any backend older than this guard — either way it is not the server we just started.
-  const served = typeof body.checkout === 'string' ? body.checkout : '(no checkout reported)';
-  if (typeof body.checkout !== 'string' || !isInsideCheckout(served)) {
-    report(mismatchLines('backend', backendBaseURL, CHECKOUT_ROOT, served, 'E2E_BACKEND_PORT'));
+  // `checkout` is opt-in via E2E_IDENTITY, which only this config's `webServer` sets (see
+  // `backend/app.ts`). A production build omits it, so does any backend older than this
+  // guard, and so does one a developer started by hand — none of those is the server we
+  // just started, so the run must not continue against them silently.
+  if (typeof body.checkout !== 'string') {
+    report([
+      ...mismatchLines(
+        'backend',
+        backendBaseURL,
+        CHECKOUT_ROOT,
+        '(no checkout reported)',
+        'E2E_BACKEND_PORT'
+      ),
+      '',
+      'A backend only reports its checkout when started with E2E_IDENTITY=1, which this',
+      'config does for the server it starts. If that is your own backend on that port,',
+      'let Playwright start its own instead, or restart yours with E2E_IDENTITY=1.',
+    ]);
+    return;
+  }
+  if (!isInsideCheckout(body.checkout)) {
+    report(
+      mismatchLines('backend', backendBaseURL, CHECKOUT_ROOT, body.checkout, 'E2E_BACKEND_PORT')
+    );
   }
 }
 

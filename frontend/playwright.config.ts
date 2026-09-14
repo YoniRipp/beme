@@ -18,8 +18,6 @@ import {
  */
 export default defineConfig({
   testDir: './e2e',
-  /* `support/` holds helpers, not specs */
-  testMatch: '**/*.spec.ts',
   /* Refuse to run against a dev server belonging to another checkout */
   globalSetup: './e2e/support/global-setup.ts',
   /* Run tests in files in parallel */
@@ -99,6 +97,10 @@ export default defineConfig({
               // backend — the cross-checkout interference this config exists to stop,
               // one layer down. No spec needs a worker.
               SEPARATE_WORKERS: 'true',
+              // Opt in to `checkout` in the /health payload. Off by default so a developer's
+              // ordinary `npm run dev:backend` does not hand its absolute path to any page
+              // that fetches localhost:3000. See the note in `backend/app.ts`.
+              E2E_IDENTITY: '1',
             },
             url: `${backendBaseURL}/health`,
             reuseExistingServer: !process.env.CI,
