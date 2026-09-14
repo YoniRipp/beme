@@ -35,10 +35,16 @@ describe('BottomNavigation', () => {
     expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
   });
 
-  it('uses the safe-area and FAB shadow utilities instead of inline styles', () => {
+  // What this can prove is that the styling goes through utility classes rather than an
+  // inline `style` attribute, which is the `frontend/mobile-ui` rule. It cannot prove the
+  // safe area is honoured: jsdom has no layout engine and no `env()`, so it stayed green
+  // through the entire life of the bug where the insets were inert. The behaviour is
+  // covered by `e2e/safe-area.spec.ts`.
+  it('declares its safe-area and FAB shadow as classes, not as inline styles', () => {
     renderNav();
     const nav = screen.getByRole('navigation', { name: 'Main navigation' });
     expect(nav.className).toContain('pb-safe');
+    expect(nav.className).toContain('px-safe');
     expect(nav).not.toHaveAttribute('style');
 
     const voiceButton = screen.getByRole('button', { name: 'Open voice' });
