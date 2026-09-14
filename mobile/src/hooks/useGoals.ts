@@ -15,7 +15,9 @@ export function useGoals() {
     refetch: refetchGoalsQuery,
   } = useQuery({
     queryKey: queryKeys.goals,
-    staleTime: 5 * 60 * 1000,
+    // 2 min, matching frontend/src/hooks/useGoals.ts. This was 5, which let a goal's
+    // computed `current` sit five minutes stale next to food and workout data a minute old.
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const result = await goalsApi.list();
       return result.data.map(apiGoalToGoal);
