@@ -117,6 +117,11 @@ export function WaterCard() {
         <View style={[styles.fill, { width: `${pct * 100}%` }]} />
       </View>
 
+      {/* Neither control is disabled while a tap is in flight, deliberately: `useWater`
+          writes the new count optimistically, so `glasses` here is already the count after
+          every tap the user has made — which is what makes the `<= 0` guard correct, and
+          what lets someone log four glasses as fast as they can press. `waterLoading` is the
+          first read only, where there is genuinely no count to change yet. */}
       <View style={styles.controls}>
         <IconButton
           icon="minus"

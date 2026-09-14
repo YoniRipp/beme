@@ -141,9 +141,23 @@ export function buildQuickLogPills(
   const today = toLocalDateString(now);
   const todaysWeight = weightEntries.find((e) => e.date === today);
   return {
-    sleep: sleepHours != null && sleepHours > 0 ? `${sleepHours}h` : undefined,
-    weight: todaysWeight ? `${todaysWeight.weight}kg` : undefined,
+    sleep: sleepHours != null && sleepHours > 0 ? `${oneDecimal(sleepHours)}h` : undefined,
+    weight: todaysWeight ? `${oneDecimal(todaysWeight.weight)}kg` : undefined,
   };
+}
+
+/**
+ * At most one decimal, with no trailing `.0`.
+ *
+ * `sleepHours` is a free-form number the user types (`z.number().min(0).max(24)`), so a
+ * check-in of 7.333 exists and printed as "7.333h" in a pill that is one line inside a
+ * half-width tile. The stat tile this pill replaced formatted it (`toFixed(1)`) and the
+ * repo's own `formatGoalValue` rounds sleep for the same reason — dropping the formatting
+ * along with the tile would have been a regression hidden inside a relocation. `toFixed`
+ * alone would render a clean 8 as "8.0h", which is noise on a pill.
+ */
+function oneDecimal(value: number): string {
+  return String(Math.round(value * 10) / 10);
 }
 
 export function HomeScreen() {
@@ -231,7 +245,12 @@ export function HomeScreen() {
     <MobileScreen
       kicker={format(new Date(), 'EEE · MMM d')}
       title={`Hey ${firstNameOf(user?.name)}`}
-      subtitle={homeProgressMessage(progress.meals)}
+      // The message counts today's meals, so before the food query lands it would tell a
+      // user who logged three of them to "Start tracking your progress". Same rule the fuel
+      // card applies to targets: an unresolved value is not an absent one. The web renders
+      // it unconditionally and has the same flicker; that is a fix for the reference client,
+      // not something to copy across.
+      subtitle={energyLoading ? undefined : homeProgressMessage(progress.meals)}
     >
       <FuelCard
         todayCalories={progress.todayCalories}

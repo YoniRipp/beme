@@ -57,35 +57,67 @@ export function exerciseCountLabel(count: number): string {
  *
  * Entries with an unparseable date sort last rather than throwing; a single bad row must
  * not blank the card.
+ *
+ * A BOUNDED SELECTION, not a sort. Both sources are whole-history reads on both clients
+ * (`listAll()` paging on Expo, an unpaginated list on the web), so mapping every row into a
+ * new object and sorting the lot would allocate thousands of objects and run an O(n log n)
+ * sort to keep five rows — on Home, inside a `useMemo` that re-runs on every cache write,
+ * which includes every food entry and workout the user logs. This walks each source once,
+ * keeps only the best `limit` candidates, and builds display objects for those alone.
  */
 export function buildRecentActivity(
   foodEntries: readonly RecentActivityFoodSource[],
   workouts: readonly RecentActivityWorkoutSource[],
   limit: number = RECENT_ACTIVITY_LIMIT
 ): RecentActivityItem[] {
-  const items: RecentActivityItem[] = [
-    ...foodEntries.map((f) => ({
-      id: f.id,
-      type: 'food' as const,
-      name: f.name,
-      detail: `${f.calories} cal`,
-      date: f.date,
-    })),
-    ...workouts.map((w) => ({
+  const cap = Math.max(0, limit);
+  if (cap === 0) return [];
+
+  /** A place in the running top-`cap`: which source, and which row of it. */
+  interface Pick {
+    time: number;
+    isFood: boolean;
+    index: number;
+  }
+
+  // Newest first. Nothing is allocated for a row that does not make the cut — that is the
+  // whole point of scanning rather than mapping-then-sorting.
+  const best: Pick[] = [];
+
+  const offer = (time: number, isFood: boolean, index: number) => {
+    // Pure short-circuit: a full list cannot be improved by something no newer than its
+    // oldest member. The walk below would reach the same answer without this line, just
+    // after a splice and a pop — so `<=` versus `<` here is speed, not behaviour.
+    if (best.length === cap && time <= best[best.length - 1].time) return;
+    // Walk back past everything older. Stopping on equality is what keeps this stable: a
+    // tie never displaces the incumbent, so food (scanned first) stays ahead of a workout
+    // logged at the same instant, exactly as a stable sort over [...food, ...workouts] did.
+    let at = best.length;
+    while (at > 0 && best[at - 1].time < time) at -= 1;
+    best.splice(at, 0, { time, isFood, index });
+    if (best.length > cap) best.pop();
+  };
+
+  for (let i = 0; i < foodEntries.length; i += 1) offer(sortableTime(foodEntries[i].date), true, i);
+  for (let i = 0; i < workouts.length; i += 1) offer(sortableTime(workouts[i].date), false, i);
+
+  return best.map((pick) => {
+    if (pick.isFood) {
+      const f = foodEntries[pick.index];
+      return { id: f.id, type: 'food' as const, name: f.name, detail: `${f.calories} cal`, date: f.date };
+    }
+    const w = workouts[pick.index];
+    return {
       id: w.id,
       type: 'workout' as const,
       name: w.title,
       detail: exerciseCountLabel(w.exercises.length),
       date: w.date,
-    })),
-  ];
-
-  return items
-    .sort((a, b) => sortableTime(b.date) - sortableTime(a.date))
-    .slice(0, Math.max(0, limit));
+    };
+  });
 }
 
-/** `NaN` from an invalid Date would make every comparison false and leave the sort arbitrary. */
+/** `NaN` from an invalid Date would make every comparison false and leave the order arbitrary. */
 function sortableTime(date: Date): number {
   const time = date instanceof Date ? date.getTime() : Number.NaN;
   return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time;
