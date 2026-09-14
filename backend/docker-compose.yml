@@ -18,7 +18,11 @@ services:
       retries: 5
 
   backend:
-    build: .
+    # Context is the repo root: this is an npm workspace with a single root
+    # package-lock.json, so `npm ci` inside the image has to run from there.
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
     ports:
       - "3000:3000"
     environment:
@@ -32,7 +36,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./src:/app/src
+      - ./src:/repo/backend/src
 
 volumes:
   postgres_data:

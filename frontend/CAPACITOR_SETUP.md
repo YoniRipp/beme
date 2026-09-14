@@ -1,5 +1,18 @@
 # Capacitor iOS Setup Guide
 
+> **Superseded — kept for reference only.** Native iOS and Android now ship from
+> `mobile/` (Expo, SDK 54), not from this Capacitor shell. Nothing in CI builds the
+> Capacitor projects.
+>
+> These instructions also no longer work as written: `@capacitor/cli` is pinned a major
+> behind `@capacitor/core|ios|android`, so the CLI scaffolds an iOS 14 project that
+> Capacitor 8 refuses to build (`pod install` fails on the deployment target, then
+> `xcodebuild` fails on the same). Step 4.3 below — "iOS 14.0 or higher recommended" —
+> is the setting that breaks it. The claim under Prerequisites that the simulator cannot
+> do speech recognition is also wrong; it can.
+>
+> Don't follow this to stand up a new iOS build. Use `mobile/`.
+
 This document describes how to complete the iOS native app setup on macOS.
 
 ## Prerequisites
