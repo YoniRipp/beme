@@ -9,15 +9,42 @@ This is a mobile app that runs in a browser. Design for a thumb, not a mouse.
 
 ## Safe areas
 
-Fixed-position elements must respect the notch and home indicator. Use the utilities, not inline styles:
+Fixed- and sticky-position elements must respect the notch, the home indicator and — in
+landscape — the side cutouts. The insets are named once in `index.css`, the same way colours
+are, and read from there. Never inline a `style`, and never call `env()` in a component:
 
 ```
-.pb-safe  →  padding-bottom: env(safe-area-inset-bottom, 0px)
-.pt-safe  →  padding-top: env(safe-area-inset-top, 0px)
+:root {
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+}
+
+.pt-safe  →  padding-top: var(--safe-top)
+.pb-safe  →  padding-bottom: var(--safe-bottom)
+.px-safe  →  padding-left / -right: var(--safe-left) / var(--safe-right)
+```
+
+The variable, not `env()`, is the thing to reach for: `env()` cannot be overridden, so a test
+can never set it, and a headless browser always reports `0`. `e2e/safe-area.spec.ts` drives the
+variables to a notched phone's values — that is only possible because there is one definition.
+
+**The utilities set their padding outright.** Put them on an element that has no padding of its
+own on that edge (a fixed bar, a drawer, a content wrapper). Where the element already pads that
+edge, compose instead, or the utility silently deletes the padding everywhere else:
+
+```
+py-3 pt-[calc(0.75rem+var(--safe-top))]      ✓ keeps the 12px, adds the notch
+py-3 pt-safe                                  ✗ 12px becomes 0 on every phone without a notch
 ```
 
 Anything pinned above the bottom nav offsets from it:
-`bottom-[calc(env(safe-area-inset-bottom,0px)+9.75rem)]`
+`bottom-[calc(var(--safe-bottom)+9.75rem)]`
+
+None of this works without `viewport-fit=cover` in the viewport meta (`index.html`). Without it
+every `env(safe-area-inset-*)` resolves to `0`, the whole vocabulary above is inert, and content
+renders under the status bar in the installed iOS PWA. `index.test.ts` guards the meta tag.
 
 ## Navigation
 

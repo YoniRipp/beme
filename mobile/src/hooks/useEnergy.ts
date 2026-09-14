@@ -11,6 +11,10 @@ export function useEnergy() {
 
   const checkInsQuery = useQuery({
     queryKey: queryKeys.checkIns,
+    // Always explicit, per agent-os/standards/frontend/data-fetching.md, and 2 min to match
+    // frontend/src/hooks/useEnergy.ts. These two inherited the 60s client default, so the
+    // Goals screen mixed one-minute-old food data with five-minute-old goals.
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const checkIns = await dailyCheckInsApi.listAll();
       return checkIns.map(apiCheckInToDailyCheckIn);
@@ -19,6 +23,7 @@ export function useEnergy() {
 
   const foodEntriesQuery = useQuery({
     queryKey: queryKeys.foodEntries,
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const entries = await foodApi.listAll();
       return entries.map(apiFoodEntryToFoodEntry);

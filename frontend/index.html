@@ -4,7 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- `viewport-fit=cover` is what makes `env(safe-area-inset-*)` report real numbers.
+         Without it every inset resolves to 0 and the whole safe-area vocabulary in
+         `src/index.css` is inert — which is what put page content under the iOS status bar
+         in an installed PWA (`apple-mobile-web-app-status-bar-style=black-translucent`,
+         below, draws the app behind the clock). Guarded by `index.test.ts`. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#F7F3EC" />

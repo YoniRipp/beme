@@ -1,0 +1,13 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "frontend/Dockerfile",
+    "watchPatterns": [
+      "frontend/**",
+      "packages/**",
+      "package.json",
+      "package-lock.json"
+    ]
+  }
+}

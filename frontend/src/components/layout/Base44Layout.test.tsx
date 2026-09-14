@@ -33,6 +33,7 @@ function renderLayout() {
       <Routes>
         <Route element={<Base44Layout />}>
           <Route path="/" element={<div>Home content</div>} />
+          <Route path="/energy" element={<div>Food content</div>} />
         </Route>
       </Routes>
     </MemoryRouter>
@@ -87,6 +88,34 @@ describe('Base44Layout navigation', () => {
     renderLayout();
 
     expect(screen.queryByText('Clients')).not.toBeInTheDocument();
+  });
+});
+
+describe('Base44Layout scroll position', () => {
+  beforeEach(() => {
+    mockUser.mockReturnValue({
+      id: 'user-1',
+      name: 'Test User',
+      email: 'test@example.com',
+      role: 'user',
+      subscriptionStatus: 'free',
+    });
+  });
+
+  // The shell is the only thing that sees every tab switch, so the reset lives here rather
+  // than in the pages. Without it a tab opens at the previous tab's offset.
+  it('sends the document back to the top when a tab is tapped', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const user = userEvent.setup();
+    renderLayout();
+
+    const bar = screen.getByRole('navigation', { name: /main navigation/i });
+    await user.click(within(bar).getByRole('link', { name: 'Food' }));
+
+    expect(await screen.findByText('Food content')).toBeInTheDocument();
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
+
+    scrollTo.mockRestore();
   });
 });
 

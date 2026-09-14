@@ -16,6 +16,15 @@ if (typeof Element !== 'undefined' && typeof Element.prototype.scrollIntoView !=
   Element.prototype.scrollIntoView = function () {};
 }
 
+// jsdom does not implement scrolling; useScrollToTopOnNavigate calls window.scrollTo on every
+// navigation, and both shells use it. Assigned unconditionally rather than behind a
+// `typeof … !== 'function'` guard like its neighbours: jsdom *does* define window.scrollTo, it
+// just logs "Not implemented: window.scrollTo" when called, which would be noise in every
+// suite that renders a layout.
+if (typeof window !== 'undefined') {
+  window.scrollTo = (() => {}) as typeof window.scrollTo;
+}
+
 // jsdom does not implement matchMedia; useMediaQuery / useIsMobile call it on mount.
 // Reports "no match", i.e. the mobile/narrow branch, which is this app's primary target.
 if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { buildGoalCurrentCalcs, computeGoalProgress } from '../goals';
-import type { Goal } from '../../types/goals';
+import {
+  buildGoalCurrentCalcs,
+  computeGoalProgress,
+  defaultPeriodForType,
+  formatGoalValue,
+  GOAL_UNIT_LABELS,
+} from '../goals';
+import { GOAL_PERIODS, GOAL_TYPES, type Goal } from '../../types/goals';
 
 /**
  * Pins the behaviour of frontend/src/features/goals/useGoalProgress.ts's pure core
@@ -164,5 +170,63 @@ describe('computeGoalProgress', () => {
       checkIns: [],
     };
     expect(computeGoalProgress(g, deps)).toEqual({ current: 1, target: 50, percentage: 2 });
+  });
+});
+
+/**
+ * `formatGoalValue` / `GOAL_UNIT_LABELS` moved here from the web's GoalCard so both clients
+ * print a goal the same way. Mobile printed `current.toLocaleString()` directly, which for a
+ * sleep goal — an *average*, straight out of computeGoalProgress above — rendered
+ * "7.333 / 8 hours" where the web rendered "7.3h / 8.0h hours avg".
+ */
+describe('formatGoalValue', () => {
+  it('rounds a sleep average to one decimal and suffixes the unit', () => {
+    // Exactly what buildGoalCurrentCalcs returns for check-ins of 7, 7 and 8 hours.
+    expect(formatGoalValue('sleep', 22 / 3)).toBe('7.3h');
+  });
+
+  it('formats a whole sleep target the same way, so both halves of the pair match', () => {
+    expect(formatGoalValue('sleep', 8)).toBe('8.0h');
+  });
+
+  it('gives a calories value thousands separators and no unit suffix', () => {
+    expect(formatGoalValue('calories', 1850)).toBe('1,850');
+  });
+
+  it('leaves a small workouts count alone', () => {
+    expect(formatGoalValue('workouts', 3)).toBe('3');
+  });
+});
+
+describe('GOAL_UNIT_LABELS', () => {
+  it('uses the web Goals card\'s noun for every type', () => {
+    expect(GOAL_UNIT_LABELS).toEqual({
+      calories: 'calories',
+      workouts: 'workouts',
+      sleep: 'hours avg',
+    });
+  });
+
+  it('covers every member of GOAL_TYPES, so no type can render an undefined unit', () => {
+    for (const type of GOAL_TYPES) {
+      expect(typeof GOAL_UNIT_LABELS[type]).toBe('string');
+    }
+  });
+});
+
+describe('defaultPeriodForType', () => {
+  it('defaults calories and sleep goals to daily', () => {
+    expect(defaultPeriodForType('calories')).toBe('daily');
+    expect(defaultPeriodForType('sleep')).toBe('daily');
+  });
+
+  it('defaults workouts goals to weekly', () => {
+    expect(defaultPeriodForType('workouts')).toBe('weekly');
+  });
+
+  it('only ever returns a real GoalPeriod', () => {
+    for (const type of GOAL_TYPES) {
+      expect(GOAL_PERIODS).toContain(defaultPeriodForType(type));
+    }
   });
 });
