@@ -12,6 +12,25 @@ const API_BASE = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
+/**
+ * Carries the HTTP status alongside the message. Still an `Error`, so every existing
+ * `catch` and `instanceof Error` check behaves exactly as before; the status is what lets
+ * a caller tell "retrying might help" from "retrying definitely won't".
+ */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+export function isUnauthorized(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
 export function getApiBase(): string {
   return API_BASE;
 }
@@ -150,7 +169,7 @@ export async function request<T>(
     handleUnauthorized({ suppressEvent: suppressUnauthorizedEvent });
     const err = (await res.json().catch(() => ({}))) as { error?: string | { message?: string } };
     const errMsg = typeof err.error === 'string' ? err.error : err.error?.message;
-    throw new Error(errMsg ?? 'Session expired');
+    throw new ApiError(errMsg ?? 'Session expired', 401);
   }
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
@@ -158,7 +177,7 @@ export async function request<T>(
     const msg = typeof errField === 'string'
       ? errField
       : errField?.message ?? res.statusText;
-    throw new Error(msg);
+    throw new ApiError(msg, res.status);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;

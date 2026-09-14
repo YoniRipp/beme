@@ -7,10 +7,9 @@ import { AuthProvider } from './src/context/AuthContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import { ThemeProvider, useThemeContext } from './src/theme/ThemeContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
-
-const queryClient = new QueryClient();
+import { queryClient } from './src/lib/queryClient';
 
 export default function App() {
   // The exact three family names `theme.ts` references (`Inter_400Regular`,

@@ -15,6 +15,21 @@ export type { RequestOptions } from '@trackvibe/shared/api';
 
 const STORAGE_KEY = 'trackvibe_token';
 
+/**
+ * `ApiError` is re-exported, not redeclared. The shared transport
+ * (`packages/shared/src/api/transport.ts`) already defines it and is what actually throws
+ * here, so declaring a second class in this module would give `isUnauthorized` a different
+ * constructor to test against than the one the errors are built from — `instanceof` would
+ * silently return false for every real 401.
+ */
+export { ApiError } from '@trackvibe/shared/api';
+import { ApiError as SharedApiError } from '@trackvibe/shared/api';
+
+/** True only for a 401 — the case where retrying cannot help, because the session is gone. */
+export function isUnauthorized(error: unknown): boolean {
+  return error instanceof SharedApiError && error.status === 401;
+}
+
 function getApiBase(): string {
   const extra = Constants.expoConfig?.extra as { apiUrl?: string } | undefined;
   return extra?.apiUrl ?? process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
