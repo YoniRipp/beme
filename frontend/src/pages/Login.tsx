@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,10 @@ import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
 export function Login() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Set by pages that finish somewhere else and need to confirm it here — /reset-password
+  // sends "your password has been updated" so the confirmation sits where the next action is.
+  const notice = (location.state as { notice?: string } | null)?.notice;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -50,6 +54,11 @@ export function Login() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {notice && (
+              <p className="text-sm text-success" role="status">
+                {notice}
+              </p>
+            )}
             {error && (
               <p className="text-sm text-destructive" role="alert">
                 {error}

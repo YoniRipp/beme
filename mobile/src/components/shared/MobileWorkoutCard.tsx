@@ -1,11 +1,15 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Card, Chip, Icon, IconButton, Text } from 'react-native-paper';
-import { format } from 'date-fns';
+import { formatDate, getWeightUnit } from '@trackvibe/shared/domain';
 import { Workout } from '../../types/workout';
 import { radius, spacing } from '../../theme';
+import { useSettings } from '../../hooks/useSettings';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
+
+/** Minimum touch target, per agent-os/standards/frontend/mobile-ui.md. */
+const TAP_TARGET = 44;
 
 interface MobileWorkoutCardProps {
   workout: Workout;
@@ -13,16 +17,33 @@ interface MobileWorkoutCardProps {
   onPress?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  /** Ticks the workout off. Omit to render the card without a completion control. */
+  onToggleCompleted?: (id: string, completed: boolean) => void;
 }
 
-export function MobileWorkoutCard({ workout, expanded, onPress, onEdit, onDelete }: MobileWorkoutCardProps) {
+export function MobileWorkoutCard({
+  workout,
+  expanded,
+  onPress,
+  onEdit,
+  onDelete,
+  onToggleCompleted,
+}: MobileWorkoutCardProps) {
   const { colors } = useThemeContext();
+  // The card used to hardcode `EEE, MMM d` and `kg`, so an imperial user was shown
+  // kilograms and nobody's date-format choice reached this screen. Both now resolve from
+  // the same settings blob the web reads, through the same shared helpers.
+  const { settings } = useSettings();
+  const weightUnit = getWeightUnit(settings.units);
   const styles = useThemedStyles((colors) => ({
     card: {
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
       borderWidth: 1,
       borderColor: colors.border,
+    },
+    completedCard: {
+      opacity: 0.75,
     },
     content: {
       gap: spacing.md,
@@ -31,6 +52,14 @@ export function MobileWorkoutCard({ workout, expanded, onPress, onEdit, onDelete
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.md,
+    },
+    toggle: {
+      width: TAP_TARGET,
+      height: TAP_TARGET,
+      marginLeft: -spacing.sm,
+      marginRight: -spacing.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     iconWrap: {
       width: 48,
@@ -47,6 +76,10 @@ export function MobileWorkoutCard({ workout, expanded, onPress, onEdit, onDelete
     title: {
       color: colors.text,
       fontWeight: '800',
+    },
+    titleCompleted: {
+      color: colors.textMuted,
+      textDecorationLine: 'line-through',
     },
     meta: {
       color: colors.textMuted,
@@ -88,19 +121,51 @@ export function MobileWorkoutCard({ workout, expanded, onPress, onEdit, onDelete
       flexDirection: 'row',
       justifyContent: 'flex-end',
     },
+    actionButton: {
+      width: TAP_TARGET,
+      height: TAP_TARGET,
+      margin: 0,
+    },
   }));
 
   return (
-    <Card mode="contained" style={styles.card} onPress={onPress}>
+    <Card
+      mode="contained"
+      style={[styles.card, workout.completed && styles.completedCard]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Workout: ${workout.title}, ${workout.type}, ${workout.durationMinutes || 0} minutes`}
+    >
       <Card.Content style={styles.content}>
         <View style={styles.topRow}>
+          {onToggleCompleted && (
+            <Pressable
+              style={styles.toggle}
+              onPress={() => onToggleCompleted(workout.id, !workout.completed)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: !!workout.completed }}
+              accessibilityLabel={workout.completed ? 'Mark as not completed' : 'Mark as completed'}
+            >
+              <Icon
+                source={workout.completed ? 'check-circle' : 'checkbox-blank-circle-outline'}
+                size={24}
+                color={workout.completed ? colors.success : colors.textMuted}
+              />
+            </Pressable>
+          )}
           <View style={styles.iconWrap}>
             <Icon source="dumbbell" size={22} color={colors.workout} />
           </View>
           <View style={styles.titleBlock}>
-            <Text variant="titleMedium" style={styles.title} numberOfLines={1}>{workout.title}</Text>
+            <Text
+              variant="titleMedium"
+              style={[styles.title, workout.completed && styles.titleCompleted]}
+              numberOfLines={1}
+            >
+              {workout.title}
+            </Text>
             <Text variant="bodySmall" style={styles.meta}>
-              {format(workout.date, 'EEE, MMM d')} · {workout.durationMinutes || 0} min
+              {formatDate(workout.date, settings.dateFormat)} · {workout.durationMinutes || 0} min
             </Text>
           </View>
           <Chip compact style={styles.chip} textStyle={styles.chipText}>{workout.type}</Chip>
@@ -111,7 +176,7 @@ export function MobileWorkoutCard({ workout, expanded, onPress, onEdit, onDelete
             <View key={`${exercise.name}-${index}`} style={styles.exerciseRow}>
               <Text variant="bodyMedium" style={styles.exerciseName} numberOfLines={1}>{exercise.name}</Text>
               <Text variant="bodySmall" style={styles.exerciseMeta}>
-                {exercise.sets} sets × {exercise.reps} reps{exercise.weight ? ` · ${exercise.weight}kg` : ''}
+                {exercise.sets} sets × {exercise.reps} reps{exercise.weight ? ` · ${exercise.weight}${weightUnit}` : ''}
               </Text>
             </View>
           ))}
@@ -122,8 +187,25 @@ export function MobileWorkoutCard({ workout, expanded, onPress, onEdit, onDelete
 
         {(onEdit || onDelete) && (
           <View style={styles.actions}>
-            {onEdit && <IconButton icon="pencil" size={18} onPress={onEdit} />}
-            {onDelete && <IconButton icon="trash-can-outline" size={18} iconColor={colors.danger} onPress={onDelete} />}
+            {onEdit && (
+              <IconButton
+                icon="pencil"
+                size={18}
+                style={styles.actionButton}
+                onPress={onEdit}
+                accessibilityLabel={`Edit workout: ${workout.title}`}
+              />
+            )}
+            {onDelete && (
+              <IconButton
+                icon="trash-can-outline"
+                size={18}
+                iconColor={colors.danger}
+                style={styles.actionButton}
+                onPress={onDelete}
+                accessibilityLabel={`Delete workout: ${workout.title}`}
+              />
+            )}
           </View>
         )}
       </Card.Content>

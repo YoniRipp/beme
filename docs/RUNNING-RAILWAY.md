@@ -54,7 +54,7 @@ that, so the backend still ignores frontend-only commits and vice versa.
 |----------|-------|
 | `DATABASE_URL` | Add PostgreSQL service → use connection variable |
 | `JWT_SECRET` | Generate a strong secret (e.g. `openssl rand -base64 32`) |
-| `CORS_ORIGIN` | Frontend URL (e.g. `https://trackvibe-frontend.up.railway.app`) |
+| `CORS_ORIGIN` | Frontend URL (e.g. `https://trackvibe-frontend.up.railway.app`). Accepts a comma-separated list to allow more than one origin — `https://app.example.com,capacitor://localhost` |
 
 **Optional:**
 
@@ -63,7 +63,7 @@ that, so the backend still ignores frontend-only commits and vice versa.
 | `REDIS_URL` | Add Redis service → `${{Redis.REDIS_URL}}` |
 | `GEMINI_API_KEY` | From [Google AI Studio](https://aistudio.google.com/) |
 | `GOOGLE_CLIENT_ID`, `FACEBOOK_APP_ID`, etc. | For social login |
-| `FRONTEND_ORIGIN` | Same as `CORS_ORIGIN` |
+| `FRONTEND_ORIGIN` | Defaults to `CORS_ORIGIN`, or to its **first** entry when that is a list. Set it explicitly whenever `CORS_ORIGIN` lists several origins — it is the one the app builds OAuth callbacks, password-reset links and checkout redirects from |
 
 ---
 

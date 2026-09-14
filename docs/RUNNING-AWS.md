@@ -41,8 +41,8 @@ See [docs/architecture-target-aws.md](architecture-target-aws.md) for the target
 | `DATABASE_URL` | Secrets Manager or RDS connection |
 | `JWT_SECRET` | Secrets Manager |
 | `REDIS_URL` | ElastiCache endpoint |
-| `CORS_ORIGIN` | CloudFront or custom domain |
-| `FRONTEND_ORIGIN` | S3/CloudFront origin |
+| `CORS_ORIGIN` | CloudFront or custom domain. Accepts a comma-separated list for several origins |
+| `FRONTEND_ORIGIN` | S3/CloudFront origin. Defaults to the first entry of `CORS_ORIGIN`; set it explicitly when `CORS_ORIGIN` is a list |
 | `EVENT_TRANSPORT` | `sqs` (or `redis` with ElastiCache) |
 | `EVENT_QUEUE_URL` | SQS queue URL (when using SQS) |
 | `AWS_REGION` | e.g. `us-east-1` |

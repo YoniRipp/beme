@@ -54,9 +54,31 @@ const configSchema = z.object({
   // logged out early. Long by design: the session rolls forward on every app open
   // (POST /api/auth/refresh), so an active user never sees the login screen again.
   sessionTtlMs: z.coerce.number().int().min(60 * 1000).default(SESSION_TTL_DEFAULT_MS),
+  // CORS_ORIGIN is one origin or a comma-separated list, so the parser below yields a string
+  // or a string[]. `.min(1)` rather than `.nonempty()` on the array -- same runtime check,
+  // without widening the exported type with a `[string, ...string[]]` tuple no caller wants.
+  //
+  // Every message here names CORS_ORIGIN. A bare union reports `Invalid input`, which names
+  // neither the field nor the env var the operator actually typed -- the message that made
+  // this bug unreadable in the first place. The union `errorMap` covers a value that matches
+  // no member at all; the per-check messages cover the ones Zod reports through its "dirty"
+  // path, where a failed `.min()` inside a member is surfaced directly and the union's
+  // errorMap never runs.
   corsOrigin: isProduction
-    ? z.string().min(1, 'CORS_ORIGIN must be set to an explicit origin in production')
-    : z.union([z.string(), z.boolean(), z.undefined()]),
+    ? z.union(
+        [
+          z.string().min(1, 'CORS_ORIGIN must be set to an explicit origin in production'),
+          z
+            .array(z.string().min(1, 'CORS_ORIGIN must not contain an empty origin'))
+            .min(1, 'CORS_ORIGIN must list at least one origin'),
+        ],
+        { errorMap: () => ({ message: 'CORS_ORIGIN must be set to an explicit origin in production' }) },
+      )
+    : z.union([z.string(), z.array(z.string()), z.boolean(), z.undefined()], {
+        errorMap: () => ({
+          message: 'CORS_ORIGIN must be an origin, a comma-separated list of origins, or unset',
+        }),
+      }),
   frontendOrigin: isProduction
     ? z.string().min(1, 'FRONTEND_ORIGIN must be set in production')
     : z.string().optional(),
@@ -112,16 +134,43 @@ if (JWT_SECRET === 'dev-secret-change-in-production') {
 }
 // Clean up CORS origins — trim whitespace and trailing slashes to prevent subtle mismatches
 const rawCorsOrigin = process.env.CORS_ORIGIN?.trim().replace(/\/+$/, '');
-const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN?.trim().replace(/\/+$/, '')) || rawCorsOrigin;
+/**
+ * CORS_ORIGIN supports a comma-separated list
+ * (e.g. "https://app.example.com,https://staging.example.com").
+ *
+ * Split it once, here, before anything reads it: both CORS_ORIGIN and FRONTEND_ORIGIN are
+ * derived from this list, and FRONTEND_ORIGIN is itself read by the CORS_ORIGIN fallback
+ * below — so the split cannot live inside that IIFE without a temporal dead zone.
+ *
+ * Empty segments are dropped. A trailing comma or a stray space is an operator typo, not a
+ * request to allowlist the empty-string origin, and without the filter it would fail the
+ * schema's per-entry check and take the whole process down at boot.
+ */
+const CORS_ORIGIN_LIST = (rawCorsOrigin ?? '')
+  .split(',')
+  .map((o) => o.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+/**
+ * FRONTEND_ORIGIN is a single origin — it is concatenated into absolute URLs by the Twitter
+ * OAuth callback, the LemonSqueezy checkout redirects, password-reset links and the VAPID
+ * subject. Defaulting it to the *raw* CORS_ORIGIN put the whole comma-separated list into
+ * those URLs. Default to the first origin in the list instead; an explicit value still wins.
+ */
+const FRONTEND_ORIGIN: string | undefined =
+  (process.env.FRONTEND_ORIGIN?.trim().replace(/\/+$/, '')) || CORS_ORIGIN_LIST[0];
 const CORS_ORIGIN: string | string[] | boolean = (() => {
-  if (rawCorsOrigin != null && rawCorsOrigin !== '') {
-    // Support comma-separated origins (e.g. "https://app.example.com,https://staging.example.com")
-    if (rawCorsOrigin.includes(',')) {
-      return rawCorsOrigin.split(',').map(o => o.trim().replace(/\/+$/, ''));
-    }
-    return rawCorsOrigin;
-  }
-  return isProduction ? (FRONTEND_ORIGIN ?? true) : true;
+  if (CORS_ORIGIN_LIST.length > 1) return CORS_ORIGIN_LIST;
+  // One origin stays a string, not a one-element array: cors() and the startup log in app.ts
+  // both read this value and single-origin deployments must come out unchanged.
+  if (CORS_ORIGIN_LIST.length === 1) return CORS_ORIGIN_LIST[0];
+  if (!isProduction) return true;
+  if (FRONTEND_ORIGIN !== undefined) return FRONTEND_ORIGIN;
+  // Production with no usable origin. Hand the guards below the same value the pre-list
+  // parser did, so each still fails by the name the operator typed: CORS_ORIGIN absent ->
+  // `true`, caught by the "not true" guard; set but blank -> '', caught by the "must be
+  // explicitly set" guard. Set to nothing but separators reaches neither guard, and the
+  // schema rejects '' with a message that also names CORS_ORIGIN.
+  return rawCorsOrigin === undefined ? true : '';
 })();
 if (isProduction && (CORS_ORIGIN === true || CORS_ORIGIN === 'true')) {
   throw new Error('CORS_ORIGIN must be an explicit origin in production, not true');

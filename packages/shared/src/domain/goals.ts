@@ -13,7 +13,7 @@
  * rendering anything or touching React Query.
  */
 import { isWithinInterval } from 'date-fns';
-import type { Goal, GoalType } from '../types/goals';
+import type { Goal, GoalPeriod, GoalType } from '../types/goals';
 import { getPeriodRange } from './dates';
 
 export interface GoalProgress {
@@ -73,4 +73,50 @@ export function computeGoalProgress(goal: Goal, deps: GoalProgressDeps): GoalPro
   const current = calcs[goal.type](goal, dateRange);
   const percentage = goal.target > 0 ? Math.min((current / goal.target) * 100, 100) : 0;
   return { current, target: goal.target, percentage };
+}
+
+/**
+ * The noun that follows a goal's numbers on a card: "1,850 / 2,000 calories".
+ *
+ * These are the web Goals card's strings verbatim (the former local `GOAL_LABELS` in
+ * frontend/src/components/goals/GoalCard.tsx), and the web is the reference client. Note it
+ * is not internally consistent — the web's *food* cards say `kcal` where its *goal* cards
+ * say `calories`, and mobile had independently copied the food noun onto its goal card.
+ * Matching the reference card is the parity call here; picking one word for the whole
+ * product is a separate product decision (spec open question 1).
+ */
+export const GOAL_UNIT_LABELS: Record<GoalType, string> = {
+  calories: 'calories',
+  workouts: 'workouts',
+  sleep: 'hours avg',
+};
+
+/**
+ * A goal's `current` or `target` as a card should print it.
+ *
+ * Sleep is the case that matters. `computeGoalProgress` *averages* a period's check-ins, so
+ * a sleep goal's `current` is routinely something like 7.333333333333333. The web has always
+ * rounded that to one decimal and suffixed the unit ("7.3h"); mobile printed the raw
+ * `toLocaleString()` ("7.333"), which is the drift this shared copy removes. Every other
+ * type is a whole count and just gets thousands separators.
+ */
+export function formatGoalValue(type: GoalType, value: number): string {
+  return type === 'sleep' ? `${value.toFixed(1)}h` : value.toLocaleString();
+}
+
+/**
+ * The period a *new* goal of this type should default to.
+ *
+ * Product behaviour, not a constraint: every type/period pair is legal (a daily workouts
+ * goal and a monthly calories goal both validate on both clients and against the backend's
+ * Zod enums). But you eat and sleep every day and you don't work out every day, so the
+ * sensible starting point differs by type, and the web encoded that as an inline ternary
+ * inside `GoalModal`. Lifted here so mobile's form gets the same defaults rather than a
+ * second copy of the rule.
+ *
+ * New goals only — editing an existing goal must leave its period exactly as the user set
+ * it, which is what the web's `!goal && …` guard around this call does.
+ */
+export function defaultPeriodForType(type: GoalType): GoalPeriod {
+  return type === 'calories' || type === 'sleep' ? 'daily' : 'weekly';
 }
