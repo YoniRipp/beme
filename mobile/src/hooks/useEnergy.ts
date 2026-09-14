@@ -9,8 +9,12 @@ import { toLocalDateString } from '../lib/dateRanges';
 export function useEnergy() {
   const queryClient = useQueryClient();
 
+  // staleTime is explicit and matches frontend/src/hooks/useEnergy.ts. Both queries used
+  // to omit it and silently inherit the 60 s client default while the web set 2 min, so
+  // the same two screens refetched on different schedules on the two clients.
   const checkInsQuery = useQuery({
     queryKey: queryKeys.checkIns,
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const checkIns = await dailyCheckInsApi.listAll();
       return checkIns.map(apiCheckInToDailyCheckIn);
@@ -19,6 +23,7 @@ export function useEnergy() {
 
   const foodEntriesQuery = useQuery({
     queryKey: queryKeys.foodEntries,
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const entries = await foodApi.listAll();
       return entries.map(apiFoodEntryToFoodEntry);

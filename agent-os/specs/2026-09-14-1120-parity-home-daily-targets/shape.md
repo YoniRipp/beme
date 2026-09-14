@@ -77,55 +77,53 @@ so it was checked and cleared rather than filed.
 
 ## Decisions
 
-- **The web's rule wins.** `frontend/` ships to users; Expo conforms. A daily calorie target
-  is `carbs*4 + fat*9 + protein*4` over the profile's macro grams. Expo stops reading the
-  `goals` table for it.
-- **The derivation moves to `packages/shared`, it does not get copied.** New
-  `packages/shared/src/domain/targets.ts`, sitting next to `domain/goals.ts` for the same
-  reason: pure, React-free, unit-testable without rendering, and callable from a screen or a
-  hook. Both Homes import it.
-- **Defaults live in one exported constant.** `DEFAULT_MACRO_TARGETS` in that module. Neither
-  client may spell a number like `2000` or `120` inline again.
-- **Expo gets a real profile client.** `mobile/src/core/api/` has no `health.ts` at all —
-  no `/api/profile`, and therefore no way to reach macros. Add the profile slice only
-  (`get` + `upsert`), plus `hooks/useProfile.ts` and `queryKeys.profile`, mirroring
-  `frontend/src/hooks/useProfile.ts`. Weight/water/cycle/streak clients are the sibling PR's
-  problem, not this one's.
-- **No API change.** `GET /api/profile` already returns `macroCarbs / macroFat / macroProtein`
-  (`backend/src/models/profile.ts:8`). Nothing on the wire moves, so the MCP server is
-  unaffected.
-- **Expo's sleep tile switches to today's hours** to match the web quick-tile — see the open
-  questions, this one is contested.
-- **Expo's `staleTime`s are made explicit** on `useEnergy` and `useWorkouts` while these files
-  are open, matching the web's 2 min (`frontend/data-fetching`: "always set `staleTime`").
-  Today they silently inherit the 60 s client default while the web sets 2 min, so the two
-  clients refetch on different schedules.
+**The owner chose the goal page: the `goals` table owns the daily calorie target.** This
+reverses the recommendation this shape originally carried (which was "the web's rule wins,
+Expo conforms") and closes Q1 below. Consequences, as built:
 
-## Open questions — do not decide these in the PR
+- **The web moves, not Expo.** Expo already read `goals` (`type: 'calories'`,
+  `period: 'daily'`) and was right. The web's Home stops deriving kcal from
+  `profile.macro*` and reads the same row its own Goals page writes. That also fixes the
+  standing web-only bug where a calorie goal set on the web was ignored by the web.
+- **Macros stay on the profile, because the schema gives no choice.** `goals.type` is
+  `calories | workouts | sleep` and cannot express protein, carbs or fat. So one card
+  reads two stores. Both clients now make the same split, and `packages/shared`'s
+  `domain/targets.ts` is the only place that knows it.
+- **No invented targets, anywhere.** `|| 2000` (Expo), `|| 4` (Expo) and the 2400 the web
+  derived from default macro grams are gone. An unset target is `null` and renders as
+  unset, with a control that sets it.
+- **`MacroGoalModal` became `DailyTargetsModal`, and calories is a real field in it.** The
+  modal used to *derive* and display a kcal number from the grams. Once `goals` owns the
+  target that derivation would be a number a user edits and never sees again, so calories
+  is now an input that writes the goals row (update the displayed row, create if absent,
+  delete if cleared). The derivation survives as a hint — "these macros add up to N kcal"
+  with a button that fills the field — so the old mental model still works and every
+  number in the sheet takes effect.
+- **Sleep is last night's hours on both.** Expo's weekly average is gone. The web's tile is
+  a log-today affordance whose pill can only sensibly show today, so today is what both
+  show — see Q2.
+- **Expo gets a real profile client.** `mobile/src/core/api/health.ts` (profile slice
+  only), `hooks/useProfile.ts`, `queryKeys.profile`. Without it Expo cannot see macro
+  grams at all, which is why its protein card had no target.
+- **No API change.** `GET /api/profile` already carries the macro fields and `GET /api/goals`
+  already carries the row. Nothing on the wire moves, so the MCP server is unaffected.
 
-**Q1. The `goals` table's `calories`/`daily` row is a real user setting that the web Home
-throws away.** A user who adds "2200 calories daily" on the web Goals page sees that goal
-tracked on the Goals page and a 2400 ring on Home. Conforming Expo to the web makes Expo
-*stop* honouring a target the user explicitly set — which is a regression for that user, even
-though it is parity.
-*Recommendation:* ship parity now (profile macros win on Home, both clients), and open
-product work to collapse the two: either the Goals page's calorie goal writes through to the
-profile macros, or Home surfaces both explicitly. Do not let a client pick silently.
+## Questions that were open, and how they closed
 
-**Q2. Expo's weekly sleep average may be the better number.** Web shows *today's* sleep on a
-quick-log tile; Expo shows a *weekly average* stat. For a dashboard the average arguably reads
-better — last night's 6.2 h is noise, the week's 7.1 h is a trend. This is exactly the case
-the ground rules say to record rather than decide.
-*Recommendation:* conform Expo to today's-sleep for parity now; if product prefers the
-average, add it to **both** clients as a second metric rather than keeping the split.
+**Q1 — should the `goals` calories row keep losing to profile macros?** *Closed by the
+owner: no. The goals table owns it.* Expo keeps honouring the row it always did, and the
+web starts honouring the row it always wrote and never read.
 
-**Q3. Expo's "Workouts this week" tile has no web counterpart at all.** It is a genuinely
-useful number and the web Home does not show it anywhere (`startOfWeek` appears nowhere in
-`frontend/src/pages/Home.tsx` or `frontend/src/components/home/`).
-*Recommendation:* keep it on Expo, add it to the web Home, and give it the same shared
-`resolveDailyTargets` treatment (target from the `goals` table, since there is no profile
-field for it) — but adding a metric to the reference client needs sign-off, so this PR
-leaves the tile in place and unchanged rather than deleting it.
+**Q2 — is Expo's weekly sleep average the better number?** *Closed: today's hours, on
+both.* The web's sleep tile is a quick-log button whose pill states what you logged today;
+a weekly average on a "Log sleep" button would be a different statement from the one the
+button makes. Rather than keep one tile meaning two things, both show last night. If
+product wants the trend, it should be added to **both** as a second metric.
+
+**Q3 — should the web gain Expo's "Workouts this week" tile?** *Still open, still not
+done here.* Adding a metric to the reference client needs sign-off. Expo keeps the tile;
+its invented `|| 4` target is gone, so it now reads "3 this week" until a weekly workout
+goal exists.
 
 ## Constraints
 

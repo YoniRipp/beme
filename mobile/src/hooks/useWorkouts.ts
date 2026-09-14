@@ -36,6 +36,7 @@ export function useWorkouts() {
     refetch: refetchWorkoutsQuery,
   } = useQuery({
     queryKey: queryKeys.workouts,
+    staleTime: 2 * 60 * 1000, // explicit, matching frontend/src/hooks/useWorkouts.ts
     queryFn: async () => {
       const workouts = await workoutsApi.listAll();
       return workouts.map(apiWorkoutToWorkout);
