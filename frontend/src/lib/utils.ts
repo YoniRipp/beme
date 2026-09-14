@@ -1,6 +1,5 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { format } from 'date-fns';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -19,22 +18,11 @@ export function formatCurrency(amount: number, currency: string = 'USD'): string
   }).format(amount);
 }
 
-export function formatDate(date: Date | string, dateFormat: string = 'DD/MM/YYYY'): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  
-  // Map date format strings to date-fns format strings
-  const formatMap: Record<string, string> = {
-    'MM/DD/YYYY': 'MM/dd/yyyy',
-    'DD/MM/YYYY': 'dd/MM/yyyy',
-    'YYYY-MM-DD': 'yyyy-MM-dd',
-    // Legacy support for old 2-digit year formats
-    'MM/DD/YY': 'MM/dd/yy',
-    'DD/MM/YY': 'dd/MM/yy',
-  };
-  
-  const dateFnsFormat = formatMap[dateFormat] || 'dd/MM/yyyy';
-  return format(d, dateFnsFormat);
-}
+// `formatDate` and `getWeightUnit` now live in @trackvibe/shared/domain so the Expo client
+// renders a user-facing date and weight unit exactly as the web does — it previously had
+// neither and hardcoded both. Re-exported here so every existing `@/lib/utils` import site
+// keeps working unchanged.
+export { formatDate, getWeightUnit } from '@trackvibe/shared/domain';
 
 export function formatTime(time: string): string {
   const [hours, minutes] = time.split(':');
@@ -122,8 +110,4 @@ export function isSameDay(date1: Date | string, date2: Date | string): boolean {
   const d1 = typeof date1 === 'string' ? new Date(date1) : date1;
   const d2 = typeof date2 === 'string' ? new Date(date2) : date2;
   return d1.toDateString() === d2.toDateString();
-}
-
-export function getWeightUnit(units: 'metric' | 'imperial'): string {
-  return units === 'metric' ? 'kg' : 'lbs';
 }
