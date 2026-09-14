@@ -132,6 +132,38 @@ export interface HexLiteralHit {
  * anticipate (`tintColor`, `stroke`, `overlayColor`, ...) would slip past an allowlist of
  * keys but not past "is this string shaped like a hex colour".
  */
+/**
+ * Every JSX tag name used in a file — `<Foo />` and `<Foo>…</Foo>` alike, plus the
+ * namespaced form `<Foo.Bar />` (recorded as its root, `Foo`, which is the identifier an
+ * import binds).
+ *
+ * Used by the allowlist-expiry check in `noFrozenPaletteImports.test.ts`: "this component
+ * has no call sites" is a claim about the codebase, and this is what re-evaluates it. A
+ * grep would answer the same question until the day it doesn't — a name in a comment, a
+ * string, or its own definition all match text and none of them is a call site.
+ */
+export function collectJsxElementNames(sourceFile: ts.SourceFile): string[] {
+  const names: string[] = [];
+  const rootName = (tag: ts.JsxTagNameExpression): string | undefined => {
+    if (ts.isIdentifier(tag)) return tag.text;
+    if (ts.isPropertyAccessExpression(tag)) {
+      let expr: ts.Expression = tag;
+      while (ts.isPropertyAccessExpression(expr)) expr = expr.expression;
+      return ts.isIdentifier(expr) ? expr.text : undefined;
+    }
+    return undefined;
+  };
+  const visit = (node: ts.Node) => {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const name = rootName(node.tagName);
+      if (name) names.push(name);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return names;
+}
+
 export function collectHexColorLiterals(sourceFile: ts.SourceFile): HexLiteralHit[] {
   const hits: HexLiteralHit[] = [];
   const visit = (node: ts.Node) => {

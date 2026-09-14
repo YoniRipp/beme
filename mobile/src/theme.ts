@@ -1,5 +1,5 @@
 import { MD3DarkTheme, MD3LightTheme, configureFonts, type MD3Theme } from 'react-native-paper';
-import { lightColors, darkColors, colors, spacing, radii, type ColorRoles } from '@trackvibe/shared/tokens';
+import { lightColors, darkColors, colors, spacing, radii, withAlpha, type ColorRoles } from '@trackvibe/shared/tokens';
 
 /**
  * Design tokens now live in `@trackvibe/shared/tokens` (task 11), transcribed from
@@ -90,29 +90,141 @@ const appFonts = configureFonts({
 
 /**
  * Maps a `ColorRoles` palette onto a react-native-paper MD3 theme, layered over a base
- * (`MD3LightTheme`/`MD3DarkTheme`) so every MD3 role this doesn't touch keeps Paper's
- * own default. Extracted (task 3) so the static `paperTheme`/`paperDarkTheme` below and
- * `theme/useAppTheme.ts`'s runtime-resolved theme — same base palettes, but with
- * `primary` swapped for the user's accent-colour choice — share one mapping instead of
- * two copies that can drift apart. `fonts` (task 5) is the same map regardless of
- * base, since family choice doesn't depend on light/dark.
+ * (`MD3LightTheme`/`MD3DarkTheme`). Extracted (task 3) so the static
+ * `paperTheme`/`paperDarkTheme` below and `theme/useAppTheme.ts`'s runtime-resolved
+ * theme — same base palettes, but with `primary` swapped for the user's accent-colour
+ * choice — share one mapping instead of two copies that can drift apart. `fonts` (task
+ * 5) is the same map regardless of base, since family choice doesn't depend on
+ * light/dark.
+ *
+ * EVERY MD3 ROLE IS SPELLED OUT HERE, AND THAT IS THE POINT. This docstring used to say
+ * the opposite — "every MD3 role this doesn't touch keeps Paper's own default" — framed
+ * as a deliberate choice, and that sentence is why the bug below survived review for as
+ * long as it did. Paper's defaults are not neutral: `MD3DarkTheme` is generated from
+ * `primary40 = #6750A4`, so an inherited role is not "unstyled", it is *a different
+ * brand's purple*. Nine of thirty-three roles were mapped; of the twenty-four inherited,
+ * six were on screen — purple label text on the lime "Log Food" pill (`onPrimary`),
+ * a purple block behind every selected segment (`secondaryContainer`), a purple-grey
+ * dialog ground and a purple modal wash (`elevation.level3`, `backdrop`), and a lilac
+ * rule between exercise rows (`outlineVariant`). `DEFAULT_SETTINGS.theme` is `'dark'`,
+ * so that was the default experience.
+ *
+ * The rule this file now follows: a role Paper adds in a future version is a DECISION,
+ * not a default to inherit silently. `theme/__tests__/everyMd3RoleIsMapped.test.ts`
+ * walks the base theme's own keys and fails on anything left unmapped, so a Paper minor
+ * that introduces one turns the build red rather than quietly painting it purple.
+ *
+ * `...base.colors` is kept as the spread underneath deliberately — not because anything
+ * should reach it, but so a role added upstream still *renders* (Paper reads it
+ * unconditionally) while the guard reports it. A missing key would crash a component;
+ * a purple one only looks wrong.
+ *
+ * Every value below traces to the web (`frontend/src/index.css`, or a
+ * `frontend/src/components/ui/` primitive) via `@trackvibe/shared/tokens`. The mapping
+ * table with each role's Paper default, its target and the components that read it is in
+ * `agent-os/specs/2026-09-14-1110-parity-md3-color-roles/shape.md`.
  */
 export function buildPaperTheme(base: MD3Theme, palette: ColorRoles): MD3Theme {
+  /**
+   * MD3's "container" roles are a tinted ground with the accent itself as the
+   * foreground. The web spells that pattern out longhand at each call site —
+   * `bg-primary/10 text-primary` in `PeriodSelector.tsx` and `AiInsightsSection.tsx` —
+   * so 10% is a transcription, not an approximation. Alpha rather than the existing
+   * `primarySoft` role, because `primarySoft` is `--sage-50`, a fixed sage tint that
+   * would NOT follow the user's accent choice the way `bg-primary/10` does; `primary`
+   * here is already accent-resolved by `useAppTheme`.
+   */
+  const primaryContainer = withAlpha(palette.primary, 0.1);
+
   return {
     ...base,
     roundness: radius.md,
     fonts: appFonts,
     colors: {
       ...base.colors,
+
       primary: palette.primary,
-      secondary: palette.food,
+      onPrimary: palette.primaryForeground,
+      primaryContainer,
+      onPrimaryContainer: palette.primary,
+
+      // NOT `palette.food`, which is what this used to be.
+      // `agent-os/standards/frontend/design-tokens.md`: "Terracotta is reserved for
+      // food/energy — don't spend it as a generic accent." MD3 `secondary` is the
+      // definition of a generic accent (Paper spends it on `DialogIcon` and little
+      // else), and the web's own `--secondary` is a warm neutral, not terracotta.
+      // Terracotta keeps its own first-class role — `palette.food`, and MD3 `tertiary`
+      // below — for the Energy surfaces that actually mean it.
+      secondary: palette.textMuted,
+      onSecondary: palette.surface,
+      secondaryContainer: primaryContainer,
+      onSecondaryContainer: palette.primary,
+
+      tertiary: palette.food,
+      onTertiary: palette.primaryForeground,
+      tertiaryContainer: palette.foodSoft,
+      onTertiaryContainer: palette.food,
+
       background: palette.background,
+      onBackground: palette.text,
       surface: palette.surface,
-      surfaceVariant: palette.surfaceMuted,
-      outline: palette.border,
       onSurface: palette.text,
+      surfaceVariant: palette.surfaceMuted,
       onSurfaceVariant: palette.textMuted,
+      // MD3's disabled mechanism is the ink at low opacity over whatever is behind it.
+      // The web instead puts `disabled:opacity-50` on the whole element; those are
+      // different renderings and matching the web exactly would mean overriding opacity
+      // per component. Keeping MD3's mechanism with the app's ink is the trade the spec
+      // chose — the colour is ours either way.
+      surfaceDisabled: withAlpha(palette.text, 0.12),
+      onSurfaceDisabled: withAlpha(palette.text, 0.38),
+
       error: palette.danger,
+      // Dark text on the error fill, as MD3 does (`onError` is `error20`) — the web
+      // pairs `--destructive` with a near-white `--destructive-foreground` instead, and
+      // measures WORSE for it: 3.79:1 dark against 4.25:1 here. Neither reaches AA 4.5
+      // on a saturated red; see the per-pair thresholds in `useAppTheme.test.tsx`.
+      onError: palette.surface,
+      errorContainer: withAlpha(palette.danger, 0.1),
+      onErrorContainer: palette.danger,
+
+      outline: palette.border,
+      // The web has exactly one rule colour — `--hairline` — so both outline roles read
+      // it. MD3 wants `outlineVariant` subtler than `outline`; inventing a second warm
+      // hairline to satisfy that would be a colour no web surface has.
+      outlineVariant: palette.border,
+
+      inverseSurface: palette.text,
+      inverseOnSurface: palette.background,
+      inversePrimary: palette.primary,
+
+      shadow: palette.shadow,
+      scrim: palette.scrim,
+      // `dialog.tsx` and `sheet.tsx` both overlay with `bg-scrim/50`.
+      backdrop: withAlpha(palette.scrim, 0.5),
+
+      /**
+       * Paper's tonal-elevation model tints a surface by depth, and its five levels are
+       * `primary40`/`primary80` composited over the surface at 5/8/11/12/14% — baked
+       * into opaque `rgb()` strings so RN's shadow handling doesn't break. They are
+       * literally the purple; there is no way to inherit them and not inherit it.
+       *
+       * The web never tints a card by depth: `card.tsx` is `bg-card shadow-card`, a flat
+       * surface plus a box-shadow. So all five levels are the surface, and the depth cue
+       * belongs to the shadow scale (a separate concern — see the
+       * `2026-09-14-1112-parity-radius-elevation-spacing` spec).
+       *
+       * `level0` stays `'transparent'`: that is not a colour, it is Paper's "no surface"
+       * sentinel, and painting it would give every flat `Surface` a background.
+       */
+      elevation: {
+        level0: 'transparent',
+        level1: palette.surface,
+        level2: palette.surface,
+        level3: palette.surface,
+        level4: palette.surface,
+        level5: palette.surface,
+      },
     },
   };
 }

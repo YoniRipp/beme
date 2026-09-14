@@ -7,6 +7,7 @@ import {
   collectImports,
   collectRequireCalls,
   collectHexColorLiterals,
+  collectJsxElementNames,
   isRelativeModule,
 } from '../paletteGuardSupport';
 
@@ -54,23 +55,89 @@ const ALLOWED_THEME_IMPORTS: Record<string, Set<string>> = {
 const FROZEN_PALETTE_NAMES = new Set(['colors', 'lightColors', 'darkColors']);
 
 /**
- * file (relative to `mobile/src`) -> hex value -> why it's allowed. Kept small and
- * per-(file, value) rather than a whole-file skip, so the rest of an allowlisted file is
- * still checked.
+ * AN ALLOWLIST ENTRY IS A CLAIM ABOUT THE CODEBASE, NOT A NOTE. A claim nothing
+ * re-evaluates is a comment, and a guard whose exemptions are comments goes green through
+ * the change that invalidates them.
+ *
+ * That is not hypothetical here. `ProgressRing.tsx`'s `#e5e7eb` was exempted because
+ * "the component has no current call sites (`\"<ProgressRing\"` greps empty), so it is
+ * not a live dark-mode defect today". True when written. PR #303 gave the component its
+ * first call site — a weekly goal ring on `BodyScreen`, inside a card whose background is
+ * `colors.surface`, in the theme that ships as the default — and the hex became a
+ * 14.44:1 light-grey hoop on a near-black card. This guard stayed green through exactly
+ * that transition, because nothing re-checked the sentence it was resting on.
+ *
+ * So an entry may carry a `condition` that IS re-checked, and the ones that can be
+ * checked must be. `unusedComponent` is the shape that has already bitten: it asserts
+ * "no JSX in `mobile/src` renders this component", and the moment one does, the exemption
+ * fails — reported as an expired justification rather than as a disallowed hex, because
+ * the author needs to know the reasoning died, not just see the symptom.
+ *
+ * Free text stays available, and stays correct, for exemptions that are genuinely not
+ * mechanically checkable: `lib/analytics.ts`'s categorical chart colours are not a themed
+ * role in any theme and never will be. The distinction is whether the reason makes a claim
+ * that could stop being true.
+ *
+ * There are ZERO `unusedComponent` entries below, and that is the intended end state, not
+ * an oversight — the one that existed expired and was fixed. The mechanism is here so the
+ * NEXT one expires loudly; it is pinned by a fixture case (see the bottom of this file)
+ * for the same reason the two import-regex holes are.
+ *
+ * file (relative to `mobile/src`) -> hex value -> the exemption. Kept per-(file, value)
+ * rather than a whole-file skip, so the rest of an allowlisted file is still checked.
  */
-const ALLOWED_HEX_LITERALS: Record<string, Record<string, string>> = {
+interface HexExemption {
+  reason: string;
+  /**
+   * Mechanically re-checked: the exemption holds only while NO file under `mobile/src`
+   * renders this component in JSX. Use it whenever the reason is "nothing uses this yet".
+   * Tests don't count as call sites — `collectSourceFiles` skips `__tests__` — which is
+   * the right reading: a rendered-in-a-test component is not on anyone's screen.
+   */
+  unusedComponent?: string;
+}
+
+const ALLOWED_HEX_LITERALS: Record<string, Record<string, HexExemption>> = {
   [path.join('lib', 'analytics.ts')]: {
-    '#10b981': 'CHART_COLORS — react-native-gifted-charts needs literal values; chart series colours are categorical, not a themed role',
-    '#3b82f6': 'CHART_COLORS — categorical chart series colour',
-    '#8b5cf6': 'CHART_COLORS — categorical chart series colour',
-    '#f59e0b': 'CHART_COLORS — categorical chart series colour',
-    '#ef4444': 'CHART_COLORS — categorical chart series colour',
+    '#10b981': { reason: 'CHART_COLORS — react-native-gifted-charts needs literal values; chart series colours are categorical, not a themed role' },
+    '#3b82f6': { reason: 'CHART_COLORS — categorical chart series colour' },
+    '#8b5cf6': { reason: 'CHART_COLORS — categorical chart series colour' },
+    '#f59e0b': { reason: 'CHART_COLORS — categorical chart series colour' },
+    '#ef4444': { reason: 'CHART_COLORS — categorical chart series colour' },
   },
   [path.join('screens', 'InsightsScreen.tsx')]: {
-    '#fff': "PieChart label text drawn on the chart's own coloured wedge fills, not the page background — legible regardless of app theme",
-    '#ef4444': 'LineChart series colour (calorie trend) — categorical chart accent, same class as CHART_COLORS',
+    '#fff': { reason: "PieChart label text drawn on the chart's own coloured wedge fills, not the page background — legible regardless of app theme" },
+    '#ef4444': { reason: 'LineChart series colour (calorie trend) — categorical chart accent, same class as CHART_COLORS' },
   },
 };
+
+/**
+ * The re-evaluation itself, as a pure function of (allowlist, components rendered
+ * somewhere in the tree) so the fixture case at the bottom can drive it with a synthetic
+ * allowlist. Returns one message per exemption whose stated justification has stopped
+ * being true.
+ */
+function expiredExemptions(
+  allowlist: Record<string, Record<string, HexExemption>>,
+  renderedComponents: Set<string>
+): string[] {
+  const expired: string[] = [];
+  for (const [file, byHex] of Object.entries(allowlist)) {
+    for (const [hex, exemption] of Object.entries(byHex)) {
+      const component = exemption.unusedComponent;
+      if (component && renderedComponents.has(component)) {
+        expired.push(
+          `mobile/src/${file}: the exemption for '${hex}' has EXPIRED. It was allowed on the ` +
+            `grounds that \`${component}\` has no call sites, and something under mobile/src now ` +
+            `renders \`<${component}>\`. The hex is not newly wrong — the reasoning that made it ` +
+            `acceptable is. Either theme the colour (\`useThemedStyles\` / \`useThemeContext\`) ` +
+            `and delete this entry, or replace the entry's reason with one that is true now.`
+        );
+      }
+    }
+  }
+  return expired;
+}
 
 function scanFileForImportOffenses(file: string): string[] {
   const rel = path.relative(SRC_ROOT, file);
@@ -149,6 +216,19 @@ describe('static colour palette guard', () => {
     }
   });
 
+  it('does not let an allowlist entry outlive the justification it was granted on', () => {
+    const files = collectSourceFiles(SRC_ROOT, /\.tsx?$/);
+    const rendered = new Set(files.flatMap((file) => collectJsxElementNames(parseSourceFile(file))));
+    const expired = expiredExemptions(ALLOWED_HEX_LITERALS, rendered);
+
+    if (expired.length > 0) {
+      throw new Error(
+        `${expired.length} hex-literal exemption(s) rest on a claim that is no longer true:\n` +
+          expired.map((e) => `  - ${e}`).join('\n')
+      );
+    }
+  });
+
   // Regression coverage for the two import-shaped evasions the old regex missed. These
   // parse fixture source text directly rather than touching the filesystem, so they pin
   // the AST-level behaviour independent of whatever real files exist under mobile/src
@@ -182,6 +262,78 @@ describe('static colour palette guard', () => {
       const sourceFile = parseFixture(src);
       const flagged = collectRequireCalls(sourceFile).some((spec) => isRelativeModule(spec, 'theme'));
       expect(flagged).toBe(true);
+    });
+  });
+
+  /**
+   * Pins the expiry mechanism itself. `ALLOWED_HEX_LITERALS` has no `unusedComponent`
+   * entries any more — the one that did expired, was found, and was fixed — so the live
+   * check above passes vacuously today and would keep passing if the whole mechanism were
+   * deleted. These fixtures are what make it real for the next entry.
+   */
+  describe('the allowlist-expiry mechanism', () => {
+    const parseFixture = (text: string): ts.SourceFile =>
+      ts.createSourceFile('fixture.tsx', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+    const fixtureAllowlist = {
+      [path.join('components', 'Widget.tsx')]: {
+        '#e5e7eb': { reason: 'no call sites yet', unusedComponent: 'Widget' },
+      },
+    };
+
+    it('reports an exemption as expired once something renders the component', () => {
+      const expired = expiredExemptions(fixtureAllowlist, new Set(['Widget']));
+
+      expect(expired).toHaveLength(1);
+      // The message has to name the justification, not the symptom: an author who reads
+      // "hex not allowed" goes looking for what changed about the colour, and nothing did.
+      expect(expired[0]).toMatch(/EXPIRED/);
+      expect(expired[0]).toMatch(/no call sites/);
+      expect(expired[0]).toMatch(/<Widget>/);
+    });
+
+    it('leaves the exemption alone while the component really is unused', () => {
+      expect(expiredExemptions(fixtureAllowlist, new Set(['SomethingElse']))).toEqual([]);
+    });
+
+    it('never expires a free-text exemption, which makes no checkable claim', () => {
+      const freeText = {
+        [path.join('lib', 'analytics.ts')]: { '#10b981': { reason: 'categorical chart series colour' } },
+      };
+      // Even with every name in the tree rendered, an entry with no condition stands.
+      expect(expiredExemptions(freeText, new Set(['analytics', 'CHART_COLORS', 'Widget']))).toEqual([]);
+    });
+
+    it('counts a real JSX usage and not a mention of the name in prose or a string', () => {
+      // The grep the original justification cited (`"<ProgressRing"`) could not tell these
+      // apart, which is half of why a sentence in a comment was doing a guard's job.
+      const rendered = new Set(
+        collectJsxElementNames(
+          parseFixture(
+            `// Widget is not used here.\nconst label = '<Widget>';\nexport const A = () => <Other />;\n`
+          )
+        )
+      );
+      expect(rendered.has('Widget')).toBe(false);
+      expect(expiredExemptions(fixtureAllowlist, rendered)).toEqual([]);
+
+      const used = new Set(
+        collectJsxElementNames(parseFixture(`export const B = () => <Widget value={1} />;\n`))
+      );
+      expect(used.has('Widget')).toBe(true);
+      expect(expiredExemptions(fixtureAllowlist, used)).toHaveLength(1);
+    });
+
+    it('sees a component rendered with children, and one reached through a namespace', () => {
+      const withChildren = new Set(
+        collectJsxElementNames(parseFixture(`export const C = () => <Widget><Text /></Widget>;\n`))
+      );
+      expect(withChildren.has('Widget')).toBe(true);
+
+      const namespaced = new Set(
+        collectJsxElementNames(parseFixture(`export const D = () => <Widget.Ring value={1} />;\n`))
+      );
+      expect(namespaced.has('Widget')).toBe(true);
     });
   });
 });
