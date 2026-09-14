@@ -1,7 +1,7 @@
 # Playwright silently tests whichever worktree owns port 5173
 
-Status: **not started**. Found 2026-09-14 when an E2E run reported a fix as broken that
-was, in fact, present in the branch under test.
+Status: **done** (PR #319 — options 1 and 3 together). Found 2026-09-14 when an E2E run
+reported a fix as broken that was, in fact, present in the branch under test.
 Severity: **high** — it does not fail loudly. It reports confident, wrong results.
 
 ## What happens
@@ -61,13 +61,20 @@ that a route is reachable without authentication.
 Recommendation: 3 as an immediate guard, then 1. Option 2 alone is defensible if the
 per-run cost is acceptable — measure it before deciding.
 
+**What was built: 1 and 3 together.** Option 2 was measured and rejected, but not on cost —
+a cold Vite start is ~1.0–2.9s and a cold backend ~1.0–2.4s, which is affordable. It was
+rejected because Playwright refuses to run at all when `reuseExistingServer` is false and
+something already answers on the URL: with every worktree naming one port, a single dev
+server anywhere on the machine would have blocked E2E in all ~30 of the others. Deriving the
+port removes the contention that option 2 would merely have made loud.
+
 Note this interacts with `SKIP_BACKEND=1`: the backend `webServer` entry has the same
 `reuseExistingServer` and the same exposure on port 3000.
 
 ## Acceptance criteria
 
-- [ ] A Playwright run in worktree A cannot test worktree B's code
-- [ ] If it somehow can, the run fails with a message naming the cause
-- [ ] `npx playwright test` still works with no manual setup in a fresh clone
-- [ ] The same protection covers the backend `webServer` entry on 3000
-- [ ] `frontend/CLAUDE.md` says which port a run uses and how to override it
+- [x] A Playwright run in worktree A cannot test worktree B's code
+- [x] If it somehow can, the run fails with a message naming the cause
+- [x] `npx playwright test` still works with no manual setup in a fresh clone
+- [x] The same protection covers the backend `webServer` entry on 3000
+- [x] `frontend/CLAUDE.md` says which port a run uses and how to override it

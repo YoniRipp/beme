@@ -1,11 +1,37 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
+/**
+ * Answers "which checkout are you serving?" on `/__e2e/identity`.
+ *
+ * The repo is worked in many git worktrees at once and they all used to name port 5173, so a
+ * Playwright run happily reused another worktree's dev server and reported its results
+ * against your branch. Ports are derived per checkout now, but nothing stops an unrelated
+ * process from taking one — so the E2E global setup asks the server who it is and refuses to
+ * run on a mismatch. See `e2e/support/servers.ts`.
+ *
+ * Dev only (`apply: 'serve'`); it is not part of a build.
+ */
+function e2eIdentity(): Plugin {
+  return {
+    name: 'trackvibe:e2e-identity',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/__e2e/identity', (_req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'no-store');
+        res.end(JSON.stringify({ root: __dirname }));
+      });
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    e2eIdentity(),
     react(),
     VitePWA({
       strategies: 'injectManifest',

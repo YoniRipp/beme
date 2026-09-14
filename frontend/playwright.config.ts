@@ -1,12 +1,27 @@
 import { defineConfig, devices } from '@playwright/test';
+import {
+  backendBaseURL,
+  backendPort,
+  frontendBaseURL,
+  frontendPort,
+  skipBackend,
+} from './e2e/support/servers';
 
 /**
  * Playwright E2E test configuration for TrackVibe.
+ *
+ * Ports are derived per checkout and the running servers are identity-checked in
+ * `globalSetup` — see `e2e/support/servers.ts` for why, and `CLAUDE.md` for the env
+ * overrides (`E2E_FRONTEND_PORT`, `E2E_BACKEND_PORT`, `E2E_ALLOW_FOREIGN_SERVER`).
  *
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
   testDir: './e2e',
+  /* `support/` holds helpers, not specs */
+  testMatch: '**/*.spec.ts',
+  /* Refuse to run against a dev server belonging to another checkout */
+  globalSetup: './e2e/support/global-setup.ts',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code */
@@ -21,7 +36,7 @@ export default defineConfig({
   /* Shared settings for all the projects below */
   use: {
     /* Base URL to use in actions like \`await page.goto('/')\` */
-    baseURL: 'http://localhost:5173',
+    baseURL: frontendBaseURL,
 
     /* Collect trace when retrying the failed test */
     trace: 'on-first-retry',
@@ -57,28 +72,36 @@ export default defineConfig({
   ],
 
   /* Run dev servers before starting the tests.
-   * In CI, both backend and frontend are started.
-   * Locally, set SKIP_BACKEND=1 to skip the backend server if no DB is available.
+   * Both run on ports derived from this checkout's path, so concurrent worktrees do not
+   * fight over 5173/3000; `globalSetup` then verifies that what answers is in fact ours.
+   * Set SKIP_BACKEND=1 to run against whatever API is already up (or none at all).
    */
   webServer: [
-    // Backend server (Express on port 3000)
-    // Skipped when SKIP_BACKEND=1 or when the backend is already running.
-    ...(!process.env.SKIP_BACKEND
+    // Backend server (Express). PORT is passed explicitly, which also means the API boots in
+    // a fresh clone that has no backend/.env — where it previously exited on a missing PORT
+    // and the run silently fell through to whoever owned 3000.
+    ...(!skipBackend
       ? [
           {
             command: 'npm run dev',
             cwd: '../backend',
-            url: 'http://localhost:3000/health',
+            env: { PORT: String(backendPort) },
+            url: `${backendBaseURL}/health`,
             reuseExistingServer: !process.env.CI,
             timeout: 30_000,
             ignoreHTTPSErrors: true,
           },
         ]
       : []),
-    // Frontend server (Vite on port 5173)
+    // Frontend server (Vite). `--strictPort` matters: without it Vite quietly moves to the
+    // next free port when ours is taken, and the suite would run against the squatter.
     {
-      command: 'npm run dev',
-      url: 'http://localhost:5173',
+      command: `npm run dev -- --port ${frontendPort} --strictPort`,
+      // The app defaults its API base to `:3000`; point it at the backend we actually
+      // started. Under SKIP_BACKEND the default is left alone — that flag means the
+      // developer is supplying the API themselves.
+      env: skipBackend ? {} : { VITE_API_URL: backendBaseURL },
+      url: frontendBaseURL,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
     },

@@ -90,8 +90,19 @@ export async function createApp() {
   app.use(requestIdMiddleware);
   app.use(metricsMiddleware);
 
-  // Health (not rate-limited)
-  app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
+  // Health (not rate-limited).
+  //
+  // Outside production the payload also carries `checkout`: the directory this process was
+  // started in. Nothing in the product reads it. It exists because the repo is worked in many
+  // git worktrees at once and Playwright reuses whatever already listens on a port — without
+  // this, an E2E run could not tell its own API server from another worktree's and would
+  // report that tree's behaviour against your branch. See `frontend/e2e/support/servers.ts`.
+  // The production response is unchanged.
+  app.get('/health', (req, res) =>
+    res
+      .status(200)
+      .json(config.isProduction ? { status: 'ok' } : { status: 'ok', checkout: process.cwd() })
+  );
 
   // Ready: 200 if DB (and Redis when configured) reachable, 503 otherwise (not rate-limited)
   app.get('/ready', async (req, res) => {
