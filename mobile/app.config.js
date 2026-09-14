@@ -1,8 +1,91 @@
-export default {
+/**
+ * The single source of truth for the Expo config.
+ *
+ * There used to be an `app.json` next to this file. Expo resolves a dynamic config
+ * (`app.config.js`) *after* the static one and lets it replace the result wholesale, so the
+ * old static-object export here shadowed `app.json` entirely -- icon, splash, orientation,
+ * userInterfaceStyle, newArchEnabled and every `ios`/`android`/`web` key were silently
+ * dropped from the resolved config. This app cannot be static-only (`extra.apiUrl` reads an
+ * env var), so the two files are collapsed into this one rather than kept in a merge
+ * relationship that already failed once.
+ *
+ * The `({ config })` signature and the `...config` spread are kept deliberately: if `eas init`
+ * or a future tool writes an `app.json` back, its keys flow through instead of vanishing.
+ *
+ * Native projects are generated (`/ios` and `/android` are gitignored), so everything native
+ * -- permissions included -- has to be declared here or it does not exist.
+ */
+
+/**
+ * Shown in the iOS permission prompts. Wording carried over from the retired Capacitor setup
+ * guide (`frontend/CAPACITOR_SETUP.md`) so the ask reads the same as it always has.
+ *
+ * `NSSpeechRecognitionUsageDescription` is not optional: iOS raises SIGABRT the first time an
+ * app touches SFSpeechRecognizer without it. It is declared in `ios.infoPlist` *and* passed to
+ * the speech plugin below -- the plugin only fills in a generic default when the key is
+ * absent, and this is not a string worth leaving to a fallback.
+ */
+const SPEECH_RECOGNITION_PERMISSION =
+  'TrackVibe uses speech recognition to understand your voice commands for logging activities.';
+const MICROPHONE_PERMISSION = 'TrackVibe needs microphone access to capture your voice commands.';
+
+/**
+ * Reused from the retired Capacitor shell, which never shipped: its `versionCode` is still 1,
+ * it has no signing config, `assetlinks.json` still holds the placeholder fingerprint, and the
+ * id was renamed `com.bme.app` -> `com.trackvibe.app` in 858de40 (store package names are
+ * immutable, so a published app could not have been renamed). Nothing owns this id yet.
+ * Confirm it is free on App Store Connect and the Play Console before the first submission.
+ */
+const BUNDLE_ID = 'com.trackvibe.app';
+
+export default ({ config }) => ({
+  ...config,
   name: 'TrackVibe',
   slug: 'trackvibe',
   version: '1.0.0',
+  orientation: 'portrait',
+  icon: './assets/icon.png',
+  userInterfaceStyle: 'automatic',
+  newArchEnabled: true,
+  splash: {
+    image: './assets/splash-icon.png',
+    resizeMode: 'contain',
+    backgroundColor: '#110f0e',
+  },
+  ios: {
+    supportsTablet: true,
+    bundleIdentifier: BUNDLE_ID,
+    infoPlist: {
+      NSSpeechRecognitionUsageDescription: SPEECH_RECOGNITION_PERMISSION,
+      NSMicrophoneUsageDescription: MICROPHONE_PERMISSION,
+    },
+  },
+  android: {
+    package: BUNDLE_ID,
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#ffffff',
+    },
+    edgeToEdgeEnabled: true,
+    predictiveBackGestureEnabled: false,
+    // Additive, not an allowlist: the speech plugin unions its own RECORD_AUDIO into this.
+    permissions: ['android.permission.RECORD_AUDIO'],
+  },
+  web: {
+    favicon: './assets/favicon.png',
+  },
+  plugins: [
+    [
+      'expo-speech-recognition',
+      {
+        speechRecognitionPermission: SPEECH_RECOGNITION_PERMISSION,
+        microphonePermission: MICROPHONE_PERMISSION,
+      },
+    ],
+  ],
   extra: {
+    // Spread first so an `extra.eas.projectId` written by `eas init` survives.
+    ...config.extra,
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000',
   },
-};
+});
