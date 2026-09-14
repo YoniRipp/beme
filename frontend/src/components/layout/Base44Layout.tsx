@@ -23,6 +23,7 @@ import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useMediaQuery, supportsMediaQueries, LG_BREAKPOINT_QUERY } from '@/hooks/useMediaQuery';
+import { useScrollToTopOnNavigate } from '@/hooks/useScrollToTopOnNavigate';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -106,6 +107,10 @@ export function Base44Layout() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // The other reaction to a route change: every screen opens at the top. See the hook for
+  // why it skips POP and why `behavior: 'instant'` is not optional.
+  useScrollToTopOnNavigate();
 
   useEffect(() => {
     setSidebarOpen(false);
