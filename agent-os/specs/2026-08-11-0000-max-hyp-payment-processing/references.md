@@ -12,7 +12,7 @@
 - **Relevance:** `/checkout` changes return value, `/portal` is deleted, webhook becomes callback
 
 ### Pro gating
-- **Location:** `backend/src/middleware/requirePro.ts`
+- **Location:** `backend/src/middleware/aiAccess.ts` (was `requirePro.ts`)
 - **Relevance:** Gates on `lemonSqueezyApiKey` being configured; must gate on `maxTerminalNumber`
 
 ### Config

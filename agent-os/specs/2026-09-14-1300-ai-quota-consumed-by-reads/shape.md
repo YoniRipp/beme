@@ -1,6 +1,7 @@
 # `requirePro` spends an AI call on endpoints that never call a model
 
-Status: **not started**. Found 2026-09-14 while auditing web/Expo parity; it is not a
+Status: **shipped** (PR #314), with one criterion deliberately deferred — see
+"Outcome" at the bottom. Found 2026-09-14 while auditing web/Expo parity; it is not a
 parity problem — it is a live defect on the shipping web client.
 Severity: **high**. It silently consumes a free user's monthly allowance.
 
@@ -65,10 +66,50 @@ own look.
 
 ## Acceptance criteria
 
-- [ ] Reading or deleting chat history spends no AI call
-- [ ] Polling insights freshness spends no AI call
-- [ ] A cache hit on `GET /api/insights` spends no AI call
-- [ ] Endpoints that reach a model still debit exactly once
-- [ ] A test per endpoint asserting the balance before and after, so the next route added
+- [x] Reading or deleting chat history spends no AI call
+- [x] Polling insights freshness spends no AI call
+- [ ] A cache hit on `GET /api/insights` spends no AI call — **deferred, see below**
+- [x] Endpoints that reach a model still debit exactly once
+- [x] A test per endpoint asserting the balance before and after, so the next route added
       behind the middleware cannot quietly re-introduce this
-- [ ] `aiCallsRemaining` reported to the client reflects the balance after the request
+- [x] `aiCallsRemaining` reported to the client reflects the balance after the request
+      (`res.locals.remainingCalls` is now the post-debit balance under `requireAiQuota`
+      and the untouched balance under `requireAiAccess` — both true statements. Nothing
+      reads it yet; surfacing it on the response is a separate change.)
+
+## Outcome
+
+`backend/src/middleware/requirePro.ts` is gone. `backend/src/middleware/aiAccess.ts`
+exports two guards — `requireAiAccess` (checks, spends nothing, backed by the existing
+`checkAiQuota`) and `requireAiQuota` (checks and debits, backed by `tryConsumeAiCall`).
+`requirePro` was not kept as an alias: nothing outside `backend/src/routes` imported it,
+so there is no ambiguous name left for a new call site to pick up.
+
+`GET`/`DELETE /api/chat/history` and `GET /api/insights/freshness` are on
+`requireAiAccess`. Everything that reaches a model is on `requireAiQuota`.
+
+### `GET /api/insights` — still debits on entry, deliberately
+
+Three options, all bad in different ways:
+
+1. **`requireAiAccess`.** Rejected outright. A cache miss would reach Gemini with no
+   debit and no limit — a worse defect than the one being fixed.
+2. **Debit inside `services/insights.ts` at the point `generateInsights` runs.** This is
+   the honest fix and it is what this spec proposes, but it cannot be done in isolation:
+   - `getOrGenerateInsights` is shared with `GET /api/insights/today` and
+     `POST /api/insights/refresh`, which already debit at the middleware — a service-level
+     debit double-charges both unless an "already paid" flag is threaded through, which
+     reintroduces exactly the invisible coupling this change removes.
+   - `refreshAllPeriods` fans out to three more `refreshInsights` calls in the background.
+     A service-level debit turns one user action into four charges, silently.
+   - The 403 body is a frozen contract (web client and MCP server both branch on
+     `error === 'free_quota_exhausted'`). A service throw surfaces through `errorHandler`
+     in the standard error envelope instead, so keeping it byte-identical needs a
+     special case in `errorHandler` too.
+3. **Leave it debiting.** Chosen. No behaviour change, no regression, nothing silently
+   free, and the overcharge is bounded at one call per cache hit.
+
+Doing (2) properly means unwinding the fan-out in `refreshAllPeriods` and giving the
+service a single billed entry point. That is its own change, and it pairs naturally with
+the already-noted problem that the web prefetches three extra periods on the Insights
+page. Both belong in one follow-up.
