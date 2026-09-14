@@ -18,6 +18,9 @@ const PUBLIC_ROUTES = [
   { path: '/privacy', name: /privacy policy/i },
   { path: '/terms', name: /terms of service/i },
   { path: '/contact', name: /get in touch/i },
+  // Reached from a link in an email, so it has to answer for a signed-out visitor. Behind
+  // the auth guard the redirect to /login strips ?token= and ?email= and the reset is lost.
+  { path: '/reset-password', name: /reset link is no longer valid/i },
 ] as const;
 
 test.describe('Navigation - public routes', () => {
