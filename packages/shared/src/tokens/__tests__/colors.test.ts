@@ -3,7 +3,7 @@ import { colors, radii } from '../index';
 
 describe('design tokens', () => {
   it('exposes the semantic colour roles both clients need', () => {
-    for (const role of ['background', 'surface', 'text', 'textMuted', 'primary', 'danger', 'border']) {
+    for (const role of ['background', 'surface', 'text', 'textMuted', 'primary', 'primaryForeground', 'danger', 'border']) {
       expect(colors).toHaveProperty(role);
       expect(colors[role as keyof typeof colors]).toMatch(/^#[0-9a-fA-F]{6}$/);
     }

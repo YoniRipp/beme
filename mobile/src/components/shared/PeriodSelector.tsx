@@ -26,7 +26,7 @@ export function PeriodSelector({ value, onChange, labels = DEFAULT_LABELS }: Per
     container: { flexDirection: 'row', marginVertical: spacing.sm },
     chip: { marginRight: spacing.sm },
     selectedChip: { backgroundColor: colors.primary },
-    selectedText: { color: '#fff' },
+    selectedText: { color: colors.primaryForeground },
   }));
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.container}>

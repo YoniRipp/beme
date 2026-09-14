@@ -14,10 +14,19 @@
  *   surfaceMuted -> --paper-2                 text        -> --ink
  *   textMuted    -> --ink-3 (--muted-foreground)  border  -> --hairline
  *   primary      -> --primary (--sage-dark / --sage)
+ *   primaryForeground -> --primary-foreground (fixed light value / `var(--paper)`)
  *   primarySoft  -> --sage-50                 food        -> --terracotta
  *   foodSoft     -> --terracotta-light        workout     -> --info
  *   sleep        -> --gold                    danger      -> --destructive
  *   success      -> --success
+ *
+ * `primaryForeground` is the text/icon colour meant to sit ON TOP of `primary` — the
+ * web pairs the two everywhere `--primary` is a background (see
+ * `frontend/src/hooks/useThemeEffect.ts`, which overrides both together). Light's
+ * `--primary-foreground` is a fixed `36 40% 98%` (`#fcfaf8`); dark's is
+ * `var(--paper)` = `30 8% 6%`, which is `#110f0e` — identical to this file's own
+ * `darkColors.background`, not a coincidence, just the same "near-black paper" value
+ * reused as a foreground.
  *
  * `workoutSoft` and `sleepSoft` have no counterpart on the web — it never needed an
  * "info-soft" or "gold-soft" role the way it needed `--terracotta-light` for food.
@@ -32,6 +41,7 @@ export interface ColorRoles {
   textMuted: string;
   border: string;
   primary: string;
+  primaryForeground: string;
   primarySoft: string;
   food: string;
   foodSoft: string;
@@ -51,6 +61,7 @@ export const lightColors: ColorRoles = {
   textMuted: '#756961',
   border: '#e0dcd6',
   primary: '#37624d',
+  primaryForeground: '#fcfaf8',
   primarySoft: '#eff6f2',
   food: '#ce6546',
   foodSoft: '#f7e4de',
@@ -70,6 +81,7 @@ export const darkColors: ColorRoles = {
   textMuted: '#a59e97',
   border: '#2e2b28',
   primary: '#64c491',
+  primaryForeground: '#110f0e', // var(--paper) on the web — identical to `background` above
   primarySoft: '#17261e',
   food: '#e27a5a',
   foodSoft: '#462920',

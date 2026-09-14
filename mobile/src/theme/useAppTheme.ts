@@ -33,20 +33,26 @@ export interface AppTheme {
 
 /**
  * Resolves the app's active theme: the base light/dark palette from
- * `@trackvibe/shared/tokens`, with `primary` overridden by the user's accent-colour
- * choice (`settings.balanceDisplayColor`) — matching what `useThemeEffect` does on the
- * web (`frontend/src/hooks/useThemeEffect.ts`). That effect is mounted unconditionally
- * in `ProtectedAppRoutes` (`frontend/src/routes.tsx:90`) and overwrites `--primary` at
- * runtime with `ACCENT_PALETTE[accentColor]`; it never touches any other custom
- * property, so only `colors.primary` is overridden here — every other role comes
- * straight from the resolved base palette.
+ * `@trackvibe/shared/tokens`, with `primary` AND `primaryForeground` overridden by the
+ * user's accent-colour choice (`settings.balanceDisplayColor`) — matching what
+ * `useThemeEffect` does on the web (`frontend/src/hooks/useThemeEffect.ts`). That effect
+ * is mounted unconditionally in `ProtectedAppRoutes` (`frontend/src/routes.tsx:90`) and
+ * overwrites FIVE custom properties at runtime from `ACCENT_PALETTE[accentColor]`:
+ * `--primary`, `--primary-foreground`, `--sidebar-primary`,
+ * `--sidebar-primary-foreground` and `--ring`. Mobile has no sidebar and nothing reads
+ * `--ring` today, so those three have no mobile counterpart — but `--primary-foreground`
+ * is the half that makes the accent's own text legible, and it is overridden here too.
+ * Every other role still comes straight from the resolved base palette.
  *
  * THE TRAP: with the shipped defaults (`theme: 'dark'`, `balanceDisplayColor: 'green'`)
  * this resolves `colors.primary` to `accentHex.green.darkPrimary` = `#b5ef57` (lime) —
  * NOT `darkColors.primary` (`#64c491`, sage). `frontend/src/index.css`'s `.dark` block
  * sets `--primary: var(--sage)`, but `useThemeEffect`'s runtime override wins on every
  * authenticated page, so lime is what the live site actually shows. Reading only
- * `darkColors.primary` here would make mobile sage where the site is lime.
+ * `darkColors.primary` here would make mobile sage where the site is lime. The same
+ * trap applies to the foreground half: `darkColors.primaryForeground` (this base
+ * palette's own near-black) is NOT what pairs with lime — `accentHex.green.darkPrimaryForeground`
+ * is, and that is what must be read here, for the same reason.
  */
 export function useAppTheme(): AppTheme {
   const { settings } = useSettings();
@@ -58,6 +64,7 @@ export function useAppTheme(): AppTheme {
   const colors: ColorRoles = {
     ...basePalette,
     primary: scheme === 'dark' ? accent.darkPrimary : accent.primary,
+    primaryForeground: scheme === 'dark' ? accent.darkPrimaryForeground : accent.primaryForeground,
   };
 
   const paperTheme = buildPaperTheme(scheme === 'dark' ? MD3DarkTheme : MD3LightTheme, colors);

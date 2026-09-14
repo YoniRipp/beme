@@ -11,11 +11,13 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { fonts, radius, spacing } from '../theme';
+import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
 
 export function SignupScreen() {
   const navigation = useNavigation();
   const { register } = useAuth();
+  const { colors } = useThemeContext();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -69,7 +71,7 @@ export function SignupScreen() {
     },
     buttonText: {
       fontFamily: fonts.regular,
-      color: '#fff',
+      color: colors.primaryForeground,
       fontSize: 16,
       fontWeight: '600',
     },
@@ -136,7 +138,7 @@ export function SignupScreen() {
           editable={!loading}
         />
         <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleSignup} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign up</Text>}
+          {loading ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={styles.buttonText}>Sign up</Text>}
         </Pressable>
         <Pressable onPress={() => navigation.navigate('Login' as never)} disabled={loading}>
           <Text style={styles.link}>Already have an account? Sign in</Text>
