@@ -6,16 +6,18 @@
 
 A mobile-first fitness tracking PWA: food and calories, workouts, exercises, sleep, weight, water, cycle. Voice is the primary input method. The app works and has users — changes should improve it, not restart it.
 
-Monorepo: `backend/` (Node/Express/TS) · `frontend/` (React/Vite/TS) · `mobile/` (Expo) · `twa/` (Android wrapper).
+Monorepo, on npm workspaces: `backend/` (Node/Express/TS) · `frontend/` (React/Vite/TS) · `mobile/` (Expo) · `packages/shared` · `twa/` (Android wrapper).
 
-`frontend/` is **the** client — it ships as the web app, as a PWA, and as a native shell via Capacitor. `mobile/` is **dormant**: the Expo app has been untouched since May 2026 and ships to nobody. Don't spend effort there unless asked.
+`frontend/` ships as the web app and the PWA. `mobile/` is **the native client**: the Expo app came back into active development on 2026-09-12 (Expo SDK 54) and is where iOS and Android work belongs. Code both clients need goes in `packages/shared`.
+
+The Capacitor shell inside `frontend/` is **not** the native path any more. No CI job builds it, `frontend/ios/` is not in the repo, and its `@capacitor/cli` is a major behind its runtime — so it does not currently build from a clean checkout. Leave it alone rather than repairing it; new native work goes to `mobile/`.
 
 ## Critical rules
 
 1. **Never break existing functionality.**
 2. **Never remove working features.**
 3. **Don't rewrite backend logic** unless the task genuinely requires it.
-4. **Don't change API shapes** unless required — the web client and the MCP server both consume them, and the MCP server ships separately. (The dormant Expo app is not a consumer to keep in sync.)
+4. **Don't change API shapes** unless required — the web client, the Expo app and the MCP server all consume them, and the MCP server ships separately. All three are consumers to keep in sync.
 5. Default focus is UI, UX, and bug fixing. This project evolves gradually.
 6. **Per-user data must stay bounded.** New per-user tables need `user_id ... ON DELETE CASCADE` and a compaction story. Never read a user's whole history in a request path — pass `{ limit, offset }` or filter by date in SQL. See `backend/data-lifecycle`.
 
