@@ -34,6 +34,10 @@ other checkout if it is not this one.
 | `SKIP_BACKEND=1` | Don't start or check an API server; the app falls back to `:3000` |
 | `E2E_ALLOW_FOREIGN_SERVER=1` | Turn an identity mismatch into a warning instead of a failure |
 
+The two flags take `1` or `true` and nothing else, so `SKIP_BACKEND=0` means off rather than on.
+The API server the run starts is passed `SEPARATE_WORKERS=true`: it shares your `DATABASE_URL`
+and Redis, and a second voice worker would take jobs off your own backend's queue.
+
 Nothing about this runs in CI — CI does not run Playwright at all. It is a local-only guard.
 
 The mechanics live in `e2e/support/servers.ts`.

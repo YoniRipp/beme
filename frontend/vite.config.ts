@@ -12,14 +12,20 @@ import path from 'path';
  * process from taking one — so the E2E global setup asks the server who it is and refuses to
  * run on a mismatch. See `e2e/support/servers.ts`.
  *
- * Dev only (`apply: 'serve'`); it is not part of a build.
+ * Dev only (`apply: 'serve'`); it is not part of a build. Loopback only, too: `npm run dev`
+ * is `vite --host`, which binds 0.0.0.0, and the answer is an absolute path on the
+ * developer's disk. Playwright always asks over localhost, so nothing else needs it.
  */
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
 function e2eIdentity(): Plugin {
   return {
     name: 'trackvibe:e2e-identity',
     apply: 'serve',
     configureServer(server) {
-      server.middlewares.use('/__e2e/identity', (_req, res) => {
+      server.middlewares.use('/__e2e/identity', (req, res, next) => {
+        const from = req.socket.remoteAddress ?? '';
+        if (!LOOPBACK.has(from)) return next();
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Cache-Control', 'no-store');
         res.end(JSON.stringify({ root: __dirname }));

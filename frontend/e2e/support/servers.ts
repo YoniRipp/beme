@@ -42,11 +42,14 @@ export const CHECKOUT_ROOT = path.resolve(FRONTEND_ROOT, '..');
 export const BACKEND_ROOT = path.join(CHECKOUT_ROOT, 'backend');
 
 /**
- * Ports live between the low well-known range and macOS's ephemeral range (49152+), so a
- * derived port never collides with a listener the OS handed out to something else.
+ * Ports sit above the well-known range and below the *lowest* ephemeral range we run on, so
+ * the OS never hands one of ours out to an unrelated outbound socket. macOS starts its
+ * ephemeral range at 49152, but Linux's default `ip_local_port_range` starts at 32768 — and
+ * the lower bound is the one that matters, because `--strictPort` turns a momentary clash
+ * into a failed run rather than a silent move to the next port.
  */
 const PORT_MIN = 20_000;
-const PORT_MAX = 48_999;
+const PORT_MAX = 32_767;
 const PORT_SPAN = PORT_MAX - PORT_MIN + 1;
 
 /**
@@ -56,6 +59,8 @@ const PORT_SPAN = PORT_MAX - PORT_MIN + 1;
  * percent, and it only bites when both are running servers at the same moment. That case is
  * what `assertServersAreOurs()` is for; it names the collision and the override rather than
  * quietly testing the wrong tree.
+ *
+ * The span is ~12.7k, so a frontend/backend self-collision is roughly 1 in 12,800.
  */
 function derivePort(salt: string): number {
   // Hashed as two chunks rather than one concatenated string, so no separator character
@@ -77,7 +82,7 @@ function envPort(name: string): number | undefined {
 function resolvePorts(): { frontend: number; backend: number } {
   const frontendOverride = envPort('E2E_FRONTEND_PORT');
   const backendOverride = envPort('E2E_BACKEND_PORT');
-  const frontend = frontendOverride ?? derivePort('frontend');
+  let frontend = frontendOverride ?? derivePort('frontend');
   let backend = backendOverride ?? derivePort('backend');
 
   if (frontend === backend) {
@@ -86,9 +91,12 @@ function resolvePorts(): { frontend: number; backend: number } {
         `E2E_FRONTEND_PORT and E2E_BACKEND_PORT are both ${frontend}; they must differ.`
       );
     }
-    // A 1-in-29000 hash coincidence. Nudging the derived one is cheaper than explaining why
-    // the app and the API are fighting over a socket.
-    backend = backend === PORT_MAX ? PORT_MIN : backend + 1;
+    // A hash coincidence. Nudge whichever side we derived — never the one the developer
+    // pinned, or their explicit port would move under them without a word, which is the
+    // class of silent surprise this file exists to remove.
+    const nudge = (p: number) => (p === PORT_MAX ? PORT_MIN : p + 1);
+    if (backendOverride === undefined) backend = nudge(backend);
+    else frontend = nudge(frontend);
   }
 
   return { frontend, backend };
@@ -104,10 +112,20 @@ export const backendBaseURL = `http://localhost:${backendPort}`;
 /** Served by the dev-only Vite plugin in `vite.config.ts`. */
 export const IDENTITY_PATH = '/__e2e/identity';
 
-/** `SKIP_BACKEND=1` means "use whatever API is already there" — an explicit opt-out. */
-export const skipBackend = !!process.env.SKIP_BACKEND;
+/**
+ * Only `1` and `true` enable a flag, matching `backend/src/config/index.ts`. A bare `!!` reads
+ * `E2E_ALLOW_FOREIGN_SERVER=0` as "yes, allow it" and silently downgrades a real mismatch to a
+ * warning — the precise failure this file exists to prevent, re-entered through the off switch.
+ */
+function envFlag(name: string): boolean {
+  const raw = process.env[name]?.trim().toLowerCase();
+  return raw === '1' || raw === 'true';
+}
 
-const allowForeignServer = !!process.env.E2E_ALLOW_FOREIGN_SERVER;
+/** `SKIP_BACKEND=1` means "use whatever API is already there" — an explicit opt-out. */
+export const skipBackend = envFlag('SKIP_BACKEND');
+
+const allowForeignServer = envFlag('E2E_ALLOW_FOREIGN_SERVER');
 
 /**
  * The last line of every diagnostic. Offering the escape hatch to someone who has already
@@ -124,6 +142,20 @@ function real(p: string): string {
   } catch {
     return path.resolve(p);
   }
+}
+
+/**
+ * Is `served` this checkout, or somewhere inside it?
+ *
+ * The backend reports `process.cwd()`, which is `<checkout>/backend` when Playwright starts
+ * it but the repo root for someone running `tsx watch backend/index.ts` from the top. Both
+ * are this checkout, and the property being guarded is the checkout — not the cwd. The
+ * separator test keeps `<checkout>-2` from passing as `<checkout>`.
+ */
+function isInsideCheckout(served: string): boolean {
+  const root = real(CHECKOUT_ROOT);
+  const actual = real(served);
+  return actual === root || actual.startsWith(root + path.sep);
 }
 
 async function fetchJson(url: string): Promise<Record<string, unknown>> {
@@ -210,8 +242,8 @@ async function assertBackendIsOurs(): Promise<void> {
   // `checkout` is dev-only (see `backend/app.ts`). A production build omits it, and so does
   // any backend older than this guard — either way it is not the server we just started.
   const served = typeof body.checkout === 'string' ? body.checkout : '(no checkout reported)';
-  if (real(served) !== real(BACKEND_ROOT)) {
-    report(mismatchLines('backend', backendBaseURL, BACKEND_ROOT, served, 'E2E_BACKEND_PORT'));
+  if (typeof body.checkout !== 'string' || !isInsideCheckout(served)) {
+    report(mismatchLines('backend', backendBaseURL, CHECKOUT_ROOT, served, 'E2E_BACKEND_PORT'));
   }
 }
 

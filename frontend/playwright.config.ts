@@ -85,7 +85,21 @@ export default defineConfig({
           {
             command: 'npm run dev',
             cwd: '../backend',
-            env: { PORT: String(backendPort) },
+            env: {
+              PORT: String(backendPort),
+              // The app no longer lives on 5173, so a `backend/.env` that pins
+              // `CORS_ORIGIN=http://localhost:5173` — the value README documents — would
+              // reject every call the E2E app makes. Name the origin we actually serve.
+              // `dotenv` does not override an existing variable, so this wins over `.env`.
+              CORS_ORIGIN: frontendBaseURL,
+              FRONTEND_ORIGIN: frontendBaseURL,
+              // This is a throwaway API for one test run, but it shares the developer's
+              // DATABASE_URL and Redis. Without this it starts a second voice worker and
+              // compaction scheduler on the same queues and eats jobs meant for their own
+              // backend — the cross-checkout interference this config exists to stop,
+              // one layer down. No spec needs a worker.
+              SEPARATE_WORKERS: 'true',
+            },
             url: `${backendBaseURL}/health`,
             reuseExistingServer: !process.env.CI,
             timeout: 30_000,
