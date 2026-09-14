@@ -69,7 +69,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     : null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4 pt-[calc(1rem+var(--safe-top))] pb-[calc(1rem+var(--safe-bottom))]">
       <Card className="w-full max-w-md rounded-2xl">
         <CardContent className="p-6">
           {/* Progress */}

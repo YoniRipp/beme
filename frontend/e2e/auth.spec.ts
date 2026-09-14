@@ -71,3 +71,39 @@ test.describe('Forgot password page', () => {
     await expect(page.getByLabel(/email/i)).toBeVisible();
   });
 });
+
+test.describe('Reset password page', () => {
+  // The address the reset email points at. `token` is the shape the backend mints,
+  // `crypto.randomBytes(32).toString('hex')`; no backend runs here, so it is never redeemed.
+  const RESET_LINK = `/reset-password?token=${'a1b2c3d4'.repeat(8)}&email=runner%40example.com`;
+
+  test('renders the form for a link that carries a token', async ({ page }) => {
+    await page.goto(RESET_LINK);
+
+    await expect(page).toHaveURL(/\/reset-password/);
+    await expect(page.getByRole('heading', { name: /choose a new password/i })).toBeVisible();
+    await expect(page.getByLabel('New password', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Confirm new password', { exact: true })).toBeVisible();
+  });
+
+  test('explains itself instead of showing a form when the token is missing', async ({ page }) => {
+    await page.goto('/reset-password');
+
+    await expect(
+      page.getByRole('heading', { name: /reset link is no longer valid/i })
+    ).toBeVisible();
+    await expect(page.getByLabel('New password', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /request a new link/i })).toBeVisible();
+  });
+
+  test('rejects a weak password before any network call', async ({ page }) => {
+    await page.goto(RESET_LINK);
+
+    await page.getByLabel('New password', { exact: true }).fill('alllowercase1');
+    await page.getByLabel('Confirm new password', { exact: true }).fill('alllowercase1');
+    await page.getByRole('button', { name: /update password/i }).click();
+
+    await expect(page.getByRole('alert')).toContainText(/uppercase letter/i);
+    await expect(page).toHaveURL(/\/reset-password/);
+  });
+});

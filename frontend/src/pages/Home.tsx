@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
 import { useGoals } from '@/hooks/useGoals';
-import { useMacroGoals } from '@/hooks/useMacroGoals';
+import { useDailyTargets } from '@/hooks/useDailyTargets';
 import { useProfile } from '@/hooks/useProfile';
 import { useWeight } from '@/hooks/useWeight';
 import { useApp } from '@/context/AppContext';
-import { MacroGoalModal } from '@/components/home/MacroGoalModal';
+import { DailyTargetsModal } from '@/components/home/DailyTargetsModal';
 import { SleepEditModal } from '@/components/energy/SleepEditModal';
 import { FoodEntryModal } from '@/components/energy/FoodEntryModal';
 import { WorkoutModal } from '@/components/body/WorkoutModal';
@@ -24,6 +24,7 @@ import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
 import { Apple, ChevronRight, Dumbbell, Moon, Pencil, Scale, UtensilsCrossed, User } from 'lucide-react';
+import { targetFraction } from '@trackvibe/shared/domain';
 import { isSameDay, format } from 'date-fns';
 import { toast } from '@/components/shared/ToastProvider';
 import { cn } from '@/lib/utils';
@@ -38,7 +39,7 @@ export function Home() {
   const { workouts, workoutsLoading, addWorkout } = useWorkouts();
   const { checkIns, foodEntries, addCheckIn, updateCheckIn, addFoodEntry, getCheckInByDate, energyLoading } = useEnergy();
   const { addGoal, updateGoal } = useGoals();
-  const { macroGoals, setMacroGoals, calorieGoal } = useMacroGoals();
+  const { targets, saveDailyTargets } = useDailyTargets();
   const { profile, profileLoading } = useProfile();
   const { weightEntries } = useWeight();
   const { user } = useApp();
@@ -51,7 +52,7 @@ export function Home() {
   const [workoutModalOpen, setWorkoutModalOpen] = useState(false);
   const [foodModalOpen, setFoodModalOpen] = useState(false);
   const [weightModalOpen, setWeightModalOpen] = useState(false);
-  const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
+  const [targetsModalOpen, setTargetsModalOpen] = useState(false);
 
   // Derived data
   const todayCheckIn = useMemo(
@@ -73,9 +74,9 @@ export function Home() {
   }, [foodEntries]);
 
   const macroRows = [
-    { label: 'Protein', current: Math.round(todaySummary.totalProtein), goal: macroGoals.protein, color: 'bg-info' },
-    { label: 'Carbs',   current: Math.round(todaySummary.totalCarbs),   goal: macroGoals.carbs,   color: 'bg-gold' },
-    { label: 'Fat',     current: Math.round(todaySummary.totalFats),    goal: macroGoals.fat,     color: 'bg-terracotta' },
+    { label: 'Protein', current: Math.round(todaySummary.totalProtein), goal: targets.protein, color: 'bg-info' },
+    { label: 'Carbs',   current: Math.round(todaySummary.totalCarbs),   goal: targets.carbs,   color: 'bg-gold' },
+    { label: 'Fat',     current: Math.round(todaySummary.totalFats),    goal: targets.fat,     color: 'bg-terracotta' },
   ];
 
   const progressMessage = useMemo(() => {
@@ -105,7 +106,12 @@ export function Home() {
       .slice(0, 5);
   }, [foodEntries, workouts]);
 
-  const calPct = calorieGoal > 0 ? Math.min(todaySummary.totalCal / calorieGoal, 1) : 0;
+  // `null` target is not a 0% ring: one says "nothing logged yet against your goal", the
+  // other says "there is no goal". The card renders them differently.
+  const calorieTarget = targets.calories;
+  const calPct = targetFraction(todaySummary.totalCal, calorieTarget) ?? 0;
+  const hasAnyTarget =
+    calorieTarget != null || targets.protein != null || targets.carbs != null || targets.fat != null;
   const sleepHours = Number(todayCheckIn?.sleepHours ?? 0);
   const todayDate = format(new Date(), 'EEE · MMM d');
   const todaysWeight = useMemo(
@@ -190,15 +196,24 @@ export function Home() {
             <div className="relative z-10 mb-4 flex items-center justify-between text-eyebrow font-bold uppercase tracking-[0.18em] text-muted-foreground">
               <span className="text-primary">Today's fuel</span>
               <div className="flex items-center gap-2">
-                <span>{Math.round(todaySummary.totalCal)} / {calorieGoal} kcal</span>
+                <span className="tabular-nums">
+                  {Math.round(todaySummary.totalCal)}{calorieTarget != null ? ` / ${calorieTarget}` : ''} kcal
+                </span>
+                {/* One control, two presentations: a pencil once targets exist, an
+                    invitation while they don't. An unset target is shown as unset — never
+                    filled in with a plausible number the user never chose. */}
                 <button
                   type="button"
-                  onClick={() => setMacroGoalModalOpen(true)}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-                  aria-label="Edit macro goals"
-                  title="Edit macros"
+                  onClick={() => setTargetsModalOpen(true)}
+                  className={cn(
+                    'flex h-11 items-center justify-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70',
+                    hasAnyTarget ? 'w-11' : 'px-3'
+                  )}
+                  aria-label="Edit daily targets"
+                  title="Edit daily targets"
                 >
                   <Pencil className="h-3.5 w-3.5" />
+                  {!hasAnyTarget && <span className="text-eyebrow font-bold">Set targets</span>}
                 </button>
               </div>
             </div>
@@ -206,7 +221,11 @@ export function Home() {
               <ProgressRing
                 pct={calPct}
                 label="Calories today"
-                valueText={`${Math.round(todaySummary.totalCal)} of ${calorieGoal} kcal`}
+                valueText={
+                  calorieTarget != null
+                    ? `${Math.round(todaySummary.totalCal)} of ${calorieTarget} kcal`
+                    : `${Math.round(todaySummary.totalCal)} kcal, no daily calorie target set`
+                }
               >
                 <span className="text-[34px] font-extrabold tabular-nums leading-none tracking-tight">
                   {Math.round(todaySummary.totalCal)}
@@ -217,18 +236,20 @@ export function Home() {
               </ProgressRing>
               <div className="flex-1 space-y-3">
                 {macroRows.map((row) => {
-                  const pct = row.goal > 0 ? Math.min(row.current / row.goal, 1) : 0;
+                  const pct = targetFraction(row.current, row.goal) ?? 0;
                   return (
                     <button
                       key={row.label}
                       type="button"
-                      onClick={() => setMacroGoalModalOpen(true)}
+                      onClick={() => setTargetsModalOpen(true)}
                       className="block w-full rounded-xl p-1.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-                      aria-label={`Edit ${row.label} goal`}
+                      aria-label={row.goal != null ? `Edit ${row.label} target` : `Set ${row.label} target`}
                     >
                       <div className="flex justify-between text-xs mb-1">
                         <span className="font-medium">{row.label}</span>
-                        <span className="text-muted-foreground tabular-nums">{row.current}/{row.goal}g</span>
+                        <span className="text-muted-foreground tabular-nums">
+                          {row.goal != null ? `${row.current}/${row.goal}g` : `${row.current}g`}
+                        </span>
                       </div>
                       <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                         <div className={cn('h-full rounded-full', row.color)} style={{ width: `${pct * 100}%` }} />
@@ -336,11 +357,11 @@ export function Home() {
         onSave={handleSleepSave}
         currentHours={todayCheckIn?.sleepHours}
       />
-      <MacroGoalModal
-        open={macroGoalModalOpen}
-        onOpenChange={setMacroGoalModalOpen}
-        goals={macroGoals}
-        onSave={setMacroGoals}
+      <DailyTargetsModal
+        open={targetsModalOpen}
+        onOpenChange={setTargetsModalOpen}
+        targets={targets}
+        onSave={saveDailyTargets}
       />
       <WeightLogModal open={weightModalOpen} onOpenChange={setWeightModalOpen} />
     </Page>

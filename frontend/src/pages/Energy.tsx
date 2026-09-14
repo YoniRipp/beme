@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useEnergy } from '@/hooks/useEnergy';
-import { useMacroGoals } from '@/hooks/useMacroGoals';
+import { useDailyTargets } from '@/hooks/useDailyTargets';
 import { FoodEntry, type DailyCheckIn } from '@/types/energy';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { SleepEditModal } from '@/components/energy/SleepEditModal';
@@ -11,7 +11,7 @@ import { FoodCard } from '@/components/energy/FoodCard';
 import { MealJournalCard, groupByMeal, type MealType } from '@/components/energy/MealJournalCard';
 import QuickVoiceEntry from '@/components/energy/QuickVoiceEntry';
 import { MacroCircles } from '@/components/home/MacroCircles';
-import { MacroGoalModal } from '@/components/home/MacroGoalModal';
+import { DailyTargetsModal } from '@/components/home/DailyTargetsModal';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,6 +21,7 @@ import { PeriodSelector } from '@/components/shared/PeriodSelector';
 import { Moon, Trash2, Pencil, ChevronDown, ClipboardList, Copy, UtensilsCrossed } from 'lucide-react';
 import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
+import { targetFraction } from '@trackvibe/shared/domain';
 import { Page, PageHeader } from '@/components/ui/page';
 interface FoodGroup {
   key: string;
@@ -149,7 +150,8 @@ function CollapsibleGroup({
 
 export function Energy() {
   const { checkIns, foodEntries, energyLoading, addCheckIn, updateCheckIn, deleteCheckIn, addFoodEntry, updateFoodEntry, deleteFoodEntry, addFoodEntriesBatch, duplicateDay } = useEnergy();
-  const { macroGoals, setMacroGoals, calorieGoal } = useMacroGoals();
+  // Same resolver Home uses, so the two rings can never print different targets again.
+  const { targets, saveDailyTargets } = useDailyTargets();
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<DailyCheckIn | undefined>(undefined);
   const [deleteConfirmCheckInId, setDeleteConfirmCheckInId] = useState<string | null>(null);
@@ -158,7 +160,7 @@ export function Energy() {
   const [caloriePeriod, setCaloriePeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [sleepPeriod, setSleepPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [macroGoalModalOpen, setMacroGoalModalOpen] = useState(false);
+  const [targetsModalOpen, setTargetsModalOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [activeMealType, setActiveMealType] = useState<MealType | undefined>();
@@ -373,8 +375,8 @@ export function Energy() {
           />
 
           {(() => {
-            const calGoalTarget = calorieGoal;
-            const calPct = calGoalTarget > 0 ? Math.min(periodTotals.calories / calGoalTarget, 1) : 0;
+            const calGoalTarget = targets.calories;
+            const calPct = targetFraction(periodTotals.calories, calGoalTarget) ?? 0;
             const periodSelectorEl = (
               <PeriodSelector
                 options={(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => {
@@ -398,16 +400,20 @@ export function Energy() {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-[34px] font-extrabold tabular-nums leading-none tracking-tight">{Math.round(periodTotals.calories)}</span>
-                  <span className="mt-1.5 text-caption leading-none text-muted-foreground">of {calGoalTarget}{caloriePeriod !== 'daily' ? '/ day' : ''} kcal</span>
+                  <span className="mt-1.5 text-caption leading-none text-muted-foreground">
+                    {calGoalTarget != null
+                      ? `of ${calGoalTarget}${caloriePeriod !== 'daily' ? '/ day' : ''} kcal`
+                      : 'kcal · no target'}
+                  </span>
                 </div>
               </div>
             );
             const macroCirclesEl = (
               <MacroCircles
-                carbs={{ current: Math.round(periodTotals.carbs), goal: macroGoals.carbs }}
-                fat={{ current: Math.round(periodTotals.fats), goal: macroGoals.fat }}
-                protein={{ current: Math.round(periodTotals.protein), goal: macroGoals.protein }}
-                onEditGoals={() => setMacroGoalModalOpen(true)}
+                carbs={{ current: Math.round(periodTotals.carbs), goal: targets.carbs }}
+                fat={{ current: Math.round(periodTotals.fats), goal: targets.fat }}
+                protein={{ current: Math.round(periodTotals.protein), goal: targets.protein }}
+                onEditGoals={() => setTargetsModalOpen(true)}
               />
             );
 
@@ -622,11 +628,11 @@ export function Energy() {
         variant="destructive"
       />
 
-      <MacroGoalModal
-        open={macroGoalModalOpen}
-        onOpenChange={setMacroGoalModalOpen}
-        goals={macroGoals}
-        onSave={setMacroGoals}
+      <DailyTargetsModal
+        open={targetsModalOpen}
+        onOpenChange={setTargetsModalOpen}
+        targets={targets}
+        onSave={saveDailyTargets}
       />
 
       <BulkFoodEntryModal

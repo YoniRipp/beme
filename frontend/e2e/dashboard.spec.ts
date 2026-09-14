@@ -120,6 +120,49 @@ test.describe.skip('Mobile bottom navigation', () => {
     await expect(page).toHaveURL(/\/body/);
   });
 
+  // The real-browser version of `useScrollToTopOnNavigate`. jsdom has no layout, so the unit
+  // tests can only assert that `window.scrollTo` was called with the right options; only a
+  // browser can prove the next tab actually opens at offset 0.
+  //
+  // Skipped along with the rest of this describe, so it is documentation of the intended
+  // behaviour rather than a gate. Note the extra stub: `signIn()` answers every list endpoint
+  // empty, which leaves /body shorter than 844px and makes the scroll below a no-op that
+  // would assert nothing. Routes registered here take precedence over the ones from
+  // `beforeEach`, so this one wins for workouts.
+  test('opens the next tab at the top, not at the previous tab offset', async ({ page }) => {
+    await page.route('**/api/workouts**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: Array.from({ length: 20 }, (_, i) => ({
+            id: `w-${i}`,
+            date: new Date().toISOString().slice(0, 10),
+            title: `Session ${i + 1}`,
+            type: 'strength',
+            durationMinutes: 45,
+            exercises: [],
+            completed: true,
+          })),
+          total: 20,
+          limit: 20,
+          offset: 0,
+          hasMore: false,
+        }),
+      })
+    );
+
+    await page.goto('/body');
+    await page.evaluate(() => window.scrollTo(0, 500));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+    const nav = page.getByRole('navigation', { name: /main navigation/i });
+    await nav.getByRole('link', { name: /food/i }).click();
+
+    await expect(page).toHaveURL(/\/energy/);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  });
+
   // Home is the one screen where a second voice control used to sit on top of the nav
   // mic; the hero was removed so there is exactly one per viewport.
   test('does not duplicate the voice control on Home', async ({ page }) => {

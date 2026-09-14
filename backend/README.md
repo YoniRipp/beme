@@ -884,6 +884,7 @@ The voice path is optimized for real multi-action utterances and for cost/latenc
 | `add_water` writes N rows for N glasses | Single count-based upsert | `src/models/water.ts` (`addGlasses`) |
 | Streaming double-execution | `finished` guard so `executeActions` runs once | `src/ws/voiceStreaming.ts` |
 | Free AI call burned on empty/failed attempts | Gate with non-consuming `checkAiQuota`; consume only on a real result | `src/services/aiQuota.ts`, `src/ws/voiceStreaming.ts` |
+| Free AI call burned by an endpoint that never calls a model | Two guards, so the route file states which it means: `requireAiAccess` checks, `requireAiQuota` debits | `src/middleware/aiAccess.ts`, `src/routes/aiQuotaGating.test.ts` |
 | Server-UTC date defaults | User's local `today` threaded through `executeActions(actions, userId, { today })` | `src/services/voice.ts`, `voiceExecutor.ts`, `ws/voiceStreaming.ts` |
 | Silent 0-kcal entries | `add_food` actions carry `nutritionResolved`; the result message flags unresolved nutrition | `actionBuilders.ts`, `voiceExecutor.ts` |
 
