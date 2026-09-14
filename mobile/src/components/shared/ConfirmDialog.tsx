@@ -50,7 +50,12 @@ export function ConfirmDialog({
     if (!visible) setTyped('');
   }, [visible]);
 
-  const unconfirmed = confirmationPhrase != null && typed.trim() !== confirmationPhrase;
+  // Case-insensitive, matching `frontend/src/components/shared/ConfirmationDialog.tsx`.
+  // `autoCapitalize="characters"` below already uppercases most input here, but it has no
+  // web equivalent, and the two clients must accept the same keystrokes.
+  const unconfirmed =
+    confirmationPhrase != null &&
+    typed.trim().toLowerCase() !== confirmationPhrase.toLowerCase();
 
   return (
     <Portal>

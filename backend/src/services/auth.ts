@@ -13,6 +13,11 @@ import { publishEvent } from '../events/publish.js';
 import { logger } from '../lib/logger.js';
 import { kvGet, kvSet, kvDelete, kvGetAndDelete } from '../lib/keyValueStore.js';
 import {
+  TOKEN_BLOCKLIST_PREFIX,
+  USER_BLOCKLIST_PREFIX,
+  hashToken,
+} from '../lib/tokenBlocklist.js';
+import {
   ValidationError,
   ConflictError,
   UnauthorizedError,
@@ -28,9 +33,6 @@ const TOKEN_EXPIRY_SECONDS = Math.floor(config.sessionTtlMs / 1000);
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000;
 const PKCE_TTL_MS = 5 * 60 * 1000;
 const AUTH_CODE_TTL_MS = 60 * 1000;
-const TOKEN_BLOCKLIST_PREFIX = 'blocked:';
-/** Per-user blocklist. Must match `USER_BLOCKLIST_PREFIX` in `middleware/auth.ts`. */
-const USER_BLOCKLIST_PREFIX = 'blockedUser:';
 const PKCE_PREFIX = 'pkce:';
 const AUTH_CODE_PREFIX = 'authCode:';
 
@@ -630,11 +632,7 @@ export async function blockToken(token: string): Promise<void> {
     if (payload.exp) {
       const ttlMs = payload.exp * 1000 - Date.now();
       if (ttlMs > 0) {
-        const tokenHash = crypto
-          .createHash('sha256')
-          .update(token)
-          .digest('hex');
-        await kvSet(TOKEN_BLOCKLIST_PREFIX + tokenHash, '1', ttlMs);
+        await kvSet(TOKEN_BLOCKLIST_PREFIX + hashToken(token), '1', ttlMs);
       }
     }
   } catch {

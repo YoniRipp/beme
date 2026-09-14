@@ -83,10 +83,14 @@ export function SettingsScreen() {
     }
 
     Toast.show({ type: 'success', text1: 'Your account has been deleted' });
+    // Cleared *before* logout, not after. `logout` swaps the navigator to the signed-out
+    // stack and unmounts this screen, so a reset afterwards would set state on a screen
+    // that is going away — and if the stack ever kept it mounted instead, the button would
+    // stay disabled with no way to retry.
+    setDeleting(false);
     // The server has blocklisted the whole user, so the local session is dead whatever
-    // happens next. Clearing it here is what returns the app to the signed-out stack — and
-    // that unmounts this screen, so `deleting` is deliberately not reset afterwards; doing
-    // it in a `finally` would set state on a screen that is going away.
+    // happens next. (`logout` here is synchronous and returns void — unlike the web
+    // AuthContext's — so there is nothing to await or catch.)
     logout();
   };
 

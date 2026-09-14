@@ -7,7 +7,7 @@ vi.mock('../db/pool.js', () => ({
   getPool: () => ({ query: mockQuery }),
 }));
 
-import { deleteWithOwnedData } from './user.js';
+import { deleteWithOwnedData, __piiRedactionStatements } from './user.js';
 
 const USER_ID = '11111111-2222-3333-4444-555555555555';
 const USER_EMAIL = 'deleted.person@example.com';
@@ -38,6 +38,35 @@ function recordingClient(overrides: Record<string, () => unknown> = {}) {
 function indexOf(sqls: string[], needle: string) {
   return sqls.findIndex((sql) => sql.includes(needle));
 }
+
+/**
+ * Postgres numbers a statement's parameters up to the highest `$n` the SQL mentions, and
+ * rejects the statement at *parse* time with 42P18 if any index in that range is never
+ * referenced -- it has nothing to infer a type from. An unreferenced `$1` therefore takes
+ * down every account deletion with a 500, whether or not there is anything to redact.
+ *
+ * This is exactly the bug the rest of this file cannot see: those tests drive a recording
+ * stub whose `query` never parses SQL, so a statement that Postgres would refuse outright
+ * passes them all. Checking the placeholders against the bound arity needs no database and
+ * catches the whole class.
+ */
+describe('PII redaction statements — placeholders vs. bound parameters', () => {
+  it.each(__piiRedactionStatements.map((s, i) => [i, s] as const))(
+    'statement %i references every parameter it binds, and binds every one it references',
+    (_index, statement) => {
+      const referenced = new Set(
+        [...statement.sql.matchAll(/\$(\d+)/g)].map((m) => Number(m[1])),
+      );
+      const bound = statement.params('11111111-2222-3333-4444-555555555555', 'a@b.c').length;
+      const highest = Math.max(...referenced);
+
+      expect(bound, 'binds a different number of parameters than the SQL uses').toBe(highest);
+      for (let n = 1; n <= highest; n += 1) {
+        expect(referenced.has(n), `$${n} is bound but never referenced — Postgres raises 42P18`).toBe(true);
+      }
+    },
+  );
+});
 
 describe('user model — deleteWithOwnedData', () => {
   beforeEach(() => {
@@ -134,8 +163,8 @@ describe('user model — deleteWithOwnedData', () => {
       await deleteWithOwnedData(USER_ID, client);
 
       const redaction = calls.find((c) => /UPDATE app_logs\s+SET details/.test(c.sql));
-      expect(redaction!.sql).toContain("details->>'targetId' = $2");
-      expect(redaction!.params).toEqual([USER_ID, USER_ID, USER_EMAIL]);
+      expect(redaction!.sql).toContain("details->>'targetId' = $1");
+      expect(redaction!.params).toEqual([USER_ID, USER_EMAIL]);
     });
 
     // `logAction('User created', { email, role }, adminId)` (routes/users.ts) carries the

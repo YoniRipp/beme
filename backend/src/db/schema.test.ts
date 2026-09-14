@@ -104,6 +104,23 @@ describe('initSchema', () => {
     expect(statements.some((s) => s.startsWith('ROLLBACK TO SAVEPOINT user_fk'))).toBe(true);
   });
 
+  // initSchema runs on every dev boot. Dropping and re-adding a foreign key takes an ACCESS
+  // EXCLUSIVE lock and revalidates the whole table, so without a short-circuit eight tables
+  // — including the seeded exercise and food catalogs — get a full scan on every startup,
+  // and two processes bootstrapping the same database can block on each other's locks.
+  it('skips a foreign key whose ON DELETE action is already correct', async () => {
+    await initSchema();
+
+    const reconciles = mockQuery.mock.calls
+      .map(([sql]) => String(sql))
+      .filter((sql) => sql.includes('ADD CONSTRAINT') && sql.includes('_fkey'));
+
+    expect(reconciles.length).toBeGreaterThan(0);
+    for (const sql of reconciles) {
+      expect(sql, 'reconcile has no already-correct guard').toMatch(/confdeltype = '[cn]'/);
+    }
+  });
+
   it('reconciles the remaining foreign keys after one of them is skipped', async () => {
     mockQuery.mockImplementation(async (sql: string) => {
       if (String(sql).includes('exercises_created_by_fkey')) {

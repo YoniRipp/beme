@@ -466,6 +466,26 @@ export async function initSchema() {
           IF to_regclass('public.${table}') IS NULL THEN
             RETURN;
           END IF;
+
+          -- Already correct? Then do nothing. Dropping and re-adding takes an ACCESS
+          -- EXCLUSIVE lock and revalidates the whole table, and initSchema runs on every
+          -- dev boot -- so without this, eight tables (including the seeded exercise and
+          -- food catalogs) get a full scan each time, and two processes bootstrapping the
+          -- same database concurrently can block on each other's locks.
+          IF EXISTS (
+            SELECT 1
+            FROM pg_constraint con
+            JOIN pg_attribute att
+              ON att.attrelid = con.conrelid AND att.attnum = con.conkey[1]
+            WHERE con.contype = 'f'
+              AND con.conrelid = to_regclass('public.${table}')
+              AND array_length(con.conkey, 1) = 1
+              AND att.attname = '${column}'
+              AND con.confdeltype = '${action === 'CASCADE' ? 'c' : 'n'}'
+          ) THEN
+            RETURN;
+          END IF;
+
           SELECT tc.constraint_name INTO fk_name
           FROM information_schema.table_constraints tc
           JOIN information_schema.key_column_usage kcu

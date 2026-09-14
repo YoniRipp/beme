@@ -269,27 +269,48 @@ export async function getSubscriptionGrant(userId: string): Promise<Subscription
  * on a non-object value, hence the `jsonb_typeof` guard. The `?` pre-filter keeps the UPDATE
  * from rewriting every log row in order to remove nothing.
  *
- * Parameters are `$1` uuid, `$2` the same id as text (one statement cannot deduce two types
- * for one placeholder) and `$3` the email. The JSON arms are a sequential scan either way --
- * account deletion is rare and off the request-latency path.
+ * Each statement carries its own parameter list, because they need different bindings and
+ * Postgres numbers parameters up to the highest `$n` the SQL mentions: a shared list would
+ * leave the app_logs statement with an unreferenced `$1` whose type cannot be inferred, and
+ * the statement would fail to *parse* with 42P18 -- turning every account deletion into a
+ * 500, with or without any log rows to redact. The placeholder/arity test in `user.test.ts`
+ * guards that, because the stub-driven tests around it never parse SQL and cannot.
+ *
+ * Where the same id appears as both uuid and text it is bound twice on purpose: one
+ * statement cannot deduce two different types for a single placeholder. The JSON arms are a
+ * sequential scan either way -- account deletion is rare and off the request-latency path.
  */
-const PII_REDACTION_STATEMENTS = [
-  `UPDATE app_logs
+type RedactionStatement = { sql: string; params: (userId: string, email: string) => unknown[] };
+
+const PII_REDACTION_STATEMENTS: RedactionStatement[] = [
+  {
+    // $1 the id as text, $2 the email. No uuid comparison here: app_logs.user_id is the
+    // actor, and matching it would strip other people's addresses out of an admin's rows.
+    sql: `UPDATE app_logs
       SET details = details - 'email' - 'targetEmail' - 'name'
     WHERE jsonb_typeof(details) = 'object'
       AND (details ? 'email' OR details ? 'targetEmail' OR details ? 'name')
       AND (
-        lower(details->>'email') = lower($3)
-        OR lower(details->>'targetEmail') = lower($3)
-        OR details->>'targetId' = $2
-        OR details->>'userId' = $2
+        lower(details->>'email') = lower($2)
+        OR lower(details->>'targetEmail') = lower($2)
+        OR details->>'targetId' = $1
+        OR details->>'userId' = $1
       )`,
-  `UPDATE user_activity_log
+    params: (userId, email) => [userId, email],
+  },
+  {
+    // $1 the id as uuid, $2 the same id as text, $3 the email.
+    sql: `UPDATE user_activity_log
       SET payload = payload - 'email' - 'name'
     WHERE jsonb_typeof(payload) = 'object'
       AND (payload ? 'email' OR payload ? 'name')
       AND (user_id = $1 OR payload->>'userId' = $2 OR lower(payload->>'email') = lower($3))`,
+    params: (userId, email) => [userId, userId, email],
+  },
 ];
+
+/** Exported for the placeholder/arity test only. */
+export const __piiRedactionStatements = PII_REDACTION_STATEMENTS;
 
 /**
  * Drop the link to the user without removing the row. The cascade migration also sets these
@@ -357,8 +378,8 @@ export async function deleteWithOwnedData(userId: string, client: pg.PoolClient)
   if (existing.rowCount === 0) return false;
   const email: string = existing.rows[0].email ?? '';
 
-  for (const sql of PII_REDACTION_STATEMENTS) {
-    await runTolerantly(client, sql, [userId, userId, email], [MISSING_TABLE, MISSING_COLUMN]);
+  for (const { sql, params } of PII_REDACTION_STATEMENTS) {
+    await runTolerantly(client, sql, params(userId, email), [MISSING_TABLE, MISSING_COLUMN]);
   }
   for (const sql of SET_NULL_STATEMENTS) {
     await runTolerantly(client, sql, [userId], [MISSING_TABLE, MISSING_COLUMN]);

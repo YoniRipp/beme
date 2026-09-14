@@ -60,7 +60,13 @@ export function ConfirmationDialog({
     if (!open) setTyped('');
   }, [open]);
 
-  const unconfirmed = confirmationPhrase != null && typed.trim() !== confirmationPhrase;
+  // Case-insensitive, and the same on both clients. The Expo dialog's input sets
+  // `autoCapitalize="characters"`, which has no web equivalent — an exact-case comparison
+  // would mean the identical keystrokes confirm on the phone and silently do nothing in the
+  // browser. What the phrase is for is deliberateness, not shouting.
+  const unconfirmed =
+    confirmationPhrase != null &&
+    typed.trim().toLowerCase() !== confirmationPhrase.toLowerCase();
 
   const handleConfirm = () => {
     if (unconfirmed) return;
