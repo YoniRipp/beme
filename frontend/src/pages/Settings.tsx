@@ -12,6 +12,7 @@ import { UnitsSection } from '@/components/settings/UnitsSection';
 import { AppearanceSection } from '@/components/settings/AppearanceSection';
 import { NotificationsSection } from '@/components/settings/NotificationsSection';
 import { DataManagementSection } from '@/components/settings/DataManagementSection';
+import { DeleteAccountSection } from '@/components/settings/DeleteAccountSection';
 import { SubscriptionSection } from '@/components/settings/SubscriptionSection';
 import { storage } from '@/lib/storage';
 import { useApp } from '@/context/AppContext';
@@ -70,6 +71,10 @@ export function Settings() {
         onResetClick={() => setShowResetConfirm(true)}
         onClearClick={() => setShowClearConfirm(true)}
       />
+      {/* Last, and after Data Management: an irreversible control does not belong above the
+          reversible ones. "Clear All Data" above only clears this browser's local storage —
+          this one deletes the account on the server. */}
+      <DeleteAccountSection />
 
       <ConfirmationDialog
         open={showClearConfirm}

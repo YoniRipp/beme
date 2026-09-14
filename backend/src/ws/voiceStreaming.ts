@@ -11,6 +11,7 @@ import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { IncomingMessage } from 'http';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
+import { isRevoked } from '../lib/tokenBlocklist.js';
 import { VOICE_PROMPT } from '../services/voice.js';
 import { buildActionsFromFunctionCalls, filterHallucinatedActions } from '../services/voice/geminiClient.js';
 import { VOICE_TOOLS } from '../../voice/tools.js';
@@ -27,7 +28,15 @@ function getCookie(req: IncomingMessage, name: string): string | null {
   return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
 }
 
-/** Extract and verify JWT from query string ?token=... or the auth cookie. */
+/**
+ * Extract and verify JWT from query string ?token=... or the auth cookie.
+ *
+ * Consults the same two blocklists as `middleware/auth.ts`, and for the same reason: a
+ * signature check alone says a token was once valid, not that it still is. Without the
+ * per-user entry a deleted account could keep opening voice sessions — burning AI quota and
+ * running the executor against a `userId` with no `users` row — for the rest of that token's
+ * 365-day life. Without the per-token entry, so could a logged-out one.
+ */
 async function authenticateWs(req: IncomingMessage): Promise<{ id: string; email: string; role: string } | null> {
   try {
     const url = new URL(req.url ?? '', `http://${req.headers.host}`);
@@ -36,6 +45,9 @@ async function authenticateWs(req: IncomingMessage): Promise<{ id: string; email
 
     const payload = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] }) as { sub?: string; email?: string; role?: string };
     if (!payload.sub) return null;
+
+    if (await isRevoked(token, payload.sub)) return null;
+
     return { id: payload.sub, email: payload.email ?? '', role: payload.role ?? 'user' };
   } catch {
     return null;

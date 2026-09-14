@@ -6,10 +6,9 @@ import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { config } from '../config/index.js';
 import { getPool } from '../db/pool.js';
-import { kvGet } from '../lib/keyValueStore.js';
+import { isRevoked } from '../lib/tokenBlocklist.js';
 import { sendError } from '../utils/response.js';
 
-const TOKEN_BLOCKLIST_PREFIX = 'blocked:';
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -30,10 +29,10 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   try {
     const payload = jwt.verify(token, config.jwtSecret!, { algorithms: ['HS256'] }) as { sub?: string; email?: string; role?: string };
 
-    // Check token blocklist (SEC3: revoked tokens on logout/password-reset)
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const blocked = await kvGet(TOKEN_BLOCKLIST_PREFIX + tokenHash);
-    if (blocked) {
+    // Both blocklists: this token (SEC3: revoked on logout/password-reset) and the whole
+    // user (account deletion). Nothing here looks the user up, so the per-user entry is the
+    // only thing that stops a deleted account's *other* devices.
+    if (await isRevoked(token, payload.sub)) {
       return sendError(res, 401, 'Token has been revoked', { code: 'UNAUTHORIZED' });
     }
 

@@ -4,7 +4,9 @@
 import bcrypt from 'bcrypt';
 import { Router, Request, Response } from 'express';
 import { getPool } from '../db/index.js';
+import { ConflictError, NotFoundError } from '../errors.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import * as accountService from '../services/account.js';
 import { logAction } from '../services/appLog.js';
 import { logger } from '../lib/logger.js';
 
@@ -113,6 +115,22 @@ async function updateUser(req: Request, res: Response) {
   }
 }
 
+/**
+ * DELETE /api/users/:id — admin removes someone else's account.
+ *
+ * The deletion transaction itself now lives in `services/account.ts`, shared with
+ * `DELETE /api/auth/account`; this handler is the admin-facing HTTP skin over it. The
+ * skin is preserved on purpose: bare `{ error: string }` bodies rather than the modern
+ * error envelope, and the same status codes and strings as before, because the web
+ * client, the Expo app and the MCP server all read this route (critical rule 4).
+ *
+ * Two things the shared service adds that the old inline handler did not do, and which
+ * apply to admin deletions too: it empties the user's S3 prefix, and it redacts their
+ * email out of `app_logs.details` and `user_activity_log.payload`. The audit entry it
+ * writes therefore records `{ targetId, filesDeleted }` where this route used to record
+ * `{ targetId, targetEmail }` — writing the address back in after deleting the user was
+ * the leak, not an audit feature.
+ */
 async function deleteUser(req: Request, res: Response) {
   try {
     const { id } = req.params;
@@ -120,70 +138,17 @@ async function deleteUser(req: Request, res: Response) {
     if (id === req.user!.id) {
       return res.status(400).json({ error: 'Cannot delete your own account' });
     }
-    const pool = getPool();
-    const client = await pool.connect();
-    let deletedEmail: string | undefined;
-    try {
-      await client.query('BEGIN');
-
-      // Clear attribution columns (keep the rows, drop the link).
-      // Each statement runs inside a savepoint: a failed statement aborts the
-      // whole transaction otherwise, so catching the error is not enough.
-      const setNullStatements = [
-        `UPDATE app_logs SET user_id = NULL WHERE user_id = $1`,
-        `UPDATE user_activity_log SET user_id = NULL WHERE user_id = $1`,
-        `UPDATE exercises SET created_by = NULL WHERE created_by = $1`,
-        `UPDATE foods SET verified_by = NULL WHERE verified_by = $1`,
-      ];
-      for (const sql of setNullStatements) {
-        await client.query('SAVEPOINT delete_user_stmt');
-        try {
-          await client.query(sql, [id]);
-          await client.query('RELEASE SAVEPOINT delete_user_stmt');
-        } catch (err: any) {
-          if (err?.code !== '42P01' && err?.code !== '42703') throw err; // missing table/column ok
-          await client.query('ROLLBACK TO SAVEPOINT delete_user_stmt');
-        }
-      }
-
-      // Delete user-owned rows. Most have ON DELETE CASCADE in newer
-      // migrations, but the baseline tables don't, so we clean up here.
-      const deleteStatements = [
-        `DELETE FROM food_entries WHERE user_id = $1`,
-        `DELETE FROM workouts WHERE user_id = $1`,
-        `DELETE FROM goals WHERE user_id = $1`,
-        `DELETE FROM daily_check_ins WHERE user_id = $1`,
-      ];
-      for (const sql of deleteStatements) {
-        await client.query('SAVEPOINT delete_user_stmt');
-        try {
-          await client.query(sql, [id]);
-          await client.query('RELEASE SAVEPOINT delete_user_stmt');
-        } catch (err: any) {
-          if (err?.code !== '42P01') throw err;
-          await client.query('ROLLBACK TO SAVEPOINT delete_user_stmt');
-        }
-      }
-
-      const result = await client.query('DELETE FROM users WHERE id = $1 RETURNING id, email', [id]);
-      if (result.rowCount === 0) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ error: 'User not found' });
-      }
-      deletedEmail = result.rows[0].email;
-      await client.query('COMMIT');
-    } catch (txErr) {
-      try { await client.query('ROLLBACK'); } catch { /* ignore */ }
-      throw txErr;
-    } finally {
-      client.release();
-    }
-    await logAction('User deleted', { targetId: id, targetEmail: deletedEmail }, req.user!.id);
+    // No `revokeToken`: an admin presents their own token, not the subject's.
+    await accountService.deleteAccount({ userId: id, actorId: req.user!.id });
     res.status(204).send();
   } catch (e: unknown) {
-    const err = e as Record<string, unknown>;
-    if (err.code === '23503') {
+    if (e instanceof NotFoundError) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (e instanceof ConflictError) {
       logger.error({ err: e }, 'delete user FK violation');
+      // Admin-facing wording, kept verbatim. The service's own message is deliberately
+      // different because it reaches an end user on the self-service route.
       return res.status(409).json({ error: 'Cannot delete user: related records exist. Run database migrations to enable cascading delete.' });
     }
     logger.error({ err: e }, 'delete user error');

@@ -80,4 +80,116 @@ describe('initSchema', () => {
 
     expect([...selected].filter((c) => !available.has(c))).toEqual([]);
   });
+
+  // The users(id) FK reconcile loop re-adds constraints on columns that a database
+  // bootstrapped before those columns existed does not have -- `exercises.created_by` is
+  // declared in the CREATE TABLE and never in an `ADD COLUMN IF NOT EXISTS` block, so on
+  // such a database `ALTER TABLE exercises ADD CONSTRAINT ... (created_by)` raises 42703.
+  // Without a savepoint that aborts the whole transaction and the final COMMIT silently
+  // becomes a rollback, discarding every table the run created -- the same failure the
+  // pgvector savepoint above exists to prevent.
+  it('still commits when a foreign-key reconcile hits a column the database does not have', async () => {
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (String(sql).includes('exercises_created_by_fkey')) {
+        throw Object.assign(new Error('column "created_by" does not exist'), { code: '42703' });
+      }
+      return { rows: [] };
+    });
+
+    await initSchema();
+
+    const statements = mockQuery.mock.calls.map(([sql]) => String(sql).trim());
+    expect(statements).toContain('COMMIT');
+    expect(statements).not.toContain('ROLLBACK');
+    expect(statements.some((s) => s.startsWith('ROLLBACK TO SAVEPOINT user_fk'))).toBe(true);
+  });
+
+  // initSchema runs on every dev boot. Dropping and re-adding a foreign key takes an ACCESS
+  // EXCLUSIVE lock and revalidates the whole table, so without a short-circuit eight tables
+  // — including the seeded exercise and food catalogs — get a full scan on every startup,
+  // and two processes bootstrapping the same database can block on each other's locks.
+  it('skips a foreign key whose ON DELETE action is already correct', async () => {
+    await initSchema();
+
+    const reconciles = mockQuery.mock.calls
+      .map(([sql]) => String(sql))
+      .filter((sql) => sql.includes('ADD CONSTRAINT') && sql.includes('_fkey'));
+
+    expect(reconciles.length).toBeGreaterThan(0);
+    for (const sql of reconciles) {
+      expect(sql, 'reconcile has no already-correct guard').toMatch(/confdeltype = '[cn]'/);
+    }
+  });
+
+  it('reconciles the remaining foreign keys after one of them is skipped', async () => {
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (String(sql).includes('exercises_created_by_fkey')) {
+        throw Object.assign(new Error('column "created_by" does not exist'), { code: '42703' });
+      }
+      return { rows: [] };
+    });
+
+    await initSchema();
+
+    const statements = mockQuery.mock.calls.map(([sql]) => String(sql));
+    // `foods.verified_by` is reconciled after `exercises.created_by` in USER_FK_ACTIONS.
+    expect(statements.some((s) => s.includes('foods_verified_by_fkey'))).toBe(true);
+  });
+});
+
+/**
+ * `src/db/schema.ts` (what a dev machine gets) against `migrations/` (what production gets).
+ *
+ * `check-schema-drift.mjs` compares two live databases and is the real gate, but it only
+ * runs in the `migrations` CI job and needs both databases built. This is the cheap
+ * always-on half: it reads the two files and fails when they disagree about which foreign
+ * keys reference users(id) and what happens to them on delete.
+ *
+ * It exists because they *did* disagree. The cascade migration landed and schema.ts never
+ * received it, so `DELETE FROM users` cascaded in production and raised 23503 in a freshly
+ * bootstrapped dev database -- which means an account-deletion test written against dev
+ * exercised a foreign-key topology production does not have.
+ */
+describe('src/db/schema.ts vs. the cascade migration', () => {
+  /** Parses a `['table', 'column', 'ACTION'],` list out of either file. */
+  function parseFkList(source: string, constName: string): [string, string, string][] {
+    const start = source.indexOf(constName);
+    expect(start, `${constName} not found`).toBeGreaterThan(-1);
+    const body = source.slice(start, source.indexOf('];', start));
+    return [...body.matchAll(/\[\s*'([^']+)',\s*'([^']+)',\s*'([^']+)'\s*\]/g)].map(
+      (m) => [m[1], m[2], m[3]] as [string, string, string],
+    );
+  }
+
+  const schemaSource = readSource('./schema.ts');
+  const migrationSource = readSource('../../migrations/1776000000000_cascade-user-delete-fks.js');
+  const schemaActions = parseFkList(schemaSource, 'USER_FK_ACTIONS');
+  const migrationTargets = parseFkList(migrationSource, 'FK_TARGETS');
+
+  it('declares the same users(id) foreign keys, with the same ON DELETE action', () => {
+    const sortByKey = (rows: [string, string, string][]) =>
+      [...rows].sort((a, b) => `${a[0]}.${a[1]}`.localeCompare(`${b[0]}.${b[1]}`));
+
+    expect(sortByKey(schemaActions)).toEqual(sortByKey(migrationTargets));
+  });
+
+  it('covers every table the migration cascades, so no dev database blocks a delete', () => {
+    expect(migrationTargets.length).toBeGreaterThan(0);
+    expect(schemaActions.length).toBe(migrationTargets.length);
+  });
+
+  // CREATE TABLE IF NOT EXISTS is a no-op on a database that already has the table, so
+  // declaring the right action in the CREATE alone leaves every previously bootstrapped dev
+  // machine on the old actionless FK. The constraint has to be re-added explicitly.
+  it('re-adds the constraints rather than trusting CREATE TABLE IF NOT EXISTS', () => {
+    expect(schemaSource).toContain('ADD CONSTRAINT');
+    expect(schemaSource).toMatch(/DROP CONSTRAINT/);
+  });
+
+  // Every inline `REFERENCES users(id)` in a CREATE TABLE has to state its action too, or a
+  // brand-new dev database is born drifted even though the fixup pass above corrects it.
+  it('leaves no users(id) reference without an explicit ON DELETE action', () => {
+    const bare = [...schemaSource.matchAll(/REFERENCES users\(id\)(?! ON DELETE)/g)];
+    expect(bare, 'a users(id) FK has no ON DELETE action').toHaveLength(0);
+  });
 });

@@ -13,6 +13,11 @@ import { publishEvent } from '../events/publish.js';
 import { logger } from '../lib/logger.js';
 import { kvGet, kvSet, kvDelete, kvGetAndDelete } from '../lib/keyValueStore.js';
 import {
+  TOKEN_BLOCKLIST_PREFIX,
+  USER_BLOCKLIST_PREFIX,
+  hashToken,
+} from '../lib/tokenBlocklist.js';
+import {
   ValidationError,
   ConflictError,
   UnauthorizedError,
@@ -28,7 +33,6 @@ const TOKEN_EXPIRY_SECONDS = Math.floor(config.sessionTtlMs / 1000);
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000;
 const PKCE_TTL_MS = 5 * 60 * 1000;
 const AUTH_CODE_TTL_MS = 60 * 1000;
-const TOKEN_BLOCKLIST_PREFIX = 'blocked:';
 const PKCE_PREFIX = 'pkce:';
 const AUTH_CODE_PREFIX = 'authCode:';
 
@@ -628,14 +632,33 @@ export async function blockToken(token: string): Promise<void> {
     if (payload.exp) {
       const ttlMs = payload.exp * 1000 - Date.now();
       if (ttlMs > 0) {
-        const tokenHash = crypto
-          .createHash('sha256')
-          .update(token)
-          .digest('hex');
-        await kvSet(TOKEN_BLOCKLIST_PREFIX + tokenHash, '1', ttlMs);
+        await kvSet(TOKEN_BLOCKLIST_PREFIX + hashToken(token), '1', ttlMs);
       }
     }
   } catch {
     // Token already invalid -- no need to blocklist
   }
+}
+
+/**
+ * Revoke **every** token ever issued to a user, not just the one in hand.
+ *
+ * `blockToken` is keyed by token hash, so it can only reach the session that presented it.
+ * That is right for logout — you are signing one device out — and badly wrong for account
+ * deletion: `middleware/auth.ts` verifies a signature and consults a blocklist but never
+ * looks the user up, so with the 365-day default TTL every *other* device that user is
+ * signed in on keeps authenticating as an account that no longer exists, for up to a year.
+ * Reads come back empty and writes fail with foreign-key violations.
+ *
+ * A single per-user key closes all of them at once, and needs no table: the blocklist entry
+ * outlives the longest token that could still be in circulation and then expires itself.
+ * `requireAuth` reads it in parallel with the token blocklist, so it costs no extra latency.
+ *
+ * Note the store's own limits: `lib/keyValueStore.ts` falls back to a per-process in-memory
+ * Map when Redis is unreachable, and never throws. Revocation is therefore best-effort
+ * during a Redis outage — it will hold on the process that served the request and nowhere
+ * else. That is a property of the store, not of this call.
+ */
+export async function blockAllUserTokens(userId: string): Promise<void> {
+  await kvSet(USER_BLOCKLIST_PREFIX + userId, '1', config.sessionTtlMs);
 }
