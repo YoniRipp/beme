@@ -18,6 +18,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+// The "a calories goal is usually daily" rule was an inline ternary here. Expo's form needs
+// the same defaults, so it moved to the shared package instead of being copied across.
+import { defaultPeriodForType } from '@trackvibe/shared/domain';
 
 interface GoalModalProps {
   open: boolean;
@@ -93,7 +96,9 @@ export function GoalModal({ open, onOpenChange, onSave, goal }: GoalModalProps) 
                 value={formData.type}
                 onValueChange={(value) => {
                   const newType = value as GoalType;
-                  const period = !goal && (newType === 'calories' || newType === 'sleep') ? 'daily' : !goal && newType !== 'calories' && newType !== 'sleep' ? 'weekly' : formData.period;
+                  // New goals follow the type's default period; editing leaves the user's
+                  // own choice alone.
+                  const period = goal ? formData.period : defaultPeriodForType(newType);
                   setFormData({ ...formData, type: newType, period });
                 }}
               >

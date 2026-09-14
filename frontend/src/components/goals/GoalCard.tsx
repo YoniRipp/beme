@@ -8,19 +8,17 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { toast } from '@/components/shared/ToastProvider';
+// `GOAL_LABELS` and `formatGoalValue` used to be local consts here. They are pure product
+// rules the Expo client needs to print the identical string, so they moved next to
+// computeGoalProgress in the shared package rather than being copied. Same values, same
+// output — this file's own test suite is the proof it didn't change.
+import { formatGoalValue, GOAL_UNIT_LABELS } from '@trackvibe/shared/domain';
 
 const GOAL_ICON_STYLES: Record<GoalType, { icon: React.ElementType; color: string }> = {
   calories: { icon: Flame, color: 'text-terracotta' },
   workouts: { icon: Dumbbell, color: 'text-info' },
   sleep: { icon: Moon, color: 'text-gold' },
 };
-const GOAL_LABELS: Record<GoalType, string> = {
-  calories: 'calories',
-  workouts: 'workouts',
-  sleep: 'hours avg',
-};
-const formatGoalValue = (type: GoalType, value: number) =>
-  type === 'sleep' ? `${value.toFixed(1)}h` : value.toLocaleString();
 
 interface GoalCardProps {
   goal: Goal;
@@ -77,7 +75,7 @@ export function GoalCard({ goal, onEdit }: GoalCardProps) {
             <h4 className="text-base font-extrabold mt-0.5 capitalize">{goal.type} goal</h4>
             <p className="text-sm text-muted-foreground tabular-nums mt-1">
               <span className={cn('font-bold', style.color)}>{formatGoalValue(goal.type, progress.current)}</span>
-              {' '}/ {formatGoalValue(goal.type, goal.target)} {GOAL_LABELS[goal.type]}
+              {' '}/ {formatGoalValue(goal.type, goal.target)} {GOAL_UNIT_LABELS[goal.type]}
             </p>
             <p className="text-xs text-muted-foreground mt-1">{normalizedProgress.toFixed(0)}% complete</p>
             <span className="sr-only">{goal.type} goal progress {normalizedProgress.toFixed(0)} percent</span>

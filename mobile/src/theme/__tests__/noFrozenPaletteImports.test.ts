@@ -70,9 +70,6 @@ const ALLOWED_HEX_LITERALS: Record<string, Record<string, string>> = {
     '#fff': "PieChart label text drawn on the chart's own coloured wedge fills, not the page background — legible regardless of app theme",
     '#ef4444': 'LineChart series colour (calorie trend) — categorical chart accent, same class as CHART_COLORS',
   },
-  [path.join('components', 'shared', 'ProgressRing.tsx')]: {
-    '#e5e7eb': 'unfilled ring track. NOW A LIVE DEFECT: this entry was written when the component had no call sites, but BodyScreen\'s weekly goal ring is one as of the workouts-parity port, and `dark` is the DEFAULT theme — so a light-grey track is painted on a near-black card for every default user. Left in place only because the palette of this component is the design-system agent\'s to change (see agent-os/specs/2026-09-14-1140-parity-workouts-week-summary/shape.md, "Constraints"); the fix is `colors.surfaceMuted` via useThemedStyles, after which this entry should be deleted.',
-  },
 };
 
 function scanFileForImportOffenses(file: string): string[] {

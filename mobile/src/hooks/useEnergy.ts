@@ -9,11 +9,11 @@ import { toLocalDateString } from '../lib/dateRanges';
 export function useEnergy() {
   const queryClient = useQueryClient();
 
-  // staleTime is explicit and matches frontend/src/hooks/useEnergy.ts. Both queries used
-  // to omit it and silently inherit the 60 s client default while the web set 2 min, so
-  // the same two screens refetched on different schedules on the two clients.
   const checkInsQuery = useQuery({
     queryKey: queryKeys.checkIns,
+    // Always explicit, per agent-os/standards/frontend/data-fetching.md, and 2 min to match
+    // frontend/src/hooks/useEnergy.ts. These two inherited the 60s client default, so the
+    // Goals screen mixed one-minute-old food data with five-minute-old goals.
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const checkIns = await dailyCheckInsApi.listAll();
