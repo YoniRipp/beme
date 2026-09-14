@@ -1,5 +1,6 @@
-import fs from 'fs';
 import path from 'path';
+import ts from 'typescript';
+import { SRC_ROOT, collectSourceFiles, parseSourceFile, collectImports } from '../paletteGuardSupport';
 
 /**
  * Paper's MD3 typescale carries the app's fonts (`buildPaperTheme` in `mobile/src/theme.ts`),
@@ -13,39 +14,44 @@ import path from 'path';
  * the one surface the fonts visibly missed was the first impression.
  *
  * The invariant this guards: if a file imports `Text` from 'react-native', it must also
- * import `fonts` from the theme. That is not proof every style names a face, but it fails
- * loudly on the actual mistake — adding a raw-`Text` screen and never thinking about the
- * font at all.
+ * import a binding literally named `fonts` (from the theme). That is not proof every style
+ * names a face, but it fails loudly on the actual mistake — adding a raw-`Text` screen and
+ * never thinking about the font at all.
+ *
+ * REWRITTEN from a plain-text regex scan to AST parsing (see `paletteGuardSupport.ts`'s own
+ * docblock). The regex version had two confirmed holes:
+ *   1. Its import match was single-quote only (`from\s*'react-native'`), so
+ *      `from "react-native"` was invisible to it. No linter in this repo enforces quote
+ *      style, so this was a live gap, not a hypothetical one.
+ *   2. Its "imports fonts" check was `/\bfonts\b/.test(src)` — the literal word ANYWHERE in
+ *      the file, comments included. A file with raw `<Text>` and a comment reading
+ *      `// fonts are handled by Paper elsewhere` satisfied it without a real import.
+ * Parsing sidesteps both: `node.moduleSpecifier.text` is quote-agnostic, and the "imports
+ * fonts" check now walks real `ImportDeclaration` named-binding nodes — a comment is not one.
  *
  * A file that legitimately renders no text of its own can be added to ALLOWED_FILES with a
- * reason. Deliberately a source scan, matching `noFrozenPaletteImports.test.ts`.
+ * reason.
  */
-const SRC = path.join(__dirname, '..', '..');
 const ALLOWED_FILES: Record<string, string> = {};
-
-function sourceFiles(dir: string): string[] {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    const full = path.join(dir, e.name);
-    if (e.isDirectory()) return e.name === '__tests__' ? [] : sourceFiles(full);
-    return e.isFile() && full.endsWith('.tsx') ? [full] : [];
-  });
-}
-
-const RAW_TEXT_IMPORT = /import\s*\{([^}]*)\}\s*from\s*'react-native'/gs;
 
 describe('raw react-native <Text> names its font', () => {
   it('every file rendering raw Text also imports `fonts` from the theme', () => {
     const offenders: string[] = [];
 
-    for (const file of sourceFiles(SRC)) {
-      const rel = path.relative(SRC, file);
+    for (const file of collectSourceFiles(SRC_ROOT, /\.tsx$/)) {
+      const rel = path.relative(SRC_ROOT, file);
       if (rel in ALLOWED_FILES) continue;
-      const src = fs.readFileSync(file, 'utf8');
 
-      const usesRawText = [...src.matchAll(RAW_TEXT_IMPORT)].some((m) => /\bText\b/.test(m[1]));
+      const sourceFile = parseSourceFile(file);
+      const imports = collectImports(sourceFile);
+
+      const usesRawText = imports.some(
+        (imp) => imp.moduleSpecifier === 'react-native' && imp.namedImports.includes('Text')
+      );
       if (!usesRawText) continue;
 
-      if (!/\bfonts\b/.test(src)) {
+      const importsFonts = imports.some((imp) => imp.namedImports.includes('fonts'));
+      if (!importsFonts) {
         offenders.push(
           `${rel} renders react-native's raw <Text> but never imports \`fonts\` — it will ` +
           `render in the system face, not Inter/Fraunces. Add \`fontFamily: fonts.regular\` ` +
@@ -55,5 +61,32 @@ describe('raw react-native <Text> names its font', () => {
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  // Regression coverage for the two confirmed holes in the old regex-based version. These
+  // parse fixture source text directly rather than touching the filesystem, so they pin the
+  // AST-level behaviour independent of whatever real files exist under mobile/src today.
+  describe('closes the two confirmed regex holes', () => {
+    const parseFixture = (text: string): ts.SourceFile =>
+      ts.createSourceFile('fixture.tsx', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+    it('detects a raw Text import written with double quotes', () => {
+      const src = `import { Text } from "react-native";\nexport const X = () => <Text>hi</Text>;\n`;
+      const imports = collectImports(parseFixture(src));
+      const usesRawText = imports.some(
+        (imp) => imp.moduleSpecifier === 'react-native' && imp.namedImports.includes('Text')
+      );
+      expect(usesRawText).toBe(true);
+    });
+
+    it('does not accept a comment mentioning "fonts" as importing the `fonts` binding', () => {
+      const src =
+        `// fonts are handled by Paper elsewhere\n` +
+        `import { Text, View } from 'react-native';\n` +
+        `export const X = () => <View><Text>hi</Text></View>;\n`;
+      const imports = collectImports(parseFixture(src));
+      const importsFonts = imports.some((imp) => imp.namedImports.includes('fonts'));
+      expect(importsFonts).toBe(false);
+    });
   });
 });
