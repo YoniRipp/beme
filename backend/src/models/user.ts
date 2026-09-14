@@ -242,37 +242,53 @@ export async function getSubscriptionGrant(userId: string): Promise<Subscription
  *
  * `migrations/1776000000000_cascade-user-delete-fks.js` sets `app_logs.user_id` and
  * `user_activity_log.user_id` to NULL on delete, which drops the *link* and keeps the
- * *payload*. Two writers put PII into that payload:
+ * *payload*. Three writers put PII into that payload:
  *
  *   - `services/auth.ts` publishes `auth.UserRegistered` as `{ userId, email, name }`, and
  *     `events/consumers/userActivityLog.ts` stores the event body verbatim.
- *   - the admin user routes call `logAction(..., { targetId, email })` on create and update,
- *     so those rows carry the *subject's* email under the *admin's* `user_id` -- which is
- *     why matching on `user_id` alone is not enough.
+ *   - `routes/users.ts` logs `'User updated'` as `{ targetId, email, ... }`.
+ *   - `routes/users.ts` logs `'User created'` as `{ email, role }` — **no id of any kind**.
  *
  * Without this a "deleted" user's email and name survive in both tables, which makes the
- * privacy policy false. Runs before the `SET NULL` statements below, while `user_id` still
- * points at the user.
+ * privacy policy false.
+ *
+ * The two tables need different predicates, because they are different kinds of log:
+ *
+ *   - **`app_logs` is an actor log.** `user_id` is whoever *performed* the action, not who
+ *     it was about: all three rows above are filed under the admin's id. Matching on
+ *     `user_id` would therefore both miss the subject's rows and, when the deleted user is
+ *     themselves an admin, strip other people's emails out of unrelated audit entries. So
+ *     match the address itself (which also catches the id-less `'User created'` row), plus
+ *     the subject-id keys for rows that name a target without repeating their email.
+ *   - **`user_activity_log` is a subject log.** The consumer files every row under
+ *     `event.metadata.userId`, so `user_id` *is* the subject and matching on it is correct.
+ *
+ * Runs before the `SET NULL` statements below, while `user_id` still points at the user.
  *
  * `jsonb - 'key'` is a no-op when the key is absent but raises `cannot delete from scalar`
  * on a non-object value, hence the `jsonb_typeof` guard. The `?` pre-filter keeps the UPDATE
- * from rewriting every log row the user ever produced in order to remove nothing.
+ * from rewriting every log row in order to remove nothing.
  *
- * `$1` (uuid) and `$2` (text) are the same id bound twice on purpose: one statement cannot
- * deduce two different types for a single placeholder. The JSON-payload arms are a
- * sequential scan either way -- account deletion is rare and off the request-latency path.
+ * Parameters are `$1` uuid, `$2` the same id as text (one statement cannot deduce two types
+ * for one placeholder) and `$3` the email. The JSON arms are a sequential scan either way --
+ * account deletion is rare and off the request-latency path.
  */
 const PII_REDACTION_STATEMENTS = [
   `UPDATE app_logs
       SET details = details - 'email' - 'targetEmail' - 'name'
     WHERE jsonb_typeof(details) = 'object'
       AND (details ? 'email' OR details ? 'targetEmail' OR details ? 'name')
-      AND (user_id = $1 OR details->>'targetId' = $2 OR details->>'userId' = $2)`,
+      AND (
+        lower(details->>'email') = lower($3)
+        OR lower(details->>'targetEmail') = lower($3)
+        OR details->>'targetId' = $2
+        OR details->>'userId' = $2
+      )`,
   `UPDATE user_activity_log
       SET payload = payload - 'email' - 'name'
     WHERE jsonb_typeof(payload) = 'object'
       AND (payload ? 'email' OR payload ? 'name')
-      AND (user_id = $1 OR payload->>'userId' = $2)`,
+      AND (user_id = $1 OR payload->>'userId' = $2 OR lower(payload->>'email') = lower($3))`,
 ];
 
 /**
@@ -328,12 +344,21 @@ async function runTolerantly(
  * Redact the user's PII from surviving log rows, clear attribution columns, delete owned
  * rows, then delete the user. Must run inside a transaction -- it uses savepoints.
  *
+ * The address is read up front, under `FOR UPDATE`, because the redaction predicates match
+ * on it and it is gone by the end. The lock also serialises two concurrent deletions of the
+ * same account: the second waits, then finds no row. The address is used only inside this
+ * function and is never returned -- `services/account.ts` deliberately has no way to log it.
+ *
  * @returns false when no such user existed, so a repeated delete of the same account is a
  *   clean no-op at this layer rather than an error.
  */
 export async function deleteWithOwnedData(userId: string, client: pg.PoolClient): Promise<boolean> {
+  const existing = await client.query('SELECT email FROM users WHERE id = $1 FOR UPDATE', [userId]);
+  if (existing.rowCount === 0) return false;
+  const email: string = existing.rows[0].email ?? '';
+
   for (const sql of PII_REDACTION_STATEMENTS) {
-    await runTolerantly(client, sql, [userId, userId], [MISSING_TABLE, MISSING_COLUMN]);
+    await runTolerantly(client, sql, [userId, userId, email], [MISSING_TABLE, MISSING_COLUMN]);
   }
   for (const sql of SET_NULL_STATEMENTS) {
     await runTolerantly(client, sql, [userId], [MISSING_TABLE, MISSING_COLUMN]);

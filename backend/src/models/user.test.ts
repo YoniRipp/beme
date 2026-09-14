@@ -10,6 +10,7 @@ vi.mock('../db/pool.js', () => ({
 import { deleteWithOwnedData } from './user.js';
 
 const USER_ID = '11111111-2222-3333-4444-555555555555';
+const USER_EMAIL = 'deleted.person@example.com';
 
 /**
  * `deleteWithOwnedData` is handed a transaction client, so the tests drive a recording stub
@@ -23,6 +24,9 @@ function recordingClient(overrides: Record<string, () => unknown> = {}) {
       calls.push({ sql, params });
       for (const [needle, behaviour] of Object.entries(overrides)) {
         if (sql.includes(needle)) return behaviour();
+      }
+      if (sql.includes('SELECT email FROM users')) {
+        return { rowCount: 1, rows: [{ email: USER_EMAIL }] };
       }
       return { rowCount: 1, rows: [{ id: USER_ID }] };
     }),
@@ -54,13 +58,25 @@ describe('user model — deleteWithOwnedData', () => {
   });
 
   it('reports the user as absent instead of throwing when the row is already gone', async () => {
-    const { client } = recordingClient({
-      'DELETE FROM users': () => ({ rowCount: 0, rows: [] }),
+    const { client, sqls } = recordingClient({
+      'SELECT email FROM users': () => ({ rowCount: 0, rows: [] }),
     });
 
     // A second delete of the same account has to be a clean no-op at this layer; the service
     // turns it into a 404, and only because the caller asked for a user that is not there.
     await expect(deleteWithOwnedData(USER_ID, client)).resolves.toBe(false);
+    // And it must bail before rewriting anyone's log rows.
+    expect(sqls().some((s) => s.includes('UPDATE app_logs'))).toBe(false);
+  });
+
+  // Two concurrent deletions of the same account would otherwise both redact and both race
+  // on the final DELETE. The row lock makes the second wait and then find nothing.
+  it('locks the user row before touching anything else', async () => {
+    const { client, sqls } = recordingClient();
+
+    await deleteWithOwnedData(USER_ID, client);
+
+    expect(sqls()[0]).toContain('FOR UPDATE');
   });
 
   // The PII redaction is the whole reason these statements exist. `app_logs.user_id` and
@@ -119,7 +135,43 @@ describe('user model — deleteWithOwnedData', () => {
 
       const redaction = calls.find((c) => /UPDATE app_logs\s+SET details/.test(c.sql));
       expect(redaction!.sql).toContain("details->>'targetId' = $2");
-      expect(redaction!.params).toEqual([USER_ID, USER_ID]);
+      expect(redaction!.params).toEqual([USER_ID, USER_ID, USER_EMAIL]);
+    });
+
+    // `logAction('User created', { email, role }, adminId)` (routes/users.ts) carries the
+    // new user's address and *no id at all* — not targetId, not userId. Matching the
+    // address itself is the only thing that reaches it.
+    it('matches on the address, so the id-less "User created" row is caught too', async () => {
+      const { client, calls } = recordingClient();
+
+      await deleteWithOwnedData(USER_ID, client);
+
+      const redaction = calls.find((c) => /UPDATE app_logs\s+SET details/.test(c.sql));
+      expect(redaction!.sql).toContain("details->>'email'");
+      expect(redaction!.params).toContain(USER_EMAIL);
+    });
+
+    // app_logs is an *actor* log: user_id is who performed the action, not who it was
+    // about. Matching it would strip other people's emails out of an admin's audit trail
+    // when that admin deletes their own account — silent, irreversible audit-trail loss.
+    it('does not redact app_logs rows merely because the deleted user wrote them', async () => {
+      const { client, calls } = recordingClient();
+
+      await deleteWithOwnedData(USER_ID, client);
+
+      const redaction = calls.find((c) => /UPDATE app_logs\s+SET details/.test(c.sql));
+      expect(redaction!.sql).not.toMatch(/user_id = \$1/);
+    });
+
+    // user_activity_log is the opposite: the consumer files every row under
+    // event.metadata.userId, so there user_id *is* the subject.
+    it('does match user_activity_log on user_id, where the row is about its owner', async () => {
+      const { client, calls } = recordingClient();
+
+      await deleteWithOwnedData(USER_ID, client);
+
+      const redaction = calls.find((c) => /UPDATE user_activity_log\s+SET payload/.test(c.sql));
+      expect(redaction!.sql).toMatch(/user_id = \$1/);
     });
   });
 

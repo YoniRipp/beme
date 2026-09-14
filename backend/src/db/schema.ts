@@ -447,8 +447,18 @@ export async function initSchema() {
     //
     // Same introspect-drop-recreate shape as the migration: the existing constraint's name
     // varies between baseline tables and ALTER-added columns, so it has to be looked up.
+    //
+    // Each statement runs inside its own savepoint. `to_regclass` guards a missing *table*
+    // but nothing guards a missing *column*, and `exercises.created_by` is declared only in
+    // its CREATE TABLE -- never in an `ADD COLUMN IF NOT EXISTS` block -- so a database
+    // whose `exercises` predates that column answers the ADD CONSTRAINT with 42703. A raw
+    // failure there poisons the transaction and turns the COMMIT below into a rollback that
+    // discards every table this run created, which is exactly what the pgvector savepoint
+    // further down exists to prevent.
     for (const [table, column, action] of USER_FK_ACTIONS) {
-      await client.query(`
+      await client.query(`SAVEPOINT user_fk_${table}_${column}`);
+      try {
+        await client.query(`
         DO $$
         DECLARE
           fk_name text;
@@ -476,6 +486,14 @@ export async function initSchema() {
                    FOREIGN KEY (${column}) REFERENCES users(id) ON DELETE ${action}';
         END $$;
       `);
+        await client.query(`RELEASE SAVEPOINT user_fk_${table}_${column}`);
+      } catch (e) {
+        await client.query(`ROLLBACK TO SAVEPOINT user_fk_${table}_${column}`);
+        logger.warn(
+          { err: e, table, column },
+          'Could not reconcile a users(id) foreign key -- deletion may behave differently here than in production',
+        );
+      }
     }
 
     // Indexes

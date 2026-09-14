@@ -2,6 +2,7 @@
 
 | Doc | Description |
 |-----|-------------|
+| [HANDOFF.md](HANDOFF.md) | **Work in flight** — open PRs, what is unverified, landing order, owner actions |
 | [RUNNING.md](RUNNING.md) | Index: running locally, Railway, or AWS |
 | [RUNNING-LOCAL.md](RUNNING-LOCAL.md) | Local development setup |
 | [RUNNING-RAILWAY.md](RUNNING-RAILWAY.md) | Railway deployment |

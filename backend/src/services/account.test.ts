@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockDeleteWithOwnedData = vi.fn();
 const mockDeleteUserFiles = vi.fn();
 const mockBlockToken = vi.fn();
+const mockBlockAllUserTokens = vi.fn();
 const mockLogAction = vi.fn();
 const mockLogError = vi.fn();
 
@@ -28,6 +29,7 @@ vi.mock('./storage.js', () => ({
 
 vi.mock('./auth.js', () => ({
   blockToken: (...args: unknown[]) => mockBlockToken(...args),
+  blockAllUserTokens: (...args: unknown[]) => mockBlockAllUserTokens(...args),
 }));
 
 vi.mock('./appLog.js', () => ({
@@ -109,26 +111,39 @@ describe('account service — deleteAccount', () => {
   // the user up. With a 365-day default TTL, a token that is not blocklisted keeps
   // authenticating as a user who no longer exists for up to a year.
   describe('session revocation', () => {
+    // The per-token blocklist can only reach the session that presented its token. Every
+    // other device the user is signed in on needs the per-user entry, or it keeps
+    // authenticating against a deleted account until its token expires.
+    it('revokes every session the user has, not just the one making the request', async () => {
+      await deleteAccount({ userId: USER_ID, actorId: null, revokeToken: 'jwt-abc' });
+
+      expect(mockBlockAllUserTokens).toHaveBeenCalledWith(USER_ID);
+    });
+
     it('blocklists the token the deletion request arrived with', async () => {
       await deleteAccount({ userId: USER_ID, actorId: null, revokeToken: 'jwt-abc' });
 
       expect(mockBlockToken).toHaveBeenCalledWith('jwt-abc');
     });
 
-    it('blocklists nothing on the admin path, where the presented token is the admin’s own', async () => {
+    // An admin presents their own token, so there is nothing session-specific to revoke --
+    // but the subject's own sessions still have to die, and only the per-user entry can do
+    // that. This path had no revocation at all before.
+    it('revokes the subject’s sessions on the admin path too', async () => {
       await deleteAccount({ userId: USER_ID, actorId: ADMIN_ID });
 
+      expect(mockBlockAllUserTokens).toHaveBeenCalledWith(USER_ID);
       expect(mockBlockToken).not.toHaveBeenCalled();
     });
 
     it('still succeeds when the blocklist write fails, and says so in the log', async () => {
-      mockBlockToken.mockRejectedValue(new Error('redis down'));
+      mockBlockAllUserTokens.mockRejectedValue(new Error('redis down'));
 
       await expect(
         deleteAccount({ userId: USER_ID, actorId: null, revokeToken: 'jwt-abc' }),
       ).resolves.toBeDefined();
       expect(mockLogError).toHaveBeenCalledWith(
-        expect.stringMatching(/session token/i),
+        expect.stringMatching(/session/i),
         expect.objectContaining({ targetId: USER_ID }),
       );
     });

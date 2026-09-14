@@ -10,6 +10,16 @@ import { kvGet } from '../lib/keyValueStore.js';
 import { sendError } from '../utils/response.js';
 
 const TOKEN_BLOCKLIST_PREFIX = 'blocked:';
+/**
+ * Per-user blocklist, written by `authService.blockAllUserTokens` when an account is
+ * deleted. Must match `USER_BLOCKLIST_PREFIX` in `services/auth.ts`.
+ *
+ * The token blocklist above can only reach the one session that presented its token. This
+ * middleware does no user lookup, so without a per-user entry a deleted account's other
+ * devices keep authenticating for the remaining life of their tokens — up to a year on the
+ * default TTL.
+ */
+const USER_BLOCKLIST_PREFIX = 'blockedUser:';
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -30,10 +40,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   try {
     const payload = jwt.verify(token, config.jwtSecret!, { algorithms: ['HS256'] }) as { sub?: string; email?: string; role?: string };
 
-    // Check token blocklist (SEC3: revoked tokens on logout/password-reset)
+    // Check both blocklists: this token (SEC3: revoked on logout/password-reset) and the
+    // whole user (account deletion). Read in parallel so the second costs no extra latency.
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const blocked = await kvGet(TOKEN_BLOCKLIST_PREFIX + tokenHash);
-    if (blocked) {
+    const [blockedToken, blockedUser] = await Promise.all([
+      kvGet(TOKEN_BLOCKLIST_PREFIX + tokenHash),
+      payload.sub ? kvGet(USER_BLOCKLIST_PREFIX + payload.sub) : Promise.resolve(null),
+    ]);
+    if (blockedToken || blockedUser) {
       return sendError(res, 401, 'Token has been revoked', { code: 'UNAUTHORIZED' });
     }
 

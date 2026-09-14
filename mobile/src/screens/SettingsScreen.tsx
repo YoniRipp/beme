@@ -76,15 +76,18 @@ export function SettingsScreen() {
     setDeleting(true);
     try {
       await authApi.deleteAccount();
-      Toast.show({ type: 'success', text1: 'Your account has been deleted' });
-      // The server has already blocklisted this token, so the local session is dead whatever
-      // happens next. Clearing it here is what returns the app to the signed-out stack.
-      logout();
     } catch {
       Toast.show({ type: 'error', text1: 'Could not delete your account. Please try again.' });
-    } finally {
       setDeleting(false);
+      return;
     }
+
+    Toast.show({ type: 'success', text1: 'Your account has been deleted' });
+    // The server has blocklisted the whole user, so the local session is dead whatever
+    // happens next. Clearing it here is what returns the app to the signed-out stack — and
+    // that unmounts this screen, so `deleting` is deliberately not reset afterwards; doing
+    // it in a `finally` would set state on a screen that is going away.
+    logout();
   };
 
   return (
@@ -154,7 +157,6 @@ export function SettingsScreen() {
         confirmationPhrase={DELETE_ACCOUNT_CONFIRMATION_PHRASE}
         confirmLabel="Delete permanently"
         onConfirm={handleDeleteAccount}
-        busy={deleting}
         destructive
       />
     </MobileScreen>

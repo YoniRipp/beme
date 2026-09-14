@@ -96,6 +96,9 @@ export async function deleteFile(key: string) {
  *  so one listed page is exactly one delete batch and no re-chunking is needed. */
 const S3_PAGE_SIZE = 1000;
 
+/** Enough failing keys in the log line to diagnose, not enough to fill the log. */
+const MAX_REPORTED_FAILURES = 5;
+
 /**
  * Delete every object a user ever uploaded, by listing and emptying their key prefix.
  *
@@ -107,7 +110,15 @@ const S3_PAGE_SIZE = 1000;
  * Returns 0 without touching the network when S3 is not configured, which is the state in
  * dev and in CI; a deployment with no bucket has no objects to sweep.
  *
+ * Per-object failures do not stop the sweep. S3 reports them inside an otherwise successful
+ * 200, and there is no retry driver behind this call -- with the user row already gone,
+ * whatever this pass leaves behind stays behind until somebody re-runs it by hand. So every
+ * page is attempted, and the failures are collected and raised together at the end, rather
+ * than one transient `SlowDown` on one key abandoning every page after it.
+ *
  * @returns the number of objects deleted.
+ * @throws when any object could not be deleted, after the whole prefix has been attempted.
+ *   The count of objects that *were* deleted is on the error as `deleted`.
  */
 export async function deleteUserFiles(userId: string): Promise<number> {
   if (!config.awsRegion || !config.awsS3Bucket) return 0;
@@ -115,6 +126,7 @@ export async function deleteUserFiles(userId: string): Promise<number> {
   const prefix = userFilePrefix(userId);
   const s3 = getS3Client();
   let deleted = 0;
+  const failures: string[] = [];
   let continuationToken: string | undefined;
 
   do {
@@ -138,21 +150,26 @@ export async function deleteUserFiles(userId: string): Promise<number> {
           Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
         }),
       );
-      // S3 reports per-object failures in the 200 response rather than throwing. Surfacing
-      // them as an error is what makes a partial sweep visible instead of silently leaving
-      // a deleted user's photos in the bucket.
       const errors = result.Errors ?? [];
       deleted += keys.length - errors.length;
-      if (errors.length > 0) {
-        throw new Error(
-          `Failed to delete ${errors.length} of ${keys.length} objects under ${prefix}: ` +
-            `${errors[0].Key} (${errors[0].Code}: ${errors[0].Message})`,
-        );
+      for (const error of errors) {
+        failures.push(`${error.Key} (${error.Code}: ${error.Message})`);
       }
     }
 
     continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
   } while (continuationToken);
+
+  if (failures.length > 0) {
+    throw Object.assign(
+      new Error(
+        `Failed to delete ${failures.length} object(s) under ${prefix} ` +
+          `(${deleted} deleted): ${failures.slice(0, MAX_REPORTED_FAILURES).join('; ')}` +
+          (failures.length > MAX_REPORTED_FAILURES ? ' …' : ''),
+      ),
+      { deleted },
+    );
+  }
 
   return deleted;
 }

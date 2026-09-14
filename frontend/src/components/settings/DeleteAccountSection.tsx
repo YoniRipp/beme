@@ -29,18 +29,25 @@ export function DeleteAccountSection() {
     setDeleting(true);
     try {
       await authApi.deleteAccount();
-      toast.success('Your account has been deleted');
-      // The server has already blocklisted this token, so the session is dead whatever
-      // happens next. `logout` clears the local caches and the offline queue too — leaving
-      // a deleted account's rows in IndexedDB would be its own small privacy failure.
-      await logout();
     } catch (e) {
       toast.error(
         e instanceof Error ? e.message : 'Could not delete your account. Please try again.',
       );
-    } finally {
       setDeleting(false);
+      return;
     }
+
+    toast.success('Your account has been deleted');
+    // Deliberately outside the try above. The account is already gone, so a failure in the
+    // local cleanup is not a deletion failure — and `clearClientSession` calls `caches.keys()`
+    // unguarded (AuthContext.tsx), so folding it in would let one rejected Cache Storage call
+    // show "Your account has been deleted" and "Could not delete your account" back to back.
+    //
+    // The server has blocklisted the whole user, so the session is dead whatever happens
+    // here; `logout` also clears the query cache and the offline queue, and leaving a deleted
+    // account's rows in the browser would be its own small privacy failure.
+    await logout().catch(() => {});
+    setDeleting(false);
   };
 
   return (
@@ -68,7 +75,6 @@ export function DeleteAccountSection() {
         confirmationPhrase={DELETE_ACCOUNT_CONFIRMATION_PHRASE}
         confirmLabel="Delete permanently"
         onConfirm={handleDelete}
-        busy={deleting}
         variant="destructive"
       />
     </SettingsSection>

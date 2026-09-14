@@ -8,9 +8,10 @@
  *
  *   1. **S3 objects.** No column stores upload keys; the `users/<id>/` prefix is the only
  *      handle. See `services/storage.ts`.
- *   2. **The session.** `middleware/auth.ts` verifies the JWT signature and consults a
- *      blocklist; it never looks the user up. With a 365-day default TTL a deleted user's
- *      token keeps authenticating for up to a year unless it is blocklisted.
+ *   2. **The sessions — all of them.** `middleware/auth.ts` verifies the JWT signature and
+ *      consults a blocklist; it never looks the user up. With a 365-day default TTL every
+ *      device the user is signed in on keeps authenticating for up to a year unless the
+ *      whole user is blocklisted, not merely the token that made this request.
  *   3. **The audit trail.** The old inline handler logged the deleted user's email into
  *      `app_logs.details` *after* deleting them, re-creating the PII the delete removed.
  *
@@ -84,13 +85,22 @@ export async function deleteAccount(options: DeleteAccountOptions): Promise<Dele
   if (!existed) throw new NotFoundError('User not found');
 
   // Past this point the account is gone. Anything that fails is reported, never rethrown.
-  if (revokeToken) {
-    try {
-      await authService.blockToken(revokeToken);
-    } catch (err) {
-      logger.error({ err, userId }, 'delete account: token revocation failed');
-      await logError('Account deletion could not revoke the session token', { targetId: userId });
-    }
+
+  // Every session, not just this request's. `middleware/auth.ts` does no user lookup, so a
+  // per-token blocklist entry would leave the user's other devices authenticating as a
+  // deleted account until their tokens expired — up to a year on the default TTL. This also
+  // covers the admin path, which presents the admin's token and has none of the subject's.
+  //
+  // Neither call can reject: `blockToken` swallows its own errors and `lib/keyValueStore.ts`
+  // falls back to a per-process in-memory Map rather than throwing when Redis is down. The
+  // try/catch is defensive against that changing, not a live error path — during a Redis
+  // outage revocation degrades silently to one process, and no code here can observe it.
+  try {
+    await authService.blockAllUserTokens(userId);
+    if (revokeToken) await authService.blockToken(revokeToken);
+  } catch (err) {
+    logger.error({ err, userId }, 'delete account: token revocation failed');
+    await logError('Account deletion could not revoke the user’s sessions', { targetId: userId });
   }
 
   let filesDeleted = 0;

@@ -23,9 +23,12 @@ interface ConfirmDialogProps {
   confirmationPhrase?: string;
   /** Extra warning shown under the message, for irreversible actions. */
   warning?: string;
-  /** Disables the confirm button while a request is in flight. */
-  busy?: boolean;
 }
+
+// No `busy` prop. Confirming dismisses the dialog synchronously, before the caller's own
+// state update can re-render it, so an in-flight flag passed down here could never be
+// observed — it would render as a spinner that never appears and a guard that never guards.
+// Callers disable their own trigger button for the duration instead, which does work.
 
 export function ConfirmDialog({
   visible,
@@ -37,7 +40,6 @@ export function ConfirmDialog({
   destructive = false,
   confirmationPhrase,
   warning,
-  busy = false,
 }: ConfirmDialogProps) {
   const { colors } = useThemeContext();
   const [typed, setTyped] = useState('');
@@ -78,8 +80,7 @@ export function ConfirmDialog({
           <Button onPress={onDismiss}>Cancel</Button>
           <Button
             onPress={() => { onConfirm(); onDismiss(); }}
-            disabled={unconfirmed || busy}
-            loading={busy}
+            disabled={unconfirmed}
             textColor={destructive ? colors.danger : undefined}
           >
             {confirmLabel}
