@@ -214,4 +214,3 @@ The guard stayed green through the exact transition that invalidated its own exe
       (say 2 of 5) so the unfilled arc is on screen. The whole question is whether the
       track is visible against the card without shouting; 1.19:1 is a deliberately quiet
       contrast and this is the one number in the spec that a screenshot can overrule.
-</content>

@@ -38,4 +38,3 @@
   is first for that reason.
 - **Don't change API shapes.** Nothing here touches the API. The Expo app is now a real
   consumer of the same endpoints as the web client and the MCP server.
-</content>

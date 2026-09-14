@@ -383,5 +383,3 @@ Reported honestly because several of these were expected to be broken:
 - `ColorRoles` gains two keys (`scrim`, `shadow`). Both are additive, so no existing
   consumer breaks.
 - Fixing this without fixing CI leaves the next regression exactly as undetectable.
-</content>
-</invoke>
