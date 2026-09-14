@@ -43,9 +43,21 @@ export function PeriodSelector({ value, onChange, labels = DEFAULT_LABELS }: Per
    * selected and unselected chips the same colour — which is the same class of silent
    * bug this PR is fixing, in the opposite direction.
    *
-   * Remaining divergence, stated rather than papered over: the web's selected button
-   * also gets `border-primary`, and a flat Paper chip has no border at all. Matching
-   * that would mean a per-call-site override again, for a hairline.
+   * Remaining divergence, stated rather than papered over — both accepted, neither
+   * hidden:
+   *
+   *   - The web's selected button also gets `border-primary`, and a flat Paper chip has
+   *     no border at all.
+   *   - The LABEL is accent here and ink on the web. A flat chip paints its text with
+   *     `onSecondaryContainer`, which this theme maps to `palette.primary`; the web's
+   *     `shared/PeriodSelector.tsx` leaves its two `<p>`s at `text-muted-foreground` and
+   *     default ink. The web is not self-consistent about this — `AiInsightsSection.tsx`
+   *     spells the same selected state `bg-primary/10 text-primary` — so mobile matches
+   *     one of the two, and it is the one MD3's container semantic already gives for
+   *     free. Legibility is pinned (>= 3:1, `useAppTheme.test.tsx`).
+   *
+   * Both are only fixable with the per-call-site override this component just deleted,
+   * which is a worse trade than a hairline and a label hue.
    */
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.container}>

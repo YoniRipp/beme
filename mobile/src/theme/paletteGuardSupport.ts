@@ -156,6 +156,15 @@ export function collectJsxElementNames(sourceFile: ts.SourceFile): string[] {
   return names;
 }
 
+/**
+ * Every string-literal hex colour anywhere in the file — object property values
+ * (`backgroundColor: '#fff'`) and JSX attribute values (`color="#fff"`) alike, since
+ * both are `StringLiteral` nodes in the AST. Deliberately not restricted to a fixed set
+ * of "colour-ish" key names (`color`/`backgroundColor`/...): a new prop name we didn't
+ * anticipate (`tintColor`, `stroke`, `overlayColor`, ...) would slip past an allowlist of
+ * keys but not past "is this string shaped like a hex colour". `ProgressRing`'s frozen
+ * track was a `stroke=`, so that is not a hypothetical.
+ */
 export function collectHexColorLiterals(sourceFile: ts.SourceFile): HexLiteralHit[] {
   const hits: HexLiteralHit[] = [];
   const visit = (node: ts.Node) => {

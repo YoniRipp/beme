@@ -52,7 +52,23 @@ const ALLOWED_THEME_IMPORTS: Record<string, Set<string>> = {
   [path.join('theme', 'useAppTheme.ts')]: new Set(['lightColors', 'darkColors']),
 };
 
-const FROZEN_PALETTE_NAMES = new Set(['colors', 'lightColors', 'darkColors']);
+/**
+ * `paperTheme`/`paperDarkTheme` are in here alongside the three palettes because they are
+ * the same hazard one layer up. `theme.ts` builds both at module load from the STATIC
+ * palettes, so each is frozen to the default accent — `useAppTheme` is the only thing
+ * that resolves the user's choice, and it calls `buildPaperTheme` directly rather than
+ * touching either export. Nothing imports them today, which is exactly when to add the
+ * name: this PR just widened what a stray import of one would freeze from nine baked
+ * roles to thirty-three, so the first `import { paperTheme }` would pin a whole MD3
+ * theme to light mode and the default green.
+ */
+const FROZEN_PALETTE_NAMES = new Set([
+  'colors',
+  'lightColors',
+  'darkColors',
+  'paperTheme',
+  'paperDarkTheme',
+]);
 
 /**
  * AN ALLOWLIST ENTRY IS A CLAIM ABOUT THE CODEBASE, NOT A NOTE. A claim nothing

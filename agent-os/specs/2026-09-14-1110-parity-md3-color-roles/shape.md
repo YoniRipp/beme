@@ -380,6 +380,8 @@ Reported honestly because several of these were expected to be broken:
 - **Web is the reference.** Every value above is read from `frontend/src/index.css` or a
   `frontend/src/components/ui/` primitive. Nothing is invented.
 - **No API shapes change.** This is presentation only.
-- `ColorRoles` gains two keys (`scrim`, `shadow`). Both are additive, so no existing
+- `ColorRoles` gains three keys (`scrim`, `shadow`, `muted` — this line said "two" and
+  omitted `muted`, which the Gaps section above adds and the ring fix depends on). All
+  additive, so no existing
   consumer breaks.
 - Fixing this without fixing CI leaves the next regression exactly as undetectable.
