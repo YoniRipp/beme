@@ -24,6 +24,12 @@ export function ProgressRing({
 }: ProgressRingProps) {
   const { colors } = useThemeContext();
   const resolvedColor = color ?? colors.primary;
+  // The unfilled track was a hardcoded '#e5e7eb' — a light-mode grey frozen at write time,
+  // invisible against the dark palette's surfaces and unreachable by the user's accent
+  // choice. `surfaceMuted` is the role the rest of the app already draws progress tracks
+  // with (see MobileGoalCard's ProgressBar) and is the mobile counterpart of the web ring's
+  // `hsl(var(--muted))`.
+  const trackColor = colors.surfaceMuted;
   const styles = useThemedStyles((colors) => ({
     container: { alignItems: 'center' },
     textContainer: { position: 'absolute', top: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
@@ -42,7 +48,7 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#e5e7eb"
+          stroke={trackColor}
           strokeWidth={strokeWidth}
           fill="none"
         />

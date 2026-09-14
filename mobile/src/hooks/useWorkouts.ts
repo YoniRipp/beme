@@ -36,6 +36,9 @@ export function useWorkouts() {
     refetch: refetchWorkoutsQuery,
   } = useQuery({
     queryKey: queryKeys.workouts,
+    // Always explicit, per agent-os/standards/frontend/data-fetching.md; 2 min matches
+    // frontend/src/hooks/useWorkouts.ts. This inherited the 60s client default.
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const workouts = await workoutsApi.listAll();
       return workouts.map(apiWorkoutToWorkout);

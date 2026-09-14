@@ -70,9 +70,6 @@ const ALLOWED_HEX_LITERALS: Record<string, Record<string, string>> = {
     '#fff': "PieChart label text drawn on the chart's own coloured wedge fills, not the page background — legible regardless of app theme",
     '#ef4444': 'LineChart series colour (calorie trend) — categorical chart accent, same class as CHART_COLORS',
   },
-  [path.join('components', 'shared', 'ProgressRing.tsx')]: {
-    '#e5e7eb': 'unfilled ring track — not in this task\'s enumerated fix list for this file, and the component has no current call sites ("<ProgressRing" greps empty), so it is not a live dark-mode defect today. Flagged here deliberately rather than silently left off this allowlist.',
-  },
 };
 
 function scanFileForImportOffenses(file: string): string[] {

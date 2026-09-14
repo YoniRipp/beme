@@ -11,6 +11,10 @@ import type { Goal } from '../../types/goals';
  * The calculation itself is @trackvibe/shared/domain's computeGoalProgress, already
  * covered by packages/shared/src/domain/__tests__/goals.test.ts; this only pins that
  * GoalsScreen wires it up correctly per goal.
+ *
+ * `percentage` was added alongside `current` so MobileGoalCard stops deriving its own
+ * `current / goal.target` — a second, smaller copy of the same arithmetic, and one without
+ * the shared calculator's divide-by-zero guard or its >100% clamp.
  */
 
 const NOW = new Date(2026, 8, 16, 12, 0, 0); // Wednesday 16 September 2026, 12:00 local
@@ -31,7 +35,7 @@ describe('goalsWithCurrent', () => {
       checkIns: [],
     };
     expect(goalsWithCurrent(goals, deps)).toEqual([
-      { goal: goals[0], current: 800 },
+      { goal: goals[0], current: 800, percentage: 40 },
     ]);
   });
 
@@ -43,7 +47,7 @@ describe('goalsWithCurrent', () => {
       checkIns: [],
     };
     expect(goalsWithCurrent(goals, deps)).toEqual([
-      { goal: goals[0], current: 2 },
+      { goal: goals[0], current: 2, percentage: (2 / 3) * 100 },
     ]);
   });
 
@@ -55,7 +59,7 @@ describe('goalsWithCurrent', () => {
       checkIns: [{ date: NOW, sleepHours: 7 }],
     };
     expect(goalsWithCurrent(goals, deps)).toEqual([
-      { goal: goals[0], current: 7 },
+      { goal: goals[0], current: 7, percentage: 87.5 },
     ]);
   });
 
@@ -79,9 +83,23 @@ describe('goalsWithCurrent', () => {
       checkIns: [{ date: NOW, sleepHours: 6 }],
     };
     expect(goalsWithCurrent(goals, deps)).toEqual([
-      { goal: goals[0], current: 1200 },
-      { goal: goals[1], current: 1 },
-      { goal: goals[2], current: 6 },
+      { goal: goals[0], current: 1200, percentage: 60 },
+      { goal: goals[1], current: 1, percentage: (1 / 3) * 100 },
+      { goal: goals[2], current: 6, percentage: 75 },
     ]);
+  });
+
+  it('hands the card a clamped percentage rather than letting it derive its own', () => {
+    // MobileGoalCard's own `current / goal.target` had no >100% clamp and no
+    // divide-by-zero guard; both live in the shared calculator, and both arrive here.
+    const goals = [
+      goal({ id: 'over', type: 'calories', target: 2000, period: 'daily' }),
+      goal({ id: 'zero', type: 'calories', target: 0, period: 'daily' }),
+    ];
+    const deps = { foodEntries: [{ date: NOW, calories: 5000 }], workouts: [], checkIns: [] };
+    const [over, zero] = goalsWithCurrent(goals, deps);
+    expect(over.percentage).toBe(100);
+    expect(zero.percentage).toBe(0);
+    expect(zero.percentage).not.toBeNaN();
   });
 });
