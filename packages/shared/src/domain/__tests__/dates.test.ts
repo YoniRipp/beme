@@ -5,6 +5,7 @@ import {
   WEEK_SUNDAY,
   getPeriodRange,
   getTrendPeriodBounds,
+  formatDate,
 } from '../dates';
 
 describe('toLocalDateString', () => {
@@ -124,5 +125,29 @@ describe('getTrendPeriodBounds', () => {
     const b = getTrendPeriodBounds('week', ref);
     expect(b.previousEnd.getTime()).toBeLessThan(b.currentStart.getTime());
     expect(b.currentStart.getTime() - b.previousEnd.getTime()).toBeLessThan(1000);
+  });
+});
+
+describe('formatDate', () => {
+  const date = new Date(2026, 0, 16); // 16 January 2026, local
+
+  it('renders each format the settings UI offers', () => {
+    expect(formatDate(date, 'DD/MM/YYYY')).toBe('16/01/2026');
+    expect(formatDate(date, 'MM/DD/YYYY')).toBe('01/16/2026');
+    expect(formatDate(date, 'YYYY-MM-DD')).toBe('2026-01-16');
+  });
+
+  it('still renders the legacy two-digit-year values older settings blobs may hold', () => {
+    expect(formatDate(date, 'DD/MM/YY')).toBe('16/01/26');
+    expect(formatDate(date, 'MM/DD/YY')).toBe('01/16/26');
+  });
+
+  it('falls back to DD/MM/YYYY for a missing or unrecognised format', () => {
+    expect(formatDate(date)).toBe('16/01/2026');
+    expect(formatDate(date, 'nonsense')).toBe('16/01/2026');
+  });
+
+  it('accepts a string date', () => {
+    expect(formatDate('2026-01-16T09:00:00', 'YYYY-MM-DD')).toBe('2026-01-16');
   });
 });

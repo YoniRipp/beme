@@ -50,7 +50,7 @@ Replace the existing Lemon Squeezy subscription payment system with Max's paymen
   - Remove `/api/subscription/portal` (Max doesn't have a customer portal like Lemon Squeezy)
 
 ### Step 4: Update Middleware
-- Update `requirePro.ts`: Change `lemonSqueezyApiKey` check to `maxTerminalNumber` check
+- Update `aiAccess.ts` (formerly `requirePro.ts`): Change `lemonSqueezyApiKey` check to `maxTerminalNumber` check — the check lives in `services/aiQuota.ts`, in both `checkAiQuota` and `tryConsumeAiCall`
 
 ### Step 5: Update DB Schema
 - Rename `lemon_squeezy_customer_id` column to `max_customer_id` (or add new column)

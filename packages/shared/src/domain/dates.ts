@@ -88,3 +88,32 @@ export function getTrendPeriodBounds(
 ): TrendPeriodBounds {
   return TREND_PERIOD_GETTERS[period](refDate);
 }
+
+/**
+ * `AppSettings.dateFormat` -> the equivalent date-fns pattern. Legacy two-digit-year
+ * values are kept because settings blobs written by older builds still hold them; they
+ * are not offered in the settings UI any more (`DATE_FORMATS` in `../settings/types`).
+ */
+const DATE_FORMAT_PATTERNS: Record<string, string> = {
+  'MM/DD/YYYY': 'MM/dd/yyyy',
+  'DD/MM/YYYY': 'dd/MM/yyyy',
+  'YYYY-MM-DD': 'yyyy-MM-dd',
+  'MM/DD/YY': 'MM/dd/yy',
+  'DD/MM/YY': 'dd/MM/yy',
+};
+
+/**
+ * Renders a date in the user's chosen `AppSettings.dateFormat`.
+ *
+ * Moved here verbatim from the web client (`frontend/src/lib/utils.ts`, which now
+ * re-exports this) so both clients render a user-facing date the same way — Expo's
+ * workout card hardcoded `EEE, MMM d` and ignored the setting entirely.
+ *
+ * The parameter stays a plain `string` rather than `DateFormat`: stored blobs can hold a
+ * legacy value, and an unrecognised one falls back to `dd/MM/yyyy` rather than throwing.
+ * This is display only — never use it to build an API value, which is `toLocalDateString`.
+ */
+export function formatDate(date: Date | string, dateFormat: string = 'DD/MM/YYYY'): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return format(d, DATE_FORMAT_PATTERNS[dateFormat] ?? 'dd/MM/yyyy');
+}

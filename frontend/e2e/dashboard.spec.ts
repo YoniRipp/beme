@@ -1,59 +1,26 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { signIn } from './support/session';
 
 /**
  * The authenticated shell.
  *
- * Auth here is cookie/bearer based and bootstrapped from `GET /api/auth/me`
- * (`src/core/api/auth.ts`), so signing in is a matter of answering that one call. The
- * previous version of this file injected a Supabase `sb-*-auth-token` into localStorage,
- * which this app has never used — the mock could not work, and every test below it was
- * asserting against the login page.
+ * Auth is bootstrapped from `POST /api/auth/refresh` (`src/context/AuthContext.tsx`), so
+ * signing in is a matter of answering that one call — see `e2e/support/session.ts`.
+ *
+ * These tests were skipped for months on the wrong diagnosis. This header used to claim the
+ * app bootstraps from `GET /api/auth/me`, and the comment on the skip concluded that route
+ * interception could not get past the auth gate at all. Neither was true: the spec stubbed an
+ * endpoint the app never calls at startup, and it routed on a double-star glob around
+ * `/api/`, which also matches Vite's own module URLs for `src/core/api/client.ts` — so the
+ * interceptor answered application source with JSON and the page could not boot. Matching on
+ * the pathname and answering `/auth/refresh` is enough; no backend, no seeded user.
  *
  * The list endpoints are stubbed empty so pages render their loaded state rather than
  * hanging on a backend that is not running. That means these tests cover the shell —
  * routing, navigation, page titles, empty states — and not data rendering.
  */
 
-const TEST_USER = {
-  id: 'e2e-user',
-  email: 'e2e@example.com',
-  name: 'E2E Tester',
-  role: 'user',
-  subscriptionStatus: 'free',
-};
-
-const EMPTY_PAGE = { data: [], total: 0, limit: 0, offset: 0, hasMore: false };
-
-async function signIn(page: Page) {
-  await page.route('**/api/auth/me', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(TEST_USER) })
-  );
-
-  // Every list endpoint answers "nothing yet" so the app settles into its empty states.
-  await page.route('**/api/**', (route) => {
-    const url = route.request().url();
-    if (url.includes('/api/auth/me')) return route.fallback();
-    if (url.includes('/water-entries')) {
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ date: new Date().toISOString().slice(0, 10), glasses: 0, mlTotal: 0 }),
-      });
-    }
-    return route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(EMPTY_PAGE),
-    });
-  });
-}
-
-// Skipped, not deleted. Stubbing `GET /api/auth/me` is not enough to get this app past
-// its auth gate in a browser — AuthContext also settles against cookie state that route
-// interception does not provide, so every test below lands on /login. Covering the
-// authenticated shell needs a real backend and a seeded test user, which is the same work
-// as wiring Playwright into CI. Written out here so that work has a target to make pass.
-test.describe.skip('Authenticated shell', () => {
+test.describe('Authenticated shell', () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page);
   });
@@ -65,12 +32,21 @@ test.describe.skip('Authenticated shell', () => {
     await expect(page.getByRole('heading', { name: /hey /i })).toBeVisible();
   });
 
+  /**
+   * Each route's own `h1`, from the `PageHeader` the page renders — not a word from the
+   * chrome. The original table matched on free text, and three of its five entries ("Workouts",
+   * "Goals", "Insights") are sidebar labels that are on screen whichever page is mounted, so
+   * those cases would have passed on the wrong page. The remaining two were stale anyway:
+   * `/energy` titles itself "Food log", `/settings` is "Profile" in the chrome.
+   *
+   * The sidebar's own `h1` is "TrackVibe", so a level-1 heading identifies the page uniquely.
+   */
   const APP_ROUTES = [
-    { path: '/body', title: 'Workouts' },
-    { path: '/energy', title: 'Journal' },
-    { path: '/goals', title: 'Goals' },
-    { path: '/insights', title: 'Insights' },
-    { path: '/settings', title: 'Settings' },
+    { path: '/body', heading: 'Workouts' },
+    { path: '/energy', heading: 'Food log' },
+    { path: '/goals', heading: 'Stay on target' },
+    { path: '/insights', heading: 'Patterns' },
+    { path: '/settings', heading: 'Settings' },
   ] as const;
 
   for (const route of APP_ROUTES) {
@@ -79,7 +55,7 @@ test.describe.skip('Authenticated shell', () => {
 
       await expect(page).toHaveURL(new RegExp(route.path.replace('/', '\\/')));
       await expect(page).not.toHaveURL(/\/login/);
-      await expect(page.getByText(route.title).first()).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: route.heading })).toBeVisible();
     });
   }
 
@@ -96,7 +72,7 @@ test.describe.skip('Authenticated shell', () => {
   });
 });
 
-test.describe.skip('Mobile bottom navigation', () => {
+test.describe('Mobile bottom navigation', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test.beforeEach(async ({ page }) => {
@@ -115,9 +91,54 @@ test.describe.skip('Mobile bottom navigation', () => {
     await page.goto('/');
 
     const nav = page.getByRole('navigation', { name: /main navigation/i });
-    await nav.getByRole('link', { name: /body/i }).click();
+    // The tab is labelled "Workouts"; `/body` is only its path. The bar is Home, Workouts,
+    // Food, Profile — see `BOTTOM_NAV` in `components/layout/Base44Layout.tsx`.
+    await nav.getByRole('link', { name: /workouts/i }).click();
 
     await expect(page).toHaveURL(/\/body/);
+  });
+
+  // The real-browser version of `useScrollToTopOnNavigate`. jsdom has no layout, so the unit
+  // tests can only assert that `window.scrollTo` was called with the right options; only a
+  // browser can prove the next tab actually opens at offset 0.
+  //
+  // Skipped along with the rest of this describe, so it is documentation of the intended
+  // behaviour rather than a gate. Note the extra stub: `signIn()` answers every list endpoint
+  // empty, which leaves /body shorter than 844px and makes the scroll below a no-op that
+  // would assert nothing. Routes registered here take precedence over the ones from
+  // `beforeEach`, so this one wins for workouts.
+  test('opens the next tab at the top, not at the previous tab offset', async ({ page }) => {
+    await page.route('**/api/workouts**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: Array.from({ length: 20 }, (_, i) => ({
+            id: `w-${i}`,
+            date: new Date().toISOString().slice(0, 10),
+            title: `Session ${i + 1}`,
+            type: 'strength',
+            durationMinutes: 45,
+            exercises: [],
+            completed: true,
+          })),
+          total: 20,
+          limit: 20,
+          offset: 0,
+          hasMore: false,
+        }),
+      })
+    );
+
+    await page.goto('/body');
+    await page.evaluate(() => window.scrollTo(0, 500));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+    const nav = page.getByRole('navigation', { name: /main navigation/i });
+    await nav.getByRole('link', { name: /food/i }).click();
+
+    await expect(page).toHaveURL(/\/energy/);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   });
 
   // Home is the one screen where a second voice control used to sit on top of the nav

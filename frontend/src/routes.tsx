@@ -32,6 +32,9 @@ const AuthCallback = lazy(() =>
 const ForgotPassword = lazy(() =>
   import('./pages/ForgotPassword').then((m) => ({ default: m.ForgotPassword }))
 );
+const ResetPassword = lazy(() =>
+  import('./pages/ResetPassword').then((m) => ({ default: m.ResetPassword }))
+);
 const Pricing = lazy(() =>
   import('./pages/Pricing').then((m) => ({ default: m.Pricing }))
 );
@@ -263,6 +266,19 @@ export function AppRoutes() {
           element={
             <Suspense fallback={<LoadingSpinner text="Loading..." />}>
               <ForgotPassword />
+            </Suspense>
+          }
+        />
+        {/*
+          Public on purpose. The reset email links here with ?token=&email=, and behind the
+          auth guard those params get dropped on the redirect to /login — which is exactly
+          how this flow was broken before the page existed.
+        */}
+        <Route
+          path="/reset-password"
+          element={
+            <Suspense fallback={<LoadingSpinner text="Loading..." />}>
+              <ResetPassword />
             </Suspense>
           }
         />
