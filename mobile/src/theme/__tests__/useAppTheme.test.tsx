@@ -98,7 +98,29 @@ function srgbChannelToLinear(channel255: number): number {
   return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
+/**
+ * Rejects anything that is not `#rrggbb` instead of parsing it into `NaN`.
+ *
+ * This matters more than it looks. `parseInt('gb', 16)` is `NaN`, so the unguarded
+ * version silently returned `NaN` for every non-hex input, and `expect(NaN)
+ * .toBeGreaterThanOrEqual(4.5)` fails — which means a NaN was INDISTINGUISHABLE FROM A
+ * MEASUREMENT. Proven while checking this suite could fail on a revert: deleting the
+ * `onPrimary` mapping turned all eight of its cases red, but with "Received: NaN", not a
+ * ratio — Paper spells its own defaults `rgba(56, 30, 114, 1)`, which this could not
+ * read. Had Paper written `#381E72` instead, the dark case would have measured 9.67:1
+ * and PASSED. So the red was an accident of Paper's notation, and a helper that turns
+ * "I can't read this" into "this failed" is not one to keep in a suite whose whole
+ * argument is measure-what-resolves.
+ */
 function relativeLuminance(hex: string): number {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    throw new Error(
+      `contrast helpers take an opaque '#rrggbb'; got '${hex}'. An eight-digit value must ` +
+        `go through composite() first, and anything else (an rgba() string from Paper's own ` +
+        `defaults, say) means the role is unmapped — which is everyMd3RoleIsMapped.test.ts's ` +
+        `job to report, not this suite's to swallow as NaN.`
+    );
+  }
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -201,6 +223,18 @@ describe('useAppTheme primaryForeground contrast', () => {
  * built theme against Paper's base. This block is worth having on its own terms — it
  * guards the legibility of the mapping THIS PR introduces, several pairs of which are
  * genuinely tight — but it should not be believed to do the other job.
+ *
+ * WHAT IT DOES AND DOES NOT CATCH, established by reverting things and watching, not by
+ * reasoning about it:
+ *
+ *   - Mapping a role to the WRONG in-palette ink is caught. `onPrimary: palette.text`
+ *     is 1.3:1 on lime; `inversePrimary: palette.primary` is 1.02:1 on the neutral
+ *     accent, which is what the pair at the bottom of PAIRS was added for.
+ *   - DELETING a mapping, so the role falls back to Paper, is NOT caught here — it is
+ *     `everyMd3RoleIsMapped`'s job. Deleting `onPrimary` does turn these eight cases
+ *     red, but only because `relativeLuminance` now refuses Paper's `rgba(…)` notation;
+ *     the underlying pair, `#381E72` on `#b5ef57`, measures 9.67:1 and would pass.
+ *     Don't mistake that red for coverage.
  *
  * Thresholds are per pair, with a reason, rather than a blanket 4.5. A single number
  * would have to be either unmeetable (the web's own `bg-primary/10 text-primary` is
@@ -309,5 +343,18 @@ describe('paperTheme contrast on the pairs Paper renders', () => {
     expect(result.current.paperTheme.colors.secondaryContainer).toMatch(/^#[0-9a-f]{6}[0-9a-f]{2}$/);
     expect(composite('#ffffff80', '#000000')).toBe('#808080');
     expect(composite('#123456', '#000000')).toBe('#123456');
+  });
+
+  it('refuses to measure a value it cannot parse, rather than scoring it NaN', () => {
+    // The guard on the guard. Without the shape check in relativeLuminance, an
+    // unparseable colour scores NaN, every `toBeGreaterThanOrEqual` on it fails, and the
+    // suite looks like it caught something it never measured. Paper's own defaults are
+    // the input that makes this concrete.
+    expect(() => contrastRatio('rgba(56, 30, 114, 1)', '#b5ef57')).toThrow(/opaque '#rrggbb'/);
+    // Eight-digit is refused too: it has to be composited onto its ground first, because
+    // a ratio taken against a translucent colour is not a ratio anyone can see.
+    expect(() => contrastRatio('#b5ef571a', '#b5ef57')).toThrow(/composite\(\) first/);
+    // And the shape it does accept still measures.
+    expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 5);
   });
 });
