@@ -123,8 +123,15 @@ describe('defaultPortionFor — real API shapes', () => {
     expect(defaultPortionFor({ ...cola, servingSizesMl: null })).toEqual({ amount: 100, unit: 'ml' });
   });
 
-  it('honours a non-100 reference basis for a drink too', () => {
-    expect(defaultPortionFor({ ...cola, referenceGrams: 330 })).toEqual({ amount: 330, unit: 'ml' });
+  // This used to assert `{ amount: 330, unit: 'ml' }` — i.e. that a non-100 reference
+  // basis was honoured for the seed amount. It isn't, on the web: `handleSelectFood`
+  // normalizes macros to per-100 first (`factor = DEFAULT_REFERENCE_GRAMS / refGrams`)
+  // and then always seeds the LITERAL 100, never `refGrams` itself
+  // (`FoodEntryModal.tsx:273-298`). Seeding 330 here was a real divergence from the web
+  // for any food published at a non-100 reference; it stayed inert only because the
+  // backend always publishes `referenceGrams: 100` today.
+  it('still seeds the literal 100 ml even when a drink publishes a non-100 reference basis, matching the web', () => {
+    expect(defaultPortionFor({ ...cola, referenceGrams: 330 })).toEqual({ amount: 100, unit: 'ml' });
   });
 
   // The sizes themselves remain available — this is what feeds the can/bottle/glass
@@ -142,7 +149,24 @@ describe('defaultPortionFor — real API shapes', () => {
     expect(defaultPortionFor({ ...drumstick, unitWeightGrams: null })).toEqual({ amount: 100, unit: 'g' });
   });
 
-  it('seeds a non-100g solid with its own reference basis', () => {
-    expect(defaultPortionFor({ ...chicken, referenceGrams: 30 })).toEqual({ amount: 30, unit: 'g' });
+  // Same correction as the drink case above: this used to assert `{ amount: 30, unit:
+  // 'g' }`. The web's seed amount is always the literal 100, never the food's own
+  // `referenceGrams` — a 30g-reference bar shows "100 g → 300 kcal" on the web, not
+  // "30 g → 90 kcal".
+  it('still seeds the literal 100g even when a solid publishes a non-100 reference basis, matching the web', () => {
+    expect(defaultPortionFor({ ...chicken, referenceGrams: 30 })).toEqual({ amount: 100, unit: 'g' });
+  });
+
+  // End-to-end: feeding the seeded portion straight back into scalePortion should
+  // reproduce exactly what the web shows for the same food, for both a drink and a
+  // solid published at a non-100 reference basis.
+  it('composes with scalePortion to reproduce the web-equivalent kcal for a non-100-reference food', () => {
+    const drink = { ...cola, referenceGrams: 330 };
+    const seededDrink = defaultPortionFor(drink);
+    expect(scalePortion(drink, seededDrink.amount, seededDrink.unit).calories).toBe(13);
+
+    const solid = { ...chicken, calories: 90, referenceGrams: 30 };
+    const seededSolid = defaultPortionFor(solid);
+    expect(scalePortion(solid, seededSolid.amount, seededSolid.unit).calories).toBe(300);
   });
 });

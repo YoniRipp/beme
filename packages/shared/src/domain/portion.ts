@@ -102,8 +102,19 @@ export function scalePortion(
  *
  * Mirrors `FoodEntryModal.tsx:293-298` exactly, including for drinks. The web has only
  * TWO branches: a countable food seeds at one unit (`initialGrams = unitWeightGrams`),
- * and everything else — drinks included — seeds at the reference quantity. Its own UI
- * says so: "Values scaled from 100 ml." (`FoodEntryModal.tsx:703`).
+ * and everything else — drinks included — seeds at the LITERAL `DEFAULT_REFERENCE_GRAMS`
+ * (100), never at `food.referenceGrams` itself. Its own UI says so: "Values scaled from
+ * 100 ml." (`FoodEntryModal.tsx:703`) — always 100, whatever the food's own reference
+ * basis is. `handleSelectFood` (`:273-298`) first normalizes the food's macros to a
+ * per-100 basis (`factor = DEFAULT_REFERENCE_GRAMS / refGrams`) and only THEN seeds the
+ * portion at the literal 100 — it never re-reads `refGrams` for the seed amount. For a
+ * food published at a non-100 reference (`referenceGrams: 330, calories: 42`), the web
+ * shows "100 ml → 13 kcal"; seeding `referenceOf(food)` here instead (330) showed
+ * "330 ml → 42 kcal" — same food, 3.3x the logged calories. Inert against today's real
+ * API responses only because the backend always publishes `referenceGrams: 100`
+ * (`backend/src/models/foodSearch.ts`'s `REFERENCE_GRAMS` constant,
+ * `backend/src/controllers/foodSearch.ts:73`) — a future per-food reference basis would
+ * have silently diverged from the web the moment it shipped.
  *
  * A drink is NOT seeded at a published serving size. The web offers can/bottle/glass as
  * an explicit choice (`FoodEntryModal.tsx:639-646`) starting from an empty selection, so
@@ -116,7 +127,7 @@ export function defaultPortionFor(food: PortionSource): { amount: number; unit: 
   if (food.defaultUnit && food.unitWeightGrams) {
     return { amount: 1, unit: food.defaultUnit };
   }
-  return { amount: referenceOf(food), unit: food.isLiquid ? 'ml' : 'g' };
+  return { amount: DEFAULT_REFERENCE_GRAMS, unit: food.isLiquid ? 'ml' : 'g' };
 }
 
 /** Every serving size a drink publishes, smallest first, deduped. */
