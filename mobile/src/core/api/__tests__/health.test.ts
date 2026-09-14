@@ -37,7 +37,15 @@ describe('weightApi', () => {
    * a bound nobody asked for. Absent parameters must stay absent.
    */
   it('omits absent parameters instead of serialising "undefined"', async () => {
-    await weightApi.list({});
+    // The shape a caller with optional arguments actually produces — the keys are present,
+    // their values are not. `{}` would not exercise this: there is nothing to skip.
+    await weightApi.list({ startDate: undefined, endDate: undefined, limit: undefined, offset: undefined });
+    expect(mockRequest).toHaveBeenCalledWith('/api/weight-entries');
+
+    await weightApi.list({ startDate: undefined, limit: 30, offset: 0 });
+    expect(mockRequest).toHaveBeenCalledWith('/api/weight-entries?limit=30&offset=0');
+
+    await weightApi.list();
     expect(mockRequest).toHaveBeenCalledWith('/api/weight-entries');
   });
 
@@ -104,6 +112,11 @@ describe('cycleApi', () => {
     expect(mockRequest).toHaveBeenCalledWith(
       '/api/cycle-entries?startDate=2026-03-18&endDate=2026-09-14'
     );
+  });
+
+  it('omits an absent bound rather than sending "undefined" as a date', async () => {
+    await cycleApi.list('2026-03-18');
+    expect(mockRequest).toHaveBeenCalledWith('/api/cycle-entries?startDate=2026-03-18');
   });
 
   it('posts a period start', async () => {

@@ -126,16 +126,19 @@ export interface QuickLogPills {
  * `frontend/src/pages/Home.tsx:269-270`). Sleep in particular is ONLY here — it used to be
  * a stat tile as well, and one screen stating "7.5h" twice is not two facts.
  *
- * Weight matches on the date STRING rather than parsing it. The API sends `YYYY-MM-DD`, and
- * `new Date('2026-09-14')` is UTC midnight — which is the 13th anywhere west of UTC, so the
- * web's `isSameDay(new Date(entry.date), new Date())` drops today's pill for those users.
- * Comparing local calendar strings has no such edge (`global/domain-conventions`).
+ * Weight matches on the local calendar date STRING rather than parsing the API value. The
+ * API sends `YYYY-MM-DD`, and `new Date('2026-09-14')` is UTC MIDNIGHT — 20:00 on the 13th
+ * in New York — so the web's `isSameDay(new Date(entry.date), new Date())` finds no entry
+ * for today anywhere west of UTC, and the tile tells those users they have not weighed in
+ * when they have. `toLocalDateString` renders `now` in the device's own calendar, and two
+ * `YYYY-MM-DD` strings compare without a zone between them (`global/domain-conventions`).
  */
 export function buildQuickLogPills(
   sleepHours: number | null,
   weightEntries: readonly { date: string; weight: number }[],
-  today: string
+  now: Date
 ): QuickLogPills {
+  const today = toLocalDateString(now);
   const todaysWeight = weightEntries.find((e) => e.date === today);
   return {
     sleep: sleepHours != null && sleepHours > 0 ? `${sleepHours}h` : undefined,
@@ -196,7 +199,7 @@ export function HomeScreen() {
   );
 
   const pills = useMemo(
-    () => buildQuickLogPills(progress.sleepHours, weightEntries, toLocalDateString(new Date())),
+    () => buildQuickLogPills(progress.sleepHours, weightEntries, new Date()),
     [progress.sleepHours, weightEntries]
   );
 
