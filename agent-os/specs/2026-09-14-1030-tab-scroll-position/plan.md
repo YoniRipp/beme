@@ -1,6 +1,7 @@
 # Plan — Every Tab Opens at the Top
 
-Status: **planned**. No application code has been changed by this spec.
+Status: **built**. Tasks 2-5 are implemented on `claude/ios-sweep-tab-scroll-position`; Task 6
+no longer has a runnable target — see the note under it.
 
 The bug in `shape.md` reproduces and the diagnosis is right. Two supporting claims in it are
 wrong; they are corrected in Task 0 before anything is built on them.
@@ -60,10 +61,10 @@ wrong; they are corrected in Task 0 before anything is built on them.
 **Decision: scroll to top on PUSH and REPLACE; leave POP to the browser.** Recorded here so
 the implementer does not have to re-argue it.
 
-- [ ] **Ship plain reset.** Every `PUSH`/`REPLACE` navigation puts the document at offset 0.
+- [x] **Ship plain reset.** Every `PUSH`/`REPLACE` navigation puts the document at offset 0.
       This is acceptance criterion 1 read literally: *every* tab opens at the top, including
       one you have visited before.
-- [ ] **Do not build per-tab restoration.** Four reasons, in order of weight:
+- [x] **Do not build per-tab restoration.** Four reasons, in order of weight:
       1. *It is the wrong model for these screens.* iOS restores per tab because a tab is a
          navigation **stack** whose content is stable while you are away. TrackVibe's tabs are
          live date-scoped dashboards — a voice log, a synced workout or a date rollover changes
@@ -82,35 +83,35 @@ the implementer does not have to re-argue it.
       4. *Reset is a strict improvement and does not close the door.* `shape.md` says as much.
          If users ask for memory later it can be added per tab, behind the same hook, keyed
          by tab rather than by history entry.
-- [ ] **Browser back/forward: do not touch it.** Skip the reset when
+- [x] **Browser back/forward: do not touch it.** Skip the reset when
       `useNavigationType() === 'POP'`. `history.scrollRestoration` defaults to `'auto'`, so
       Safari/WKWebView and Chrome already restore the offset they recorded for that history
       entry. Not fighting them satisfies acceptance criterion 2 exactly as worded — "where a
       browser would" — and keeps the PWA and the web app behaving like the web. It is also the
       honest reason not to hand-roll a `POP`-aware store: the platform already has one, and on
       a page whose height arrives asynchronously the platform's is the better of the two.
-- [ ] **`REPLACE` resets.** A `<Navigate replace>` (`routes.tsx:69`, `:83`) lands on a
+- [x] **`REPLACE` resets.** A `<Navigate replace>` (`routes.tsx:69`, `:83`) lands on a
       different page; it should start at the top.
 
 ## Task 3 — `useScrollToTopOnNavigate`
 
 New file: `frontend/src/hooks/useScrollToTopOnNavigate.ts`.
 
-- [ ] Signature `useScrollToTopOnNavigate(): void`. No arguments, no state, no return value.
-- [ ] Reads `const { pathname } = useLocation()` and `const navigationType = useNavigationType()`,
+- [x] Signature `useScrollToTopOnNavigate(): void`. No arguments, no state, no return value.
+- [x] Reads `const { pathname } = useLocation()` and `const navigationType = useNavigationType()`,
       both from `react-router-dom`.
-- [ ] **`useLayoutEffect`, not `useEffect`.** With `v7_startTransition: true` (`routes.tsx:235`)
+- [x] **`useLayoutEffect`, not `useEffect`.** With `v7_startTransition: true` (`routes.tsx:235`)
       the location context commits together with the new route's content, so a `useEffect`
       would let the browser paint the new page at the old offset for one frame — a visible
       flash of mid-page content before it snaps. A layout effect runs before that paint.
-- [ ] Effect body, in this order:
+- [x] Effect body, in this order:
       1. `if (navigationType === 'POP') return;`
       2. `window.scrollTo({ top: 0, left: 0, behavior: 'instant' })`, wrapped so an old WebView
          that rejects the `'instant'` enum member falls back to `window.scrollTo(0, 0)`.
          `'instant'` is mandatory — see Task 0's `scroll-behavior: smooth` hazard.
       3. Guard the whole thing with `typeof window !== 'undefined'`, matching the defensive
          style of `hooks/useMediaQuery.ts:4-7`.
-- [ ] **The lazy-route timing question, answered.** Nothing extra is needed, and the reason is
+- [x] **The lazy-route timing question, answered.** Nothing extra is needed, and the reason is
       worth writing down so nobody adds a `setTimeout` later. Scrolling *to zero* is the one
       target that cannot be defeated by an unknown page height: if the incoming route is still
       its `<Suspense>` spinner the document is short and the browser has already clamped the
@@ -119,7 +120,7 @@ New file: `frontend/src/hooks/useScrollToTopOnNavigate.ts`.
       user back down. The height race is fatal only for *restoring* a non-zero offset — which
       Task 2 declined. Do not add a `requestAnimationFrame` or a timeout; either would move the
       scroll after paint and reintroduce the flash the layout effect exists to prevent.
-- [ ] Dependency array `[pathname, navigationType]`. Deliberately **not** the whole `location`
+- [x] Dependency array `[pathname, navigationType]`. Deliberately **not** the whole `location`
       object. Two notes, one of them a free feature:
       - `location` changes identity on every navigation *including a push to the path you are
         already on*, so keying on `location.key` would additionally scroll to top when you tap
@@ -130,11 +131,11 @@ New file: `frontend/src/hooks/useScrollToTopOnNavigate.ts`.
         user to the top. No page uses search params for sub-views today (only `Signup` and
         `AuthCallback` read them, both outside these layouts) — this is future-proofing, not a
         fix for an existing case, and it should not be described as one.
-- [ ] Doc comment covering: which element scrolls and why (`window`, one document scroller at
+- [x] Doc comment covering: which element scrolls and why (`window`, one document scroller at
       every breakpoint), why `'instant'`, why `POP` is skipped, and why zero needs no timing
       dance. That is four non-obvious constraints in fifteen lines — the comment is part of the
       deliverable.
-- [ ] **Do not** add a scroll container, change `index.css`, or remove
+- [x] **Do not** add a scroll container, change `index.css`, or remove
       `html { scroll-behavior: smooth }`. Its only in-app consumer is `pages/Landing.tsx`
       (`href="#pricing"`, `href="#main-content"`), currently an unreachable route — but
       deleting a global CSS rule to work around a call site is the wrong direction, and
@@ -142,54 +143,66 @@ New file: `frontend/src/hooks/useScrollToTopOnNavigate.ts`.
 
 ## Task 4 — Wire it into the two shells
 
-- [ ] `frontend/src/components/layout/Base44Layout.tsx` — call `useScrollToTopOnNavigate()`
+- [x] `frontend/src/components/layout/Base44Layout.tsx` — call `useScrollToTopOnNavigate()`
       immediately above the existing sidebar effect at line 110, so the two `pathname`
       reactions read together. One added import, one added line; nothing else in this file
       changes.
-- [ ] `frontend/src/components/layout/PublicLayout.tsx` — same call. The marketing pages have
+- [x] `frontend/src/components/layout/PublicLayout.tsx` — same call. The marketing pages have
       the identical bug (Pricing → About keeps the offset) and the file is currently a
       nine-line pure-JSX shell, so this is where the shared hook pays for itself.
-- [ ] Do **not** call it inside individual pages. Two shells, two call sites; a page-level call
+- [x] Do **not** call it inside individual pages. Two shells, two call sites; a page-level call
       would fire on every remount, not on every navigation.
-- [ ] Leave `Login`, `Signup`, `ForgotPassword` and `AuthCallback` alone — they render outside
+- [x] Leave `Login`, `Signup`, `ForgotPassword` and `AuthCallback` alone — they render outside
       both layouts (`routes.tsx:237-268`) and are single-screen forms with nothing to scroll.
 
 ## Task 5 — Tests
 
-- [ ] `frontend/src/setupTests.ts` — stub `window.scrollTo` alongside the existing
+- [x] `frontend/src/setupTests.ts` — stub `window.scrollTo` alongside the existing
       `scrollIntoView` stub at lines 14-17. jsdom does not implement it and logs a
       `Not implemented: window.scrollTo` error on every render of either shell, which would
-      pollute the whole suite, not just the new tests. Use the same
-      `if (typeof … !== 'function')` guard style as its neighbours.
-- [ ] `frontend/src/hooks/useScrollToTopOnNavigate.test.tsx` — co-located per `global/testing`.
+      pollute the whole suite, not just the new tests. ~~Use the same
+      `if (typeof … !== 'function')` guard style as its neighbours.~~ **Corrected while
+      building:** that guard would never fire. jsdom 23 *does* define `window.scrollTo` — as a
+      writable, configurable function that emits the "Not implemented" error when called — so
+      the stub is assigned unconditionally, with a comment saying why it breaks the local
+      pattern.
+- [x] `frontend/src/hooks/useScrollToTopOnNavigate.test.tsx` — co-located per `global/testing`.
       Render the hook inside a `MemoryRouter` with
       `future={{ v7_startTransition: true, v7_relativeSplatPath: true }}` (matching
       `Base44Layout.test.tsx:32`) and a `vi.spyOn(window, 'scrollTo')`. Cases:
-      - [ ] scrolls to top when the pathname changes
-      - [ ] passes `behavior: 'instant'` — asserted explicitly, because dropping it is the
+      - [x] scrolls to top when the pathname changes
+      - [x] passes `behavior: 'instant'` — asserted explicitly, because dropping it is the
             regression that reintroduces the smooth-scroll animation and nothing else would
             catch it
-      - [ ] does **not** scroll on `POP` — drive it with a real history back through
+      - [x] does **not** scroll on `POP` — drive it with a real history back through
             `MemoryRouter`, not by mocking `useNavigationType`, so the assertion covers the
             wiring rather than the mock
-      - [ ] does **not** scroll when only the search string changes on the same pathname
-- [ ] `frontend/src/components/layout/Base44Layout.test.tsx` — one integration case: click the
+      - [x] does **not** scroll when only the search string changes on the same pathname
+- [x] `frontend/src/components/layout/Base44Layout.test.tsx` — one integration case: click the
       Food tab in the bottom nav and assert `window.scrollTo` was called. The existing
       `renderLayout()` helper only registers `/`; extend it to register `/energy` too. Do not
       restructure the file — its four nav tests stay as they are.
-- [ ] `frontend/e2e/dashboard.spec.ts` — add the real-browser case to the existing
+- [x] `frontend/e2e/dashboard.spec.ts` — add the real-browser case to the existing
       `Mobile bottom navigation` describe (390×844 viewport). **Be honest that this does not
       run**: that describe is `test.describe.skip` because route interception cannot get past
       the auth gate, as its own comment at lines 51-56 explains. Write it so it passes the day
       authenticated E2E is wired, and note that `signIn()` stubs every list endpoint empty —
       the `/body` stub must return enough workouts to make the page taller than the viewport,
       or `window.scrollTo(0, 500)` is a no-op and the test asserts nothing.
-- [ ] `cd frontend && npm run test -- --run` and `npx tsc --noEmit`.
+- [x] `cd frontend && npm run test -- --run` and `npx tsc --noEmit`.
 
-## Task 6 — Verify on device (this is the gate)
+## Task 6 — Verify on device (superseded)
 
-Acceptance criterion 3 is "verified in the iOS shell, not just the browser", and Task 5's
-E2E coverage is skipped, so this list is what actually closes the spec.
+**Superseded while building.** This task was written against the Capacitor shell in
+`frontend/`, and `main` has since retired it: per the root `CLAUDE.md`, no CI job builds it,
+`frontend/ios/` is not in the repo, and its `@capacitor/cli` is a major behind its runtime, so
+`npm run cap:ios` does not produce a project that compiles from a clean checkout. Native work
+now lives in `mobile/` (Expo), which does not use this hook — it has its own navigator.
+
+So there is no iOS shell to walk this list in, and the acceptance criterion it came from is no
+longer reachable from this package. What remains verifiable is the browser and PWA behaviour,
+which is what the fix ships for. The list is kept below for whoever ports the equivalent to
+`mobile/`.
 
 - [ ] `npm run build && npm run cap:sync && npm run cap:ios`, iPhone 17 Pro simulator.
 - [ ] The reported repro: Workouts → scroll down → Food. Food opens at its calorie ring with
@@ -209,12 +222,12 @@ E2E coverage is skipped, so this list is what actually closes the spec.
 
 ## Verification
 
-- [ ] `cd frontend && npx tsc --noEmit` — clean
-- [ ] `cd frontend && npm run test -- --run` — all green, plus the four new hook tests and one
-      new layout test
-- [ ] `cd frontend && npm run build` — clean
-- [ ] No backend change, so no backend run is required
-- [ ] Task 6 walked on the simulator
+- [x] `cd frontend && npx tsc --noEmit` — clean
+- [x] `cd frontend && npm run test -- --run` — all green: 39 files, 262 tests, including the
+      four new hook tests and one new layout test
+- [x] `cd frontend && npm run build` — clean
+- [x] No backend change, so no backend run is required
+- [ ] Task 6 — superseded, see the note under it
 
 ## Deliberately not done
 
