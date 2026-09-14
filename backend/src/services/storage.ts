@@ -7,7 +7,13 @@
  * Requires env vars: AWS_REGION, AWS_S3_BUCKET, plus AWS credentials
  * (AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY, or instance role).
  */
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import crypto from 'crypto';
 import { config } from '../config/index.js';
@@ -36,6 +42,17 @@ export const CONTEXT_MIME_TYPES: Record<string, readonly string[]> = {
 const ALLOWED_MIME_TYPES = new Set(Object.values(CONTEXT_MIME_TYPES).flat());
 
 /**
+ * Every object a user uploads lives under this prefix, and **no database column records the
+ * key** -- `controllers/uploads.ts` hands the URL to the client and the client is expected
+ * to keep it on whichever record it belongs to. The prefix is therefore the only handle
+ * account deletion has on a user's files, which is why the upload path and the deletion
+ * sweep both derive it here instead of each spelling it out.
+ */
+export function userFilePrefix(userId: string): string {
+  return `users/${userId}/`;
+}
+
+/**
  * Generate a pre-signed S3 PUT URL for a user file upload.
  * @param {string} userId
  * @param {string} mimeType - e.g. 'image/jpeg'
@@ -49,7 +66,7 @@ export async function createPresignedUploadUrl(userId: string, mimeType: string,
 
   const ext = mimeType.split('/')[1].replace('jpeg', 'jpg');
   const uniqueId = crypto.randomBytes(8).toString('hex');
-  const key = `users/${userId}/${context}/${uniqueId}.${ext}`;
+  const key = `${userFilePrefix(userId)}${context}/${uniqueId}.${ext}`;
 
   const s3 = getS3Client();
   const command = new PutObjectCommand({
@@ -73,4 +90,69 @@ export async function createPresignedUploadUrl(userId: string, mimeType: string,
 export async function deleteFile(key: string) {
   const s3 = getS3Client();
   await s3.send(new DeleteObjectCommand({ Bucket: config.awsS3Bucket, Key: key }));
+}
+
+/** ListObjectsV2 returns at most 1000 keys per page and DeleteObjects accepts at most 1000,
+ *  so one listed page is exactly one delete batch and no re-chunking is needed. */
+const S3_PAGE_SIZE = 1000;
+
+/**
+ * Delete every object a user ever uploaded, by listing and emptying their key prefix.
+ *
+ * Nothing in the database records these keys (see `userFilePrefix`), so the prefix is the
+ * whole handle. Idempotent and safely re-runnable: a second call lists nothing and deletes
+ * nothing, which matters because account deletion calls this *after* the rows are gone --
+ * if the sweep fails there is no longer a user row to retry from, only this prefix.
+ *
+ * Returns 0 without touching the network when S3 is not configured, which is the state in
+ * dev and in CI; a deployment with no bucket has no objects to sweep.
+ *
+ * @returns the number of objects deleted.
+ */
+export async function deleteUserFiles(userId: string): Promise<number> {
+  if (!config.awsRegion || !config.awsS3Bucket) return 0;
+
+  const prefix = userFilePrefix(userId);
+  const s3 = getS3Client();
+  let deleted = 0;
+  let continuationToken: string | undefined;
+
+  do {
+    const page = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: config.awsS3Bucket,
+        Prefix: prefix,
+        MaxKeys: S3_PAGE_SIZE,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    const keys = (page.Contents ?? [])
+      .map((object) => object.Key)
+      .filter((key): key is string => typeof key === 'string' && key.length > 0);
+
+    if (keys.length > 0) {
+      const result = await s3.send(
+        new DeleteObjectsCommand({
+          Bucket: config.awsS3Bucket,
+          Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
+        }),
+      );
+      // S3 reports per-object failures in the 200 response rather than throwing. Surfacing
+      // them as an error is what makes a partial sweep visible instead of silently leaving
+      // a deleted user's photos in the bucket.
+      const errors = result.Errors ?? [];
+      deleted += keys.length - errors.length;
+      if (errors.length > 0) {
+        throw new Error(
+          `Failed to delete ${errors.length} of ${keys.length} objects under ${prefix}: ` +
+            `${errors[0].Key} (${errors[0].Code}: ${errors[0].Message})`,
+        );
+      }
+    }
+
+    continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return deleted;
 }

@@ -13,6 +13,14 @@
  * water_goal_glasses 500'd with `23502` for production users and passed every dev test.
  * So compare the full column definition, not just its name.
  *
+ * Columns are still not the whole contract. A foreign key's ON DELETE action is invisible
+ * to `information_schema.columns`, and the two paths disagreed on exactly that for a year:
+ * `migrations/1776000000000_cascade-user-delete-fks.js` cascaded eight FKs that reference
+ * users(id) and `src/db/schema.ts` never received the change. Deleting a user therefore
+ * behaved one way in production and another in a freshly bootstrapped dev database -- so an
+ * account-deletion test written against dev exercised a FK topology production does not
+ * have. Referential actions are compared here for that reason.
+ *
  * Usage:
  *   MIGRATED_DATABASE_URL=... INIT_DATABASE_URL=... node scripts/check-schema-drift.mjs
  *
@@ -60,19 +68,73 @@ function describe(def) {
   return `${def.type}${def.nullable ? '' : ' NOT NULL'}${def.default === null ? '' : ` DEFAULT ${def.default}`}`;
 }
 
-async function columnsOf(connectionString) {
+/**
+ * Foreign keys with their referential actions, keyed by the columns rather than the
+ * constraint name -- the two bootstrap paths name the same constraint differently (baseline
+ * tables vs. ALTER-added columns), so comparing names would report drift on every FK.
+ * `string_agg` over `ordinal_position` keeps composite keys as one row.
+ */
+const FOREIGN_KEYS_SQL = `
+  SELECT
+    con.conrelid::regclass::text                                     AS table_name,
+    string_agg(att.attname, ',' ORDER BY cols.ordinality)            AS columns,
+    con.confrelid::regclass::text                                    AS referenced_table,
+    con.confdeltype                                                  AS delete_action,
+    con.confupdtype                                                  AS update_action
+  FROM pg_constraint con
+  JOIN pg_namespace nsp ON nsp.oid = con.connamespace
+  CROSS JOIN LATERAL unnest(con.conkey) WITH ORDINALITY AS cols(attnum, ordinality)
+  JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = cols.attnum
+  WHERE con.contype = 'f' AND nsp.nspname = 'public'
+  GROUP BY con.oid, con.conrelid, con.confrelid, con.confdeltype, con.confupdtype
+`;
+
+/** pg_constraint stores referential actions as one-character codes. */
+const REFERENTIAL_ACTIONS = {
+  a: 'NO ACTION',
+  r: 'RESTRICT',
+  c: 'CASCADE',
+  n: 'SET NULL',
+  d: 'SET DEFAULT',
+};
+
+function actionOf(code) {
+  return REFERENTIAL_ACTIONS[code] ?? code;
+}
+
+async function withClient(connectionString, fn) {
   const client = new pg.Client({ connectionString, ssl: false });
   await client.connect();
   try {
+    return await fn(client);
+  } finally {
+    await client.end();
+  }
+}
+
+function columnsOf(connectionString) {
+  return withClient(connectionString, async (client) => {
     const { rows } = await client.query(COLUMNS_SQL);
     return new Map(
       rows
         .filter((r) => !IGNORED_TABLES.has(r.table_name))
         .map((r) => [`${r.table_name}.${r.column_name}`, definitionOf(r)]),
     );
-  } finally {
-    await client.end();
-  }
+  });
+}
+
+function foreignKeysOf(connectionString) {
+  return withClient(connectionString, async (client) => {
+    const { rows } = await client.query(FOREIGN_KEYS_SQL);
+    return new Map(
+      rows
+        .filter((r) => !IGNORED_TABLES.has(r.table_name))
+        .map((r) => [
+          `${r.table_name}(${r.columns}) -> ${r.referenced_table}`,
+          `ON DELETE ${actionOf(r.delete_action)} ON UPDATE ${actionOf(r.update_action)}`,
+        ]),
+    );
+  });
 }
 
 const migratedUrl = process.env.MIGRATED_DATABASE_URL;
@@ -82,7 +144,12 @@ if (!migratedUrl || !initUrl) {
   process.exit(2);
 }
 
-const [migrated, init] = await Promise.all([columnsOf(migratedUrl), columnsOf(initUrl)]);
+const [migrated, init, migratedFks, initFks] = await Promise.all([
+  columnsOf(migratedUrl),
+  columnsOf(initUrl),
+  foreignKeysOf(migratedUrl),
+  foreignKeysOf(initUrl),
+]);
 
 const missingFromMigrations = [...init.keys()].filter((c) => !migrated.has(c)).sort();
 const missingFromInitSchema = [...migrated.keys()].filter((c) => !init.has(c)).sort();
@@ -124,10 +191,46 @@ if (mismatched.length) {
   console.error('  the tighter one (backfill first; SET NOT NULL fails on existing NULLs).');
 }
 
-const drifted = missingFromMigrations.length + missingFromInitSchema.length + mismatched.length;
-if (drifted) {
-  console.error(`\nSchema drift: ${drifted} column(s).`);
+// Foreign keys. A missing FK is a column-level difference the checks above already catch or
+// a genuinely absent constraint; a *differing referential action* is the silent one, because
+// it changes what DELETE does without changing what any query looks like.
+const fkOnlyInMigrations = [...migratedFks.keys()].filter((k) => !initFks.has(k)).sort();
+const fkOnlyInInitSchema = [...initFks.keys()].filter((k) => !migratedFks.has(k)).sort();
+const fkMismatched = [...migratedFks.keys()]
+  .filter((k) => initFks.has(k) && migratedFks.get(k) !== initFks.get(k))
+  .sort();
+
+if (fkOnlyInMigrations.length || fkOnlyInInitSchema.length) {
+  console.error('\nForeign keys present on only one bootstrap path');
+  for (const k of fkOnlyInMigrations) console.error(`     migrations/ only:  ${k}`);
+  for (const k of fkOnlyInInitSchema) console.error(`     schema.ts only:    ${k}`);
+  console.error('  Fix: declare the constraint on both paths.');
+}
+
+if (fkMismatched.length) {
+  console.error('\nForeign keys whose referential action differs');
+  console.error('  -> nothing about a query changes, but DELETE does: a parent row that');
+  console.error('     cascades on one path raises 23503 (or orphans children) on the other,');
+  console.error('     so account deletion is only tested on the path the test ran against:');
+  for (const k of fkMismatched) {
+    console.error(`     ${k}`);
+    console.error(`       migrations/    ${migratedFks.get(k)}`);
+    console.error(`       schema.ts      ${initFks.get(k)}`);
+  }
+  console.error('  Fix: migrations/ is what production runs, so it is the source of truth --');
+  console.error('  bring src/db/schema.ts in line (USER_FK_ACTIONS mirrors the users(id)');
+  console.error('  cascade migration; CREATE TABLE IF NOT EXISTS alone will not fix an');
+  console.error('  already-bootstrapped database, so the constraint has to be re-added).');
+}
+
+const columnDrift = missingFromMigrations.length + missingFromInitSchema.length + mismatched.length;
+const fkDrift = fkOnlyInMigrations.length + fkOnlyInInitSchema.length + fkMismatched.length;
+if (columnDrift || fkDrift) {
+  console.error(`\nSchema drift: ${columnDrift} column(s), ${fkDrift} foreign key(s).`);
   process.exit(1);
 }
 
-console.log(`No schema drift. Both bootstrap paths agree on ${migrated.size} columns.`);
+console.log(
+  `No schema drift. Both bootstrap paths agree on ${migrated.size} columns ` +
+    `and ${migratedFks.size} foreign keys.`,
+);

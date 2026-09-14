@@ -1,10 +1,23 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '../../context/AuthContext';
 import { loadStoredSettings, SettingsProvider } from '../../context/SettingsContext';
 import { ThemeProvider } from '../../theme/ThemeContext';
-import { SETTINGS_SECTION_TITLES, SettingsScreen } from '../SettingsScreen';
+import { authApi } from '../../core/api/auth';
+import {
+  DELETE_ACCOUNT_CONFIRMATION_PHRASE,
+  SETTINGS_SECTION_TITLES,
+  SettingsScreen,
+} from '../SettingsScreen';
+
+jest.mock('../../core/api/auth', () => ({
+  authApi: { me: jest.fn().mockRejectedValue(new Error('no session')), deleteAccount: jest.fn() },
+}));
+
+jest.mock('react-native-toast-message', () => ({ show: jest.fn() }));
+
+const mockDeleteAccount = authApi.deleteAccount as jest.Mock;
 
 // Three defects fixed here, all verified against the web (frontend/src/pages/Settings.tsx):
 //
@@ -22,6 +35,7 @@ import { SETTINGS_SECTION_TITLES, SettingsScreen } from '../SettingsScreen';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
+  mockDeleteAccount.mockReset().mockResolvedValue(undefined);
 });
 
 describe('SettingsScreen sections', () => {
@@ -34,7 +48,18 @@ describe('SettingsScreen sections', () => {
   });
 
   it("offers exactly the sections that are real, working settings, in the web's order", () => {
-    expect(SETTINGS_SECTION_TITLES).toEqual(['Account', 'Units', 'Appearance']);
+    expect(SETTINGS_SECTION_TITLES).toEqual(['Account', 'Units', 'Appearance', 'Delete account']);
+  });
+
+  // App Store Guideline 5.1.1(v): an app that supports account creation must offer account
+  // deletion within the app. SignupScreen creates accounts, so the trigger is met, and the
+  // only delete route before this landed was admin-only.
+  it('offers account deletion, which Guideline 5.1.1(v) requires of an app that creates accounts', () => {
+    expect(SETTINGS_SECTION_TITLES).toContain('Delete account');
+  });
+
+  it('puts the irreversible control last, not between two preference pickers', () => {
+    expect(SETTINGS_SECTION_TITLES[SETTINGS_SECTION_TITLES.length - 1]).toBe('Delete account');
   });
 });
 
@@ -93,5 +118,67 @@ describe('Appearance section', () => {
     fireEvent.press(await r.findByText('Blue'));
 
     await expect(loadStoredSettings()).resolves.toMatchObject({ balanceDisplayColor: 'blue' });
+  });
+});
+
+describe('Delete account section', () => {
+  /**
+   * Opens the confirmation dialog and returns the rendered screen. The three labels are
+   * deliberately distinct strings ("Delete account" section, "Delete my account" trigger,
+   * "Delete permanently" confirm) so neither this helper nor a reader has to disambiguate
+   * by position.
+   */
+  async function openDialog() {
+    const r = await renderScreen();
+    // `find`, not `get`: ThemeProvider renders nothing until the fonts resolve.
+    fireEvent.press(await r.findByText('Delete my account'));
+    return r;
+  }
+
+  it('does not delete on the first tap — the dialog has to be confirmed', async () => {
+    await openDialog();
+
+    expect(mockDeleteAccount).not.toHaveBeenCalled();
+  });
+
+  it('warns that the action is irreversible', async () => {
+    const r = await openDialog();
+
+    await r.findByText(/cannot be undone/i);
+  });
+
+  // A tap-through confirmation is the right weight for deleting one workout. It is not the
+  // right weight for deleting the account, and Apple's reviewer taps everything.
+  it('keeps the confirm button inert until the phrase is typed', async () => {
+    const r = await openDialog();
+
+    fireEvent.press(await r.findByText('Delete permanently'));
+
+    expect(mockDeleteAccount).not.toHaveBeenCalled();
+  });
+
+  it('calls the delete endpoint once the phrase is typed', async () => {
+    const r = await openDialog();
+
+    fireEvent.changeText(
+      await r.findByLabelText(`Type ${DELETE_ACCOUNT_CONFIRMATION_PHRASE} to confirm`),
+      DELETE_ACCOUNT_CONFIRMATION_PHRASE,
+    );
+    fireEvent.press(await r.findByText('Delete permanently'));
+
+    await waitFor(() => expect(mockDeleteAccount).toHaveBeenCalledTimes(1));
+  });
+
+  // A near-miss must not be treated as close enough.
+  it('ignores a phrase that is not the exact word', async () => {
+    const r = await openDialog();
+
+    fireEvent.changeText(
+      await r.findByLabelText(`Type ${DELETE_ACCOUNT_CONFIRMATION_PHRASE} to confirm`),
+      'delet',
+    );
+    fireEvent.press(await r.findByText('Delete permanently'));
+
+    expect(mockDeleteAccount).not.toHaveBeenCalled();
   });
 });

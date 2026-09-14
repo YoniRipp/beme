@@ -25,4 +25,11 @@ export const authApi = {
   loginWithTwitter: (token: string) =>
     request<AuthResponse>('/api/auth/twitter', { method: 'POST', body: { token } }),
   me: () => request<ApiUser>('/api/auth/me'),
+  /**
+   * Irreversibly deletes the signed-in user's account, as App Store Guideline 5.1.1(v)
+   * requires of any app that can create one. Takes no id: the backend's subject is the token
+   * holder and nothing else. The server blocklists this token before answering, so every
+   * later request with it is a 401.
+   */
+  deleteAccount: () => request<void>('/api/auth/account', { method: 'DELETE' }),
 };

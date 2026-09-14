@@ -227,3 +227,121 @@ export async function getSubscriptionGrant(userId: string): Promise<Subscription
  * Historical `subscription_source = 'trainer'` grants are left alone. The role that created
  * them is gone, but the Pro they bought those users is theirs to keep.
  */
+
+// ---------------------------------------------------------------------------
+// Account deletion
+//
+// One definition of "delete this user and everything hanging off them", shared by the admin
+// route (`DELETE /api/users/:id`) and self-service deletion (`DELETE /api/auth/account`).
+// This used to live inline in `routes/users.ts`; a second caller is the moment to extract
+// it, not the moment to copy it.
+// ---------------------------------------------------------------------------
+
+/**
+ * Strip the deleted user's own PII out of the two tables whose rows outlive them.
+ *
+ * `migrations/1776000000000_cascade-user-delete-fks.js` sets `app_logs.user_id` and
+ * `user_activity_log.user_id` to NULL on delete, which drops the *link* and keeps the
+ * *payload*. Two writers put PII into that payload:
+ *
+ *   - `services/auth.ts` publishes `auth.UserRegistered` as `{ userId, email, name }`, and
+ *     `events/consumers/userActivityLog.ts` stores the event body verbatim.
+ *   - the admin user routes call `logAction(..., { targetId, email })` on create and update,
+ *     so those rows carry the *subject's* email under the *admin's* `user_id` -- which is
+ *     why matching on `user_id` alone is not enough.
+ *
+ * Without this a "deleted" user's email and name survive in both tables, which makes the
+ * privacy policy false. Runs before the `SET NULL` statements below, while `user_id` still
+ * points at the user.
+ *
+ * `jsonb - 'key'` is a no-op when the key is absent but raises `cannot delete from scalar`
+ * on a non-object value, hence the `jsonb_typeof` guard. The `?` pre-filter keeps the UPDATE
+ * from rewriting every log row the user ever produced in order to remove nothing.
+ *
+ * `$1` (uuid) and `$2` (text) are the same id bound twice on purpose: one statement cannot
+ * deduce two different types for a single placeholder. The JSON-payload arms are a
+ * sequential scan either way -- account deletion is rare and off the request-latency path.
+ */
+const PII_REDACTION_STATEMENTS = [
+  `UPDATE app_logs
+      SET details = details - 'email' - 'targetEmail' - 'name'
+    WHERE jsonb_typeof(details) = 'object'
+      AND (details ? 'email' OR details ? 'targetEmail' OR details ? 'name')
+      AND (user_id = $1 OR details->>'targetId' = $2 OR details->>'userId' = $2)`,
+  `UPDATE user_activity_log
+      SET payload = payload - 'email' - 'name'
+    WHERE jsonb_typeof(payload) = 'object'
+      AND (payload ? 'email' OR payload ? 'name')
+      AND (user_id = $1 OR payload->>'userId' = $2)`,
+];
+
+/**
+ * Drop the link to the user without removing the row. The cascade migration also sets these
+ * FKs to `ON DELETE SET NULL`, so on a migrated database this is belt-and-braces -- but it
+ * is the only thing that does it on a database that predates the migration.
+ */
+const SET_NULL_STATEMENTS = [
+  `UPDATE app_logs SET user_id = NULL WHERE user_id = $1`,
+  `UPDATE user_activity_log SET user_id = NULL WHERE user_id = $1`,
+  `UPDATE exercises SET created_by = NULL WHERE created_by = $1`,
+  `UPDATE foods SET verified_by = NULL WHERE verified_by = $1`,
+];
+
+/**
+ * Delete user-owned rows. Most have `ON DELETE CASCADE` in newer migrations, but the
+ * baseline tables don't on a database that predates the cascade migration.
+ */
+const DELETE_STATEMENTS = [
+  `DELETE FROM food_entries WHERE user_id = $1`,
+  `DELETE FROM workouts WHERE user_id = $1`,
+  `DELETE FROM goals WHERE user_id = $1`,
+  `DELETE FROM daily_check_ins WHERE user_id = $1`,
+];
+
+/** Postgres codes for "no such table" and "no such column". */
+const MISSING_TABLE = '42P01';
+const MISSING_COLUMN = '42703';
+
+/**
+ * Run one cleanup statement inside a savepoint. A failed statement aborts the whole
+ * transaction otherwise, so catching the error is not enough -- the savepoint is what makes
+ * "this table is not in this database" survivable.
+ */
+async function runTolerantly(
+  client: pg.PoolClient,
+  sql: string,
+  params: unknown[],
+  tolerated: readonly string[],
+): Promise<void> {
+  await client.query('SAVEPOINT delete_user_stmt');
+  try {
+    await client.query(sql, params);
+    await client.query('RELEASE SAVEPOINT delete_user_stmt');
+  } catch (err: unknown) {
+    const code = (err as { code?: string } | null)?.code;
+    if (!code || !tolerated.includes(code)) throw err;
+    await client.query('ROLLBACK TO SAVEPOINT delete_user_stmt');
+  }
+}
+
+/**
+ * Redact the user's PII from surviving log rows, clear attribution columns, delete owned
+ * rows, then delete the user. Must run inside a transaction -- it uses savepoints.
+ *
+ * @returns false when no such user existed, so a repeated delete of the same account is a
+ *   clean no-op at this layer rather than an error.
+ */
+export async function deleteWithOwnedData(userId: string, client: pg.PoolClient): Promise<boolean> {
+  for (const sql of PII_REDACTION_STATEMENTS) {
+    await runTolerantly(client, sql, [userId, userId], [MISSING_TABLE, MISSING_COLUMN]);
+  }
+  for (const sql of SET_NULL_STATEMENTS) {
+    await runTolerantly(client, sql, [userId], [MISSING_TABLE, MISSING_COLUMN]);
+  }
+  for (const sql of DELETE_STATEMENTS) {
+    await runTolerantly(client, sql, [userId], [MISSING_TABLE]);
+  }
+
+  const result = await client.query('DELETE FROM users WHERE id = $1 RETURNING id', [userId]);
+  return (result.rowCount ?? 0) > 0;
+}

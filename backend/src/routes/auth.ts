@@ -20,5 +20,8 @@ router.post('/api/auth/refresh', requireAuth, authController.refresh);
 router.post('/api/auth/forgot-password', authController.forgotPassword);
 router.post('/api/auth/reset-password', authController.resetPassword);
 router.post('/api/auth/logout', authController.logout);
+// Self-service account deletion (App Store Guideline 5.1.1(v)). `requireAuth` and not
+// `withUser`: the subject is the authenticated user, never a `?userId=` override.
+router.delete('/api/auth/account', requireAuth, authController.deleteAccount);
 
 export default router;

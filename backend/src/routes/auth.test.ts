@@ -61,6 +61,12 @@ vi.mock('../middleware/auth.js', () => ({
   },
 }));
 
+const mockDeleteAccount = vi.fn();
+
+vi.mock('../services/account.js', () => ({
+  deleteAccount: (...args: unknown[]) => mockDeleteAccount(...args),
+}));
+
 /** Mirrors sessionTtlMs in the config mock above. */
 const SESSION_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -391,6 +397,99 @@ describe('auth routes', () => {
         .expect(404);
 
       expect(res.body.error.message).toBe('User not found');
+    });
+  });
+
+  // App Store Guideline 5.1.1(v): an app that creates accounts must let the user delete
+  // theirs from inside the app. The only delete route before this was admin-only and
+  // explicitly refused self-deletion.
+  describe('DELETE /api/auth/account', () => {
+    beforeEach(() => {
+      mockDeleteAccount.mockResolvedValue({ filesDeleted: 0 });
+    });
+
+    it('deletes the authenticated user and returns no content', async () => {
+      await request(app)
+        .delete('/api/auth/account')
+        .set('Authorization', 'Bearer live-jwt-token')
+        .expect(204);
+
+      expect(mockDeleteAccount).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-1' }),
+      );
+    });
+
+    // The subject is req.user.id and nothing else. The route is mounted with plain
+    // requireAuth rather than withUser precisely so an admin's `?userId=` override cannot
+    // reach it -- that would make this the admin delete route with a weaker guard.
+    it('ignores a userId override and deletes the caller', async () => {
+      await request(app)
+        .delete('/api/auth/account?userId=someone-else')
+        .set('Authorization', 'Bearer live-jwt-token')
+        .expect(204);
+
+      expect(mockDeleteAccount).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-1' }),
+      );
+    });
+
+    // middleware/auth.ts never looks the user up, so a token that is not blocklisted keeps
+    // authenticating as a deleted user for the rest of its 365-day life.
+    it('hands the presented token over for revocation', async () => {
+      await request(app)
+        .delete('/api/auth/account')
+        .set('Authorization', 'Bearer live-jwt-token')
+        .expect(204);
+
+      expect(mockDeleteAccount).toHaveBeenCalledWith(
+        expect.objectContaining({ revokeToken: 'live-jwt-token' }),
+      );
+    });
+
+    // app_logs.user_id references users(id); attributing the entry to the row just deleted
+    // fails the insert, and logAction swallows that failure.
+    it('attributes the audit entry to nobody, since the actor no longer exists', async () => {
+      await request(app)
+        .delete('/api/auth/account')
+        .set('Authorization', 'Bearer live-jwt-token')
+        .expect(204);
+
+      expect(mockDeleteAccount).toHaveBeenCalledWith(expect.objectContaining({ actorId: null }));
+    });
+
+    it('clears the session cookie', async () => {
+      const res = await request(app)
+        .delete('/api/auth/account')
+        .set('Authorization', 'Bearer live-jwt-token')
+        .expect(204);
+
+      const cookie = (res.headers['set-cookie'] as unknown as string[])[0];
+      expect(cookie).toMatch(/^token=;/);
+    });
+
+    it('refuses an MCP-authenticated caller', async () => {
+      // The MCP shared secret impersonates a configured user. It is a server-side
+      // integration credential, not that person asking to close their account.
+      const res = await request(app)
+        .delete('/api/auth/account')
+        .set('x-test-mcp-auth', '1')
+        .expect(403);
+
+      expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(mockDeleteAccount).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a conflict without the admin-facing migration hint', async () => {
+      mockDeleteAccount.mockRejectedValueOnce(
+        new ConflictError('Could not delete this account because related records remain.'),
+      );
+
+      const res = await request(app)
+        .delete('/api/auth/account')
+        .set('Authorization', 'Bearer live-jwt-token')
+        .expect(409);
+
+      expect(res.body.error.message).not.toMatch(/migration/i);
     });
   });
 });
