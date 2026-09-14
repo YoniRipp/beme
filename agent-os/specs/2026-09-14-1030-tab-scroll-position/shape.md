@@ -41,3 +41,22 @@ than today's shared-offset behaviour either way.
 - [ ] Every bottom-nav tab opens at the top of its page
 - [ ] Back/forward still restore position where a browser would
 - [ ] Verified in the iOS shell, not just the browser
+
+## Corrections after reading the code (2026-09-14)
+
+Appended during planning; the report above is left as written. Full detail in `plan.md`, Task 0.
+
+- **"the desktop layout scrolls a different element" is wrong.** There is one scroller at
+  every breakpoint — the document. No `overflow-y-auto` or `h-screen` exists anywhere in
+  `Base44Layout`, `PublicLayout` or the pages; `lg:ml-72` is a margin. `Base44Layout.tsx:105`
+  reads `window.scrollY` to drive the desktop header, which only works because desktop scrolls
+  the window too. So there is no element-vs-window branch to write.
+- **"on the web this is masked" is overstated.** Less noticeable on desktop, not masked. The
+  same bug ships in the browser and the PWA today.
+- Everything else checks out: no `ScrollRestoration`, no scroll-to-top, the `pathname` effect
+  at `Base44Layout.tsx:110-112` is the right hook point, and the Energy hero is where the
+  report says it is.
+- **Two hazards the report misses.** `index.css:195` sets `html { scroll-behavior: smooth }`,
+  so `window.scrollTo(0, 0)` would *animate* the reset — `behavior: 'instant'` is mandatory.
+  And `capacitor.config.ts` sets `ios: { contentInset: 'automatic' }`, which is why the iOS
+  shell has to be re-checked rather than assumed from the browser.
