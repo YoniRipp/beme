@@ -1,5 +1,6 @@
 import React from 'react';
 import { Dialog, Portal, Button, Text } from 'react-native-paper';
+import { useThemeContext } from '../../theme/ThemeContext';
 
 interface ConfirmDialogProps {
   visible: boolean;
@@ -20,6 +21,7 @@ export function ConfirmDialog({
   onConfirm,
   destructive = false,
 }: ConfirmDialogProps) {
+  const { colors } = useThemeContext();
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss}>
@@ -31,7 +33,7 @@ export function ConfirmDialog({
           <Button onPress={onDismiss}>Cancel</Button>
           <Button
             onPress={() => { onConfirm(); onDismiss(); }}
-            textColor={destructive ? '#ef4444' : undefined}
+            textColor={destructive ? colors.danger : undefined}
           >
             {confirmLabel}
           </Button>

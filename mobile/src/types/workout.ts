@@ -1,23 +1,3 @@
-export type WorkoutType = 'strength' | 'cardio' | 'flexibility' | 'sports';
-
-export interface Exercise {
-  name: string;
-  sets: number;
-  reps: number;
-  repsPerSet?: number[];
-  weight?: number;
-  notes?: string;
-}
-
-export interface Workout {
-  id: string;
-  date: Date;
-  title: string;
-  type: WorkoutType;
-  durationMinutes: number;
-  exercises: Exercise[];
-  notes?: string;
-  completed: boolean;
-}
-
-export const WORKOUT_TYPES: WorkoutType[] = ['strength', 'cardio', 'flexibility', 'sports'];
+// Domain types now live in @trackvibe/shared so both clients share one definition.
+// This module stays as a re-export so existing import sites keep working.
+export * from '@trackvibe/shared/types';

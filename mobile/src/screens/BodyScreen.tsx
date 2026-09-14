@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { Button, SegmentedButtons, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
@@ -12,7 +12,9 @@ import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { MobileWorkoutCard } from '../components/shared/MobileWorkoutCard';
 import { MetricCard } from '../components/shared/MetricCard';
-import { colors, spacing } from '../theme';
+import { spacing } from '../theme';
+import { useThemedStyles } from '../theme/useThemedStyles';
+import Toast from 'react-native-toast-message';
 
 function groupWorkouts(workouts: Workout[]) {
   const sorted = [...workouts].sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -27,6 +29,26 @@ function groupWorkouts(workouts: Workout[]) {
 }
 
 export function BodyScreen() {
+  const styles = useThemedStyles((colors) => ({
+    metricRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    section: {
+      gap: spacing.sm,
+    },
+    sectionTitle: {
+      color: colors.textMuted,
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+    },
+    cardStack: {
+      gap: spacing.sm,
+    },
+    addButton: {
+      marginTop: spacing.sm,
+    },
+  }));
   const navigation = useNavigation<any>();
   const { workouts, workoutsLoading, deleteWorkout } = useWorkouts();
   const [search, setSearch] = useState('');
@@ -117,29 +139,19 @@ export function BodyScreen() {
         message="Are you sure you want to delete this workout?"
         confirmLabel="Delete"
         destructive
-        onConfirm={() => { if (deleteId) deleteWorkout(deleteId); setDeleteId(null); }}
+        onConfirm={async () => {
+          const id = deleteId;
+          setDeleteId(null);
+          if (!id) return;
+          try {
+            await deleteWorkout(id);
+          } catch {
+            Toast.show({ type: 'error', text1: 'Failed to delete workout' });
+          }
+        }}
       />
     </MobileScreen>
   );
 }
 
-const styles = StyleSheet.create({
-  metricRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  section: {
-    gap: spacing.sm,
-  },
-  sectionTitle: {
-    color: colors.textMuted,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  cardStack: {
-    gap: spacing.sm,
-  },
-  addButton: {
-    marginTop: spacing.sm,
-  },
-});
+

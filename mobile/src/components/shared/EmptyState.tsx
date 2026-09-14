@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { Text, Button, Icon } from 'react-native-paper';
+import { useThemeContext } from '../../theme/ThemeContext';
+import { useThemedStyles } from '../../theme/useThemedStyles';
 
 interface EmptyStateProps {
   icon?: string;
@@ -11,9 +13,16 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ icon = 'plus-circle-outline', title, subtitle, actionLabel, onAction }: EmptyStateProps) {
+  const { colors } = useThemeContext();
+  const styles = useThemedStyles((colors) => ({
+    container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+    title: { marginTop: 16, color: colors.text, textAlign: 'center' },
+    subtitle: { marginTop: 8, color: colors.textMuted, textAlign: 'center' },
+    button: { marginTop: 16 },
+  }));
   return (
     <View style={styles.container}>
-      <Icon source={icon} size={48} color="#9ca3af" />
+      <Icon source={icon} size={48} color={colors.textMuted} />
       <Text variant="titleMedium" style={styles.title}>{title}</Text>
       {subtitle && <Text variant="bodyMedium" style={styles.subtitle}>{subtitle}</Text>}
       {actionLabel && onAction && (
@@ -24,10 +33,3 @@ export function EmptyState({ icon = 'plus-circle-outline', title, subtitle, acti
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  title: { marginTop: 16, color: '#374151', textAlign: 'center' },
-  subtitle: { marginTop: 8, color: '#9ca3af', textAlign: 'center' },
-  button: { marginTop: 16 },
-});

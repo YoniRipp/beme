@@ -1,6 +1,6 @@
 # Frontend
 
-React 18 SPA built with Vite, TypeScript, React Query, Tailwind CSS, and shadcn/ui.
+React 19 SPA built with Vite, TypeScript, React Query, Tailwind CSS, and shadcn/ui.
 Ships as a web app, a PWA (`src/sw.ts`), and a Capacitor native shell.
 
 ## Commands

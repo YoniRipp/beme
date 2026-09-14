@@ -1,0 +1,36 @@
+# Root build context: both Dockerfiles build from here now (npm workspaces — one lockfile,
+# and the frontend needs packages/shared). Without this file Docker would ship every
+# node_modules in the repo as build context and COPY them into the image, which is both
+# enormous and wrong: the image must install from the lockfile, not inherit a host tree.
+node_modules
+**/node_modules
+
+# Build output — regenerated inside the image.
+dist
+**/dist
+build
+**/build
+.expo
+**/.expo
+
+# Nothing here belongs in an image.
+.git
+.github
+.claude
+.superpowers
+**/.worktrees
+**/coverage
+**/*.log
+**/.DS_Store
+
+# Never copy secrets into a build context.
+.env
+**/.env
+**/.env.*
+!**/.env.example
+
+# Other workspaces the images do not build.
+mobile
+twa
+agent-os
+docs

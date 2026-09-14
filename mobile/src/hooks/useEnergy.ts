@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DailyCheckIn, FoodEntry } from '../types/energy';
-import { foodEntriesApi, dailyCheckInsApi } from '../core/api/food';
+import { foodApi, dailyCheckInsApi } from '../core/api/food';
 import { apiCheckInToDailyCheckIn, apiFoodEntryToFoodEntry } from '../features/energy/mappers';
 import { queryKeys } from '../lib/queryKeys';
 import { toLocalDateString } from '../lib/dateRanges';
@@ -12,16 +12,16 @@ export function useEnergy() {
   const checkInsQuery = useQuery({
     queryKey: queryKeys.checkIns,
     queryFn: async () => {
-      const result = await dailyCheckInsApi.list();
-      return result.data.map(apiCheckInToDailyCheckIn);
+      const checkIns = await dailyCheckInsApi.listAll();
+      return checkIns.map(apiCheckInToDailyCheckIn);
     },
   });
 
   const foodEntriesQuery = useQuery({
     queryKey: queryKeys.foodEntries,
     queryFn: async () => {
-      const result = await foodEntriesApi.list();
-      return result.data.map(apiFoodEntryToFoodEntry);
+      const entries = await foodApi.listAll();
+      return entries.map(apiFoodEntryToFoodEntry);
     },
   });
 
@@ -77,7 +77,7 @@ export function useEnergy() {
 
   const addFoodEntryMutation = useMutation({
     mutationFn: (entry: Omit<FoodEntry, 'id'>) =>
-      foodEntriesApi.add({
+      foodApi.add({
         date: toLocalDateString(entry.date),
         name: entry.name,
         calories: entry.calories,
@@ -113,7 +113,7 @@ export function useEnergy() {
       if (updates.startTime !== undefined) body.startTime = updates.startTime;
       if (updates.endTime !== undefined) body.endTime = updates.endTime;
       if (updates.mealType !== undefined) body.mealType = updates.mealType;
-      return foodEntriesApi.update(id, body);
+      return foodApi.update(id, body);
     },
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
@@ -123,7 +123,7 @@ export function useEnergy() {
   });
 
   const deleteFoodEntryMutation = useMutation({
-    mutationFn: (id: string) => foodEntriesApi.delete(id),
+    mutationFn: (id: string) => foodApi.delete(id),
     onSuccess: (_, id) => {
       queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
         prev ? prev.filter((e) => e.id !== id) : []

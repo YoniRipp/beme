@@ -1,8 +1,9 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { ScrollView, View, type ViewStyle } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing } from '../../theme';
+import { spacing } from '../../theme';
+import { useThemedStyles } from '../../theme/useThemedStyles';
 
 interface MobileScreenProps {
   title?: string;
@@ -13,6 +14,27 @@ interface MobileScreenProps {
 }
 
 export function MobileScreen({ title, subtitle, children, scroll = true, contentStyle }: MobileScreenProps) {
+  const styles = useThemedStyles((colors) => ({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: spacing.lg,
+      gap: spacing.lg,
+    },
+    header: {
+      gap: spacing.xs,
+    },
+    title: {
+      color: colors.text,
+      fontWeight: '800',
+      letterSpacing: -0.4,
+    },
+    subtitle: {
+      color: colors.textMuted,
+    },
+  }));
   const insets = useSafeAreaInsets();
   const content = (
     <View style={[styles.content, { paddingBottom: spacing.xl + insets.bottom }, contentStyle]}>
@@ -37,24 +59,4 @@ export function MobileScreen({ title, subtitle, children, scroll = true, content
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-    gap: spacing.lg,
-  },
-  header: {
-    gap: spacing.xs,
-  },
-  title: {
-    color: colors.text,
-    fontWeight: '800',
-    letterSpacing: -0.4,
-  },
-  subtitle: {
-    color: colors.textMuted,
-  },
-});
+

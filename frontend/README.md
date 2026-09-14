@@ -12,7 +12,7 @@ The frontend is a TypeScript React app built with Vite. It uses React Router for
 
 | Category | Technology |
 |----------|------------|
-| Framework | React 18 |
+| Framework | React 19 |
 | Language | TypeScript |
 | Build | Vite 4 |
 | Routing | React Router v6 |

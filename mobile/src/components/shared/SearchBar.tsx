@@ -1,7 +1,7 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
 import { Searchbar } from 'react-native-paper';
-import { colors, radius, spacing } from '../../theme';
+import { radius, spacing } from '../../theme';
+import { useThemedStyles } from '../../theme/useThemedStyles';
 
 interface SearchBarProps {
   value: string;
@@ -10,6 +10,10 @@ interface SearchBarProps {
 }
 
 export function SearchBar({ value, onChangeText, placeholder = 'Search...' }: SearchBarProps) {
+  const styles = useThemedStyles((colors) => ({
+    searchbar: { marginBottom: spacing.md, elevation: 0, backgroundColor: colors.surfaceMuted, borderRadius: radius.md },
+    input: { fontSize: 14 },
+  }));
   return (
     <Searchbar
       placeholder={placeholder}
@@ -21,7 +25,4 @@ export function SearchBar({ value, onChangeText, placeholder = 'Search...' }: Se
   );
 }
 
-const styles = StyleSheet.create({
-  searchbar: { marginBottom: spacing.md, elevation: 0, backgroundColor: colors.surfaceMuted, borderRadius: radius.md },
-  input: { fontSize: 14 },
-});
+

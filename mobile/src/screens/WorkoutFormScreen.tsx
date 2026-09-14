@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Button, SegmentedButtons, Text, IconButton, Divider, Card } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { WorkoutType, Exercise, WORKOUT_TYPES } from '../types/workout';
 import { toLocalDateString } from '../lib/dateRanges';
+import { useThemedStyles } from '../theme/useThemedStyles';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
 
@@ -12,7 +13,43 @@ function newExercise(): Exercise {
   return { name: '', sets: 3, reps: 10, weight: undefined, notes: undefined };
 }
 
+/**
+ * Apply the five fields this form edits on top of the exercise it is holding.
+ *
+ * The spread is the whole point: per-set reps, weights and completion flags
+ * loaded from the API are not editable here yet, and rebuilding the exercise
+ * from the edited fields alone is what used to wipe them on save.
+ *
+ * Exported for tests.
+ */
+export function mergeExerciseEdits(e: Exercise): Exercise {
+  return {
+    ...e,
+    name: e.name.trim(),
+    sets: e.sets || 3,
+    reps: e.reps || 10,
+    weight: e.weight || undefined,
+    notes: e.notes || undefined,
+  };
+}
+
 export function WorkoutFormScreen() {
+  const styles = useThemedStyles((colors) => ({
+    flex: { flex: 1 },
+    container: { flex: 1, backgroundColor: colors.background },
+    content: { padding: 16, paddingBottom: 40 },
+    input: { marginBottom: 12 },
+    label: { marginTop: 8, marginBottom: 8, fontWeight: '600' },
+    segment: { marginBottom: 12 },
+    divider: { marginVertical: 16 },
+    exerciseCard: { marginBottom: 12 },
+    exerciseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    exerciseInput: { marginBottom: 8 },
+    exerciseRow: { flexDirection: 'row', gap: 8 },
+    exerciseSmall: { flex: 1 },
+    addExercise: { marginTop: 8, marginBottom: 16 },
+    saveButton: { marginTop: 8, backgroundColor: colors.primary },
+  }));
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const workoutId = route.params?.workoutId;
@@ -54,13 +91,7 @@ export function WorkoutFormScreen() {
         type,
         date,
         durationMinutes: parseInt(duration) || 0,
-        exercises: validExercises.map((e) => ({
-          name: e.name.trim(),
-          sets: e.sets || 3,
-          reps: e.reps || 10,
-          weight: e.weight || undefined,
-          notes: e.notes || undefined,
-        })),
+        exercises: validExercises.map(mergeExerciseEdits),
         notes: notes.trim() || undefined,
         completed: existing?.completed ?? false,
       };
@@ -187,20 +218,3 @@ export function WorkoutFormScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 16, paddingBottom: 40 },
-  input: { marginBottom: 12 },
-  label: { marginTop: 8, marginBottom: 8, fontWeight: '600' },
-  segment: { marginBottom: 12 },
-  divider: { marginVertical: 16 },
-  exerciseCard: { marginBottom: 12 },
-  exerciseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  exerciseInput: { marginBottom: 8 },
-  exerciseRow: { flexDirection: 'row', gap: 8 },
-  exerciseSmall: { flex: 1 },
-  addExercise: { marginTop: 8, marginBottom: 16 },
-  saveButton: { marginTop: 8, backgroundColor: '#3b82f6' },
-});

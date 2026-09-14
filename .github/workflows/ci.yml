@@ -25,10 +25,9 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: package-lock.json
       - name: Install backend dependencies
         run: npm ci
-        working-directory: backend
       - name: Lint backend
         run: npm run lint
         working-directory: backend
@@ -44,9 +43,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build backend Docker image
-        run: docker build ./backend
+        run: docker build -f backend/Dockerfile .
       - name: Build frontend Docker image
-        run: docker build --build-arg VITE_API_URL=http://localhost:3000 ./frontend
+        run: docker build -f frontend/Dockerfile --build-arg VITE_API_URL=http://localhost:3000 .
 
   frontend:
     runs-on: ubuntu-latest
@@ -56,10 +55,9 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
       - name: Install frontend dependencies
         run: npm ci
-        working-directory: frontend
       - name: Lint frontend
         run: npm run lint
         working-directory: frontend
@@ -78,10 +76,9 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: package-lock.json
       - name: Install mobile dependencies
         run: npm ci
-        working-directory: mobile
       - name: Typecheck mobile
         run: npx tsc --noEmit
         working-directory: mobile
@@ -108,10 +105,9 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: package-lock.json
       - name: Install backend dependencies
         run: npm ci
-        working-directory: backend
       - name: Run migrations
         run: npm run migrate:up
         working-directory: backend
@@ -152,10 +148,8 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+          cache-dependency-path: package-lock.json
       - name: Install dependencies
         run: npm ci
-        working-directory: ${{ matrix.project }}
       - name: Audit dependencies
-        run: npm audit --audit-level=critical
-        working-directory: ${{ matrix.project }}
+        run: npm audit --audit-level=critical --workspace ${{ matrix.project }}

@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEnergy } from '../hooks/useEnergy';
+import { useThemedStyles } from '../theme/useThemedStyles';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
 
 export function SleepFormScreen() {
+  const styles = useThemedStyles((colors) => ({
+    flex: { flex: 1 },
+    container: { flex: 1, backgroundColor: colors.background, padding: 16 },
+    date: { color: colors.textMuted, marginBottom: 16 },
+    input: { marginBottom: 16 },
+    saveButton: { backgroundColor: colors.primary },
+  }));
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const checkInId = route.params?.checkInId;
@@ -65,11 +73,3 @@ export function SleepFormScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: { flex: 1, backgroundColor: '#fff', padding: 16 },
-  date: { color: '#6b7280', marginBottom: 16 },
-  input: { marginBottom: 16 },
-  saveButton: { backgroundColor: '#3b82f6' },
-});

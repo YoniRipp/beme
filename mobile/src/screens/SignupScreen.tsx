@@ -4,23 +4,83 @@ import {
   Text,
   TextInput,
   Pressable,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { colors, radius, spacing } from '../theme';
+import { fonts, radius, spacing } from '../theme';
+import { useThemeContext } from '../theme/ThemeContext';
+import { useThemedStyles } from '../theme/useThemedStyles';
 
 export function SignupScreen() {
   const navigation = useNavigation();
   const { register } = useAuth();
+  const { colors } = useThemeContext();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const styles = useThemedStyles((colors) => ({
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      padding: spacing.xl,
+      backgroundColor: colors.background,
+    },
+    form: {
+      maxWidth: 400,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: '800',
+      marginBottom: spacing.xl,
+      color: colors.text,
+    },
+    error: {
+      fontFamily: fonts.regular,
+      color: colors.danger,
+      marginBottom: spacing.md,
+    },
+    input: {
+      fontFamily: fonts.regular,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      fontSize: 16,
+      marginBottom: spacing.md,
+      backgroundColor: colors.surface,
+      color: colors.text,
+    },
+    button: {
+      backgroundColor: colors.primary,
+      padding: 14,
+      borderRadius: radius.md,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    buttonDisabled: {
+      opacity: 0.7,
+    },
+    buttonText: {
+      fontFamily: fonts.regular,
+      color: colors.primaryForeground,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    link: {
+      fontFamily: fonts.regular,
+      color: colors.primary,
+      fontSize: 14,
+    },
+  }));
 
   const handleSignup = async () => {
     setError('');
@@ -78,7 +138,7 @@ export function SignupScreen() {
           editable={!loading}
         />
         <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleSignup} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign up</Text>}
+          {loading ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={styles.buttonText}>Sign up</Text>}
         </Pressable>
         <Pressable onPress={() => navigation.navigate('Login' as never)} disabled={loading}>
           <Text style={styles.link}>Already have an account? Sign in</Text>
@@ -87,57 +147,3 @@ export function SignupScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.background,
-  },
-  form: {
-    maxWidth: 400,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginBottom: spacing.xl,
-    color: colors.text,
-  },
-  error: {
-    color: colors.danger,
-    marginBottom: spacing.md,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: 16,
-    marginBottom: spacing.md,
-    backgroundColor: colors.surface,
-    color: colors.text,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    padding: 14,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  link: {
-    color: colors.primary,
-    fontSize: 14,
-  },
-});

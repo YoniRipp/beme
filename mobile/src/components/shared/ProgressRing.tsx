@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Text } from 'react-native-paper';
+import { useThemeContext } from '../../theme/ThemeContext';
+import { useThemedStyles } from '../../theme/useThemedStyles';
 
 interface ProgressRingProps {
   value: number; // 0-100
@@ -16,10 +18,18 @@ export function ProgressRing({
   value,
   size = 80,
   strokeWidth = 8,
-  color = '#3b82f6',
+  color,
   label,
   displayValue,
 }: ProgressRingProps) {
+  const { colors } = useThemeContext();
+  const resolvedColor = color ?? colors.primary;
+  const styles = useThemedStyles((colors) => ({
+    container: { alignItems: 'center' },
+    textContainer: { position: 'absolute', top: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
+    value: { fontWeight: '700', color: colors.text },
+    label: { marginTop: 4, color: colors.textMuted, textAlign: 'center' },
+  }));
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clampedValue = Math.min(100, Math.max(0, value));
@@ -40,7 +50,7 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={color}
+          stroke={resolvedColor}
           strokeWidth={strokeWidth}
           fill="none"
           strokeDasharray={`${circumference}`}
@@ -58,10 +68,3 @@ export function ProgressRing({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { alignItems: 'center' },
-  textContainer: { position: 'absolute', top: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
-  value: { fontWeight: '700', color: '#374151' },
-  label: { marginTop: 4, color: '#6b7280', textAlign: 'center' },
-});

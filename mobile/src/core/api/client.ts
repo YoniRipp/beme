@@ -1,27 +1,33 @@
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+import { createTransport } from '@trackvibe/shared/api';
+
+// The HTTP plumbing lives in @trackvibe/shared/api. NOTE: this client is currently its only
+// consumer -- the web client deliberately keeps its own `request`, because it carries an
+// offline sync queue, cookie credentials and a logout event with no mobile counterpart (see
+// frontend/src/core/api/client.ts:121-127). The two clients share the PAGING algorithm, not
+// the transport, so a change here does not change web behaviour and is not covered by the
+// web's tests. Everything auth-shaped stays here: the token lives in SecureStore (so it
+// survives a cold start, unlike the web's in-memory bearer) and the 401 reaction is this
+// app's own. The public surface of this module is unchanged.
+
+export type { RequestOptions } from '@trackvibe/shared/api';
 
 const STORAGE_KEY = 'trackvibe_token';
 
-const DEFAULT_TIMEOUT_MS = 30000;
-
 /**
- * Carries the HTTP status alongside the message. Still an `Error`, so every existing
- * `catch` and `instanceof Error` check behaves exactly as before; the status is what lets
- * a caller tell "retrying might help" from "retrying definitely won't".
+ * `ApiError` is re-exported, not redeclared. The shared transport
+ * (`packages/shared/src/api/transport.ts`) already defines it and is what actually throws
+ * here, so declaring a second class in this module would give `isUnauthorized` a different
+ * constructor to test against than the one the errors are built from — `instanceof` would
+ * silently return false for every real 401.
  */
-export class ApiError extends Error {
-  readonly status: number;
+export { ApiError } from '@trackvibe/shared/api';
+import { ApiError as SharedApiError } from '@trackvibe/shared/api';
 
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-  }
-}
-
+/** True only for a 401 — the case where retrying cannot help, because the session is gone. */
 export function isUnauthorized(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 401;
+  return error instanceof SharedApiError && error.status === 401;
 }
 
 function getApiBase(): string {
@@ -62,46 +68,10 @@ export function handleUnauthorized(): void {
   onUnauthorizedCallback?.();
 }
 
-export interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
-  headers?: HeadersInit;
-  body?: unknown;
-  timeoutMs?: number;
-}
-
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, headers, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  const token = await getToken();
-  const authHeaders: HeadersInit = token
-    ? { ...headers, Authorization: `Bearer ${token}`, 'X-Client-Platform': 'mobile' }
-    : { ...headers, 'X-Client-Platform': 'mobile' };
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  let res: Response;
-  try {
-    res = await fetch(`${getApiBase()}${path}`, {
-      method,
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', ...authHeaders },
-      ...(body != null ? { body: JSON.stringify(body) } : {}),
-    });
-  } catch (e) {
-    clearTimeout(timeoutId);
-    if (e instanceof Error && e.name === 'AbortError') {
-      throw new Error('Request timed out');
-    }
-    throw e;
-  }
-  clearTimeout(timeoutId);
-  if (res.status === 401) {
-    handleUnauthorized();
-    const err = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new ApiError(err.error ?? 'Session expired', 401);
-  }
-  if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new ApiError(err.error ?? res.statusText, res.status);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
-}
+export const request = createTransport({
+  // Passed as a function, not a value: `Constants.expoConfig` is read per request, as before.
+  baseUrl: getApiBase,
+  getToken,
+  onUnauthorized: handleUnauthorized,
+  platform: 'mobile',
+});

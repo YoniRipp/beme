@@ -141,7 +141,7 @@ flowchart TB
 
 | Layer | Technologies |
 |-------|-------------|
-| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui (Radix), Recharts, React Router v6, TanStack Query, React Context, Zod, React Hook Form |
+| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui (Radix), Recharts, React Router v6, TanStack Query, React Context, Zod, React Hook Form |
 | **Backend** | Node.js 20 (ES modules), Express, TypeScript, tsup (build), Pino (logging), Helmet (security headers) |
 | **Database** | PostgreSQL with pgvector, pg_trgm extensions. node-pg-migrate for migrations, Prisma for schema management |
 | **Auth** | JWT (jsonwebtoken), bcrypt, google-auth-library. Optional OAuth: Google, Facebook, Twitter |

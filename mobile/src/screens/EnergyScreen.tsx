@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { Button, Card, Icon, IconButton, SegmentedButtons, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { format, isWithinInterval } from 'date-fns';
@@ -12,8 +12,12 @@ import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { MobileFoodCard } from '../components/shared/MobileFoodCard';
 import { MetricCard } from '../components/shared/MetricCard';
-import { colors, radius, spacing } from '../theme';
+import { radius, spacing } from '../theme';
+import { useThemeContext } from '../theme/ThemeContext';
+import { useThemedStyles } from '../theme/useThemedStyles';
 import { getPeriodRange, PeriodKey } from '../lib/dateRanges';
+import { inferMealTypeFromHour } from '@trackvibe/shared/domain';
+import Toast from 'react-native-toast-message';
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -24,18 +28,116 @@ const MEALS: Array<{ key: MealType; label: string; icon: string }> = [
   { key: 'snack', label: 'Snack', icon: 'cookie-outline' },
 ];
 
+/**
+ * Which meal an entry belongs to. The stored `mealType` wins; otherwise the hour comes
+ * from `startTime`/`endTime` when present and the entry date otherwise. Only the
+ * hour-to-meal bucketing is shared -- this field precedence is unchanged.
+ */
 function inferMeal(entry: FoodEntry): MealType {
   if (entry.mealType) return entry.mealType;
   const time = entry.startTime || entry.endTime;
   const hour = time ? Number(time.split(':')[0]) : entry.date.getHours();
-  if (hour < 11) return 'breakfast';
-  if (hour < 14) return 'lunch';
-  if (hour < 17) return 'snack';
-  return 'dinner';
+  return inferMealTypeFromHour(hour);
 }
 
 export function EnergyScreen() {
   const navigation = useNavigation<any>();
+  const { colors } = useThemeContext();
+  const styles = useThemedStyles((colors) => ({
+    summaryCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    summaryContent: {
+      gap: spacing.sm,
+    },
+    eyebrow: {
+      color: colors.primary,
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+    },
+    total: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    macroRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    macro: {
+      color: colors.textMuted,
+      fontWeight: '700',
+    },
+    metricRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    sectionStack: {
+      gap: spacing.xl,
+    },
+    mealSection: {
+      gap: spacing.sm,
+    },
+    mealHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    mealTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    mealIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primarySoft,
+    },
+    sectionTitle: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    muted: {
+      color: colors.textMuted,
+    },
+    cardStack: {
+      gap: spacing.sm,
+    },
+    emptyMealCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: colors.border,
+    },
+    emptyMealContent: {
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+    logCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    logRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    logTitle: {
+      color: colors.text,
+      fontWeight: '800',
+    },
+    actionRow: {
+      flexDirection: 'row',
+    },
+  }));
   const { foodEntries, checkIns, energyLoading, deleteFoodEntry, deleteCheckIn } = useEnergy();
   const [tab, setTab] = useState('food');
   const [period, setPeriod] = useState<PeriodKey>('daily');
@@ -195,110 +297,21 @@ export function EnergyScreen() {
         message="Are you sure you want to delete this entry?"
         confirmLabel="Delete"
         destructive
-        onConfirm={() => {
-          if (deleteTarget) {
-            if (deleteTarget.type === 'food') deleteFoodEntry(deleteTarget.id);
-            else deleteCheckIn(deleteTarget.id);
-          }
+        onConfirm={async () => {
+          const target = deleteTarget;
           setDeleteTarget(null);
+          if (!target) return;
+          try {
+            if (target.type === 'food') await deleteFoodEntry(target.id);
+            else await deleteCheckIn(target.id);
+          } catch {
+            Toast.show({
+              type: 'error',
+              text1: target.type === 'food' ? 'Failed to delete entry' : 'Failed to delete check-in',
+            });
+          }
         }}
       />
     </MobileScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  summaryCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  summaryContent: {
-    gap: spacing.sm,
-  },
-  eyebrow: {
-    color: colors.primary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  total: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  macroRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  macro: {
-    color: colors.textMuted,
-    fontWeight: '700',
-  },
-  metricRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  sectionStack: {
-    gap: spacing.xl,
-  },
-  mealSection: {
-    gap: spacing.sm,
-  },
-  mealHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  mealTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  mealIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  muted: {
-    color: colors.textMuted,
-  },
-  cardStack: {
-    gap: spacing.sm,
-  },
-  emptyMealCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-  },
-  emptyMealContent: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  logCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  logRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  logTitle: {
-    color: colors.text,
-    fontWeight: '800',
-  },
-  actionRow: {
-    flexDirection: 'row',
-  },
-});

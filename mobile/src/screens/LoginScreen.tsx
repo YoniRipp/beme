@@ -4,22 +4,88 @@ import {
   Text,
   TextInput,
   Pressable,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { colors, radius, spacing } from '../theme';
+import { fonts, radius, spacing } from '../theme';
+import { useThemeContext } from '../theme/ThemeContext';
+import { useThemedStyles } from '../theme/useThemedStyles';
 
 export function LoginScreen() {
   const navigation = useNavigation();
   const { login } = useAuth();
+  const { colors } = useThemeContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const styles = useThemedStyles((colors) => ({
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      padding: spacing.xl,
+      backgroundColor: colors.background,
+    },
+    form: {
+      maxWidth: 400,
+      width: '100%',
+      alignSelf: 'center',
+    },
+    title: {
+      fontSize: 28,
+      fontFamily: fonts.display,
+      marginBottom: spacing.xs,
+      color: colors.text,
+    },
+    subtitle: {
+      fontFamily: fonts.regular,
+      fontSize: 16,
+      color: colors.textMuted,
+      marginBottom: spacing.xl,
+    },
+    error: {
+      fontFamily: fonts.regular,
+      color: colors.danger,
+      marginBottom: spacing.md,
+    },
+    input: {
+      fontFamily: fonts.regular,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      fontSize: 16,
+      marginBottom: spacing.md,
+      backgroundColor: colors.surface,
+      color: colors.text,
+    },
+    button: {
+      backgroundColor: colors.primary,
+      padding: 14,
+      borderRadius: radius.md,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    buttonDisabled: {
+      opacity: 0.7,
+    },
+    buttonText: {
+      fontFamily: fonts.regular,
+      color: colors.primaryForeground,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    link: {
+      fontFamily: fonts.regular,
+      color: colors.primary,
+      fontSize: 14,
+    },
+  }));
 
   const handleLogin = async () => {
     setError('');
@@ -66,7 +132,7 @@ export function LoginScreen() {
           editable={!loading}
         />
         <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleLogin} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign in</Text>}
+          {loading ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={styles.buttonText}>Sign in</Text>}
         </Pressable>
         <Pressable onPress={() => navigation.navigate('Signup' as never)} disabled={loading}>
           <Text style={styles.link}>Create an account</Text>
@@ -75,62 +141,3 @@ export function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.background,
-  },
-  form: {
-    maxWidth: 400,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: spacing.xs,
-    color: colors.text,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.textMuted,
-    marginBottom: spacing.xl,
-  },
-  error: {
-    color: colors.danger,
-    marginBottom: spacing.md,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: 16,
-    marginBottom: spacing.md,
-    backgroundColor: colors.surface,
-    color: colors.text,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    padding: 14,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  link: {
-    color: colors.primary,
-    fontSize: 14,
-  },
-});

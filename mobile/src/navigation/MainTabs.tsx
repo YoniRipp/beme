@@ -7,7 +7,7 @@ import { GoalsScreen } from '../screens/GoalsScreen';
 import { InsightsScreen } from '../screens/InsightsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { Icon } from 'react-native-paper';
-import { colors } from '../theme';
+import { useThemeContext } from '../theme/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,6 +21,8 @@ const TAB_ICONS: Record<string, string> = {
 };
 
 export function MainTabs() {
+  const { colors } = useThemeContext();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({

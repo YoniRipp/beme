@@ -2,40 +2,14 @@ import { useMemo } from 'react';
 import { useGoals } from '@/hooks/useGoals';
 import { useWorkouts } from '@/hooks/useWorkouts';
 import { useEnergy } from '@/hooks/useEnergy';
-import type { Goal, GoalType } from '@/types/goals';
-import { isWithinInterval } from 'date-fns';
-import { getPeriodRange } from '@/lib/dateRanges';
+import { computeGoalProgress } from '@trackvibe/shared/domain';
+import type { GoalProgress } from '@trackvibe/shared/domain';
 
-export interface GoalProgress {
-  current: number;
-  target: number;
-  percentage: number;
-}
-
-function buildGoalCurrentCalcs(deps: {
-  foodEntries: { date: Date | string; calories: number }[];
-  workouts: { date: Date }[];
-  checkIns: { date: Date | string; sleepHours?: number }[];
-}) {
-  return {
-    calories: (_goal: Goal, dateRange: { start: Date; end: Date }) =>
-      deps.foodEntries
-        .filter((f) => isWithinInterval(new Date(f.date), dateRange))
-        .reduce((sum, f) => sum + f.calories, 0),
-    workouts: (_goal: Goal, dateRange: { start: Date; end: Date }) =>
-      deps.workouts.filter((w) =>
-        isWithinInterval(new Date(w.date), dateRange)
-      ).length,
-    sleep: (_goal: Goal, dateRange: { start: Date; end: Date }) => {
-      const periodCheckIns = deps.checkIns.filter((c) =>
-        isWithinInterval(new Date(c.date), dateRange)
-      ).filter((c) => c.sleepHours != null);
-      if (periodCheckIns.length === 0) return 0;
-      const total = periodCheckIns.reduce((sum, c) => sum + (c.sleepHours ?? 0), 0);
-      return total / periodCheckIns.length;
-    },
-  } as Record<GoalType, (goal: Goal, dateRange: { start: Date; end: Date }) => number>;
-}
+// The calculation now lives in @trackvibe/shared so both clients compute a goal's
+// progress identically (see packages/shared/src/domain/goals.ts). This hook stays
+// here: it's the thing that's actually React — wiring the shared, pure calculator up
+// to this client's own data hooks and memoizing it.
+export type { GoalProgress };
 
 export function useGoalProgress(goalId: string): GoalProgress {
   const { goals } = useGoals();
@@ -48,17 +22,6 @@ export function useGoalProgress(goalId: string): GoalProgress {
       return { current: 0, target: 0, percentage: 0 };
     }
 
-    const now = new Date();
-    const dateRange = getPeriodRange(goal.period, now);
-    const calcs = buildGoalCurrentCalcs({
-      foodEntries,
-      workouts,
-      checkIns,
-    });
-    const current = calcs[goal.type](goal, dateRange);
-
-    const percentage =
-      goal.target > 0 ? Math.min((current / goal.target) * 100, 100) : 0;
-    return { current, target: goal.target, percentage };
+    return computeGoalProgress(goal, { foodEntries, workouts, checkIns });
   }, [goalId, goals, workouts, foodEntries, checkIns]);
 }
