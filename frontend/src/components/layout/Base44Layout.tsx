@@ -160,6 +160,7 @@ export function Base44Layout() {
       <aside
         ref={sidebarRef}
         className={`fixed top-0 left-0 h-full w-72 bg-sidebar border-r border-sidebar-border z-50
+          pt-safe pb-safe
           transform transition-transform duration-300 ease-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
       >
@@ -215,7 +216,11 @@ export function Base44Layout() {
       {/* Main content */}
       <div className="lg:ml-72 min-h-screen">
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-30 lg:hidden bg-card/95 backdrop-blur-xl border-b border-border">
+        {/* The inset padding is on the header, not on the row inside it, so the header's
+            own background paints the status-bar strip and scrolled content passes *behind*
+            the bar instead of over the clock. `min-h-[56px]` stays on the row so the touch
+            targets keep their height whatever the inset is. */}
+        <header className="sticky top-0 z-30 lg:hidden bg-card/95 backdrop-blur-xl border-b border-border pt-safe">
           <div className="flex items-center justify-between px-4 py-3 min-h-[56px]">
             <button
               type="button"
@@ -257,7 +262,7 @@ export function Base44Layout() {
 
         {/* Desktop header */}
         <header
-          className={`hidden lg:sticky lg:block top-0 z-30 transition-all duration-300
+          className={`hidden lg:sticky lg:block top-0 z-30 pt-safe transition-all duration-300
             ${scrolled ? 'glass border-b border-border/70' : 'bg-transparent'}`}
         >
           <div className="flex items-center justify-between px-5 sm:px-6 lg:px-8 py-3 min-h-[60px]">
@@ -299,7 +304,9 @@ export function Base44Layout() {
         </header>
 
         <main className="px-4 sm:px-6 lg:px-8 pb-32 lg:pb-10 pt-5 lg:pt-3 animate-fade-up">
-          <div className="mx-auto max-w-[700px] xl:max-w-none">
+          {/* `px-safe` sits on the wrapper rather than on <main>, which owns the responsive
+              gutter: the landscape notch adds to that gutter, it does not replace it. */}
+          <div className="mx-auto max-w-[700px] xl:max-w-none px-safe">
             <Outlet />
           </div>
         </main>
@@ -319,18 +326,21 @@ export function Base44Layout() {
       <Button
         size="icon"
         onClick={() => setVoicePanelOpen((prev) => !prev)}
-        className="fixed right-4 z-40 hidden h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-card-lg hover:bg-primary/90 md:right-6 lg:bottom-6 lg:flex"
+        className="fixed right-[calc(1rem+var(--safe-right))] z-40 hidden h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-card-lg hover:bg-primary/90 md:right-[calc(1.5rem+var(--safe-right))] lg:bottom-6 lg:flex"
         aria-label={voicePanelOpen ? 'Close voice panel' : 'Open voice'}
       >
         <Mic className="h-5 w-5" />
       </Button>
 
-      {/* AI Chat FAB — bottom-right, above mobile nav */}
+      {/* AI Chat FAB — bottom-right, above mobile nav. The bottom offset reads the shared
+          variable; the computed value is unchanged. Its horizontal offset is deliberately left
+          alone: the AI FAB's placement and its overlap with the nav are owned by the
+          ai-fab-overlap change, which builds on these variables. */}
       {hasAiAccess && pathname !== '/insights' && (
         <Button
           size="icon"
           onClick={() => setAiChatOpen(true)}
-          className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom,0px)+9.75rem)] z-40 h-12 w-12 rounded-full bg-foreground text-background hover:bg-foreground/90 shadow-card-lg md:right-6 lg:bottom-[5.25rem]"
+          className="fixed right-4 bottom-[calc(var(--safe-bottom)+9.75rem)] z-40 h-12 w-12 rounded-full bg-foreground text-background hover:bg-foreground/90 shadow-card-lg md:right-6 lg:bottom-[5.25rem]"
           aria-label="Open AI Coach"
         >
           <Sparkles className="h-5 w-5" />
