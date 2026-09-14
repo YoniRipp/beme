@@ -365,7 +365,7 @@ export function Energy() {
   };
 
   return (
-    <Page className="pb-24">
+    <Page>
       <ContentWithLoading loading={energyLoading} loadingText="Loading energy...">
         <div className="space-y-6">
           <PageHeader
