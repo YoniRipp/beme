@@ -102,6 +102,11 @@ export function Base44Layout() {
 
   const pageTitle = getPageTitle(pathname);
 
+  // One condition, two renderings: the bottom bar docks the button below `lg`, the fixed FAB
+  // shows it above. `/insights` has the AI Coach inline, so the shortcut would point at the
+  // page you are already on.
+  const showAiCoach = hasAiAccess && pathname !== '/insights';
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll);
@@ -308,7 +313,12 @@ export function Base44Layout() {
           </div>
         </header>
 
-        <main className="px-4 sm:px-6 lg:px-8 pb-32 lg:pb-10 pt-5 lg:pt-3 animate-fade-up">
+        {/* The bottom reservation is the chrome's own height plus the home indicator, read
+            from `--bottom-chrome` in `index.css` — the same variable `BottomNavigation` sizes
+            its scrim from. A literal here is what let the chrome grow past the strip it was
+            supposed to fit inside, and what stranded content by the height of the home
+            indicator once the insets started reporting real numbers. */}
+        <main className="px-4 sm:px-6 lg:px-8 pb-[calc(var(--bottom-chrome)+var(--safe-bottom))] lg:pb-10 pt-5 lg:pt-3 animate-fade-up">
           {/* `px-safe` sits on the wrapper rather than on <main>, which owns the responsive
               gutter: the landscape notch adds to that gutter, it does not replace it. */}
           <div className="mx-auto max-w-[700px] xl:max-w-none px-safe">
@@ -322,6 +332,8 @@ export function Base44Layout() {
         items={BOTTOM_NAV}
         currentPath={pathname}
         onCenterPress={() => setVoicePanelOpen((prev) => !prev)}
+        showAiCoach={showAiCoach}
+        onAiCoachPress={() => setAiChatOpen(true)}
       />
 
       <VoiceAgentPanel open={voicePanelOpen} onOpenChange={setVoicePanelOpen} />
@@ -337,15 +349,16 @@ export function Base44Layout() {
         <Mic className="h-5 w-5" />
       </Button>
 
-      {/* AI Chat FAB — bottom-right, above mobile nav. The bottom offset reads the shared
-          variable; the computed value is unchanged. Its horizontal offset is deliberately left
-          alone: the AI FAB's placement and its overlap with the nav are owned by the
-          ai-fab-overlap change, which builds on these variables. */}
-      {hasAiAccess && pathname !== '/insights' && (
+      {/* Desktop AI Coach button, stacked 12px above the voice FAB — the pair that was
+          already a system, carried across unchanged apart from becoming desktop-only. Below
+          `lg` the bottom bar is on screen and owns this affordance (see `BottomNavigation`),
+          exactly as it already owns the mic. Its right offsets are the voice FAB's, so the
+          two stay on one edge; `md:right-6` is gone with the mobile rendering that needed it. */}
+      {showAiCoach && (
         <Button
           size="icon"
           onClick={() => setAiChatOpen(true)}
-          className="fixed right-4 bottom-[calc(var(--safe-bottom)+9.75rem)] z-40 h-12 w-12 rounded-full bg-foreground text-background hover:bg-foreground/90 shadow-card-lg md:right-6 lg:bottom-[5.25rem]"
+          className="fixed right-[calc(1rem+var(--safe-right))] z-40 hidden h-12 w-12 rounded-full bg-foreground text-background hover:bg-foreground/90 shadow-card-lg md:right-[calc(1.5rem+var(--safe-right))] lg:bottom-[5.25rem] lg:flex"
           aria-label="Open AI Coach"
         >
           <Sparkles className="h-5 w-5" />
