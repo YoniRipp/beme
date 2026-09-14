@@ -1,7 +1,10 @@
 # Frontend
 
 React 19 SPA built with Vite, TypeScript, React Query, Tailwind CSS, and shadcn/ui.
-Ships as a web app, a PWA (`src/sw.ts`), and a Capacitor native shell.
+Ships as the web app and the PWA (`src/sw.ts`). Native iOS/Android is **not** this
+package any more — that is `mobile/` (Expo). The Capacitor shell here is legacy: nothing
+in CI builds it, `ios/` is not in the repo, and `@capacitor/cli` is a major behind its
+runtime, so `cap add ios` produces a project that will not compile. Don't reach for it.
 
 ## Commands
 - Dev server: `npm run dev`
@@ -9,7 +12,7 @@ Ships as a web app, a PWA (`src/sw.ts`), and a Capacitor native shell.
 - Build: `npm run build`
 - Tests: `npx vitest run`
 - E2E tests: `npx playwright test`
-- Capacitor (mobile): `npm run cap:sync`, `npm run cap:ios`, `npm run cap:android`
+- Capacitor (legacy shell, unmaintained): `npm run cap:sync`, `npm run cap:ios`, `npm run cap:android`
 
 ## Architecture
 - `src/routes.tsx` — route table; `src/App.tsx` and `src/Providers.tsx` wrap the tree
