@@ -48,6 +48,8 @@ Standards folders are `backend/`, `frontend/`, and `global/`. Put new ones in th
 
 Product context — mission, roadmap, tech stack — is in `agent-os/product/`. Feature specs are in `agent-os/specs/`.
 
+**Work currently in flight is in `docs/HANDOFF.md`** — which PRs have code, what is unverified, what order they have to land in, and which hazards have already cost this project time. Read it before picking up an open PR.
+
 ## Agent OS workflow
 
 These live in `.claude/commands/agent-os/`, so they are namespaced — the `agent-os:` prefix is required.
