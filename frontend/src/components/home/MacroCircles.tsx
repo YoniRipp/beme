@@ -1,9 +1,11 @@
 import { useId } from 'react';
 import { Pencil } from 'lucide-react';
+import { targetFraction } from '@trackvibe/shared/domain';
 
 interface MacroData {
   current: number;
-  goal: number;
+  /** Grams/day, or `null` when the user has not set this target. */
+  goal: number | null;
 }
 
 interface MacroCirclesProps {
@@ -25,11 +27,11 @@ function MacroRing({
 }: {
   label: string;
   current: number;
-  goal: number;
+  goal: number | null;
   color: string;
   gradientId: string;
 }) {
-  const pct = goal > 0 ? Math.min(current / goal, 1) : 0;
+  const pct = targetFraction(current, goal) ?? 0;
   const offset = CIRCUMFERENCE * (1 - pct);
 
   return (
@@ -62,7 +64,9 @@ function MacroRing({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="font-display text-2xl font-medium leading-none tabular-nums animate-count-up">{Math.round(current)}</span>
-          <span className="text-eyebrow text-muted-foreground leading-none mt-1 tabular-nums">/ {goal}g</span>
+          <span className="text-eyebrow text-muted-foreground leading-none mt-1 tabular-nums">
+            {goal != null ? `/ ${goal}g` : 'no target'}
+          </span>
         </div>
       </div>
     </div>
@@ -79,7 +83,7 @@ export function MacroCircles({ carbs, fat, protein, onEditGoals }: MacroCirclesP
             type="button"
             onClick={onEditGoals}
             className="inline-flex h-11 items-center gap-1.5 px-3 rounded-full text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-            aria-label="Edit macro goals"
+            aria-label="Edit daily targets"
           >
             <Pencil className="w-3 h-3" />
             Edit goals
