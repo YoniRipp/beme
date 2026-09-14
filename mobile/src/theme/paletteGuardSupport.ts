@@ -125,14 +125,6 @@ export interface HexLiteralHit {
 }
 
 /**
- * Every string-literal hex colour anywhere in the file — object property values
- * (`backgroundColor: '#fff'`) and JSX attribute values (`color="#fff"`) alike, since
- * both are `StringLiteral` nodes in the AST. Deliberately not restricted to a fixed set
- * of "colour-ish" key names (`color`/`backgroundColor`/...): a new prop name we didn't
- * anticipate (`tintColor`, `stroke`, `overlayColor`, ...) would slip past an allowlist of
- * keys but not past "is this string shaped like a hex colour".
- */
-/**
  * Every JSX tag name used in a file — `<Foo />` and `<Foo>…</Foo>` alike, plus the
  * namespaced form `<Foo.Bar />` (recorded as its root, `Foo`, which is the identifier an
  * import binds).

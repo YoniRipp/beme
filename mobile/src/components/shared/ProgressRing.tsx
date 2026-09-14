@@ -34,8 +34,9 @@ export function ProgressRing({
    *
    * `muted` is the real answer and is now a role: the web draws every one of its five ring
    * tracks with `hsl(var(--muted))` — `ui/progress-ring.tsx`, `insights/AiInsightsSection.tsx`,
-   * `goals/GoalCard.tsx`, `home/MacroCircles.tsx`, `pages/Energy.tsx` — plus `ui/progress.tsx`'s
-   * bar.
+   * `goals/GoalCard.tsx`, `home/MacroCircles.tsx`, `pages/Energy.tsx` — plus the bar in
+   * `home/WaterTracker.tsx`. (The spec says "plus `ui/progress.tsx`'s bar"; that shadcn
+   * primitive is `bg-secondary` and has no call sites, so it is not evidence either way.)
    *
    * THE TRAP, and why this is not `surfaceMuted`: the names read as synonyms and are not the
    * same value. `ColorRoles.surfaceMuted` maps to the web's `--paper-2` (see

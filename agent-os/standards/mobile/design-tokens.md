@@ -35,7 +35,7 @@ Trace the web call site before choosing. Two roles that read as synonyms:
 | role | css | what it is |
 |---|---|---|
 | `surfaceMuted` | `--paper-2` | the ground under a muted **section** |
-| `muted` | `--muted` | the **track/fill** — every progress ring and bar on the web |
+| `muted` | `--muted` | the **track/fill** — every progress ring and bar the web renders (`goals/GoalCard.tsx`, `home/MacroCircles.tsx`, `home/WaterTracker.tsx`, …), and its empty week-strip day boxes |
 
 Against the `surface` card in dark — the theme that ships as the default — `surfaceMuted` is
 **1.03:1** and `muted` is **1.19:1**. A ring drawn on the first has no visible remainder, so

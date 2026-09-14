@@ -27,7 +27,10 @@
  * `muted` is `--muted`, the fill the web draws every progress track with — five ring
  * `stroke`s (`ui/progress-ring.tsx`, `insights/AiInsightsSection.tsx`,
  * `goals/GoalCard.tsx`, `home/MacroCircles.tsx`, `pages/Energy.tsx`) plus
- * `ui/progress.tsx`'s bar. Against the `surface` card those tracks sit on, in dark —
+ * `home/WaterTracker.tsx`'s bar and `body/WorkoutCard.tsx`'s rows. (NOT `ui/progress.tsx`
+ * — the spec cites it, but that shadcn primitive is `bg-secondary` and nothing renders
+ * it; the bars the web actually draws are hand-rolled `bg-muted` divs.) Against the
+ * `surface` card those tracks sit on, in dark —
  * the theme that ships as the default:
  *
  *   surfaceMuted `#1b1a18` on `#191715` = 1.03:1   (invisible: ~5 units per channel)
