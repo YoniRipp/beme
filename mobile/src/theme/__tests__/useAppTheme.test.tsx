@@ -195,7 +195,7 @@ describe('useAppTheme primaryForeground contrast', () => {
  * (`agent-os/specs/2026-09-14-1110-parity-md3-color-roles/shape.md`) says this test is
  * "the assertion that would have caught the original bug — `#381E72` on `#b5ef57` is
  * 3.06:1 and fails AA". Recomputed: Paper's dark `onPrimary` `#381E72` on the default
- * lime `#b5ef57` is **9.68:1**. It passes AA comfortably. The purple button was a BRAND
+ * lime `#b5ef57` is **9.67:1**. It passes AA comfortably. The purple button was a BRAND
  * defect, not an accessibility one, and no contrast test of any threshold would have
  * caught it. The guard that does is `everyMd3RoleIsMapped.test.ts`, which compares the
  * built theme against Paper's base. This block is worth having on its own terms — it
@@ -209,9 +209,9 @@ describe('useAppTheme primaryForeground contrast', () => {
 describe('paperTheme contrast on the pairs Paper renders', () => {
   interface Pair {
     /** Key in `paperTheme.colors` used as the ground. */
-    background: 'primary' | 'secondaryContainer' | 'primaryContainer' | 'surface' | 'background' | 'error' | 'errorContainer';
+    background: 'primary' | 'secondaryContainer' | 'primaryContainer' | 'surface' | 'background' | 'error' | 'errorContainer' | 'inverseSurface';
     /** Key in `paperTheme.colors` painted on top of it. */
-    foreground: 'onPrimary' | 'onSecondaryContainer' | 'onPrimaryContainer' | 'onSurface' | 'onBackground' | 'onError' | 'onErrorContainer';
+    foreground: 'onPrimary' | 'onSecondaryContainer' | 'onPrimaryContainer' | 'onSurface' | 'onBackground' | 'onError' | 'onErrorContainer' | 'inversePrimary';
     minRatio: number;
     why: string;
   }
@@ -251,13 +251,19 @@ describe('paperTheme contrast on the pairs Paper renders', () => {
       background: 'error',
       foreground: 'onError',
       minRatio: 3,
-      why: 'A saturated red fill cannot reach 4.5:1 against anything the palette contains: this mapping measures 4.25 (dark) / 4.60 (light), and the WEB\'S OWN pairing (`--destructive` with a near-white `--destructive-foreground`) is worse at 3.79 / 3.34. 3:1 is the honest floor here; going higher would mean changing `--destructive` on both clients, which is a palette decision and not this PR\'s.',
+      why: 'A saturated red fill cannot reach 4.5:1 against anything the palette contains: this mapping measures 4.25 (dark) / 4.60 (light), and the WEB\'S OWN `--destructive` / `--destructive-foreground` pairing is worse in both at 3.79 (dark) / 4.42 (light). 3:1 is the honest floor here; going higher would mean changing `--destructive` on both clients, which is a palette decision and not this PR\'s.',
     },
     {
       background: 'errorContainer',
       foreground: 'onErrorContainer',
       minRatio: 3,
       why: 'Danger text on a 10% danger tint — HelperText, Banner. Measured minimum: 3.85.',
+    },
+    {
+      background: 'inverseSurface',
+      foreground: 'inversePrimary',
+      minRatio: 4.5,
+      why: "AA. Snackbar's action label, and the one accent role painted on the INVERTED ground — so the accent itself measures backwards against it (1.02:1 on the neutral accent in dark, i.e. the same colour). That is why `inversePrimary` is `primarySoft` and not `primary`; see the comment on it in theme.ts. Measured minimum: 14.00. Nothing renders it today, which is precisely why it needs a guard rather than a look.",
     },
   ];
 

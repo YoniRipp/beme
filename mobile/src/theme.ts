@@ -180,10 +180,12 @@ export function buildPaperTheme(base: MD3Theme, palette: ColorRoles): MD3Theme {
       onSurfaceDisabled: withAlpha(palette.text, 0.38),
 
       error: palette.danger,
-      // Dark text on the error fill, as MD3 does (`onError` is `error20`) — the web
-      // pairs `--destructive` with a near-white `--destructive-foreground` instead, and
-      // measures WORSE for it: 3.79:1 dark against 4.25:1 here. Neither reaches AA 4.5
-      // on a saturated red; see the per-pair thresholds in `useAppTheme.test.tsx`.
+      // The card colour on the error fill — which is dark ink in DARK and near-white in
+      // LIGHT, so this is one role whose character flips with the scheme; don't read the
+      // dark half as the rule. It beats the web's own `--destructive` /
+      // `--destructive-foreground` pairing in both: 4.25:1 vs 3.79:1 dark, 4.60:1 vs
+      // 4.42:1 light. Neither reaches AA 4.5 on a saturated red in dark; see the per-pair
+      // thresholds in `useAppTheme.test.tsx`.
       onError: palette.surface,
       errorContainer: withAlpha(palette.danger, 0.1),
       onErrorContainer: palette.danger,
@@ -196,7 +198,32 @@ export function buildPaperTheme(base: MD3Theme, palette: ColorRoles): MD3Theme {
 
       inverseSurface: palette.text,
       inverseOnSurface: palette.background,
-      inversePrimary: palette.primary,
+      /**
+       * NOT `palette.primary`, which is what shape.md's table says and what review
+       * caught. `inversePrimary` is the one accent role painted on `inverseSurface`
+       * rather than on the page, and `inverseSurface` here is `palette.text` — so in
+       * dark it sits on near-white and in light on near-black, i.e. the opposite ground
+       * from every other accent use. The accent itself therefore measures backwards
+       * against it, and on the `neutral` accent it is the SAME COLOUR:
+       *
+       *   palette.primary    dark 1.23 (green) / 1.94 (blue) / 1.02 (neutral)
+       *                      light 2.21 (green) / 3.29 (blue) / 1.00 (neutral)
+       *   palette.primarySoft dark 14.20 · light 14.00
+       *
+       * `primarySoft` is the only role that flips with the scheme the way this one has
+       * to — `--sage-50` is a near-white tint in light and a near-black one in dark —
+       * so it is legible on the inverse ground in both. The cost is that it is a fixed
+       * sage rather than accent-resolved, which is the same trade `primaryContainer`
+       * declined above; the difference is that there the accent was legible and here it
+       * is not, and an unreadable accent is not accent fidelity.
+       *
+       * Latent today — Paper's only consumer is `Snackbar`'s action label and the app
+       * has no `Snackbar` — which is exactly why it needed measuring rather than
+       * eyeballing. Pinned by the `inverseSurface`/`inversePrimary` pair in
+       * `theme/__tests__/useAppTheme.test.tsx`, so a move back to `palette.primary`
+       * fails the build instead of shipping an invisible button.
+       */
+      inversePrimary: palette.primarySoft,
 
       shadow: palette.shadow,
       scrim: palette.scrim,
