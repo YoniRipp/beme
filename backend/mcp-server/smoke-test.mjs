@@ -73,6 +73,47 @@ const TEST_MODE_TOOLS = [
 
 const failures = [];
 
+/**
+ * `server.tool(name, description, shape, handler)` wants a raw shape -- `{ a: z.string() }` --
+ * not a wrapped `z.object({ a: z.string() })`.
+ *
+ * SDK 1.25 accepted both, so the wrapped form worked for as long as nobody upgraded. 1.30
+ * rejects it outright: "Tool list_food_entries expected a Zod schema or ToolAnnotations, but
+ * received an unrecognized object", thrown at import, before the server ever starts.
+ *
+ * The runtime checks below catch that on an SDK that rejects it. This one catches it on an
+ * SDK that does not, which is the window in which the mistake actually gets reintroduced.
+ * Only the third argument is in scope -- it sits at 4-space indent. Nested `z.object(...)`
+ * inside a `z.array(...)` field is deeper, and is a real schema that must stay wrapped.
+ */
+async function checkToolSignatures(registeredToolCount) {
+  const { readdir, readFile } = await import('node:fs/promises');
+  const dir = path.join(__dirname, 'tools');
+  const offenders = [];
+  let callSites = 0;
+
+  for (const file of (await readdir(dir)).filter((f) => f.endsWith('.js'))) {
+    const lines = (await readFile(path.join(dir, file), 'utf8')).split('\n');
+    lines.forEach((line, i) => {
+      if (/^ {2}server\.tool\($/.test(line)) callSites++;
+      if (/^ {4}z\.object\(\{/.test(line)) offenders.push(`tools/${file}:${i + 1}`);
+    });
+  }
+
+  // The guard above keys on indentation, so reformatting these files would make it match
+  // nothing and report success having inspected nothing -- a guard that fails open is worse
+  // than no guard. Anchor it: the call sites it can see must equal the tools the running
+  // server actually registered. Lose visibility and this fires instead of passing quietly.
+  check(
+    callSites === registeredToolCount,
+    `the source scan sees every registered tool (${callSites} call sites vs ${registeredToolCount} registered)`
+  );
+  check(
+    offenders.length === 0,
+    `no server.tool() passes a wrapped z.object() as its shape${offenders.length ? ` (${offenders.join(', ')})` : ''}`
+  );
+}
+
 function check(condition, message) {
   if (condition) {
     console.log(`  ok   ${message}`);
@@ -194,6 +235,10 @@ try {
     TEST_MODE_TOOLS.every((n) => gatedNames.includes(n)),
     'every diagnostic tool appears once MCP_TEST_MODE is set'
   );
+
+  // Last, because it needs the gated count to check itself against.
+  console.log('\nsource:');
+  await checkToolSignatures(gated.tools.length);
 } catch (error) {
   console.error('\nMCP server smoke test could not complete:');
   console.error(error instanceof Error ? error.stack : error);
