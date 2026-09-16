@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -38,6 +38,56 @@ export function weightFormSeed(
 }
 
 /**
+ * The form's field state, and the rule that governs seeding it.
+ *
+ * Extracted from the screen so it can be exercised with `renderHook` — mounting the screen
+ * drags in `useWeight` and a QueryClient, whose leftover notifyManager batch timer hangs the
+ * jest run (the same reasoning as `GoalFormScreen.useGoalFormState`).
+ *
+ * THE RULE: seed once, as soon as there is something to seed from, and never over the user.
+ *
+ * `useState`'s initialiser runs at mount, when the weight query may not have resolved — the
+ * same cold-start hole `useGoalFormState` exists for — so the seed has to be an effect. But
+ * an effect that only asks "have I seeded yet" loses a race it will actually lose: open the
+ * form from the quick tile on a cold start, type 81.5, and the query resolves a moment later
+ * and replaces it with yesterday's reading, which is then what Save posts. A wrong weight
+ * written to the log is data corruption, not a display glitch.
+ *
+ * `edited` closes that: the moment the user touches either field, their value is the one
+ * that stands, whenever the query gets back. Refs rather than state because neither is
+ * rendered and neither should schedule a render.
+ */
+export function useWeightFormState(
+  entries: readonly { date: string; weight: number; notes?: string }[],
+  today: string
+) {
+  const [weight, setWeightState] = useState('');
+  const [notes, setNotesState] = useState('');
+  const seeded = useRef(false);
+  const edited = useRef(false);
+
+  useEffect(() => {
+    if (seeded.current || edited.current || entries.length === 0) return;
+    seeded.current = true;
+    const seed = weightFormSeed(entries, today);
+    setWeightState(seed.weight);
+    setNotesState(seed.notes);
+  }, [entries, today]);
+
+  const setWeight = useCallback((value: string) => {
+    edited.current = true;
+    setWeightState(value);
+  }, []);
+
+  const setNotes = useCallback((value: string) => {
+    edited.current = true;
+    setNotesState(value);
+  }, []);
+
+  return { weight, notes, setWeight, setNotes };
+}
+
+/**
  * Log today's weight.
  *
  * A stack screen with `presentation: 'modal'`, matching how Expo already does forms
@@ -56,43 +106,8 @@ export function WeightFormScreen() {
   const { weightEntries, addWeight } = useWeight();
   const today = toLocalDateString(new Date());
 
-  const [weight, setWeight] = useState('');
-  const [notes, setNotes] = useState('');
+  const { weight, notes, setWeight, setNotes } = useWeightFormState(weightEntries, today);
   const [saving, setSaving] = useState(false);
-  const seeded = useRef(false);
-  const edited = useRef(false);
-
-  /**
-   * Seeds once, as soon as there is something to seed from — and never over the user.
-   *
-   * `useState`'s initialiser runs at mount, when the weight query may not have resolved:
-   * the same cold-start hole `GoalFormScreen.useGoalFormState` exists for. So the seed has
-   * to be an effect. But an effect that only checks "have I seeded yet" loses a race it will
-   * actually lose — open the form from the quick tile on a cold start, type 81.5, and the
-   * query resolves a moment later and replaces it with yesterday's reading, which is then
-   * what Save posts.
-   *
-   * `edited` is what closes that: the moment the user touches either field their value is
-   * the one that stands, whenever the query gets back. Refs rather than state because
-   * neither is rendered and neither should schedule one.
-   */
-  useEffect(() => {
-    if (seeded.current || edited.current || weightEntries.length === 0) return;
-    seeded.current = true;
-    const seed = weightFormSeed(weightEntries, today);
-    setWeight(seed.weight);
-    setNotes(seed.notes);
-  }, [weightEntries, today]);
-
-  const onWeightChange = (value: string) => {
-    edited.current = true;
-    setWeight(value);
-  };
-
-  const onNotesChange = (value: string) => {
-    edited.current = true;
-    setNotes(value);
-  };
 
   const handleSave = async () => {
     const value = Number(weight);
@@ -122,7 +137,7 @@ export function WeightFormScreen() {
           mode="outlined"
           label="Weight"
           value={weight}
-          onChangeText={onWeightChange}
+          onChangeText={setWeight}
           keyboardType="decimal-pad"
           placeholder="e.g. 70.5"
           right={<TextInput.Affix text="kg" />}
@@ -132,7 +147,7 @@ export function WeightFormScreen() {
           mode="outlined"
           label="Notes (optional)"
           value={notes}
-          onChangeText={onNotesChange}
+          onChangeText={setNotes}
           placeholder="Morning weigh-in..."
           maxLength={500}
           style={styles.input}
