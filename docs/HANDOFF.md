@@ -156,11 +156,11 @@ unilaterally and needs a second opinion: scrubbing PII on deletion, versus not w
 into those tables in the first place.
 
 ### #299 · AI Coach FAB overlaps real controls
-`claude/ios-sweep-ai-fab-overlap` → `d0c7812`
 
-Code is written and pushed. **Deliberately queued behind #319** — it added a
-`frontend/playwright.local.config.ts` as a workaround for the port trap, which #319 makes
-obsolete. Rebase on #319 and delete that file rather than merging both.
+Was queued behind #319, because it carried a `frontend/playwright.local.config.ts` as a
+workaround for the port trap. #319 landed the real fix, so that file is gone and #299 is
+just the layout change: the FAB is fixed above the bottom nav and covered the primary action
+on Energy and Water, so its footprint is reserved in the scroll container instead.
 
 ---
 
