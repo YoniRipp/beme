@@ -80,7 +80,7 @@ export function MobileWorkoutCard({
     },
     meta: {
       color: colors.textMuted,
-      marginTop: 2,
+      marginTop: spacing.xxs,
     },
     // Both this badge and `exerciseRow` below are filled grounds sitting directly on the
     // card's `colors.surface`, which is 1.03:1 away from `surfaceMuted` in the default

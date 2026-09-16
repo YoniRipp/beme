@@ -79,11 +79,11 @@ export function MobileGoalCard({ goal, current = 0, percentage, onEdit, onDelete
     },
     meta: {
       color: colors.textMuted,
-      marginTop: 2,
+      marginTop: spacing.xxs,
     },
     percent: {
       color: colors.textMuted,
-      marginTop: 2,
+      marginTop: spacing.xxs,
     },
     // The unfilled remainder of the bar. `surfaceMuted` — what this was — maps to the web's
     // `--paper-2`, NOT to the `--muted` the web draws its tracks with, and against this

@@ -58,7 +58,7 @@ export function StreakCard() {
     best: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 2,
+      gap: spacing.xxs,
     },
     bestText: {
       color: colors.sleep,
