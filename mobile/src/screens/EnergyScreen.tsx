@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { Button, Card, Icon, IconButton, SegmentedButtons, Text } from 'react-native-paper';
+import { Button, Card as PaperCard, Icon, IconButton, SegmentedButtons, Text } from 'react-native-paper';
+import { Card } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { format, isWithinInterval } from 'date-fns';
 import { useEnergy } from '../hooks/useEnergy';
@@ -53,12 +54,7 @@ export function EnergyScreen() {
   const navigation = useNavigation<any>();
   const { colors } = useThemeContext();
   const styles = useThemedStyles((colors) => ({
-    summaryCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.xl,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
+    summaryCard: {},
     summaryContent: {
       gap: spacing.sm,
     },
@@ -117,6 +113,11 @@ export function EnergyScreen() {
     cardStack: {
       gap: spacing.sm,
     },
+    /**
+     * Stays on Paper's `Card`, not `ui/Card`: a dashed edge with no shadow is an affordance,
+     * the same thing the web draws for its empty slots and `AddAnotherCard`. Giving it the
+     * raised-card treatment would make an empty meal look like a logged one.
+     */
     emptyMealCard: {
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
@@ -128,12 +129,7 @@ export function EnergyScreen() {
       alignItems: 'center',
       paddingVertical: spacing.md,
     },
-    logCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
+    logCard: {},
     logRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -259,11 +255,11 @@ export function EnergyScreen() {
                       ))}
                     </View>
                   ) : (
-                    <Card mode="contained" style={styles.emptyMealCard} onPress={() => addFood(meal.key)}>
-                      <Card.Content style={styles.emptyMealContent}>
+                    <PaperCard mode="contained" style={styles.emptyMealCard} onPress={() => addFood(meal.key)}>
+                      <PaperCard.Content style={styles.emptyMealContent}>
                         <Text variant="bodyMedium" style={styles.muted}>No {meal.label.toLowerCase()} logged</Text>
-                      </Card.Content>
-                    </Card>
+                      </PaperCard.Content>
+                    </PaperCard>
                   )}
                 </View>
               ))}

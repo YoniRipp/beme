@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Icon, Text, TouchableRipple } from 'react-native-paper';
+import { Card } from '../ui';
 import { radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
@@ -34,10 +35,14 @@ export function QuickTile({ icon, label, pill, onPress }: QuickTileProps) {
   const styles = useThemedStyles((colors) => ({
     wrapper: {
       flex: 1,
-      borderRadius: radius.xl,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
+    },
+    /**
+     * The ripple is clipped here rather than on the card: `overflow: 'hidden'` clips a view's
+     * own shadow on iOS too, so putting it on the card would delete the elevation the web's
+     * tile has (`quick-tile.tsx` is `shadow-card`).
+     */
+    clip: {
+      borderRadius: radius.xxl,
       overflow: 'hidden',
     },
     ripple: {
@@ -68,30 +73,32 @@ export function QuickTile({ icon, label, pill, onPress }: QuickTileProps) {
   }));
 
   return (
-    <View style={styles.wrapper}>
-      <TouchableRipple
-        onPress={onPress}
-        accessibilityRole="button"
-        // The pill is part of what the control says: "Log sleep, 7.5h logged today".
-        accessibilityLabel={pill ? `${label}, ${pill} logged today` : label}
-        style={styles.ripple}
-      >
-        <>
-          <View style={styles.top}>
-            <Icon source={icon} size={22} color={colors.text} />
-            {pill != null && (
-              <View style={styles.pill}>
-                <Text variant="labelSmall" style={styles.pillText} numberOfLines={1}>
-                  {pill}
-                </Text>
-              </View>
-            )}
-          </View>
-          <Text variant="bodyMedium" style={styles.label} numberOfLines={1}>
-            {label}
-          </Text>
-        </>
-      </TouchableRipple>
-    </View>
+    <Card style={styles.wrapper}>
+      <View style={styles.clip}>
+        <TouchableRipple
+          onPress={onPress}
+          accessibilityRole="button"
+          // The pill is part of what the control says: "Log sleep, 7.5h logged today".
+          accessibilityLabel={pill ? `${label}, ${pill} logged today` : label}
+          style={styles.ripple}
+        >
+          <>
+            <View style={styles.top}>
+              <Icon source={icon} size={22} color={colors.text} />
+              {pill != null && (
+                <View style={styles.pill}>
+                  <Text variant="labelSmall" style={styles.pillText} numberOfLines={1}>
+                    {pill}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text variant="bodyMedium" style={styles.label} numberOfLines={1}>
+              {label}
+            </Text>
+          </>
+        </TouchableRipple>
+      </View>
+    </Card>
   );
 }

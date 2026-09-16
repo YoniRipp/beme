@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Card, Icon, IconButton, Text } from 'react-native-paper';
+import { Icon, IconButton, Text } from 'react-native-paper';
+import { Card } from '../ui';
 import { FoodEntry } from '../../types/energy';
 import { radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
@@ -16,10 +17,6 @@ export function MobileFoodCard({ entry, onEdit, onDelete }: MobileFoodCardProps)
   const { colors } = useThemeContext();
   const styles = useThemedStyles((colors) => ({
     card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
     content: {
       flexDirection: 'row',

@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Card, List, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
+import { Button, List, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
+import { Card } from '../components/ui';
 import {
   BALANCE_DISPLAY_COLORS,
   type BalanceDisplayColor,
@@ -10,7 +11,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../hooks/useSettings';
 import { MobileScreen } from '../components/shared/MobileScreen';
-import { radius, spacing } from '../theme';
+import { spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
 
@@ -95,12 +96,7 @@ export function SettingsScreen() {
 
 function SettingsCard({ title, children }: { title: SettingsSectionTitle; children: React.ReactNode }) {
   const styles = useThemedStyles((colors) => ({
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
+    card: {},
     sectionTitle: {
       color: colors.text,
       fontWeight: '800',
