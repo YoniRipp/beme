@@ -9,6 +9,7 @@ import { WorkoutFormScreen } from '../screens/WorkoutFormScreen';
 import { FoodEntryFormScreen } from '../screens/FoodEntryFormScreen';
 import { SleepFormScreen } from '../screens/SleepFormScreen';
 import { GoalFormScreen } from '../screens/GoalFormScreen';
+import { WeightFormScreen } from '../screens/WeightFormScreen';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { fonts } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
@@ -57,6 +58,11 @@ function AppStack() {
         name="GoalForm"
         component={GoalFormScreen}
         options={{ title: 'Goal', presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="WeightForm"
+        component={WeightFormScreen}
+        options={{ title: 'Log Weight', presentation: 'modal' }}
       />
     </Stack.Navigator>
   );
