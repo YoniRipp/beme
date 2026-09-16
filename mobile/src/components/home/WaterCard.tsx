@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Button, IconButton, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
+import { Button, IconButton } from '../ui';
 import Toast from 'react-native-toast-message';
 import { radius, spacing } from '../../theme';
 import { useThemedStyles } from '../../theme/useThemedStyles';

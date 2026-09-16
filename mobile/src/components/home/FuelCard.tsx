@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { ActivityIndicator, Button, Text } from 'react-native-paper';
+import { ActivityIndicator, Text } from 'react-native-paper';
+import { Button } from '../ui';
 import { targetFraction, type DailyTargets } from '@trackvibe/shared/domain';
 import { radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';

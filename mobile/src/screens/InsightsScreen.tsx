@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, ScrollView } from 'react-native';
-import { Card, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
+import { Card } from '../components/ui';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { useEnergy } from '../hooks/useEnergy';
 import { LoadingView } from '../components/shared/LoadingView';
@@ -64,7 +65,7 @@ export function InsightsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {workouts.length > 0 && (
-        <Card style={styles.card} mode="outlined">
+        <Card style={styles.card}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>Workout Frequency</Text>
             <Text variant="bodySmall" style={styles.subtitle}>Last 12 weeks</Text>
@@ -83,7 +84,7 @@ export function InsightsScreen() {
       )}
 
       {typeCounts.length > 0 && (
-        <Card style={styles.card} mode="outlined">
+        <Card style={styles.card}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>Workout Types</Text>
             <View style={styles.pieContainer}>
@@ -102,7 +103,7 @@ export function InsightsScreen() {
       )}
 
       {foodEntries.length > 0 && (
-        <Card style={styles.card} mode="outlined">
+        <Card style={styles.card}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>Calorie Trend</Text>
             <Text variant="bodySmall" style={styles.subtitle}>Last 30 days</Text>
@@ -122,7 +123,7 @@ export function InsightsScreen() {
         </Card>
       )}
 
-      <Card style={styles.card} mode="outlined">
+      <Card style={styles.card}>
         <Card.Content>
           <Text variant="titleMedium" style={styles.cardTitle}>Stats</Text>
           <View style={styles.statsGrid}>

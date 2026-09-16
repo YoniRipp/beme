@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Button, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
+import { Button } from '../ui';
 import Toast from 'react-native-toast-message';
 import { radius, spacing } from '../../theme';
 import { useThemedStyles } from '../../theme/useThemedStyles';

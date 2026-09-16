@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
-import { ActivityIndicator, Button, Card, Text } from 'react-native-paper';
+import { ActivityIndicator, Card, Text } from 'react-native-paper';
+import { Button } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { format, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import {

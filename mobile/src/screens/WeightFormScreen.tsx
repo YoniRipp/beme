@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, Text } from 'react-native-paper';
+import { TextInput, Text } from 'react-native-paper';
+import { Button } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';

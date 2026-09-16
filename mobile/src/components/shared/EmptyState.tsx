@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Text, Button, Icon } from 'react-native-paper';
+import { Text, Icon } from 'react-native-paper';
+import { Button } from '../ui';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
-import { Chip, Icon, IconButton, Text } from 'react-native-paper';
-import { Card } from '../ui';
+import { Chip, Icon, Text } from 'react-native-paper';
+import { Card, IconButton } from '../ui';
 import { formatDate, getWeightUnit } from '@trackvibe/shared/domain';
 import { Workout } from '../../types/workout';
 import { radius, spacing } from '../../theme';

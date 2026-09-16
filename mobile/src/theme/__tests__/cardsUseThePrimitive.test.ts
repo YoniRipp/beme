@@ -1,6 +1,6 @@
 import path from 'path';
 import ts from 'typescript';
-import { SRC_ROOT, collectSourceFiles, parseSourceFile } from '../paletteGuardSupport';
+import { SRC_ROOT, collectSourceFiles, parseSourceFile, collectImports } from '../paletteGuardSupport';
 
 /**
  * Nobody hand-rolls a card again.
@@ -152,5 +152,53 @@ describe('cards come from the primitive', () => {
     visit(source);
 
     expect(found).not.toContain(true);
+  });
+});
+
+/**
+ * The other half of the same rule: the primitives are only the one source of truth while
+ * nothing reaches around them.
+ *
+ * Paper's `Card`, `Button` and `IconButton` are the three this app wraps, and each is wrapped
+ * because Paper's own default is wrong here — `roundness` is multiplied by 3 and 5 for the
+ * first two (36px and 60px corners against the web's 22 and 12), and `IconButton` sizes its
+ * container as `size + 16`, giving a 34px target where the standard says 44. Importing them
+ * straight from Paper silently opts back into all three.
+ */
+const WRAPPED_BY_UI = new Set(['Card', 'Button', 'IconButton']);
+
+/** Written with a reason each, never a blanket skip. */
+const ALLOWED_PAPER_IMPORTS: Record<string, { names: Set<string>; why: string }> = {
+  [path.join('screens', 'EnergyScreen.tsx')]: {
+    names: new Set(['Card']),
+    why: 'imported as PaperCard for the dashed empty-meal slot, which is an affordance rather than a raised card',
+  },
+  [path.join('screens', 'HomeScreen.tsx')]: {
+    names: new Set(['Card']),
+    why: 'the "set your first goal" prompt is a primarySoft-tinted call to action, not a card surface — it sets its own fill and radius and would read as a logged item if raised',
+  },
+};
+
+describe('the primitives are the only source', () => {
+  it('has nobody importing a wrapped Paper component directly', () => {
+    const offenders: string[] = [];
+
+    for (const file of collectSourceFiles(SRC_ROOT, /\.tsx?$/)) {
+      const relative = path.relative(SRC_ROOT, file);
+      if (relative.startsWith(path.join('components', 'ui'))) continue;
+
+      const allowed = ALLOWED_PAPER_IMPORTS[relative]?.names ?? new Set<string>();
+
+      for (const imported of collectImports(parseSourceFile(file))) {
+        if (imported.moduleSpecifier !== 'react-native-paper') continue;
+        for (const name of imported.namedImports) {
+          if (WRAPPED_BY_UI.has(name) && !allowed.has(name)) {
+            offenders.push(`${relative}: ${name}`);
+          }
+        }
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 });

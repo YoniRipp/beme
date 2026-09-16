@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, SegmentedButtons, Text, IconButton, Divider, Card } from 'react-native-paper';
+import { TextInput, SegmentedButtons, Text, Divider } from 'react-native-paper';
+import { Card, Button, IconButton } from '../components/ui';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { WorkoutType, Exercise, WORKOUT_TYPES } from '../types/workout';
@@ -153,7 +154,7 @@ export function WorkoutFormScreen() {
         <Text variant="titleMedium" style={styles.label}>Exercises</Text>
 
         {exercises.map((ex, i) => (
-          <Card key={i} style={styles.exerciseCard} mode="outlined">
+          <Card key={i} style={styles.exerciseCard}>
             <Card.Content>
               <View style={styles.exerciseHeader}>
                 <Text variant="labelLarge">Exercise {i + 1}</Text>

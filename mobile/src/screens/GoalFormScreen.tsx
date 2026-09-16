@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, SegmentedButtons, RadioButton, Text } from 'react-native-paper';
+import { TextInput, SegmentedButtons, RadioButton, Text } from 'react-native-paper';
+import { Button } from '../components/ui';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { defaultPeriodForType } from '@trackvibe/shared/domain';
 import { useGoals } from '../hooks/useGoals';

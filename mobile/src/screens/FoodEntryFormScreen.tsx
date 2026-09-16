@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, FlatList } from 'react-native';
-import { TextInput, Button, Text, Card, Chip, SegmentedButtons } from 'react-native-paper';
+import { TextInput, Text, Chip, SegmentedButtons } from 'react-native-paper';
+import { Card, Button } from '../components/ui';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEnergy } from '../hooks/useEnergy';
 import { useDebounce } from '../hooks/useDebounce';

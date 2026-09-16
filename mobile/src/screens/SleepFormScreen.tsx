@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, Text } from 'react-native-paper';
+import { TextInput, Text } from 'react-native-paper';
+import { Button } from '../components/ui';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEnergy } from '../hooks/useEnergy';
 import { useThemedStyles } from '../theme/useThemedStyles';

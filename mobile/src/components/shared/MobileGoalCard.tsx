@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Icon, IconButton, ProgressBar, Text } from 'react-native-paper';
-import { Card } from '../ui';
+import { Icon, ProgressBar, Text } from 'react-native-paper';
+import { Card, IconButton } from '../ui';
 import { formatGoalValue, GOAL_UNIT_LABELS } from '@trackvibe/shared/domain';
 import { Goal } from '../../types/goals';
 import { radius, spacing } from '../../theme';
