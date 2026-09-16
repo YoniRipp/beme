@@ -37,6 +37,9 @@ const MEAL_TIMES: Record<MealType, string> = {
 
 const MEALS: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
+/** Every "for <meal>" in a line. Global, because the COUNT is what decides how a line parses. */
+const MEAL_MENTION = /\bfor\s+(?:breakfast|lunch|dinner|snack)\b/gi;
+
 /** Title case for display — the vocabulary the UI shows, never what the API receives. */
 export function mealLabel(meal: MealType): string {
   return meal.charAt(0).toUpperCase() + meal.slice(1);
@@ -133,11 +136,16 @@ function pushItems(into: ParsedFoodItem[], segments: string[], meal: MealType): 
 /**
  * Parse free text into food items, one line at a time.
  *
- * Three shapes are recognised, in order: `"Breakfast: 2 eggs, toast"`, `"2 eggs for
- * breakfast"`, and comma-separated segments where a `"... for <meal>"` sets the meal for that
- * segment **and every segment after it**. That carry-forward is deliberate and is why
- * `"chicken for lunch, rice"` puts both in lunch while `"rice, chicken for lunch"` leaves
- * rice in the `snack` default — behaviour preserved exactly from the web.
+ * Three shapes are recognised, in order:
+ *
+ * 1. `"Breakfast: 2 eggs, toast"` — a meal prefix governs the line.
+ * 2. `"2 eggs and toast for breakfast"` — **one** meal named, trailing, governs the line.
+ * 3. comma-separated segments, where a `"... for <meal>"` sets the meal for that segment
+ *    **and every segment after it**. The carry-forward is deliberate: `"chicken for lunch,
+ *    rice"` puts both in lunch.
+ *
+ * Shape 2 is guarded by how many meals the line names, which is what stops it swallowing a
+ * line that assigns several.
  */
 export function parseFoodItems(text: string): ParsedFoodItem[] {
   const items: ParsedFoodItem[] = [];
@@ -151,8 +159,22 @@ export function parseFoodItems(text: string): ParsedFoodItem[] {
       continue;
     }
 
-    // "2 eggs and toast for breakfast"
-    const forMatch = line.match(/^(.+?)\s+for\s+(breakfast|lunch|dinner|snack)$/i);
+    // "2 eggs and toast for breakfast" — one meal named, so it governs the whole line.
+    //
+    // Guarded by the count. This branch is `$`-anchored and `(.+?)` is lazy, so without the
+    // guard it backtracks until the line ends on a meal keyword and claims EVERYTHING before
+    // it — which made "2 eggs for breakfast, chicken for lunch" produce an item named "eggs
+    // for breakfast" filed under lunch, and made the per-segment branch below unreachable for
+    // the phrasing it was written for.
+    //
+    // The count is the distinction that matters: one mention means "all of this, for that
+    // meal" ("eggs, toast for breakfast"), and two or more mean the line assigns meals
+    // per segment. Only the second case changes behaviour here.
+    const mealMentions = line.match(MEAL_MENTION) ?? [];
+    const forMatch =
+      mealMentions.length === 1
+        ? line.match(/^(.+?)\s+for\s+(breakfast|lunch|dinner|snack)$/i)
+        : null;
     if (forMatch) {
       pushItems(items, splitItems(forMatch[1]), capturedMeal(forMatch[2]));
       continue;
