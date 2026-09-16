@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Card, Icon, Text } from 'react-native-paper';
+import { Icon, Text } from 'react-native-paper';
+import { Card } from '../ui';
 import { radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
@@ -33,10 +34,6 @@ export function MetricCard({ icon, label, value, meta, tone = 'primary' }: Metri
   const styles = useThemedStyles((colors) => ({
     card: {
       flex: 1,
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
     content: {
       gap: spacing.xs,

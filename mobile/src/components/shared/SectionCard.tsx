@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Card, Icon, Text, TouchableRipple } from 'react-native-paper';
+import { Icon, Text, TouchableRipple } from 'react-native-paper';
+import { Card } from '../ui';
 import { radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
@@ -21,13 +22,16 @@ interface SectionCardProps {
 }
 
 /**
- * The card shell every Home section sits in: the app's surface, border and radius, with an
- * optional tinted-icon header.
+ * The card shell every Home section sits in: `ui/Card`'s surface, border, radius and shadow,
+ * with an optional tinted-icon header.
  *
  * Home gained five cards at once, and without this each of them would have carried its own
  * copy of the same six style rules — which is how the surface/border/radius drift between
- * cards that `agent-os/standards/frontend/components.md` warns about starts. `MetricCard` is
- * the stat tile and stays as it is; this is its full-width sibling, not a replacement.
+ * cards that `agent-os/standards/frontend/components.md` warns about starts. It carried that
+ * copy itself at first, and picked `radius.xl` (18) where the other four cards picked
+ * `radius.lg` (14) — the drift arriving inside the very component written to prevent it.
+ * Both now come from `ui/Card`. `MetricCard` is the stat tile and stays as it is; this is its
+ * full-width sibling, not a replacement.
  *
  * `TouchableRipple` rather than a `Pressable` wrapper so the press state is Paper's, and
  * inside the card so the ripple is clipped to the rounded corners.
@@ -57,11 +61,13 @@ export function SectionCard({
   };
 
   const styles = useThemedStyles((colors) => ({
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.xl,
-      borderWidth: 1,
-      borderColor: colors.border,
+    /**
+     * The ripple is clipped here rather than on the card, because `overflow: 'hidden'` on a
+     * view also clips its own shadow on iOS — putting it on the card would silently delete
+     * the elevation `ui/Card` just added. Radius matches the card's so the corners agree.
+     */
+    ripple: {
+      borderRadius: radius.xxl,
       overflow: 'hidden',
     },
     content: {
@@ -109,15 +115,17 @@ export function SectionCard({
   );
 
   return (
-    <Card mode="contained" style={styles.card}>
+    <Card>
       {onPress ? (
-        <TouchableRipple
-          onPress={onPress}
-          accessibilityRole="button"
-          accessibilityLabel={accessibilityLabel ?? title}
-        >
-          {body}
-        </TouchableRipple>
+        <View style={styles.ripple}>
+          <TouchableRipple
+            onPress={onPress}
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel ?? title}
+          >
+            {body}
+          </TouchableRipple>
+        </View>
       ) : (
         body
       )}

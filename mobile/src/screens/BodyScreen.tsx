@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
+import { Card } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { format, isToday, isYesterday, subWeeks } from 'date-fns';
 import { useWorkouts } from '../hooks/useWorkouts';
@@ -169,10 +170,6 @@ export function BodyScreen() {
   const { colors } = useThemeContext();
   const styles = useThemedStyles((colors) => ({
     goalCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
       padding: spacing.lg,
       gap: spacing.lg,
     },
@@ -391,7 +388,7 @@ export function BodyScreen() {
 
   return (
     <MobileScreen title="Workouts" subtitle="Track strength, cardio, and weekly consistency.">
-      <View style={styles.goalCard}>
+      <Card style={styles.goalCard}>
         <View style={styles.goalTopRow}>
           <View>
             <Text variant="labelSmall" style={styles.eyebrow}>Goal · {weeklyGoal}/week</Text>
@@ -432,7 +429,7 @@ export function BodyScreen() {
             </View>
           ))}
         </View>
-      </View>
+      </Card>
 
       <SearchBar value={search} onChangeText={setSearch} placeholder="Search workouts..." />
 

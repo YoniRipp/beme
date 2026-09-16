@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Card, Icon, IconButton, ProgressBar, Text } from 'react-native-paper';
+import { Icon, IconButton, ProgressBar, Text } from 'react-native-paper';
+import { Card } from '../ui';
 import { formatGoalValue, GOAL_UNIT_LABELS } from '@trackvibe/shared/domain';
 import { Goal } from '../../types/goals';
 import { radius, spacing } from '../../theme';
@@ -44,10 +45,6 @@ export function MobileGoalCard({ goal, current = 0, percentage, onEdit, onDelete
 
   const styles = useThemedStyles((colors) => ({
     card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
     // The web tints the whole card's border with success once a goal is met
     // (`achieved && 'border-success/40'`); this is that, in Paper's vocabulary.

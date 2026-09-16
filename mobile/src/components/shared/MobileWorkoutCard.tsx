@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
-import { Card, Chip, Icon, IconButton, Text } from 'react-native-paper';
+import { Chip, Icon, IconButton, Text } from 'react-native-paper';
+import { Card } from '../ui';
 import { formatDate, getWeightUnit } from '@trackvibe/shared/domain';
 import { Workout } from '../../types/workout';
 import { radius, spacing } from '../../theme';
@@ -37,10 +38,6 @@ export function MobileWorkoutCard({
   const weightUnit = getWeightUnit(settings.units);
   const styles = useThemedStyles((colors) => ({
     card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
     completedCard: {
       opacity: 0.75,
