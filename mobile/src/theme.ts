@@ -1,4 +1,4 @@
-import { MD3DarkTheme, MD3LightTheme, configureFonts, type MD3Theme } from 'react-native-paper';
+import { configureFonts, type MD3Theme } from 'react-native-paper';
 import { lightColors, darkColors, colors, spacing, radii, withAlpha, type ColorRoles } from '@trackvibe/shared/tokens';
 
 /**
@@ -19,8 +19,8 @@ export const radius = radii;
 /**
  * Font family names as registered by `useFonts()` in `App.tsx` (task 5). These are
  * plain string literals, not values threaded in from that hook, which is safe even
- * though `paperTheme`/`paperDarkTheme` below are built at *module load* time — before
- * any font has necessarily finished loading. Unlike `colors` (which genuinely varies
+ * though `buildPaperTheme` bakes them into `fonts` at *module load* time — before any
+ * font has necessarily finished loading. Unlike `colors` (which genuinely varies
  * at runtime with the user's theme/accent settings, see the frozen-palette guard test
  * in this same directory), a font family name is just a fixed key that `expo-font`
  * registers globally; whether text painted with that key looks right depends only on
@@ -90,11 +90,11 @@ const appFonts = configureFonts({
 
 /**
  * Maps a `ColorRoles` palette onto a react-native-paper MD3 theme, layered over a base
- * (`MD3LightTheme`/`MD3DarkTheme`). Extracted (task 3) so the static
- * `paperTheme`/`paperDarkTheme` below and `theme/useAppTheme.ts`'s runtime-resolved
- * theme — same base palettes, but with `primary` swapped for the user's accent-colour
- * choice — share one mapping instead of two copies that can drift apart. `fonts` (task
- * 5) is the same map regardless of base, since family choice doesn't depend on
+ * (`MD3LightTheme`/`MD3DarkTheme`). Extracted (task 3) so that one mapping serves every
+ * caller instead of copies that drift apart. `theme/useAppTheme.ts` is now the only
+ * caller outside tests: it picks the base by scheme and hands over the palette with
+ * `primary`/`primaryForeground` swapped for the user's accent-colour choice. `fonts`
+ * (task 5) is the same map regardless of base, since family choice doesn't depend on
  * light/dark.
  *
  * EVERY MD3 ROLE IS SPELLED OUT HERE, AND THAT IS THE POINT. This docstring used to say
@@ -256,5 +256,17 @@ export function buildPaperTheme(base: MD3Theme, palette: ColorRoles): MD3Theme {
   };
 }
 
-export const paperTheme = buildPaperTheme(MD3LightTheme, colors);
-export const paperDarkTheme = buildPaperTheme(MD3DarkTheme, darkColors);
+/*
+ * There were two more exports here — `paperTheme` and `paperDarkTheme`, built at module
+ * load from the STATIC palettes — and they are gone rather than kept for symmetry.
+ *
+ * Nothing imported either one: `theme/ThemeContext.tsx` mounts `PaperProvider` with
+ * `useAppTheme`'s runtime-resolved theme, and that calls `buildPaperTheme` directly. So
+ * both were frozen to light mode and the default green accent with no way for a user's
+ * settings to reach them — the same defect class as the frozen `colors` alias, one layer
+ * up, and this change made them worse by widening what they bake from nine roles to
+ * thirty-three. `FROZEN_PALETTE_NAMES` in `theme/__tests__/noFrozenPaletteImports.test.ts`
+ * lists both names, so importing one is now a build failure; an export whose only
+ * possible use fails the build is not an export, it is a trap. The guard keeps the names
+ * so that re-adding either is also a build failure.
+ */

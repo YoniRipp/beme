@@ -273,7 +273,7 @@ describe('paperTheme contrast on the pairs Paper renders', () => {
       background: 'secondaryContainer',
       foreground: 'onSecondaryContainer',
       minRatio: 3,
-      why: 'WCAG AA for large text and UI components (1.4.11). This is the web\'s own `bg-primary/10 text-primary`, which measures 4.10:1 on the blue accent in light — raising the bar to 4.5 would fail the reference design rather than a regression in this mapping. Measured minimum: 4.10.',
+      why: 'WCAG AA for large text and UI components (1.4.11). This is the web\'s own `bg-primary/10 text-primary`, which measures 4.10:1 on the blue accent in light — raising the bar to 4.5 would fail the reference design rather than a regression in this mapping. Measured minimum 3.89, over `background` (SegmentedButtons on the form screens); 4.10 over `surface`. Both are asserted.',
     },
     {
       background: 'primaryContainer',
@@ -322,16 +322,26 @@ describe('paperTheme contrast on the pairs Paper renders', () => {
       await waitFor(() => expect(result.current.settings.settingsLoading).toBe(false));
 
       const paperColors = result.current.theme.paperTheme.colors;
-      // Both halves composite over `surface`, which is what a container role sits on in
-      // every Paper component that uses one (Chip, SegmentedButtons, tonal Button, all
-      // inside a Card or the page surface).
-      const ground = composite(paperColors[background], paperColors.surface);
-      const ink = composite(paperColors[foreground], ground);
 
-      // Each pair's threshold and the reason for it are in PAIRS above; the test name
-      // carries the pair, the accent and the scheme, which is what a failure needs to
-      // point at.
-      expect(contrastRatio(ground, ink)).toBeGreaterThanOrEqual(minRatio);
+      // A translucent role has to be composited before it can be measured, and WHAT IT
+      // IS COMPOSITED ON CHANGES THE ANSWER — so assert over both grounds the app
+      // actually puts these on rather than picking one and calling it typical. An
+      // earlier version of this comment claimed container roles always sit on `surface`
+      // "inside a Card or the page surface"; they do not. `PeriodSelector`'s chips and
+      // the SegmentedButtons on GoalFormScreen and FoodEntryFormScreen render straight
+      // onto `colors.background` (each screen's `container` style), and that ground is
+      // the tighter of the two: 3.89:1 on the blue accent in light, against 4.10:1 over
+      // `surface`. Measuring only the card case would have quoted a number no screen
+      // renders.
+      for (const behind of [paperColors.surface, paperColors.background]) {
+        const ground = composite(paperColors[background], behind);
+        const ink = composite(paperColors[foreground], ground);
+
+        // Each pair's threshold and the reason for it are in PAIRS above; the test name
+        // carries the pair, the accent and the scheme, which is what a failure needs to
+        // point at.
+        expect(contrastRatio(ground, ink)).toBeGreaterThanOrEqual(minRatio);
+      }
     }
   );
 
