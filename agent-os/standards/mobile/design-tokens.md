@@ -7,6 +7,64 @@ holds the two together — it parses the CSS and fails if they drift.
 
 Read `frontend/design-tokens` first. This is the mobile half, not a replacement.
 
+## `roundness` is not this app's radius
+
+Paper does not use the theme's `roundness` as a corner radius. It uses it as a **unit** and
+multiplies it by a different fixed factor per component, so `roundness: 12` renders:
+
+| component | factor | renders | the web's value |
+|---|---|---|---|
+| `Button` | 5x | 60 -> clamps to a pill | 12 (`rounded-md`) |
+| `SegmentedButtons` | 5x | 60 -> pill | 10 (`rounded-sm`) |
+| `Card` | 3x | 36 | 22 (`rounded-2xl`) |
+| `Dialog` | 7x | 84 -> clamps | 14 (`rounded-lg`) |
+| `Chip` | 2x | 24 | 18 (`rounded-xl`) |
+| `Searchbar` (bar mode) | 7x | 84 -> pill | 12 (`rounded-md`) |
+
+**No value of `roundness` fixes this**, so do not try to tune it. The web's six radii are
+12, 10, 22, 14, 18 and 12, which are not in the ratio 5 : 5 : 3 : 7 : 2 : 7 — its buttons
+would need `roundness = 2.4`, its cards `7.33`, its dialogs `2`. Changing the constant trades
+one wrong component for another.
+
+A style on the component wins over Paper's internal value, so that is where the web's number
+goes: `mobile/src/components/ui/` wraps `Card`, `Button` and `IconButton` and pins each.
+`roundness` stays at `radius.md` as the fallback for the Paper components nothing wraps.
+
+## The primitive layer
+
+`mobile/src/components/ui/` mirrors `frontend/src/components/ui/` by name, so
+`frontend/components`'s "reach for `ui/` first" reads across both clients. `components/shared/`
+keeps the composite and domain pieces, exactly as it does on the web.
+
+Two guards hold it, both in `mobile/src/theme/__tests__/`:
+
+- `cardsUseThePrimitive.test.ts` — no hand-rolled card surface (a `surface` fill, a hairline
+  border and a card-sized corner) outside `ui/`, and nothing outside `ui/` imports `Card`,
+  `Button` or `IconButton` straight from Paper. Importing them directly silently opts back
+  into all three wrong defaults, and an unstyled Paper `Card` inherits the 36px corner
+  without any local style for the first guard to see.
+- `spacingUsesTheScale.test.ts` — spacing and radii come from the scale. Spacing accepts any
+  Tailwind step, including the half-steps the web genuinely uses (`gap-1.5`, `mt-0.5`,
+  `py-2.5`, `p-3.5`); radii accept only the five real steps, because a corner that is merely
+  a multiple of 4 is drift. `rounded-full` and a circle (a radius at half a literal
+  `width`/`height` in the same object) are exempt structurally rather than by allowlist.
+
+Both take allowlist entries with a written reason per entry, never a blanket skip.
+
+## Shadows: mobile renders them now
+
+The shared `elevation` token had no importers in any package, so the Expo app rendered no
+shadows at all — flat rectangles with a 1px border, against the web's `bg-card shadow-card`.
+`shadowStyle(step, shadowColor)` in `packages/shared/src/tokens/spacing.ts` builds the five
+properties React Native needs; `ui/Card` uses the `sm` step, matching `card.tsx`.
+
+Two things about it that look like mistakes and are not. `shadowRadius` is `blur / 2`,
+because CSS blur describes the whole gaussian and RN's radius half of it. And the colour must
+be passed in from `colors.shadow` (`#3d3229` light, `#000000` dark) — it is not defaulted,
+because a shadow that quietly falls back to black is what that role was added to prevent.
+Android reads only the `elevation` integer and ignores the colour entirely, so the web's warm
+hue survives on iOS alone.
+
 ## Never inherit an MD3 role
 
 `buildPaperTheme` (`mobile/src/theme.ts`) maps **every** one of React Native Paper's MD3
