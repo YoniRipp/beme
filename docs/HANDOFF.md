@@ -149,8 +149,7 @@ it. That is the mistake this file opens by warning about.
 
 | PR | Scope |
 |---|---|
-| #312 · radii, elevation, primitives | Small. **#308 has merged, so this is unblocked.** Same file as #316. |
-| #316 · typography | Small. **#308 has merged, so this is unblocked.** Same file as #312. |
+| #316 · typography | Small. **#308 has merged, so this is unblocked.** Shares `mobile/src/theme.ts` with #312, which is implemented — rebase on it. |
 | #315 · first-run and profile | Scope shrank once #302 added a profile client. Conflicts with #337. |
 | #311 · voice, barcode, water, meal tools, copy day | Depends on #321's speech foundation, which is merged. |
 | #304 · food Journal screen | A whole screen. |
@@ -158,6 +157,27 @@ it. That is the mistake this file opens by warning about.
 | #310 · Insights AI | Expo already has the charts; it is missing the AI half. **1.5–2 engineer-weeks.** |
 | #320 · rest of App Store readiness | Privacy policy reachable in-app, nutrition labels, `PrivacyInfo.xcprivacy`, metadata and age rating, guideline 4.2. Account deletion split out as #337. |
 | #306 · tab set, destinations, screen names | **Last, and alone.** It renames every tab and screen title, so it conflicts with every other Expo PR here. |
+
+### #312 is implemented on `claude/dazzling-fermi-vf1cv3`
+
+All seven tasks, in four commits. The spec was accurate about the shape of the problem and
+wrong about three of its numbers, each corrected in the commit that found it:
+
+- It counted **four** hand-rolled card surfaces. There were **fourteen** — writing the guard
+  first is what found the other ten, including `SectionCard`, which #307 added *after* the
+  spec named the problem and which still grew its own copy at a third radius.
+- It called six spacing values "off-scale entirely". Five of them are on Tailwind's scale —
+  the web uses `gap-1.5` 31 times and `mt-0.5` 21 — and the shared token had simply
+  transcribed six of Tailwind's steps. Following the spec there would have changed the line
+  spacing inside every card to satisfy a test. Exactly one value (a `3`) was genuinely off.
+- It asked for Paper's `containerSize` prop for the 44px target. Paper 5.15 has no such prop;
+  the size comes from `style`.
+
+**Not verified, and it needs a simulator**: cards now render at 22px with a shadow where they
+were flat at 14 or 18, and every icon button's footprint grows 10px. `MobileWorkoutCard`'s
+action row is the tightest place that happens. This is a visual change with no visual
+confirmation — it is the same "every merged Expo change is visually unseen" item below,
+now with more to look at.
 
 ### #317 has no open PR — read this before assuming it is done
 
