@@ -84,4 +84,8 @@ Agent profiles in `.claude/agents/`: `coder`, `tester`, `reviewer`, `devops`, `p
 
 Settings and hooks: `.claude/settings.json`. A PostToolUse hook typechecks the package you edited after every Write/Edit; a PreToolUse hook blocks force-pushes.
 
-MCP server at `backend/mcp-server/` (configured in `.mcp.json`) exposes **45 tools** across 12 modules in `backend/mcp-server/tools/` — goals, workouts, food entries, food search, exercises, weight, water, check-ins, profile, streaks, an `ops_*` group, and a `test-mode` group — plus **4 resources**: `trackvibe://goals`, `trackvibe://profile`, `trackvibe://water-today`, `trackvibe://streaks`.
+MCP server at `backend/mcp-server/` (configured in `.mcp.json`) exposes **31 tools** by default across 12 modules in `backend/mcp-server/tools/` — goals, workouts, food entries, food search, exercises, weight, water, check-ins, profile, streaks — plus **4 resources**: `trackvibe://goals`, `trackvibe://profile`, `trackvibe://water-today`, `trackvibe://streaks`.
+
+The `ops_*` group and the `test-mode` group are withheld unless `MCP_OPS_MODE` / `MCP_TEST_MODE` are set, which brings the total to 45. Keep them gated — `test-mode` includes `call_raw`, `reset_test_data` and `run_tests`. `npm test` in that directory spawns the server and asserts both the counts and the gate.
+
+It ships separately and is not an npm workspace: it has its own `package-lock.json`, its own `npm ci`, and its own CI job.
