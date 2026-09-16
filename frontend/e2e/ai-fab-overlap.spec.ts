@@ -69,9 +69,6 @@ function aiCoach(page: Page) {
 
 type Box = { x: number; y: number; width: number; height: number };
 
-const intersects = (a: Box, b: Box) =>
-  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
-
 /** Interactive descendants of `<main>` whose box overlaps `box`, described for the failure. */
 async function overlappedControls(page: Page, box: Box, selector: string) {
   return page.evaluate(
