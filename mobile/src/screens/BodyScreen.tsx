@@ -209,13 +209,19 @@ export function BodyScreen() {
       color: colors.textMuted,
       fontWeight: '700',
     },
+    // An unlogged day is an EMPTY box — no tick, no label inside — so its own fill is the
+    // only thing that says a day is there. `surfaceMuted` (`--paper-2`) against the
+    // enclosing `colors.surface` card is 1.03:1 in dark, which erases the six unlogged
+    // days and leaves the logged ones floating. `muted` is 1.19:1, and is literally what
+    // the web paints this element with (`pages/Body.tsx`: `bg-muted text-muted-foreground`
+    // for `!hasWorkoutByDay[i]`).
     dayBox: {
       width: 32,
       height: 32,
       borderRadius: radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.surfaceMuted,
+      backgroundColor: colors.muted,
     },
     dayBoxLogged: {
       backgroundColor: colors.primary,

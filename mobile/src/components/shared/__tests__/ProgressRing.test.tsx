@@ -24,8 +24,10 @@ import { ProgressRing } from '../ProgressRing';
  * it is the specific role chosen for contrast rather than whichever muted-sounding one came
  * to hand.
  *
- * `border` is the interim; PR #308 adds a real `muted` role. When it lands, this test is the
- * thing to update — deliberately, with the contrast recomputed, not by accident.
+ * It is now `muted` — the role the web's five ring tracks actually use — added to
+ * `ColorRoles` for this, after a release on `border` as an interim. 1.19:1 dark / 1.17:1
+ * light against the card. Any future move off it should recompute the contrast rather than
+ * pick by name; that is how (2) happened.
  *
  * Note `await render(...)` and the raised timeout: same reasons as MobileGoalCard.test.tsx.
  */
@@ -75,12 +77,12 @@ describe('ProgressRing track colour', () => {
     const r = await renderRing();
 
     // DEFAULT_SETTINGS.theme is 'dark' (packages/shared/src/settings/types.ts).
-    expect(strokeHex(await r.findByTestId('progress-ring-track'))).toBe(darkColors.border);
+    expect(strokeHex(await r.findByTestId('progress-ring-track'))).toBe(darkColors.muted);
 
     fireEvent.press(await r.findByText('go-light'));
 
     // A hardcoded literal — the original bug — would still read the dark value here.
-    expect(strokeHex(await r.findByTestId('progress-ring-track'))).toBe(lightColors.border);
+    expect(strokeHex(await r.findByTestId('progress-ring-track'))).toBe(lightColors.muted);
   });
 
   it('is not surfaceMuted, which is invisible against the card in the default theme', async () => {
