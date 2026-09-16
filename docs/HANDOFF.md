@@ -149,7 +149,6 @@ it. That is the mistake this file opens by warning about.
 
 | PR | Scope |
 |---|---|
-| #316 · typography | Small. **#308 has merged, so this is unblocked.** Shares `mobile/src/theme.ts` with #312, which is implemented — rebase on it. |
 | #315 · first-run and profile | Scope shrank once #302 added a profile client. Conflicts with #337. |
 | #311 · voice, barcode, water, meal tools, copy day | Depends on #321's speech foundation, which is merged. |
 | #304 · food Journal screen | A whole screen. |
@@ -158,7 +157,30 @@ it. That is the mistake this file opens by warning about.
 | #320 · rest of App Store readiness | Privacy policy reachable in-app, nutrition labels, `PrivacyInfo.xcprivacy`, metadata and age rating, guideline 4.2. Account deletion split out as #337. |
 | #306 · tab set, destinations, screen names | **Last, and alone.** It renames every tab and screen title, so it conflicts with every other Expo PR here. |
 
-### #312 is implemented on `claude/dazzling-fermi-vf1cv3`
+### #312 and #316 are implemented on `claude/dazzling-fermi-vf1cv3`
+
+The design-system trio is complete: #308 merged, and radii/elevation/primitives (#312) and
+typography (#316) are on that branch. Both rewrote `mobile/src/theme.ts`, in different places,
+as their specs predicted.
+
+#316 in one line: the app named weights `600`/`700`/`800` in **52 of its 55** `fontWeight`
+declarations and loaded none of them — and on Expo a weight is part of the family name, not a
+number, so not one of those 52 could render. The spec counted 27; #307's five new cards nearly
+quadrupled the 700s in between. Three faces added; deliberately no 800, because the web's own
+`font-extrabold` has no file behind it either.
+
+Two things #316 found that its spec did not:
+
+- **The most-seen text in the app had no font at all.** The six tab labels and every screen
+  header go through React Navigation style props, which never pass through a `<Text>`
+  import — so `rawTextNamesItsFont` was exempt from them by construction. That guard exists
+  because "17 green tests and the sign-in screen still rendered in the system font"; it had
+  the same blind spot one layer over. It sees navigation styles now.
+- **`LoginScreen` and `SignupScreen` were called clean because they DO name fonts** — and
+  their sign-in button named `fonts.regular` beside `fontWeight: '600'`. A named font that is
+  the wrong face for its weight renders exactly as wrong as no font, with every guard green.
+
+### #312's own corrections
 
 All seven tasks, in four commits. The spec was accurate about the shape of the problem and
 wrong about three of its numbers, each corrected in the commit that found it:
