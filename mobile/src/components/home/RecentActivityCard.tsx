@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Icon, Text, TouchableRipple } from 'react-native-paper';
 import { isSameDay, format } from 'date-fns';
 import type { RecentActivityItem } from '@trackvibe/shared/domain';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 import { SectionCard } from '../shared/SectionCard';
@@ -53,6 +53,7 @@ export function RecentActivityCard({ items, onOpen }: RecentActivityCardProps) {
     },
     name: {
       color: colors.text,
+      fontFamily: fonts.semibold,
       fontWeight: '600',
     },
     detail: {

@@ -13,7 +13,7 @@ import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { MobileFoodCard } from '../components/shared/MobileFoodCard';
 import { MetricCard } from '../components/shared/MetricCard';
-import { radius, spacing } from '../theme';
+import { fonts, radius, spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import { getPeriodRange, PeriodKey } from '../lib/dateRanges';
@@ -65,6 +65,7 @@ export function EnergyScreen() {
     },
     total: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     macroRow: {
@@ -73,6 +74,7 @@ export function EnergyScreen() {
     },
     macro: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     metricRow: {
@@ -105,6 +107,7 @@ export function EnergyScreen() {
     },
     sectionTitle: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     muted: {
@@ -137,6 +140,7 @@ export function EnergyScreen() {
     },
     logTitle: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     actionRow: {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 
@@ -37,6 +37,7 @@ export function AddAnotherCard({ onPress, icon = 'plus', label }: AddAnotherCard
     },
     label: {
       color: colors.textMuted,
+      fontFamily: fonts.semibold,
       fontWeight: '600',
     },
   }));

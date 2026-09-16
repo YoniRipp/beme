@@ -33,7 +33,7 @@ import { WaterCard } from '../components/home/WaterCard';
 import { WeightCard } from '../components/home/WeightCard';
 import { CycleCard } from '../components/home/CycleCard';
 import { RecentActivityCard } from '../components/home/RecentActivityCard';
-import { radius, spacing } from '../theme';
+import { fonts, radius, spacing } from '../theme';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import { getPeriodRange, toLocalDateString } from '../lib/dateRanges';
 
@@ -171,6 +171,7 @@ export function HomeScreen() {
       color: colors.textMuted,
       textTransform: 'uppercase',
       letterSpacing: 1,
+      fontFamily: fonts.bold,
       fontWeight: '700',
       marginBottom: -spacing.sm,
     },
@@ -189,6 +190,7 @@ export function HomeScreen() {
     },
     promptTitle: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     promptText: {

@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
 import { Card } from '../ui';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 
@@ -48,6 +48,7 @@ export function MetricCard({ icon, label, value, meta, tone = 'primary' }: Metri
     },
     value: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     label: {

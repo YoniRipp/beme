@@ -14,7 +14,7 @@ import {
   type PortionUnit,
 } from '@trackvibe/shared/domain';
 import Toast from 'react-native-toast-message';
-import { spacing } from '../theme';
+import { fonts, spacing } from '../theme';
 import { useThemedStyles } from '../theme/useThemedStyles';
 
 const DEFAULT_REFERENCE_GRAMS = 100;
@@ -87,7 +87,7 @@ export function FoodEntryFormScreen() {
     content: { padding: spacing.lg, paddingBottom: spacing.xxl },
     searchSection: { marginBottom: spacing.sm },
     input: { marginBottom: spacing.md },
-    label: { marginTop: spacing.sm, marginBottom: spacing.sm, fontWeight: '600', color: colors.text },
+    label: { marginTop: spacing.sm, marginBottom: spacing.sm, fontFamily: fonts.semibold, fontWeight: '600', color: colors.text },
     segment: { marginBottom: spacing.md },
     resultsCard: { marginTop: -spacing.sm, marginBottom: spacing.md, backgroundColor: colors.surface },
     resultItem: { paddingHorizontal: spacing.lg, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },

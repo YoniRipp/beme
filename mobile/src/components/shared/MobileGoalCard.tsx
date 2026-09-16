@@ -4,7 +4,7 @@ import { Icon, ProgressBar, Text } from 'react-native-paper';
 import { Card, IconButton } from '../ui';
 import { formatGoalValue, GOAL_UNIT_LABELS } from '@trackvibe/shared/domain';
 import { Goal } from '../../types/goals';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 
@@ -74,6 +74,7 @@ export function MobileGoalCard({ goal, current = 0, percentage, onEdit, onDelete
     },
     title: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
       textTransform: 'capitalize',
     },

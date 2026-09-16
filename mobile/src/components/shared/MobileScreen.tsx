@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, View, type ViewStyle } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { spacing } from '../../theme';
+import { fonts, spacing } from '../../theme';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 
 interface MobileScreenProps {
@@ -37,10 +37,12 @@ export function MobileScreen({ kicker, title, subtitle, children, scroll = true,
       color: colors.textMuted,
       textTransform: 'uppercase',
       letterSpacing: 1,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     title: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
       letterSpacing: -0.4,
     },

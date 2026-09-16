@@ -16,7 +16,7 @@ import { MobileScreen } from '../components/shared/MobileScreen';
 import { MobileWorkoutCard } from '../components/shared/MobileWorkoutCard';
 import { AddAnotherCard } from '../components/shared/AddAnotherCard';
 import { ProgressRing } from '../components/shared/ProgressRing';
-import { radius, spacing } from '../theme';
+import { fonts, radius, spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import Toast from 'react-native-toast-message';
@@ -183,15 +183,18 @@ export function BodyScreen() {
       color: colors.textMuted,
       letterSpacing: 1,
       textTransform: 'uppercase',
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     goalCount: {
       marginTop: spacing.xs,
+      fontFamily: fonts.bold,
       fontWeight: '800',
       color: colors.primary,
     },
     goalTarget: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     dayStrip: {
@@ -204,6 +207,7 @@ export function BodyScreen() {
     },
     dayLetter: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     // An unlogged day is an EMPTY box — no tick, no label inside — so its own fill is the
@@ -251,6 +255,7 @@ export function BodyScreen() {
     },
     filterLabel: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     filterLabelSelected: {
@@ -269,6 +274,7 @@ export function BodyScreen() {
     },
     dayGroupLabel: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '700',
       paddingLeft: spacing.xs,
     },
@@ -286,6 +292,7 @@ export function BodyScreen() {
     },
     showMoreLabel: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '700',
       letterSpacing: 0.6,
       textTransform: 'uppercase',

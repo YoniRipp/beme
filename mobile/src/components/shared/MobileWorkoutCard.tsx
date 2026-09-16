@@ -4,7 +4,7 @@ import { Chip, Icon, Text } from 'react-native-paper';
 import { Card, IconButton } from '../ui';
 import { formatDate, getWeightUnit } from '@trackvibe/shared/domain';
 import { Workout } from '../../types/workout';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useSettings } from '../../hooks/useSettings';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
@@ -72,6 +72,7 @@ export function MobileWorkoutCard({
     },
     title: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     titleCompleted: {
@@ -110,6 +111,7 @@ export function MobileWorkoutCard({
     exerciseName: {
       flex: 1,
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     exerciseMeta: {
@@ -117,6 +119,7 @@ export function MobileWorkoutCard({
     },
     more: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '700',
       paddingHorizontal: spacing.sm,
     },

@@ -9,6 +9,7 @@ import { toLocalDateString } from '../lib/dateRanges';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
+import { fonts } from '../theme';
 
 function newExercise(): Exercise {
   return { name: '', sets: 3, reps: 10, weight: undefined, notes: undefined };
@@ -40,7 +41,7 @@ export function WorkoutFormScreen() {
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, paddingBottom: 40 },
     input: { marginBottom: 12 },
-    label: { marginTop: 8, marginBottom: 8, fontWeight: '600' },
+    label: { marginTop: 8, marginBottom: 8, fontFamily: fonts.semibold, fontWeight: '600' },
     segment: { marginBottom: 12 },
     divider: { marginVertical: 16 },
     exerciseCard: { marginBottom: 12 },

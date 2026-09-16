@@ -1,5 +1,5 @@
 import { configureFonts, type MD3Theme } from 'react-native-paper';
-import { lightColors, darkColors, colors, spacing, radii, withAlpha, type ColorRoles } from '@trackvibe/shared/tokens';
+import { lightColors, darkColors, colors, spacing, radii, typeFaces, withAlpha, type ColorRoles } from '@trackvibe/shared/tokens';
 
 /**
  * Design tokens now live in `@trackvibe/shared/tokens` (task 11), transcribed from
@@ -40,10 +40,29 @@ export const radius = radii;
  * new user ever sees, so "silently" would have meant "always", for them.
  */
 export const fonts = {
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
-  display: 'Fraunces_500Medium',
+  regular: typeFaces.regular.expo,
+  medium: typeFaces.medium.expo,
+  semibold: typeFaces.semibold.expo,
+  bold: typeFaces.bold.expo,
+  display: typeFaces.display.expo,
+  displaySemibold: typeFaces.displaySemibold.expo,
 } as const;
+
+/**
+ * What a CSS weight becomes here.
+ *
+ * | web | face | note |
+ * |---|---|---|
+ * | `font-normal` (400) | `fonts.regular` | |
+ * | `font-medium` (500) | `fonts.medium` | |
+ * | `font-semibold` (600) | `fonts.semibold` | |
+ * | `font-bold` (700) | `fonts.bold` | |
+ * | `font-extrabold` (800) | `fonts.bold` | the web's own 800 is unbacked — see `App.tsx` |
+ *
+ * A numeric `fontWeight` may stay alongside `fontFamily` in a style: it is a no-op on iOS
+ * but Android's font matching can still use it, and it costs nothing. What it must not do is
+ * appear *alone* — that is the mistake this table exists to end.
+ */
 
 const INTER_REGULAR = fonts.regular;
 const INTER_MEDIUM = fonts.medium;
@@ -52,18 +71,50 @@ const FRAUNCES_DISPLAY = fonts.display;
 const regularType = { fontFamily: INTER_REGULAR, fontWeight: '400' as const };
 const mediumType = { fontFamily: INTER_MEDIUM, fontWeight: '500' as const };
 
-// The web overrides Fraunces's own default weight (700) down to 500 for `h1`/`h2`
-// (`frontend/src/index.css:210-221`; documented in
-// `packages/shared/src/tokens/typography.ts`). Paper's MD3 typescale has no direct
-// `h1`/`h2` — its closest equivalents are the `display*` variants and `titleLarge`,
-// which is why those four (and only those four) get Fraunces here; every other
-// variant is "body text" and stays on Inter.
+/**
+ * Fraunces 500, for the large-display end.
+ *
+ * `frontend/src/index.css` overrides Fraunces's own default weight (700) down to 500 for
+ * `h1`/`h2`, and this used to be handed to all three `display*` variants AND `titleLarge` on
+ * the strength of that rule alone. **Reasoning from the stylesheet was the mistake**: both
+ * components that actually render a title override the base rule, so the two headings a phone
+ * user sees on the web are neither of them Fraunces 500. See `titleType` and
+ * `pageTitleType` below. `Base44Layout.tsx:264`'s desktop app bar IS Fraunces 500, which is
+ * why the `display*` variants keep it.
+ */
 const displayType = { fontFamily: FRAUNCES_DISPLAY, fontWeight: '500' as const };
+
+/**
+ * Fraunces 600, for `titleLarge` — the mobile app bar title.
+ *
+ * `Base44Layout.tsx:228` renders it `font-display text-lg font-semibold tracking-tight`:
+ * Fraunces **600**, not 500. This is the title on every screen, so it is the one worth a
+ * bundled face of its own.
+ */
+const titleType = { fontFamily: fonts.displaySemibold, fontWeight: '600' as const };
+
+/**
+ * Inter 700 at 28px, for `headlineMedium` — the page title.
+ *
+ * `ui/page.tsx`'s `PageHeader` `<h1>` is `font-sans text-[28px] font-extrabold`, so the
+ * page title on the web is **Inter, not Fraunces at all** — the base `h1 { font-serif }` rule
+ * is overridden right there. Paper's `headlineMedium` is already 28px, which is exactly
+ * `PageHeader`'s bracket value.
+ *
+ * 700 rather than 800 because the web's `font-extrabold` has no 800 file behind it either
+ * (see `App.tsx`); matching a synthesised weight with a real one would overshoot.
+ */
+const pageTitleType = { fontFamily: fonts.bold, fontWeight: '700' as const };
 
 /**
  * Paper's default MD3 typescale re-pointed at the app's two type families, keeping
  * every variant's own size/line-height/letter-spacing untouched — only `fontFamily`/
- * `fontWeight` move. `titleMedium`/`titleSmall`/`labelLarge`/`labelMedium`/`labelSmall`
+ * `fontWeight` move.
+ *
+ * The mapping follows **what the web's components render**, not what its base stylesheet
+ * says. Those disagree: `index.css` gives `h1`/`h2` Fraunces 500, and both title components
+ * override it. Getting that backwards is how `titleLarge` and `headlineMedium` ended up on
+ * faces no web surface uses. `titleMedium`/`titleSmall`/`labelLarge`/`labelMedium`/`labelSmall`
  * default to medium weight in Paper's own typescale, so they get Inter's medium cut
  * rather than flattening to regular; `headlineLarge`/`Medium`/`Small` default to
  * regular alongside `bodyLarge`/`Medium`/`Small`, so those five get Inter regular.
@@ -73,9 +124,9 @@ const appFonts = configureFonts({
     displayLarge: displayType,
     displayMedium: displayType,
     displaySmall: displayType,
-    titleLarge: displayType,
+    titleLarge: titleType,
     headlineLarge: regularType,
-    headlineMedium: regularType,
+    headlineMedium: pageTitleType,
     headlineSmall: regularType,
     titleMedium: mediumType,
     titleSmall: mediumType,

@@ -24,7 +24,7 @@ frontend:
   data-fetching:
     description: TanStack Query keys, staleTime, mappers, setQueryData mutations
   design-tokens:
-    description: Color/typography tokens, shadow and radius scale, no hardcoded colors
+    description: Color/typography tokens, the weight-to-face table (on Expo a weight is a family name), shadow and radius scale, no hardcoded colors
   mobile-ui:
     description: Mobile-first layout, spacing scale, safe areas, bottom nav, touch targets — applies to the PWA and the Expo client alike
 
