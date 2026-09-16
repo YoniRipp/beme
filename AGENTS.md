@@ -25,7 +25,7 @@ The Capacitor shell inside `frontend/` is **not** the native path any more. No C
 
 Detailed conventions live in `agent-os/standards/` and are injected on demand rather than loaded on every turn. **Read the ones relevant to your task before writing code** — or run `/agent-os:inject-standards`.
 
-Standards folders are `backend/`, `frontend/`, and `global/`. Put new ones in those.
+Standards folders are `backend/`, `frontend/`, `mobile/`, and `global/`. Put new ones in those.
 
 | Standard | Read it when |
 |---|---|
@@ -41,6 +41,7 @@ Standards folders are `backend/`, `frontend/`, and `global/`. Put new ones in th
 | `frontend/components` | Creating or restructuring components |
 | `frontend/design-tokens` | Any color, shadow, or radius |
 | `frontend/mobile-ui` | Any screen layout or card |
+| `mobile/design-tokens` | Touching `buildPaperTheme` or any colour on the Expo client |
 | `global/domain-conventions` | Dates, units, nutrition, meal types |
 | `global/testing` | Writing or running tests |
 | `global/critical-rules` | Large UI changes |

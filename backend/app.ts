@@ -90,8 +90,41 @@ export async function createApp() {
   app.use(requestIdMiddleware);
   app.use(metricsMiddleware);
 
-  // Health (not rate-limited)
-  app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
+  // Health (not rate-limited).
+  //
+  // With E2E_IDENTITY set the payload also carries `checkout`: the directory this process was
+  // started in. Nothing in the product reads it. It exists because the repo is worked in many
+  // git worktrees at once and Playwright reuses whatever already listens on a port — without
+  // this, an E2E run could not tell its own API server from another worktree's and would
+  // report that tree's behaviour against your branch. See `frontend/e2e/support/servers.ts`.
+  //
+  // Only the Playwright `webServer` sets it. Gating on `!isProduction` instead would leak an
+  // absolute path — and with it the OS username — from every developer machine: `/health` is
+  // unauthenticated and dev CORS is `origin: true`, so any page you happen to visit could
+  // read it off localhost:3000. The production response is unchanged either way.
+  // `1`/`true` only: a bare truthiness test would read `E2E_IDENTITY=0` as "yes, disclose".
+  const e2eIdentity = ['1', 'true'].includes((process.env.E2E_IDENTITY ?? '').trim().toLowerCase());
+  const reportCheckout = !config.isProduction && e2eIdentity;
+  // Loopback callers asking for a loopback host, even then. The server binds 0.0.0.0, so
+  // while a test run is up anything on the same network could otherwise read an absolute
+  // path — and the OS username in it — off an unauthenticated, un-rate-limited endpoint.
+  // The Host check is the half that stops DNS rebinding, where the request does come from
+  // 127.0.0.1 because it is the developer's own browser making it. Same pair of checks as
+  // the Vite `/__e2e/identity` endpoint this is the counterpart to.
+  const LOOPBACK_ADDRS = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+  const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]', '::1'];
+  const isLocalCaller = (req: import('express').Request) =>
+    LOOPBACK_ADDRS.includes(req.socket.remoteAddress ?? '') &&
+    LOOPBACK_HOSTS.includes((req.headers.host ?? '').replace(/:\d+$/, ''));
+  app.get('/health', (req, res) =>
+    res
+      .status(200)
+      .json(
+        reportCheckout && isLocalCaller(req)
+          ? { status: 'ok', checkout: process.cwd() }
+          : { status: 'ok' }
+      )
+  );
 
   // Ready: 200 if DB (and Redis when configured) reachable, 503 otherwise (not rate-limited)
   app.get('/ready', async (req, res) => {

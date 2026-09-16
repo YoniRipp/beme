@@ -85,8 +85,14 @@ export function MobileWorkoutCard({
       color: colors.textMuted,
       marginTop: 2,
     },
+    // Both this badge and `exerciseRow` below are filled grounds sitting directly on the
+    // card's `colors.surface`, which is 1.03:1 away from `surfaceMuted` in the default
+    // dark theme — the badge loses its pill entirely and the exercise rows lose their
+    // banding, leaving bare text. `muted` is the role, and it is what the web paints both
+    // with: `bg-muted` on the badge and `bg-muted/70` on the row
+    // (`frontend/src/components/body/WorkoutCard.tsx`).
     chip: {
-      backgroundColor: colors.surfaceMuted,
+      backgroundColor: colors.muted,
     },
     chipText: {
       color: colors.textMuted,
@@ -100,7 +106,7 @@ export function MobileWorkoutCard({
       justifyContent: 'space-between',
       gap: spacing.md,
       borderRadius: radius.sm,
-      backgroundColor: colors.surfaceMuted,
+      backgroundColor: colors.muted,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
     },

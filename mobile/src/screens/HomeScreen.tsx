@@ -137,10 +137,15 @@ export function HomeScreen() {
     heroMeta: {
       color: colors.textMuted,
     },
+    // The unfilled remainder of the calorie bar, so `muted` and not `surfaceMuted` — the
+    // same track role `ProgressRing` and `MobileGoalCard` use, for the same reason.
+    // `heroCard` is `colors.surface`, and `surfaceMuted` (`--paper-2`) against it is
+    // 1.03:1 in dark, the default theme: the bar's channel disappears and the lime fill
+    // floats with nothing to read it against. `muted` (`--muted`) is 1.19:1.
     heroBar: {
       height: 10,
       borderRadius: radius.sm,
-      backgroundColor: colors.surfaceMuted,
+      backgroundColor: colors.muted,
       overflow: 'hidden',
     },
     heroFill: {
