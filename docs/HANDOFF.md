@@ -1,6 +1,6 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. Last updated the same day, with `main` at `e8e9979`.**
+**Written 2026-09-14. Last verified 2026-09-16 against `main` at `2b3a114`.**
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -47,6 +47,30 @@ Merged to `main` on 2026-09-14:
 | #338 | This file. |
 | #339 | The MCP server got a CI job. It ships separately, is not a workspace, and **nothing installed, built, linted or tested it** — so the Dependabot PRs #323 had just enabled were green on checks that never touched the package. |
 
+Merged to `main` on 2026-09-16 — **this is the batch the previous version of this file still
+listed as in flight**:
+
+| PR | What landed |
+|---|---|
+| #340 | Handoff updated to where the four PRs had actually got. |
+| #341 | MCP tool schemas unwrapped, so the SDK could be upgraded at all. |
+| #325, #324, #326 | `backend/mcp-server`: `@modelcontextprotocol/sdk`, zod 3 → 4.6.2, dotenv 16 → 17.4.2. Unblocked by #341. |
+| #308 | MD3 colour roles. `buildPaperTheme` mapped 9 of Paper's 33 keys; the other 24 stayed Material purple. `everyMd3RoleIsMapped.test.ts` now fails if a role is added and left unmapped. |
+| #317 | Settings parity — **spec only, 4 files, no application code.** See the warning under Not started. |
+| #319 | Playwright no longer adopts whichever worktree owns :5173. Also added `tsc --noEmit -p tsconfig.e2e.json` to the frontend lint script, which immediately found a dead helper. |
+| #299 | AI Coach FAB no longer sits on top of real controls; its footprint is reserved in the scroll container. Dropped `frontend/playwright.local.config.ts`, the workaround #319 made unnecessary. |
+| #307 | Home parity — the five missing cards (streaks, water, weight progress, cycle, recent activity), `health.ts`, the `useWater`/`useWeight`/`useCycle`/`useStreaks` hooks, a weight form screen, and the shared `activity`/`weight` domain modules. |
+
+### Carried out of #307 and not yet filed anywhere else
+
+`frontend/src/hooks/useWeight.ts:16` calls `weightApi.list()` with **no arguments**, and
+`weightApi.list(startDate?, endDate?)` (`frontend/src/core/api/health.ts:36-42`) only sends a
+window when given one — so the web reads a user's entire weight history to draw seven bars.
+**Critical rule 6.** The endpoint already accepts the window; this is a one-line call-site
+fix plus whatever the chart needs. Expo's client passes a window from day one either way.
+There is no GitHub issue for it — the repo has **zero** open issues — so this paragraph is
+the only record.
+
 ### About #323, because it changed the PR list
 
 npm workspaces keeps one lockfile, at the repo root. Dependabot was aimed at `backend/`,
@@ -59,76 +83,19 @@ Aimed at the root it works: the replacement PRs are green. But the count went **
 because the root entry also sees the root's own devDependencies and every workspace at
 once. If that is too much noise, group minor and patch bumps into one weekly PR.
 
-`#334` (zod 3 → 4) is correctly red — a real breaking change, not the old lockfile problem.
+`#334` (root zod 3 → 4.6.4) is still open and still correctly red — a real breaking change,
+not the old lockfile problem. Note that the *mcp-server's* own zod 4 bump (#324) landed
+separately on 2026-09-16 once #341 unwrapped the tool schemas; the two are different
+packages and the root one has not been retried since.
 
 ---
 
-## In flight — five PRs with code, none merged
-
-All five are pushed. Commit hashes are the state at handoff.
-
-### #319 · Playwright tests whichever worktree owns :5173
-`claude/playwright-tests-wrong-worktree` → `7183131`
-
-**Closest to done.** `reuseExistingServer` meant an E2E run silently tested whichever
-checkout already held port 5173 — green tests against someone else's code. Now
-`frontend/e2e/support/servers.ts` starts the pair on ports it picks itself and
-`global-setup.ts` asserts the app under test is this checkout.
-
-Implementation and two review rounds are in; round 2 kept the E2E types out of the deploy
-build and stopped the checkout path leaking. It was partway into round 3 when it stopped, and
-the guards had been verified by then.
-
-Remaining: finish round 3, and confirm the decoy-server proof is recorded — start a Vite
-server on 5173 from a different directory, run Playwright, confirm it does **not** adopt it.
-Without that proof the change is not demonstrated.
-
-### #308 · MD3 colour roles
-`claude/parity-md3-color-roles` → `5816ea5`
-
-`buildPaperTheme` mapped 9 of React Native Paper's 33 colour keys. The other 24 kept
-Material's default purple, visible on `onPrimary`, the `*Container` roles, `backdrop`,
-`outlineVariant` and `elevation.level1`–`level5`. `everyMd3RoleIsMapped.test.ts` now fails if
-a role is added and left unmapped.
-
-Two review rounds landed and both found real bugs. Round 1: `inversePrimary` was invisible
-and two tracks were missed by the sweep. Round 2: finished the muted sweep, guarded the
-frozen Paper themes, and made the contrast helper refuse input it cannot parse instead of
-scoring it `NaN` — a helper that returns `NaN` makes every contrast assertion pass silently.
-It was starting round 3 when it stopped. Remaining: finish the loop.
-
-> **Trap, hit twice by two different agents.** `surfaceMuted` against `colors.surface`
-> (`#191715` dark) is **1.03:1** — invisible, so a progress ring reads as complete at every
-> value. The web uses `--muted` at all five ring call sites, and `--muted` is not `--paper-2`
-> (which is what `surfaceMuted` maps to). `colors.border` is 1.27:1. Compute the ratio; do
-> not trust the name.
-
-### #307 · Home parity — the missing half of the dashboard
-`claude/parity-home-surface` → `dc2519c`
-
-Expo's Home renders about half of the web's. Five whole cards are missing — streaks, water,
-weight progress, cycle, recent activity — because `mobile/src/core/api/` has no `health.ts`
-and `mobile/src/hooks/` has five hooks against the web's forty-plus. **Every backend endpoint
-already exists and is mounted.** This is a client gap, not a product gap; the backend should
-not need to change.
-
-What is pushed: `useWater`, `useWeight`, `useCycle`, `useStreaks`, `QuickTile`,
-`SectionCard`, a weight form screen, the shared `activity`/`weight` domain modules, and the
-five cards wired into Home.
-
-**Least finished of the four.** It reached review round 3 but the final commit is
-mid-round and unreviewed. One thing it did along the way is worth keeping: it went back and
-made its two weakest new tests actually catch their bugs, and separately rejected a proposed
-"fix" on the grounds that the mutant was a pure short-circuit and semantically identical —
-the tests were right to pass. Both are the behaviour you want; don't undo either.
-
-Two questions the spec deliberately leaves open, so do not resolve them silently: the
-greeting (Expo has a time-of-day greeting and the full name; the web uses first name only)
-and the double heading (the tab navigator paints "TrackVibe" and `MobileScreen` paints a
-second title underneath).
+## In flight — one PR with code
 
 ### #337 · Self-service account deletion — the App Store blocker
-`claude/appstore-account-deletion` → `862455d`
+`claude/appstore-account-deletion` → `491baf0` (the `862455d` in the previous version of this
+file is stale). 28 files, all application code, no spec docs. **Two commits behind `main`
+and it merges clean** — verified with `git merge-tree`, zero conflicts.
 
 App Store Guideline 5.1.1(v): an app that creates accounts must let users delete them
 in-app. The only delete route is admin-only and explicitly refuses self-deletion.
@@ -151,28 +118,30 @@ Two review rounds have run and both paid for themselves. Round 1 fixed nine find
 rejected one with reasoning. **Round 2 found a SQL bug that broke deletion outright**, plus
 four more, and rejected one. It was starting round 3 when it stopped.
 
+**GitHub reports no commit statuses at all on `491baf0`** — `total_count: 0`. Do not read
+that as green. Establish what CI actually says before trusting the branch.
+
 **Still do not merge without reading it.** It deletes user data, and one decision was made
 unilaterally and needs a second opinion: scrubbing PII on deletion, versus not writing PII
 into those tables in the first place.
 
-### #299 · AI Coach FAB overlaps real controls
-
-Was queued behind #319, because it carried a `frontend/playwright.local.config.ts` as a
-workaround for the port trap. #319 landed the real fix, so that file is gone and #299 is
-just the layout change: the FAB is fixed above the bottom nav and covered the primary action
-on Energy and Water, so its footprint is reserved in the scroll container instead.
+It touches `mobile/src/screens/SettingsScreen.tsx`, which is why #317's implementation and
+#315 have to follow it.
 
 ---
 
 ## Not started
 
-Ordered by how much they unblock, not by number.
+Every PR in this table is **spec only** — verified by diffing each PR head against its merge
+base: zero files outside `agent-os/specs/` and `docs/`. None of them contains application
+code. They are also all **56–58 commits behind `main`**, and four of the PRs they were
+written against have merged since, so re-read each spec against the code before building on
+it. That is the mistake this file opens by warning about.
 
 | PR | Scope |
 |---|---|
-| #312 · radii, elevation, primitives | Small. **Must follow #308** — same file. |
-| #316 · typography | Small. **Must follow #308** — same file. |
-| #317 · settings sections | Nine on the web, three on Expo. Conflicts with #337 on `SettingsScreen`. |
+| #312 · radii, elevation, primitives | Small. **#308 has merged, so this is unblocked.** Same file as #316. |
+| #316 · typography | Small. **#308 has merged, so this is unblocked.** Same file as #312. |
 | #315 · first-run and profile | Scope shrank once #302 added a profile client. Conflicts with #337. |
 | #311 · voice, barcode, water, meal tools, copy day | Depends on #321's speech foundation, which is merged. |
 | #304 · food Journal screen | A whole screen. |
@@ -181,39 +150,57 @@ Ordered by how much they unblock, not by number.
 | #320 · rest of App Store readiness | Privacy policy reachable in-app, nutrition labels, `PrivacyInfo.xcprivacy`, metadata and age rating, guideline 4.2. Account deletion split out as #337. |
 | #306 · tab set, destinations, screen names | **Last, and alone.** It renames every tab and screen title, so it conflicts with every other Expo PR here. |
 
+### #317 has no open PR — read this before assuming it is done
+
+PR #317 **merged on 2026-09-16 and shipped four documentation files and nothing else.** The
+settings-parity *implementation* — nine sections on the web against three on Expo, of which
+two do nothing — has never been written and has no branch. Anyone who looks up "#317" will
+find a merged PR and reasonably conclude the work shipped. It did not. The spec is at
+`agent-os/specs/2026-09-14-1204-parity-settings-sections/`.
+
 ### Sequencing that matters
 
 ```
-#319 ──► #299            (#299 drops its local-config workaround once #319 lands)
-#308 ──► #312, #316      (all three rewrite mobile/src/theme.ts)
-#337 ──► #317, #315      (all three touch SettingsScreen)
+#308 ──► #312, #316      (both rewrite mobile/src/theme.ts; #308 has landed, so both are open)
+#337 ──► #317-impl, #315 (all three touch SettingsScreen)
 everything ──► #306      (renames every screen; rebase it last)
 ```
+
+Resolved since the last version: `#319 ──► #299` (both merged) and `#308` as a blocker.
 
 ---
 
 ## Needs the owner — cannot be done from an agent session
 
+Re-checked against the code on 2026-09-16; every item below is still true.
+
 1. **`RESEND_API_KEY` is unset in Railway.** `sendMail` is a no-op, so **password reset
    emails are never sent**. #309 built the page; the link still does not arrive. This is
    broken in production right now.
-2. **The AI quota gate is bypassed in production.** With no payment provider configured,
-   `tryConsumeAiCall` returns `{ allowed: true, isPro: true }` for **everyone**. The free
-   tier is unenforced and Gemini spend is uncapped. Decide the gate.
+2. **The AI quota gate is bypassed in production.** `backend/src/services/aiQuota.ts:31-34`
+   returns `{ allowed: true, remaining: -1, isPro: true }` whenever `config.lemonSqueezyApiKey`
+   is unset — which it is, no payment provider is configured. The free tier is unenforced for
+   **everyone** and Gemini spend is uncapped. Decide the gate.
 3. **`eas login` and `eas init`**, then paste the printed `extra.eas.projectId` into
-   `mobile/app.config.js` by hand, and `eas env:create` for `EXPO_PUBLIC_API_URL`. Nothing
-   in the Expo backlog can produce a build until this exists.
+   `mobile/app.config.js` by hand, and `eas env:create` for `EXPO_PUBLIC_API_URL`. Still
+   absent — `app.config.js:87-88` only spreads `config.extra` so that a value written by
+   `eas init` survives; nothing has written one. Nothing in the Expo backlog can produce a
+   build until this exists.
 4. **Confirm `com.trackvibe.app` is unclaimed** on App Store Connect and the Play Console.
    That it is free was inferred from repo evidence; nobody queried Apple or Google.
-5. **`backend/.env.example`** needs a note about the native origin. `.env*` paths are
-   permission-blocked for agent sessions.
-6. **Every merged Expo change is visually unseen.** #302, #303, #305 and #321 are
-   test-verified only — the simulator was never free to look at them. Worth doing *after*
-   #307 and #308 land, since those rewrite Home and all 33 colour roles.
-7. **`backend/mcp-server` has 8 npm vulnerabilities, 5 of them high** (`qs` among others).
-   The `security-audit` job uses `--workspace`, which cannot reach a non-workspace package,
-   so it has never been audited. `npm audit fix` offers a non-major path, and #339's smoke
-   test now makes the result verifiable — but taking it is your call.
+5. **`backend/.env.example`** needs a note about the native origin. It documents
+   `CORS_ORIGIN` and `FRONTEND_ORIGIN` and says nothing about the Expo client. `.env*` paths
+   are permission-blocked for agent sessions.
+6. **Every merged Expo change is visually unseen — and this is now due.** #302, #303, #305
+   and #321 were test-verified only. The previous version of this file said to wait for #307
+   and #308 to land, since they rewrite Home and all 33 colour roles. **Both have landed.**
+   Nothing is blocking a look at the simulator now.
+7. **`backend/mcp-server` has never been audited.** The `security-audit` job in
+   `.github/workflows/ci.yml:176-181` runs a matrix of `[backend, frontend, mobile]` — the
+   MCP server is not in it, and it is not a workspace, so no other job reaches it either.
+   #341 and the three dependency bumps that followed will have moved the numbers; the 8
+   vulnerabilities / 5 high figure predates them and has not been re-measured. Re-run the
+   audit before deciding anything. #339's smoke test makes the result verifiable.
 
 Production is Railway project `distinguished-elegance`, service **BMe**. Present:
 `API_NINJAS_KEY`, `CORS_ORIGIN`, `DATABASE_URL`, `DB_SSL_REJECT_UNAUTHORIZED`,
