@@ -1,6 +1,7 @@
 export * from './activity';
 export * from './analytics';
 export * from './dates';
+export * from './foodText';
 export * from './goals';
 export * from './greeting';
 export * from './meals';
