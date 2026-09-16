@@ -13,5 +13,12 @@
   "compilerOptions": {
     "types": ["node"]
   },
+  /*
+   * The base config excludes `**‍/*.test.ts` because those are the app's unit tests, run by
+   * vitest. Playwright's default `testMatch` runs `*.test.ts` as well as `*.spec.ts`, so
+   * inheriting that exclude would let an `e2e/foo.test.ts` execute in the suite while this
+   * gate silently skipped it.
+   */
+  "exclude": [],
   "include": ["e2e", "playwright.config.ts"]
 }

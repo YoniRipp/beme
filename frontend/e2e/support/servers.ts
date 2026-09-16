@@ -53,7 +53,10 @@ const PORT_MAX = 32_767;
 const PORT_SPAN = PORT_MAX - PORT_MIN + 1;
 
 /**
- * Stable per checkout, so a rerun finds — and reuses — the server the last run started.
+ * Stable per checkout, so the ports a run uses are predictable and the same two every time.
+ * Not a reuse mechanism: Playwright stops the servers it started, so an ordinary rerun cold
+ * starts both. `reuseExistingServer` still earns its keep for `--ui`, which holds its servers
+ * open across runs in a session, and after a run that was killed before it could clean up.
  *
  * Two worktrees can still hash to one port: with ~30 checkouts on a machine that is a few
  * percent, and it only bites when both are running servers at the same moment. That case is
@@ -151,20 +154,6 @@ function real(p: string): string {
   }
 }
 
-/**
- * Is `served` this checkout, or somewhere inside it?
- *
- * The backend reports `process.cwd()`, which is `<checkout>/backend` when Playwright starts
- * it but the repo root for someone running `tsx watch backend/index.ts` from the top. Both
- * are this checkout, and the property being guarded is the checkout — not the cwd. The
- * separator test keeps `<checkout>-2` from passing as `<checkout>`.
- */
-function isInsideCheckout(served: string): boolean {
-  const root = real(CHECKOUT_ROOT);
-  const actual = real(served);
-  return actual === root || actual.startsWith(root + path.sep);
-}
-
 async function fetchJson(url: string): Promise<Record<string, unknown>> {
   const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
   if (!res.ok) throw new Error(`${url} responded ${res.status} ${res.statusText}`);
@@ -255,7 +244,7 @@ async function assertBackendIsOurs(): Promise<void> {
       ...mismatchLines(
         'backend',
         backendBaseURL,
-        CHECKOUT_ROOT,
+        BACKEND_ROOT,
         '(no checkout reported)',
         'E2E_BACKEND_PORT'
       ),
@@ -266,9 +255,12 @@ async function assertBackendIsOurs(): Promise<void> {
     ]);
     return;
   }
-  if (!isInsideCheckout(body.checkout)) {
+  // Exact, not a prefix of the checkout root. Worktrees live *inside* the main checkout
+  // (`<main>/.claude/worktrees/<x>`), so a prefix test run from the main checkout would
+  // accept every worktree's backend as its own — reopening the hole this file closes.
+  if (real(body.checkout) !== real(BACKEND_ROOT)) {
     report(
-      mismatchLines('backend', backendBaseURL, CHECKOUT_ROOT, body.checkout, 'E2E_BACKEND_PORT')
+      mismatchLines('backend', backendBaseURL, BACKEND_ROOT, body.checkout, 'E2E_BACKEND_PORT')
     );
   }
 }

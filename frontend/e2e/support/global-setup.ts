@@ -19,7 +19,9 @@ export default async function globalSetup(): Promise<void> {
   if (skipBackend) {
     console.warn(
       `[e2e] SKIP_BACKEND: the API at ${UNMANAGED_API_BASE_URL} is not started or identity-checked ` +
-        'by this run. Whoever owns that port answers the app, including another checkout.'
+        'by this run. Whoever owns that port answers the app, including another checkout.\n' +
+        `[e2e] It is also being called from ${frontendBaseURL}, not :5173. A backend whose ` +
+        'CORS_ORIGIN is pinned to the old port will reject every request the app makes.'
     );
   }
 

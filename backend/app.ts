@@ -102,9 +102,21 @@ export async function createApp() {
   // absolute path — and with it the OS username — from every developer machine: `/health` is
   // unauthenticated and dev CORS is `origin: true`, so any page you happen to visit could
   // read it off localhost:3000. The production response is unchanged either way.
-  const reportCheckout = !config.isProduction && !!process.env.E2E_IDENTITY;
+  // `1`/`true` only: a bare truthiness test would read `E2E_IDENTITY=0` as "yes, disclose".
+  const e2eIdentity = ['1', 'true'].includes((process.env.E2E_IDENTITY ?? '').trim().toLowerCase());
+  const reportCheckout = !config.isProduction && e2eIdentity;
+  // Loopback callers only, even then. The server binds 0.0.0.0, and while a test run is up
+  // anything on the same network could otherwise read an absolute path — and the OS
+  // username in it — straight off an unauthenticated, un-rate-limited endpoint.
+  const LOOPBACK = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
   app.get('/health', (req, res) =>
-    res.status(200).json(reportCheckout ? { status: 'ok', checkout: process.cwd() } : { status: 'ok' })
+    res
+      .status(200)
+      .json(
+        reportCheckout && LOOPBACK.includes(req.socket.remoteAddress ?? '')
+          ? { status: 'ok', checkout: process.cwd() }
+          : { status: 'ok' }
+      )
   );
 
   // Ready: 200 if DB (and Redis when configured) reachable, 503 otherwise (not rate-limited)
