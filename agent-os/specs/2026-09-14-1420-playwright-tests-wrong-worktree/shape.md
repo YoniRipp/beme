@@ -78,3 +78,41 @@ Note this interacts with `SKIP_BACKEND=1`: the backend `webServer` entry has the
 - [x] `npx playwright test` still works with no manual setup in a fresh clone
 - [x] The same protection covers the backend `webServer` entry on 3000
 - [x] `frontend/CLAUDE.md` says which port a run uses and how to override it
+
+## Proof
+
+Run against a live decoy: a `vite --host` from a *different* checkout
+(`/Users/yoniripp/Documents/BeMe/frontend`, the main one) holding 5173, and its API holding
+3000 — the original failure exactly, not a simulation of it.
+
+1. **The suite does not adopt it.** `npx playwright test` printed
+   `[e2e] app http://localhost:26523 · api http://localhost:30619` and ran 129 passed /
+   6 skipped. While it was running, `http://localhost:26523/__e2e/identity` answered with
+   *this* worktree's `frontend` path and `http://localhost:30619/health` with its `backend`
+   path. The decoy's pids on 5173 and 3000 were unchanged before and after — untouched, and
+   never consulted.
+2. **Forced onto the decoy, it refuses.** `E2E_FRONTEND_PORT=5173` aborts in `globalSetup`
+   with `could not read http://localhost:5173/__e2e/identity` and no test runs; the decoy's
+   Vite predates this guard and answers the SPA fallback instead of JSON, which is precisely
+   the case that used to pass silently. `E2E_BACKEND_PORT=3000` aborts with
+   `server is serving: (no checkout reported)`.
+3. **The disclosure is off by default.** A plain `PORT=… npx tsx index.ts` answers
+   `{"status":"ok"}`; only with `E2E_IDENTITY=1`, and only to a loopback caller, does
+   `/health` carry `checkout`.
+
+Three failures remain in `dashboard.spec.ts:110`, in all three browsers. They are **not**
+from this work and do not gate it — see the note below.
+
+## Follow-up found while proving this
+
+`dashboard.spec.ts:110` ("opens the next tab at the top") fails deterministically, and did so
+before this branch as well: the app source here is byte-identical to `main`, and the test
+also fails when pointed at the decoy. Its stub, `page.route('**/api/workouts**', …)`,
+intercepts only `http://<host>/src/core/api/workouts.ts` — Vite's module URL for
+`src/core/api/workouts.ts` — and never the API call. The app is handed JSON where it expects
+a module, never boots, renders blank, and `window.scrollY` stays 0. That is the same
+double-star-glob trap `dashboard.spec.ts`'s own header documents as the reason the suite was
+skipped for months; PR #322 un-skipped the suite but left this one test's glob. The comment
+above the test still says it is "skipped along with the rest of this describe", which is now
+stale. Nothing in CI runs Playwright, so it is not a red build — it is a test that asserts
+nothing and reports failure.
