@@ -21,7 +21,9 @@ Express + TypeScript API server with PostgreSQL (+pgvector) and optional Redis.
   `compaction-worker`)
 - `lambdas/` — AWS Lambda handlers for the SQS/API-Gateway deployment
 - `migrations/` — node-pg-migrate files; `prisma/` — schema only
-- `mcp-server/` — MCP server (45 tools, 4 resources)
+- `mcp-server/` — MCP server (31 tools by default, 45 with `MCP_OPS_MODE`/`MCP_TEST_MODE`,
+  4 resources). Ships separately, not an npm workspace: its own lockfile, its own `npm ci`,
+  its own CI job. `npm test` there spawns it and asserts the counts and the gate.
 
 ## src/
 - `controllers/` — route handlers (thin, delegate to services)
