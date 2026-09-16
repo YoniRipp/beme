@@ -64,10 +64,10 @@ export function register(server, api) {
   server.tool(
     'run_tests',
     'Run the backend test suite (vitest) and return pass/fail output. Optionally pass a file/name pattern to run a subset. Use this to verify a fix did not break anything.',
-    z.object({
+    {
       pattern: z.string().optional().describe('Optional vitest filter (file path or test name substring)'),
       timeoutMs: z.number().optional().describe('Max run time in ms (default 300000)'),
-    }),
+    },
     async ({ pattern, timeoutMs }) => {
       const cmd = pattern ? `npm test -- ${pattern}` : 'npm test';
       const result = await runCommand(cmd, timeoutMs ?? 300000);
@@ -78,7 +78,7 @@ export function register(server, api) {
   server.tool(
     'run_typecheck',
     'Run the TypeScript typecheck (tsc --noEmit) on the backend and return any type errors.',
-    z.object({}),
+    {},
     async () => {
       const result = await runCommand('npm run lint', 120000);
       return text({ passed: result.ok, ...result });
@@ -90,7 +90,7 @@ export function register(server, api) {
   server.tool(
     'reset_test_data',
     'Delete ALL of the test user\'s food entries, workouts, weight entries, goals, and daily check-ins. Gives a clean slate before a test run. Only affects the impersonated test user — never use against a real account.',
-    z.object({}),
+    {},
     async () => {
       const summary = {};
       for (const base of USER_RESOURCES) {
@@ -112,9 +112,9 @@ export function register(server, api) {
   server.tool(
     'seed_test_data',
     'Create a known set of fixture data for the test user (one food entry, one workout, one goal, one weight entry) so tests run against predictable state. Returns the created items and any failures.',
-    z.object({
+    {
       date: z.string().optional().describe('Date for the fixtures in YYYY-MM-DD (default: today)'),
-    }),
+    },
     async ({ date }) => {
       const d = date || today();
       const fixtures = [
@@ -137,9 +137,9 @@ export function register(server, api) {
   server.tool(
     'get_app_logs',
     "Read the backend application logs (level 'error' or 'action'). Requires the test user to be an admin. Use after a test to check for server-side errors that the HTTP response didn't reveal.",
-    z.object({
+    {
       level: z.enum(['error', 'action']).optional().describe("Log level to fetch (default 'error')"),
-    }),
+    },
     async ({ level }) => {
       const res = await api.raw('GET', `/api/admin/logs?level=${level || 'error'}`);
       return text(res);
@@ -149,7 +149,7 @@ export function register(server, api) {
   server.tool(
     'get_metrics',
     'Read the backend runtime metrics (per-endpoint request counts and latency, DB queries, error counts, cache, events). Requires the test user to be an admin. Useful for verifying behavior and spotting slow/failing endpoints.',
-    z.object({}),
+    {},
     async () => {
       const res = await api.raw('GET', '/api/admin/metrics');
       return text(res);
@@ -159,7 +159,7 @@ export function register(server, api) {
   server.tool(
     'get_admin_stats',
     'Read aggregated business stats (user counts, subscriptions, trainer metrics, weekly active users). Requires the test user to be an admin.',
-    z.object({}),
+    {},
     async () => {
       const res = await api.raw('GET', '/api/admin/stats');
       return text(res);
@@ -171,11 +171,11 @@ export function register(server, api) {
   server.tool(
     'call_raw',
     'Call any backend API endpoint directly and return the raw { status, ok, body } WITHOUT throwing on error. Use this to test error paths (e.g. that invalid input returns 400) or endpoints not yet wrapped as dedicated tools.',
-    z.object({
+    {
       method: z.enum(['GET', 'POST', 'PATCH', 'PUT', 'DELETE']).describe('HTTP method'),
       path: z.string().describe('API path starting with /api, e.g. /api/food-entries'),
       body: z.any().optional().describe('JSON request body for POST/PATCH/PUT'),
-    }),
+    },
     async ({ method, path: p, body }) => {
       const res = await api.raw(method, p, body);
       return text(res);
