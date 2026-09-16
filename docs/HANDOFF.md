@@ -224,6 +224,22 @@ What is genuinely left, and what it costs:
 - **Meal tools (bulk entry), copy day, recent foods, "look up with AI".** No native module, and
   every endpoint already exists. These are the clean remaining wins.
 
+### Two unbounded reads, fixed — and the audit that found the second
+
+`useWeight` and `useCycle` on the web both read a user's entire history on every Home render.
+Critical rule 6. Both are fixed on this branch, and the second was found by grepping for the
+first's shape once it was understood.
+
+Cycle was the worse of the two. Its endpoint takes a date window and offers **no pagination at
+all**, and `currentCycleDay` counted from the newest period start *in what was fetched* — so an
+account that logged once and stopped was told it was on "Day 214 of ~28" with a full progress
+ring. Its day arithmetic also divided milliseconds by 86,400,000 (off by one across a DST
+boundary) and parsed `YYYY-MM-DD` as UTC midnight.
+
+**The rest of the audit came back clean**: food entries and check-ins already go through a
+bounded `requestAllPages` on both clients, and goals, streaks and exercises are naturally
+small. Weight and cycle were the two real instances, so that thread is finished.
+
 ### The food parser had no tests, and one real bug
 
 Moving it turned up a defect nobody could have seen: `"2 eggs for breakfast, chicken for
@@ -292,6 +308,27 @@ Production is Railway project `distinguished-elegance`, service **BMe**. Present
 `API_NINJAS_KEY`, `CORS_ORIGIN`, `DATABASE_URL`, `DB_SSL_REJECT_UNAUTHORIZED`,
 `GEMINI_API_KEY`, `GEMINI_MODEL`, `GOOGLE_CLIENT_ID`, `JWT_*`, `NODE_ENV`, `RAILWAY_*`,
 `REDIS_URL`. Absent: `FRONTEND_ORIGIN`, `RESEND_API_KEY`, and any payment provider key.
+
+---
+
+## What is on `claude/dazzling-fermi-vf1cv3`
+
+Nine commits, all pushed, no PR opened. In order: the handoff refresh, the weight-read fix,
+#312 in four commits (primitives, adoption, the spacing guard, standards), #316 in one, the
+food-parser move and its bug fix, and the cycle fix.
+
+Two things to know before reviewing it:
+
+- **Nothing here has been seen running.** The card and typography work changes what every
+  screen looks like — 22px corners with shadows where there were flat 14s, six font faces
+  where two were loaded, a 10px-larger footprint on every icon button. It is all
+  test-verified and none of it is visually verified, which is owner item 6 below with more
+  to look at than before.
+- **Six new guards ship with it**, and each was verified to fail against a mutant that
+  restores the behaviour it forbids. That check is worth keeping up: one of them passed its
+  first mutant run for the wrong reason (the injection silently missed), and a timezone
+  assertion passed against the very implementation it was written to replace, because the
+  test runner uses UTC and UTC is where that bug hides.
 
 ---
 
