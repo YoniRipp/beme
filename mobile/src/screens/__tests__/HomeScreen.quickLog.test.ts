@@ -46,6 +46,26 @@ describe('buildQuickLogPills — sleep', () => {
   it('shows nothing for a zero-hour check-in', () => {
     expect(buildQuickLogPills(0, [], NOON).sleep).toBeUndefined();
   });
+
+  /**
+   * `sleepHours` is a free-form number the user types (`z.number().min(0).max(24)`), so
+   * 7.333 is a real value. The stat tile this pill replaced formatted it with `toFixed(1)`;
+   * dropping that along with the tile would have put "7.333h" in a one-line half-width tile
+   * — a regression hidden inside a relocation.
+   */
+  it('rounds a long decimal to one place', () => {
+    expect(buildQuickLogPills(22 / 3, [], NOON).sleep).toBe('7.3h');
+    expect(buildQuickLogPills(7.06, [], NOON).sleep).toBe('7.1h');
+  });
+
+  /** ...but `toFixed(1)` alone would render a clean 8 as "8.0h", which is noise on a pill. */
+  it('does not pad a whole number with a trailing zero', () => {
+    expect(buildQuickLogPills(8, [], NOON).sleep).toBe('8h');
+  });
+
+  it('leaves a single decimal alone', () => {
+    expect(buildQuickLogPills(7.5, [], NOON).sleep).toBe('7.5h');
+  });
 });
 
 describe('buildQuickLogPills — weight', () => {
@@ -64,6 +84,13 @@ describe('buildQuickLogPills — weight', () => {
   it('reports the reading for today even when another row precedes it', () => {
     const entries = [entry('2026-09-20', 80), entry(TODAY, 82)];
     expect(buildQuickLogPills(null, entries, NOON).weight).toBe('82kg');
+  });
+
+  /** A scale reporting 82.35 must not widen the pill past its one line either. */
+  it('rounds the weight to one decimal without padding a whole number', () => {
+    expect(buildQuickLogPills(null, [entry(TODAY, 82.35)], NOON).weight).toBe('82.4kg');
+    expect(buildQuickLogPills(null, [entry(TODAY, 82)], NOON).weight).toBe('82kg');
+    expect(buildQuickLogPills(null, [entry(TODAY, 82.4)], NOON).weight).toBe('82.4kg');
   });
 });
 
