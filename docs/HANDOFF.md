@@ -1,6 +1,6 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. `main` was at `9ff4673`.**
+**Written 2026-09-14. Last updated the same day, with `main` at `e8e9979`.**
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -44,6 +44,8 @@ Merged to `main` on 2026-09-14:
 | #321 | EAS dev client, on-device speech, and an `app.config.js` that is actually applied — it had been silently discarding all of `app.json`. |
 | #322 | Recovered the authenticated E2E suite, which had been skipped on a wrong diagnosis. |
 | #323 | Dependabot pointed at the workspace root. |
+| #338 | This file. |
+| #339 | The MCP server got a CI job. It ships separately, is not a workspace, and **nothing installed, built, linted or tested it** — so the Dependabot PRs #323 had just enabled were green on checks that never touched the package. |
 
 ### About #323, because it changed the PR list
 
@@ -66,27 +68,34 @@ once. If that is too much noise, group minor and patch bumps into one weekly PR.
 All five are pushed. Commit hashes are the state at handoff.
 
 ### #319 · Playwright tests whichever worktree owns :5173
-`claude/playwright-tests-wrong-worktree` → `f0e646d`
+`claude/playwright-tests-wrong-worktree` → `7183131`
 
 **Closest to done.** `reuseExistingServer` meant an E2E run silently tested whichever
 checkout already held port 5173 — green tests against someone else's code. Now
 `frontend/e2e/support/servers.ts` starts the pair on ports it picks itself and
 `global-setup.ts` asserts the app under test is this checkout.
 
-Implementation plus one review round are in. Remaining: a final review pass, and the
-decoy-server proof — start a Vite server on 5173 from a different directory, run Playwright,
-confirm it does **not** adopt it. Without that proof the change is not demonstrated.
+Implementation and two review rounds are in; round 2 kept the E2E types out of the deploy
+build and stopped the checkout path leaking. It was partway into round 3 when it stopped, and
+the guards had been verified by then.
+
+Remaining: finish round 3, and confirm the decoy-server proof is recorded — start a Vite
+server on 5173 from a different directory, run Playwright, confirm it does **not** adopt it.
+Without that proof the change is not demonstrated.
 
 ### #308 · MD3 colour roles
-`claude/parity-md3-color-roles` → `7c84f6f`
+`claude/parity-md3-color-roles` → `5816ea5`
 
 `buildPaperTheme` mapped 9 of React Native Paper's 33 colour keys. The other 24 kept
 Material's default purple, visible on `onPrimary`, the `*Container` roles, `backdrop`,
 `outlineVariant` and `elevation.level1`–`level5`. `everyMd3RoleIsMapped.test.ts` now fails if
 a role is added and left unmapped.
 
-Review round 1 landed and found real bugs (`inversePrimary` invisible, two tracks missed by
-the sweep). The last commit is unreviewed remainder. Remaining: finish the loop.
+Two review rounds landed and both found real bugs. Round 1: `inversePrimary` was invisible
+and two tracks were missed by the sweep. Round 2: finished the muted sweep, guarded the
+frozen Paper themes, and made the contrast helper refuse input it cannot parse instead of
+scoring it `NaN` — a helper that returns `NaN` makes every contrast assertion pass silently.
+It was starting round 3 when it stopped. Remaining: finish the loop.
 
 > **Trap, hit twice by two different agents.** `surfaceMuted` against `colors.surface`
 > (`#191715` dark) is **1.03:1** — invisible, so a progress ring reads as complete at every
@@ -95,7 +104,7 @@ the sweep). The last commit is unreviewed remainder. Remaining: finish the loop.
 > not trust the name.
 
 ### #307 · Home parity — the missing half of the dashboard
-`claude/parity-home-surface` → `feb1819`
+`claude/parity-home-surface` → `dc2519c`
 
 Expo's Home renders about half of the web's. Five whole cards are missing — streaks, water,
 weight progress, cycle, recent activity — because `mobile/src/core/api/` has no `health.ts`
@@ -104,9 +113,14 @@ already exists and is mounted.** This is a client gap, not a product gap; the ba
 not need to change.
 
 What is pushed: `useWater`, `useWeight`, `useCycle`, `useStreaks`, `QuickTile`,
-`SectionCard`, a weight form screen, and the shared `activity`/`weight` domain modules.
+`SectionCard`, a weight form screen, the shared `activity`/`weight` domain modules, and the
+five cards wired into Home.
 
-**Unverified — no typecheck, no test run, no review.** Treat every line as unproven.
+**Least finished of the four.** It reached review round 3 but the final commit is
+mid-round and unreviewed. One thing it did along the way is worth keeping: it went back and
+made its two weakest new tests actually catch their bugs, and separately rejected a proposed
+"fix" on the grounds that the mutant was a pure short-circuit and semantically identical —
+the tests were right to pass. Both are the behaviour you want; don't undo either.
 
 Two questions the spec deliberately leaves open, so do not resolve them silently: the
 greeting (Expo has a time-of-day greeting and the full name; the web uses first name only)
@@ -114,7 +128,7 @@ and the double heading (the tab navigator paints "TrackVibe" and `MobileScreen` 
 second title underneath).
 
 ### #337 · Self-service account deletion — the App Store blocker
-`claude/appstore-account-deletion` → `2ebc4c2`
+`claude/appstore-account-deletion` → `862455d`
 
 App Store Guideline 5.1.1(v): an app that creates accounts must let users delete them
 in-app. The only delete route is admin-only and explicitly refuses self-deletion.
@@ -133,9 +147,13 @@ Also reconciles `backend/src/db/schema.ts` with the cascade migration and teache
 `information_schema.columns`, so deletion tests against a dev DB proved nothing about
 production.
 
-**Do not merge without review.** It deletes user data and no review has run. One decision
-was made unilaterally and needs a second opinion: scrubbing PII on deletion, versus not
-writing PII into those tables in the first place.
+Two review rounds have run and both paid for themselves. Round 1 fixed nine findings and
+rejected one with reasoning. **Round 2 found a SQL bug that broke deletion outright**, plus
+four more, and rejected one. It was starting round 3 when it stopped.
+
+**Still do not merge without reading it.** It deletes user data, and one decision was made
+unilaterally and needs a second opinion: scrubbing PII on deletion, versus not writing PII
+into those tables in the first place.
 
 ### #299 · AI Coach FAB overlaps real controls
 `claude/ios-sweep-ai-fab-overlap` → `d0c7812`
@@ -190,7 +208,12 @@ everything ──► #306      (renames every screen; rebase it last)
 5. **`backend/.env.example`** needs a note about the native origin. `.env*` paths are
    permission-blocked for agent sessions.
 6. **Every merged Expo change is visually unseen.** #302, #303, #305 and #321 are
-   test-verified only — the simulator was never free to look at them.
+   test-verified only — the simulator was never free to look at them. Worth doing *after*
+   #307 and #308 land, since those rewrite Home and all 33 colour roles.
+7. **`backend/mcp-server` has 8 npm vulnerabilities, 5 of them high** (`qs` among others).
+   The `security-audit` job uses `--workspace`, which cannot reach a non-workspace package,
+   so it has never been audited. `npm audit fix` offers a non-major path, and #339's smoke
+   test now makes the result verifiable — but taking it is your call.
 
 Production is Railway project `distinguished-elegance`, service **BMe**. Present:
 `API_NINJAS_KEY`, `CORS_ORIGIN`, `DATABASE_URL`, `DB_SSL_REJECT_UNAUTHORIZED`,
