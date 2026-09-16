@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Icon, Text, TouchableRipple } from 'react-native-paper';
 import { Card } from '../ui';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 
@@ -64,10 +64,12 @@ export function QuickTile({ icon, label, pill, onPress }: QuickTileProps) {
     },
     pillText: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     label: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
   }));

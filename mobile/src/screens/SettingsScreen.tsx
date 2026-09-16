@@ -11,7 +11,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../hooks/useSettings';
 import { MobileScreen } from '../components/shared/MobileScreen';
-import { spacing } from '../theme';
+import { fonts, spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
 
@@ -99,6 +99,7 @@ function SettingsCard({ title, children }: { title: SettingsSectionTitle; childr
     card: {},
     sectionTitle: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
       marginBottom: spacing.sm,
     },

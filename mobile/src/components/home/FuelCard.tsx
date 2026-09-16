@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { ActivityIndicator, Text } from 'react-native-paper';
 import { Button } from '../ui';
 import { targetFraction, type DailyTargets } from '@trackvibe/shared/domain';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 import { ProgressRing } from '../shared/ProgressRing';
@@ -95,6 +95,7 @@ export function FuelCard({
       color: colors.primary,
       letterSpacing: 1,
       textTransform: 'uppercase',
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     body: {
@@ -115,6 +116,7 @@ export function FuelCard({
     },
     macroLabel: {
       color: colors.text,
+      fontFamily: fonts.semibold,
       fontWeight: '600',
     },
     macroValue: {

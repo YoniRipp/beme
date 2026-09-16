@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
 import { Card, IconButton } from '../ui';
 import { FoodEntry } from '../../types/energy';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 
@@ -38,6 +38,7 @@ export function MobileFoodCard({ entry, onEdit, onDelete }: MobileFoodCardProps)
     },
     name: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     meta: {
@@ -54,6 +55,7 @@ export function MobileFoodCard({ entry, onEdit, onDelete }: MobileFoodCardProps)
     },
     calories: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     kcal: {

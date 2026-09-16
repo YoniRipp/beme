@@ -4,6 +4,7 @@ import { Text, Icon } from 'react-native-paper';
 import { Button } from '../ui';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
+import { fonts } from '../../theme';
 
 interface EmptyStateProps {
   /**
@@ -29,10 +30,10 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
   const firstRun = !!icon;
   const styles = useThemedStyles((colors) => ({
     container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-    title: { marginTop: 16, color: colors.text, textAlign: 'center', fontWeight: '800' },
+    title: { marginTop: 16, color: colors.text, textAlign: 'center', fontFamily: fonts.bold, fontWeight: '800' },
     // Quieter, but still a heading rather than body copy — bodyMedium alone would render
     // it at regular weight.
-    noMatchTitle: { fontWeight: '700' },
+    noMatchTitle: { fontFamily: fonts.bold, fontWeight: '700' },
     subtitle: { marginTop: 8, color: colors.textMuted, textAlign: 'center' },
     button: { marginTop: 16 },
   }));

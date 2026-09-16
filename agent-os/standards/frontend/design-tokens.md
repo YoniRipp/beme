@@ -17,6 +17,38 @@ Use Tailwind classes bound to CSS variables in `index.css`. Never hardcode a hex
 
 Type pair: **Fraunces** (display) + **Inter** (body).
 
+### Weights
+
+| role | CSS | face |
+|---|---|---|
+| regular | `font-normal` 400 | `Inter_400Regular` |
+| medium | `font-medium` 500 | `Inter_500Medium` |
+| semibold | `font-semibold` 600 | `Inter_600SemiBold` |
+| bold | `font-bold` 700 | `Inter_700Bold` |
+| display | 500 | `Fraunces_500Medium` |
+| display semibold | `font-semibold` 600 | `Fraunces_600SemiBold` |
+
+**On the Expo client a weight is a family name, not a number.** `@expo-google-fonts/*` ships
+one static file per weight rather than a variable font, so there is no `font-weight` that
+retargets which file renders — `fontWeight: '700'` on a family loaded at 400 cannot produce
+bold, and what it does instead (synthesise, ignore, fall back to the system face) differs by
+platform. This one fact is what 52 of mobile's 55 weight declarations got wrong. Write
+`fontFamily: fonts.bold`; a numeric `fontWeight` may sit beside it, never instead of it.
+`packages/shared/src/tokens/typography.ts` holds both vocabularies in one table.
+
+**There is no 800.** `font-extrabold` appears at 34 web call sites, and `frontend/index.html`
+requests Inter at `wght@300;400;500;600;700` — nothing serves 800, so the browser synthesises
+or clamps it. Mobile maps 800 to `Inter_700Bold` rather than loading a real 800 face, which
+would render *heavier* than the reference. **This is an open web-side decision**: either add
+`800` to the Google Fonts URL or change those 34 to `font-bold`. Recorded here so the next
+audit does not re-derive it.
+
+Two titles, and neither is what the base stylesheet says. `index.css` gives `h1`/`h2`
+Fraunces 500, and both components that render a title override it — `ui/page.tsx`'s
+`PageHeader` is `font-sans text-[28px] font-extrabold` (Inter, not Fraunces at all) and
+`Base44Layout.tsx:228`'s app bar is `font-display text-lg font-semibold` (Fraunces 600).
+Match the rendered surface, not the base rule.
+
 ## Elevation and radius
 
 Shadows come from the scale, not ad-hoc values:
