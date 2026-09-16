@@ -3,8 +3,14 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
-dotenv.config({ path: path.join(__dirname, '.env') });
+
+// `quiet` is not cosmetic. This server speaks JSON-RPC over stdout, so stdout belongs to the
+// protocol and nothing else may write to it. dotenv 17 prints an "injected env ... // tip:"
+// banner there by default, which lands ahead of the initialize response and corrupts the
+// stream. Clients that skip unparseable lines survive it; strict ones do not. dotenv 16
+// ignores the option, so this is safe on both.
+dotenv.config({ path: path.join(__dirname, '..', '.env'), quiet: true });
+dotenv.config({ path: path.join(__dirname, '.env'), quiet: true });
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
