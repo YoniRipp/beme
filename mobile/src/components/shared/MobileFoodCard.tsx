@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Icon, IconButton, Text } from 'react-native-paper';
-import { Card } from '../ui';
+import { Icon, Text } from 'react-native-paper';
+import { Card, IconButton } from '../ui';
 import { FoodEntry } from '../../types/energy';
 import { radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';

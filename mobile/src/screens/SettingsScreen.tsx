@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, List, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
-import { Card } from '../components/ui';
+import { List, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
+import { Button, Card } from '../components/ui';
 import {
   BALANCE_DISPLAY_COLORS,
   type BalanceDisplayColor,
