@@ -32,11 +32,26 @@ export interface ApiWeightEntry {
   notes?: string;
 }
 
+export interface WeightListParams {
+  startDate?: string;
+  endDate?: string;
+  /**
+   * Rows to read, newest first. **Omitting it returns the user's entire weight history** —
+   * `backend/src/controllers/weight.ts` paginates only when asked
+   * (`parseOptionalPagination`), so an unbounded call is an unbounded query. Callers pass
+   * `WEIGHT_HISTORY_LIMIT` unless they have a reason not to.
+   */
+  limit?: number;
+  offset?: number;
+}
+
 export const weightApi = {
-  list: (startDate?: string, endDate?: string) => {
+  list: ({ startDate, endDate, limit, offset }: WeightListParams = {}) => {
     const params = new URLSearchParams();
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
+    if (limit !== undefined) params.set('limit', String(limit));
+    if (offset !== undefined) params.set('offset', String(offset));
     const qs = params.toString();
     return request<ApiWeightEntry[]>(`/api/weight-entries${qs ? `?${qs}` : ''}`);
   },
