@@ -138,6 +138,31 @@ export function buildPaperTheme(base: MD3Theme, palette: ColorRoles): MD3Theme {
 
   return {
     ...base,
+
+    /**
+     * **`roundness` is a fallback, not this app's radius.** Paper does not use it as a
+     * corner radius; it uses it as a *unit* and multiplies it by a different fixed factor
+     * per component:
+     *
+     * | Paper component | factor | `roundness: 12` resolves to | the web's value |
+     * |---|---|---|---|
+     * | `Button` | 5x | 60 -> clamps to a pill | 12 (`button.tsx`, `rounded-md`) |
+     * | `SegmentedButtons` | 5x | 60 -> pill | 10 (`tabs.tsx`, `rounded-sm`) |
+     * | `Card` | 3x | 36 | 22 (`card.tsx`, `rounded-2xl`) |
+     * | `Dialog` | 7x | 84 -> clamps | 14 (`rounded-lg`) |
+     * | `Chip` | 2x | 24 | 18 (`rounded-xl`) |
+     * | `Searchbar` (bar mode) | 7x | 84 -> pill | 12 (`input.tsx`, `rounded-md`) |
+     *
+     * **No value of `roundness` fixes this.** The web's six radii are 12, 10, 22, 14, 18 and
+     * 12, which are not in the ratio 5 : 5 : 3 : 7 : 2 : 7 — its buttons would need
+     * `roundness = 2.4`, its cards `7.33`, its dialogs `2`. Tuning the constant trades one
+     * wrong component for another, which is exactly the change this comment exists to stop.
+     *
+     * So it stays at `radius.md`, governing only the Paper components nothing wraps, and the
+     * components that matter override it from `mobile/src/components/ui/` — a style on the
+     * component wins over Paper's internal value. Lowering it would make the unwrapped ones
+     * *more* wrong, not less.
+     */
     roundness: radius.md,
     fonts: appFonts,
     colors: {
