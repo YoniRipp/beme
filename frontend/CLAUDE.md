@@ -38,6 +38,14 @@ The two flags take `1` or `true` and nothing else, so `SKIP_BACKEND=0` means off
 The API server the run starts is passed `SEPARATE_WORKERS=true`: it shares your `DATABASE_URL`
 and Redis, and a second voice worker would take jobs off your own backend's queue.
 
+**The run always starts its own API server**, where it used to reuse whoever held `:3000`.
+Two things follow if `backend/.env` names a real database. Each run boots against it and
+applies `initSchema()` and the idempotent `ALTER TABLE … IF NOT EXISTS` patches in
+`backend/index.ts`; and if that database is unreachable the backend exits, which fails the
+whole run before a single test executes. `SKIP_BACKEND=1` avoids both. No spec needs the API
+today — every one of them stubs `/api/` in the browser — so that flag is a reasonable default
+for a local loop, at the cost of the API-side identity check.
+
 Nothing about this runs in CI — CI does not run Playwright at all. It is a local-only guard.
 
 The mechanics live in `e2e/support/servers.ts`.

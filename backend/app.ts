@@ -105,15 +105,22 @@ export async function createApp() {
   // `1`/`true` only: a bare truthiness test would read `E2E_IDENTITY=0` as "yes, disclose".
   const e2eIdentity = ['1', 'true'].includes((process.env.E2E_IDENTITY ?? '').trim().toLowerCase());
   const reportCheckout = !config.isProduction && e2eIdentity;
-  // Loopback callers only, even then. The server binds 0.0.0.0, and while a test run is up
-  // anything on the same network could otherwise read an absolute path — and the OS
-  // username in it — straight off an unauthenticated, un-rate-limited endpoint.
-  const LOOPBACK = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+  // Loopback callers asking for a loopback host, even then. The server binds 0.0.0.0, so
+  // while a test run is up anything on the same network could otherwise read an absolute
+  // path — and the OS username in it — off an unauthenticated, un-rate-limited endpoint.
+  // The Host check is the half that stops DNS rebinding, where the request does come from
+  // 127.0.0.1 because it is the developer's own browser making it. Same pair of checks as
+  // the Vite `/__e2e/identity` endpoint this is the counterpart to.
+  const LOOPBACK_ADDRS = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+  const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]', '::1'];
+  const isLocalCaller = (req: import('express').Request) =>
+    LOOPBACK_ADDRS.includes(req.socket.remoteAddress ?? '') &&
+    LOOPBACK_HOSTS.includes((req.headers.host ?? '').replace(/:\d+$/, ''));
   app.get('/health', (req, res) =>
     res
       .status(200)
       .json(
-        reportCheckout && LOOPBACK.includes(req.socket.remoteAddress ?? '')
+        reportCheckout && isLocalCaller(req)
           ? { status: 'ok', checkout: process.cwd() }
           : { status: 'ok' }
       )

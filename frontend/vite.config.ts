@@ -38,7 +38,11 @@ function e2eIdentity(): Plugin {
         if (!LOOPBACK_ADDRS.has(from) || !LOOPBACK_HOSTS.has(host)) return next();
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Cache-Control', 'no-store');
-        res.end(JSON.stringify({ root: __dirname }));
+        // `apiBase` is the API the app was *started* pointing at. A reused server — from
+        // `--ui`, or a run that was killed before it could clean up — keeps the value the
+        // earlier run baked in, which may name a backend port that is now dead or another
+        // run's. Same checkout, so `root` alone cannot tell.
+        res.end(JSON.stringify({ root: __dirname, apiBase: process.env.VITE_API_URL ?? null }));
       });
     },
   };

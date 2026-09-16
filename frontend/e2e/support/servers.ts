@@ -213,6 +213,23 @@ async function assertFrontendIsOurs(): Promise<void> {
   const served = typeof body.root === 'string' ? body.root : '(no root reported)';
   if (real(served) !== real(FRONTEND_ROOT)) {
     report(mismatchLines('frontend', frontendBaseURL, FRONTEND_ROOT, served, 'E2E_FRONTEND_PORT'));
+    return;
+  }
+
+  // Right checkout, possibly the wrong API. A reused server keeps whatever `VITE_API_URL` it
+  // was started with, so the app can be posting at a backend port this run never started.
+  // A warning, not a failure: the checkout guarantee still holds, and the value the server
+  // reports is only the env it was launched with — a `frontend/.env` could legitimately set
+  // the base some other way, and aborting on that would be a false alarm.
+  const expectedApiBase = skipBackend ? null : backendBaseURL;
+  const actualApiBase = typeof body.apiBase === 'string' ? body.apiBase : null;
+  if (actualApiBase !== expectedApiBase) {
+    console.warn(
+      `\n[e2e] The Vite server on ${frontendBaseURL} is this checkout, but it was started ` +
+        `pointing at ${actualApiBase ?? 'the app default (:3000)'} — this run expects ` +
+        `${expectedApiBase ?? 'the app default (:3000)'}. It is being reused from an earlier ` +
+        'run; stop it to have this run start its own.\n'
+    );
   }
 }
 
