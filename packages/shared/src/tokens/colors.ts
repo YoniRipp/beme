@@ -13,12 +13,37 @@
  *   background   -> --paper                  surface     -> --card
  *   surfaceMuted -> --paper-2                 text        -> --ink
  *   textMuted    -> --ink-3 (--muted-foreground)  border  -> --hairline
+ *   muted        -> --muted                   scrim       -> --scrim
  *   primary      -> --primary (--sage-dark / --sage)
  *   primaryForeground -> --primary-foreground (fixed light value / `var(--paper)`)
  *   primarySoft  -> --sage-50                 food        -> --terracotta
  *   foodSoft     -> --terracotta-light        workout     -> --info
  *   sleep        -> --gold                    danger      -> --destructive
- *   success      -> --success
+ *   success      -> --success                 shadow      -> the --shadow-* hue
+ *
+ * THE TRAP — `muted` and `surfaceMuted` are DIFFERENT COLOURS. The names read as
+ * synonyms; the values are not, and reaching for the wrong one has already happened
+ * twice in review. `surfaceMuted` is `--paper-2`, the ground under a muted *section*.
+ * `muted` is `--muted`, the fill the web draws every progress track with — five ring
+ * `stroke`s (`ui/progress-ring.tsx`, `insights/AiInsightsSection.tsx`,
+ * `goals/GoalCard.tsx`, `home/MacroCircles.tsx`, `pages/Energy.tsx`) plus
+ * `home/WaterTracker.tsx`'s bar and `body/WorkoutCard.tsx`'s rows. (NOT `ui/progress.tsx`
+ * — the spec cites it, but that shadcn primitive is `bg-secondary` and nothing renders
+ * it; the bars the web actually draws are hand-rolled `bg-muted` divs.) Against the
+ * `surface` card those tracks sit on, in dark —
+ * the theme that ships as the default:
+ *
+ *   surfaceMuted `#1b1a18` on `#191715` = 1.03:1   (invisible: ~5 units per channel)
+ *   muted        `#292624` on `#191715` = 1.19:1   (quiet, but there)
+ *
+ * At 1.03:1 a ring's unfilled remainder cannot be seen, so the ring reads as complete
+ * at every value — a silent failure. Trace the web call site before picking between
+ * these two; do not pick by name.
+ *
+ * `shadow` is the colour the web's `--shadow-*` box-shadows are composited from, not a
+ * shadow definition: light's four shadow steps are all `hsl(28 20% 20% / …)` (a warm
+ * near-black), dark's are all `hsl(0 0% 0% / …)`. It exists so Android elevation has
+ * something to read other than a hardcoded `#000`.
  *
  * `primaryForeground` is the text/icon colour meant to sit ON TOP of `primary` — the
  * web pairs the two everywhere `--primary` is a background (see
@@ -37,6 +62,8 @@ export interface ColorRoles {
   background: string;
   surface: string;
   surfaceMuted: string;
+  /** `--muted`. The track/fill role — NOT `surfaceMuted`; see THE TRAP above. */
+  muted: string;
   text: string;
   textMuted: string;
   border: string;
@@ -51,12 +78,17 @@ export interface ColorRoles {
   sleepSoft: string;
   danger: string;
   success: string;
+  /** `--scrim`. The ground a modal/drawer overlay is composited from (the web uses it at 50%). */
+  scrim: string;
+  /** The hue the web's `--shadow-*` steps are built on — a colour, not a shadow. */
+  shadow: string;
 }
 
 export const lightColors: ColorRoles = {
   background: '#faf8f4',
   surface: '#ffffff',
   surfaceMuted: '#f5f0eb',
+  muted: '#f0edea',
   text: '#29241f',
   textMuted: '#756961',
   border: '#e0dcd6',
@@ -71,12 +103,15 @@ export const lightColors: ColorRoles = {
   sleepSoft: '#f8efd8', // no web counterpart — carried over from mobile's prior value
   danger: '#db3624',
   success: '#358d61',
+  scrim: '#171312',
+  shadow: '#3d3229',
 };
 
 export const darkColors: ColorRoles = {
   background: '#110f0e',
   surface: '#191715',
   surfaceMuted: '#1b1a18',
+  muted: '#292624',
   text: '#f4f3f0',
   textMuted: '#a59e97',
   border: '#2e2b28',
@@ -91,6 +126,8 @@ export const darkColors: ColorRoles = {
   sleepSoft: '#352a14', // no web counterpart — carried over from mobile's prior value
   danger: '#d54e3f',
   success: '#5bb98a',
+  scrim: '#000000',
+  shadow: '#000000',
 };
 
 /** Default role map — light mode, matching how each client already treated "colors". */

@@ -44,7 +44,11 @@ export function WaterCard() {
     track: {
       height: 6,
       borderRadius: radius.sm,
-      backgroundColor: colors.surfaceMuted,
+      // The unfilled remainder, so `muted` and not `surfaceMuted`: they read as synonyms
+      // and are not the same value. `surfaceMuted` (`--paper-2`) against this card is
+      // 1.03:1 in dark, the default theme -- the track vanishes and the bar reads full at
+      // every value. `muted` is 1.19:1, and is what ProgressRing and MobileGoalCard use.
+      backgroundColor: colors.muted,
       overflow: 'hidden',
     },
     fill: {

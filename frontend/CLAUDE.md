@@ -14,6 +14,42 @@ runtime, so `cap add ios` produces a project that will not compile. Don't reach 
 - E2E tests: `npx playwright test`
 - Capacitor (legacy shell, unmaintained): `npm run cap:sync`, `npm run cap:ios`, `npm run cap:android`
 
+## E2E ports
+
+`npx playwright test` needs no setup: it starts both dev servers itself, on ports **derived
+from this checkout's path** — not 5173 and 3000. The run prints them on its first line
+(`[e2e] app http://localhost:… · api http://localhost:…`).
+
+They are derived because the repo is worked in many git worktrees at once. When every
+worktree named 5173, Playwright's `reuseExistingServer` reused whichever dev server got there
+first and reported *that* checkout's behaviour against your branch — silently, in both
+directions. `globalSetup` now also asks each running server which checkout it is serving
+(`/__e2e/identity` on Vite, `checkout` in the API's `/health`) and aborts the run naming the
+other checkout if it is not this one.
+
+| Env var | Effect |
+|---|---|
+| `E2E_FRONTEND_PORT` | Pin the app's port instead of deriving it |
+| `E2E_BACKEND_PORT` | Pin the API's port instead of deriving it |
+| `SKIP_BACKEND=1` | Don't start or check an API server; the app falls back to `:3000` |
+| `E2E_ALLOW_FOREIGN_SERVER=1` | Turn an identity mismatch into a warning instead of a failure |
+
+The two flags take `1` or `true` and nothing else, so `SKIP_BACKEND=0` means off rather than on.
+The API server the run starts is passed `SEPARATE_WORKERS=true`: it shares your `DATABASE_URL`
+and Redis, and a second voice worker would take jobs off your own backend's queue.
+
+**The run always starts its own API server**, where it used to reuse whoever held `:3000`.
+Two things follow if `backend/.env` names a real database. Each run boots against it and
+applies `initSchema()` and the idempotent `ALTER TABLE … IF NOT EXISTS` patches in
+`backend/index.ts`; and if that database is unreachable the backend exits, which fails the
+whole run before a single test executes. `SKIP_BACKEND=1` avoids both. No spec needs the API
+today — every one of them stubs `/api/` in the browser — so that flag is a reasonable default
+for a local loop, at the cost of the API-side identity check.
+
+Nothing about this runs in CI — CI does not run Playwright at all. It is a local-only guard.
+
+The mechanics live in `e2e/support/servers.ts`.
+
 ## Architecture
 - `src/routes.tsx` — route table; `src/App.tsx` and `src/Providers.tsx` wrap the tree
 - `src/pages/` — page components. App pages: `Home`, `Body` (workouts), `Energy`
