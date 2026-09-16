@@ -313,9 +313,9 @@ Production is Railway project `distinguished-elegance`, service **BMe**. Present
 
 ## What is on `claude/dazzling-fermi-vf1cv3`
 
-Nine commits, all pushed, no PR opened. In order: the handoff refresh, the weight-read fix,
-#312 in four commits (primitives, adoption, the spacing guard, standards), #316 in one, the
-food-parser move and its bug fix, and the cycle fix.
+15 commits, all pushed, no PR opened: the handoff refresh, the weight-read fix, #312 in four
+(primitives, adoption, the spacing guard, standards), #316 in one, the food-parser move and
+its bug fix, the cycle fix, and the doc commits recording each as it landed.
 
 Two things to know before reviewing it:
 
