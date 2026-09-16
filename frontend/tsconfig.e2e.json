@@ -1,0 +1,24 @@
+/*
+ * Typecheck for the Playwright suite and its config.
+ *
+ * Deliberately separate from `tsconfig.json`: `npm run build` is `tsc && vite build`, the
+ * production build that Railway and the Dockerfile run. Folding `e2e/` into that config
+ * would let a type error in a test — code that never ships — fail the web app's deploy.
+ * `npm run lint` runs both, so the E2E code is still typechecked in CI.
+ *
+ * Unlike the app, this code runs in Node: it reads `process.env` and imports `node:*`.
+ */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  /*
+   * The base config excludes `**‍/*.test.ts` because those are the app's unit tests, run by
+   * vitest. Playwright's default `testMatch` runs `*.test.ts` as well as `*.spec.ts`, so
+   * inheriting that exclude would let an `e2e/foo.test.ts` execute in the suite while this
+   * gate silently skipped it.
+   */
+  "exclude": [],
+  "include": ["e2e", "playwright.config.ts"]
+}

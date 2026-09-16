@@ -28,6 +28,10 @@ frontend:
   mobile-ui:
     description: Mobile-first layout, spacing scale, safe areas, bottom nav, touch targets
 
+mobile:
+  design-tokens:
+    description: MD3 role map, no inherited Paper defaults, muted vs surfaceMuted, allowlist claims
+
 global:
   critical-rules:
     description: Do-not-break rules, product quality bar, process for large UI changes

@@ -101,6 +101,25 @@ jobs:
         run: npm run test
         working-directory: packages/shared
 
+  # Not a workspace -- backend/mcp-server ships separately and carries its own lockfile, so
+  # it needs its own install. It had no job at all until now, which meant a Dependabot PR
+  # against it went green on checks that never touched it.
+  mcp-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/mcp-server/package-lock.json
+      - name: Install MCP server dependencies
+        run: npm ci
+        working-directory: backend/mcp-server
+      - name: Smoke-test the MCP server
+        run: npm test
+        working-directory: backend/mcp-server
+
   migrations:
     runs-on: ubuntu-latest
     services:
