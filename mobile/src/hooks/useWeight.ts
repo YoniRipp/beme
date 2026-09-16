@@ -1,23 +1,20 @@
 import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { WEIGHT_HISTORY_LIMIT } from '@trackvibe/shared/domain';
 import { weightApi, type ApiWeightEntry } from '../core/api/health';
 import { queryKeys } from '../lib/queryKeys';
 
 /**
  * How many rows the weight card ever reads.
  *
- * The card draws a seven-bar sparkline and one latest reading; 30 gives that headroom
- * without ever growing. The web asks for no bound at all
- * (`frontend/src/hooks/useWeight.ts:16` — `weightApi.list()`), so it pulls a user's whole
- * weight history on every Home render to draw those seven bars. That is critical rule 6,
- * and this client does not copy it.
+ * The bound and the reasoning behind it now live in `packages/shared/src/domain/weight.ts`,
+ * because the web reads the same rows to draw the same card and the two must not disagree.
+ * Re-exported here so this module stays the one place the Expo weight code looks.
  *
- * A LIMIT rather than a date window, deliberately: the model orders `date DESC`
- * (`backend/src/models/weight.ts:47`), so a limit is "the N most recent" and always contains
- * the latest reading. A 90-day window would show "No weight logged yet" to someone whose
- * last weigh-in was in the spring — which is not what the card means.
+ * This client bounded its read from day one; the web caught up separately, so the note that
+ * used to sit here about the web being unbounded is gone rather than left to rot.
  */
-export const WEIGHT_HISTORY_LIMIT = 30;
+export { WEIGHT_HISTORY_LIMIT };
 
 /**
  * Weight entries, newest first. Mirrors `frontend/src/hooks/useWeight.ts` — same key, same

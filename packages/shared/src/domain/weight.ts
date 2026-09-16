@@ -19,6 +19,24 @@ export interface WeightEntrySource {
 /** How many readings the sparkline draws, and the span the trend is measured over. */
 export const WEIGHT_TREND_POINTS = 7;
 
+/**
+ * How many rows either client reads to draw everything weight-related.
+ *
+ * A LIMIT rather than a date window, deliberately: the model orders `date DESC`
+ * (`backend/src/models/weight.ts:46`), so a limit means "the N most recent readings" and
+ * always contains the latest one. A 90-day window would show "No weight logged yet" to
+ * someone whose last weigh-in was in the spring — which is not what the card means.
+ *
+ * 30 is set by the hungriest consumer: the web's Insights chart plots the last 30 readings
+ * (`frontend/src/pages/Insights.tsx`). The Home card on both clients needs only
+ * `WEIGHT_TREND_POINTS` of them, so this is the Insights number with the card riding along.
+ *
+ * Lives here rather than in either client because both draw the same card from the same
+ * rows, and a bound that disagrees between them is a bug nobody would see until the chart
+ * on one client quietly ran short.
+ */
+export const WEIGHT_HISTORY_LIMIT = 30;
+
 /** The shortest a bar may be drawn, as a percentage, so a flat week is still visible. */
 export const WEIGHT_BAR_MIN_PERCENT = 10;
 

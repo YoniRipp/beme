@@ -61,15 +61,24 @@ listed as in flight**:
 | #299 | AI Coach FAB no longer sits on top of real controls; its footprint is reserved in the scroll container. Dropped `frontend/playwright.local.config.ts`, the workaround #319 made unnecessary. |
 | #307 | Home parity — the five missing cards (streaks, water, weight progress, cycle, recent activity), `health.ts`, the `useWater`/`useWeight`/`useCycle`/`useStreaks` hooks, a weight form screen, and the shared `activity`/`weight` domain modules. |
 
-### Carried out of #307 and not yet filed anywhere else
+### Carried out of #307, and now fixed
 
-`frontend/src/hooks/useWeight.ts:16` calls `weightApi.list()` with **no arguments**, and
-`weightApi.list(startDate?, endDate?)` (`frontend/src/core/api/health.ts:36-42`) only sends a
-window when given one — so the web reads a user's entire weight history to draw seven bars.
-**Critical rule 6.** The endpoint already accepts the window; this is a one-line call-site
-fix plus whatever the chart needs. Expo's client passes a window from day one either way.
-There is no GitHub issue for it — the repo has **zero** open issues — so this paragraph is
-the only record.
+`frontend/src/hooks/useWeight.ts` called `weightApi.list()` with no arguments, so the web
+read a user's entire weight history to draw a seven-bar sparkline — **critical rule 6**. The
+endpoint had always accepted the bound; the client never sent it.
+
+Fixed on `claude/dazzling-fermi-vf1cv3`. The bound is a LIMIT rather than a date window
+(`WEIGHT_HISTORY_LIMIT`, now in `packages/shared/src/domain/weight.ts` so the two clients
+cannot disagree): the model orders `date DESC`, so a limit means "the N most recent
+readings" and always contains the latest one, where a 90-day window would show "No weight
+logged yet" to someone whose last weigh-in was in the spring. 30 is what the web's Insights
+chart plots; the Home card needs 7 of them.
+
+Two things worth knowing if you touch this again. The cache write is capped at the same
+number — bounding the fetch while letting `setQueryData` grow without limit gives back part
+of what the bound is for. And `parseOptionalPagination`, which the whole bound rests on, had
+**no test at all** despite being the only thing that puts a LIMIT into the SQL; it has one
+now (`backend/src/utils/pagination.test.ts`).
 
 ### About #323, because it changed the PR list
 

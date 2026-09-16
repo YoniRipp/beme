@@ -9,13 +9,13 @@ import { request } from './client';
  * the MCP server. The Expo Home could not show a streak, a water count, a weight trend or a
  * cycle day for one mechanical reason — this file did not exist.
  *
- * ONE DELIBERATE DIVERGENCE FROM THE WEB, and it is the reason the reads below take
- * parameters the web's do not. `frontend/src/hooks/useWeight.ts:16` calls `weightApi.list()`
- * with no window at all, and `backend/src/controllers/weight.ts:15` only paginates when the
- * client asks (`parseOptionalPagination`), so the web reads a user's ENTIRE weight history
- * on every Home render to draw seven bars. That is critical rule 6. This client bounds every
- * read from day one — see `mobile/src/hooks/useWeight.ts` and `useCycle.ts` for the bounds
- * and why each was chosen. Fixing the web is its own task; it is not smuggled in here.
+ * EVERY READ BELOW IS BOUNDED, and that is why they take parameters. The endpoints paginate
+ * only when the client asks (`backend/src/controllers/weight.ts`, via
+ * `parseOptionalPagination`), so an unbounded call reads a user's entire history — critical
+ * rule 6. This client bounded its reads from day one; the web's weight read was unbounded
+ * until it was fixed separately, and now passes `WEIGHT_HISTORY_LIMIT` from
+ * `packages/shared/src/domain/weight.ts`, the same constant this client uses. See
+ * `mobile/src/hooks/useWeight.ts` and `useCycle.ts` for each bound and why it was chosen.
  */
 
 export interface ApiProfile {
