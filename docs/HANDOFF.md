@@ -150,7 +150,7 @@ it. That is the mistake this file opens by warning about.
 | PR | Scope |
 |---|---|
 | #315 · first-run and profile | Scope shrank once #302 added a profile client. Conflicts with #337. |
-| #311 · voice, barcode, water, meal tools, copy day | Depends on #321's speech foundation, which is merged. |
+| #311 · voice, barcode, meal tools, copy day | **Its spec is materially stale — read the note below before starting.** |
 | #304 · food Journal screen | A whole screen. |
 | #313 · workout recording | A whole screen — editor, exercise picker, voice, weight. |
 | #310 · Insights AI | Expo already has the charts; it is missing the AI half. **1.5–2 engineer-weeks.** |
@@ -200,6 +200,41 @@ were flat at 14 or 18, and every icon button's footprint grows 10px. `MobileWork
 action row is the tightest place that happens. This is a visual change with no visual
 confirmation — it is the same "every merged Expo change is visually unseen" item below,
 now with more to look at.
+
+### #311's spec is stale in three of its eight rows — check before building
+
+It was written against `34a51d9` and opens with three greps proving absence. Two of the three
+are no longer true, and the table's headline row is one of them:
+
+| spec says | actually |
+|---|---|
+| `grep -ri water mobile/` → **0 hits**, "a whole screen with no counterpart", "the cheapest large win in the audit" | **#307 built it** — `useWater.ts`, `WaterCard.tsx`, 13 files. No dedicated screen yet, but the hook and the Home card exist. Building "water" from that spec means building it twice. |
+| `grep -ri "voice\|speech" mobile/src` → **0 hits** | **#321 added `useSpeechRecognition`** (on-device, `expo-speech-recognition`). The transcript step the spec calls the only missing piece is done. |
+| `grep -ri "barcode\|camera" mobile/src` → **0 hits** | Still true. |
+
+What is genuinely left, and what it costs:
+
+- **Voice food logging.** The pipeline after the transcript — parse, resolve each item through
+  `/api/food/search` with `lookup-or-create` as fallback, review, `POST /api/food-entries/batch`
+  — is real work, but its first piece is done: **the parser now lives in
+  `packages/shared/src/domain/foodText.ts`** and both clients use it.
+- **Barcode. Needs a decision, not an implementation.** `expo-camera` is a native module, and
+  `mobile/CLAUDE.md` is explicit: a new native module means everyone rebuilds their dev client,
+  and it must be flagged rather than added. That is an owner call.
+- **Meal tools (bulk entry), copy day, recent foods, "look up with AI".** No native module, and
+  every endpoint already exists. These are the clean remaining wins.
+
+### The food parser had no tests, and one real bug
+
+Moving it turned up a defect nobody could have seen: `"2 eggs for breakfast, chicken for
+lunch"` produced an item named **"eggs for breakfast"**, filed under lunch — and that string
+went to `GET /api/food/search`. 148 lines of regex behind the product's stated primary input
+method, with zero tests. There are 29 now, and the bug is fixed in its own commit.
+
+Worth generalising: the three specs implemented on this branch each turned out to understate
+their problem (four hand-rolled cards were fourteen, 27 unbacked font weights were 52), and
+this one overstated two gaps that had since been filled. **Re-run a spec's own greps before
+trusting its framing.**
 
 ### #317 has no open PR — read this before assuming it is done
 
