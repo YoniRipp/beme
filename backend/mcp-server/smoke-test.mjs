@@ -114,6 +114,54 @@ async function checkToolSignatures(registeredToolCount) {
   );
 }
 
+/**
+ * stdout is the JSON-RPC transport. Nothing else may write a byte to it.
+ *
+ * Every check above this one went green while dotenv 17 was printing
+ * "◇ injected env (0) from ../.env // tip: ..." ahead of the initialize response, because
+ * the SDK's client transport quietly skips lines it cannot parse. A stricter client does
+ * not, and neither does the protocol. So this drives the server the raw way -- one
+ * initialize frame in, every line out parsed as JSON -- rather than through a client that
+ * forgives the thing being tested.
+ */
+async function checkStdoutIsPureJsonRpc() {
+  const { spawn } = await import('node:child_process');
+  const child = spawn(process.execPath, [ENTRYPOINT], {
+    env: { ...process.env, MCP_TEST_MODE: 'false', MCP_OPS_MODE: 'false', TRACKVIBE_API_URL: 'http://127.0.0.1:1' },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  let stdout = '';
+  child.stdout.on('data', (c) => (stdout += c.toString()));
+  child.stdin.write(
+    JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'smoke', version: '1' } },
+    }) + '\n'
+  );
+
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  child.kill();
+
+  const lines = stdout.split('\n').filter((l) => l.trim() !== '');
+  const notJson = lines.filter((l) => {
+    try {
+      JSON.parse(l);
+      return false;
+    } catch {
+      return true;
+    }
+  });
+
+  check(lines.length > 0, 'the server answers initialize on stdout');
+  check(
+    notJson.length === 0,
+    `stdout carries only JSON-RPC${notJson.length ? ` (${notJson.length} stray line(s), first: ${JSON.stringify(notJson[0].slice(0, 80))})` : ''}`
+  );
+}
+
 function check(condition, message) {
   if (condition) {
     console.log(`  ok   ${message}`);
@@ -235,6 +283,9 @@ try {
     TEST_MODE_TOOLS.every((n) => gatedNames.includes(n)),
     'every diagnostic tool appears once MCP_TEST_MODE is set'
   );
+
+  console.log('\nstdout hygiene:');
+  await checkStdoutIsPureJsonRpc();
 
   // Last, because it needs the gated count to check itself against.
   console.log('\nsource:');
