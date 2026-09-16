@@ -119,6 +119,29 @@
     --safe-right: env(safe-area-inset-right, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
+
+    /* Bottom chrome geometry — the nav pill, the AI Coach button docked above it, and the
+       strip the pair occupies.
+
+       Named here for the same reason the insets are: more than one file positions against
+       these numbers and they must not drift. `BottomNavigation` draws the pill and the dock
+       from them; `Base44Layout`'s <main> reserves `--bottom-chrome` of bottom padding so
+       nothing in the page comes to rest underneath the chrome.
+
+       The AI Coach button used to be `fixed` at a `9.75rem` literal that corresponded to
+       nothing the bar measured, which is how it ended up hovering 28px clear of both the
+       scrim and the reserved strip, on top of live content — over delete buttons, "Copy
+       day" and a dozen Profile switches.
+
+       `--bottom-chrome` deliberately excludes `--safe-bottom`: the nav adds the inset itself
+       with `.pb-safe`, and everything outside the nav composes the two. */
+    --bar-inset: 0.875rem;   /* the pill's mx-3.5 / mb-3.5, and the same breathing room on top */
+    --bar-height: 4rem;      /* the pill's h-16 */
+    --dock-gap: 0.75rem;     /* pill top edge → docked AI Coach button */
+    --dock-size: 3rem;       /* the docked button, 48px — never below the 44px touch target */
+    --bottom-chrome: calc(
+      var(--bar-inset) + var(--bar-height) + var(--dock-gap) + var(--dock-size) + var(--bar-inset)
+    );
   }
 
   /* Dark mode — the same palette on a dark ground, not a second identity.

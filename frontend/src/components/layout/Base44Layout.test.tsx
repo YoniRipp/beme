@@ -1,11 +1,12 @@
 /// <reference types="@testing-library/jest-dom" />
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Base44Layout } from './Base44Layout';
 
 const mockUser = vi.fn();
+const mockHasAiAccess = vi.fn<[], boolean>(() => false);
 
 vi.mock('@/context/AppContext', () => ({
   useApp: () => ({ user: mockUser() }),
@@ -15,25 +16,30 @@ vi.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ logout: vi.fn() }),
 }));
 
+// `hasAiAccess` is `isPro || aiCallsRemaining > 0`, and every free account starts the month
+// with a quota — so the AI Coach affordance is on screen for very nearly everyone. It was
+// pinned to `false` here for the whole life of the overlap bug, which is why no unit test
+// ever rendered the button.
 vi.mock('@/hooks/useSubscription', () => ({
-  useSubscription: () => ({ hasAiAccess: false }),
+  useSubscription: () => ({ hasAiAccess: mockHasAiAccess() }),
 }));
 
 vi.mock('../insights/AiChatPanel', () => ({
-  AiChatPanel: () => null,
+  AiChatPanel: ({ open }: { open: boolean }) => (open ? <div>AI Coach panel</div> : null),
 }));
 
 vi.mock('../voice/VoiceAgentPanel', () => ({
   VoiceAgentPanel: () => null,
 }));
 
-function renderLayout() {
+function renderLayout(initialPath = '/') {
   render(
-    <MemoryRouter initialEntries={['/']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <MemoryRouter initialEntries={[initialPath]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route element={<Base44Layout />}>
           <Route path="/" element={<div>Home content</div>} />
           <Route path="/energy" element={<div>Food content</div>} />
+          <Route path="/insights" element={<div>Insights content</div>} />
         </Route>
       </Routes>
     </MemoryRouter>
@@ -162,5 +168,107 @@ describe('Base44Layout sidebar drawer', () => {
     await user.keyboard('{Escape}');
 
     await waitFor(() => expect(sidebar).toHaveAttribute('inert'));
+  });
+});
+
+/**
+ * The AI Coach affordance.
+ *
+ * Two renderings of one condition: below `lg` the bottom bar docks it (so it inherits the
+ * bar's edge, the bar's insets and the strip `<main>` reserves), above `lg` the fixed FAB
+ * shows it stacked over the desktop voice button. Both sit in the DOM at once and CSS picks
+ * one — the same arrangement the mic has always had.
+ */
+describe('Base44Layout AI Coach', () => {
+  beforeEach(() => {
+    mockUser.mockReturnValue({
+      id: 'user-1',
+      name: 'Test User',
+      email: 'test@example.com',
+      role: 'user',
+      subscriptionStatus: 'free',
+    });
+    mockHasAiAccess.mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    mockHasAiAccess.mockReturnValue(false);
+  });
+
+  it('docks the button inside the bottom bar rather than floating it over the page', () => {
+    renderLayout();
+
+    const bar = screen.getByRole('navigation', { name: /main navigation/i });
+    const docked = within(bar).getByRole('button', { name: 'Open AI Coach' });
+
+    // The whole fix: it is a child of the bar, so it cannot land anywhere the bar is not.
+    expect(bar).toContainElement(docked);
+    // Not `position: fixed` against the viewport any more, and no literal offset.
+    expect(docked.className).not.toContain('fixed');
+    expect(docked.className).not.toContain('9.75rem');
+    // Offset from the pill's own height, and right-aligned to the pill's edge.
+    expect(docked.className).toContain('bottom-[calc(100%+var(--dock-gap))]');
+    expect(docked.className).toContain('right-0');
+    expect(docked).not.toHaveAttribute('style');
+  });
+
+  it('keeps the desktop FAB as the ≥lg rendering, stacked above the voice button', () => {
+    renderLayout();
+
+    const bar = screen.getByRole('navigation', { name: /main navigation/i });
+    const all = screen.getAllByRole('button', { name: 'Open AI Coach' });
+    const desktop = all.filter((el) => !bar.contains(el));
+
+    expect(all).toHaveLength(2);
+    expect(desktop).toHaveLength(1);
+    expect(desktop[0].className).toContain('hidden');
+    expect(desktop[0].className).toContain('lg:flex');
+    // The pair that was already correct: voice FAB at `lg:bottom-6`, AI 12px above it.
+    expect(desktop[0].className).toContain('lg:bottom-[5.25rem]');
+  });
+
+  it('opens the AI Coach panel from the docked button', async () => {
+    const user = userEvent.setup();
+    renderLayout();
+
+    const bar = screen.getByRole('navigation', { name: /main navigation/i });
+    expect(screen.queryByText('AI Coach panel')).not.toBeInTheDocument();
+
+    await user.click(within(bar).getByRole('button', { name: 'Open AI Coach' }));
+
+    expect(await screen.findByText('AI Coach panel')).toBeInTheDocument();
+  });
+
+  it('renders nothing on /insights, which has the coach inline', () => {
+    renderLayout('/insights');
+
+    expect(screen.queryAllByRole('button', { name: 'Open AI Coach' })).toEqual([]);
+  });
+
+  it('renders nothing without AI access, and leaves the bar untouched', () => {
+    mockHasAiAccess.mockReturnValue(false);
+    renderLayout();
+
+    expect(screen.queryAllByRole('button', { name: 'Open AI Coach' })).toEqual([]);
+
+    const bar = screen.getByRole('navigation', { name: /main navigation/i });
+    expect(within(bar).getAllByRole('link').map((a) => a.textContent)).toEqual([
+      'Home',
+      'Workouts',
+      'Food',
+      'Profile',
+    ]);
+    expect(within(bar).getByRole('button', { name: 'Open voice' })).toBeInTheDocument();
+  });
+
+  // The reservation and the chrome are one number now. A literal here is what let the FAB
+  // stand 28px clear of the strip that was supposed to contain it.
+  it('reserves the chrome strip in <main> from the shared variable, inset included', () => {
+    renderLayout();
+
+    const main = document.querySelector('main');
+    expect(main).not.toBeNull();
+    expect(main!.className).toContain('pb-[calc(var(--bottom-chrome)+var(--safe-bottom))]');
+    expect(main!.className).not.toContain('pb-32');
   });
 });
