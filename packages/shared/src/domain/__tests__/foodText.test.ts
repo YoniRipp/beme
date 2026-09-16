@@ -54,22 +54,32 @@ describe('parseFoodItems', () => {
     expect(items.every((i) => i.meal === 'breakfast')).toBe(true);
   });
 
-  it('BUG: a line naming two meals puts everything in the last one, and keeps "for <meal>" in the name', () => {
-    // This is the shipped behaviour, pinned so the move into `packages/shared` is provably a
-    // move. It is also wrong, and worth stating plainly: the item is named "eggs for
-    // breakfast" — text that then gets sent to `GET /api/food/search` — and it is filed under
-    // lunch.
-    //
-    // Cause: the "<items> for <meal>" branch is anchored with `$`, so it matches the WHOLE
-    // line whenever the line ends with a meal keyword, and `(.+?)` backtracks until it does.
-    // The per-segment branch below it — the one written to handle several meals in one line —
-    // is therefore unreachable for exactly the phrasing it exists for.
-    //
-    // Fixed in the commit after this one, which is where the behaviour change belongs.
+  it('assigns a meal per segment when the line names several', () => {
+    // Regression. This used to produce an item literally named "eggs for breakfast", filed
+    // under lunch — text that then went to `GET /api/food/search`. The `$`-anchored
+    // whole-line branch claimed any line ending on a meal keyword, so the per-segment branch
+    // written for exactly this phrasing was unreachable.
     expect(parseFoodItems('2 eggs for breakfast, chicken for lunch')).toMatchObject([
-      { name: 'eggs for breakfast', meal: 'lunch' },
+      { name: 'eggs', amount: 2, meal: 'breakfast' },
       { name: 'chicken', meal: 'lunch' },
     ]);
+  });
+
+  it('still lets one named meal govern the whole line', () => {
+    // The case the fix must not break, and the reason it counts mentions rather than simply
+    // dropping the whole-line branch: one meal named means all of it, for that meal.
+    expect(parseFoodItems('eggs, toast for breakfast')).toMatchObject([
+      { name: 'eggs', meal: 'breakfast' },
+      { name: 'toast', meal: 'breakfast' },
+    ]);
+  });
+
+  it('handles three meals in one line', () => {
+    expect(
+      parseFoodItems('toast for breakfast, salad for lunch, steak for dinner').map(
+        (i) => `${i.name}:${i.meal}`
+      )
+    ).toEqual(['toast:breakfast', 'salad:lunch', 'steak:dinner']);
   });
 
   it('defaults to snack when no meal is named anywhere', () => {
@@ -85,12 +95,16 @@ describe('parseFoodItems', () => {
     ]);
   });
 
-  it('BUG: the same two items in the other order both land in lunch', () => {
-    // "rice, chicken for lunch" ends on a meal keyword, so the whole-line branch claims it and
-    // rice is swept into lunch as well. Same root cause as the case above.
-    expect(parseFoodItems('rice, chicken for lunch')).toMatchObject([
-      { name: 'rice', meal: 'lunch' },
-      { name: 'chicken', meal: 'lunch' },
+  it('puts both items in lunch when only lunch is named, whichever order they come in', () => {
+    // One mention, so the whole line is lunch — the reading a user means by "rice, chicken
+    // for lunch". The mirrored phrasing reaches the same answer down the per-segment path.
+    expect(parseFoodItems('rice, chicken for lunch').map((i) => `${i.name}:${i.meal}`)).toEqual([
+      'rice:lunch',
+      'chicken:lunch',
+    ]);
+    expect(parseFoodItems('chicken for lunch, rice').map((i) => `${i.name}:${i.meal}`)).toEqual([
+      'chicken:lunch',
+      'rice:lunch',
     ]);
   });
 
