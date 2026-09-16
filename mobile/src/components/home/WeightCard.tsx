@@ -34,7 +34,7 @@ export function WeightCard({ onLogWeight }: WeightCardProps) {
     logHint: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 2,
+      gap: spacing.xxs,
     },
     logHintText: {
       color: colors.primary,
@@ -73,7 +73,7 @@ export function WeightCard({ onLogWeight }: WeightCardProps) {
     sparkline: {
       flexDirection: 'row',
       alignItems: 'flex-end',
-      gap: 2,
+      gap: spacing.xxs,
       height: 32,
     },
     bar: {

@@ -42,11 +42,11 @@ export function MobileFoodCard({ entry, onEdit, onDelete }: MobileFoodCardProps)
     },
     meta: {
       color: colors.textMuted,
-      marginTop: 2,
+      marginTop: spacing.xxs,
     },
     macro: {
       color: colors.textMuted,
-      marginTop: 3,
+      marginTop: spacing.xxs,
     },
     calorieBlock: {
       alignItems: 'flex-end',

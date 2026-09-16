@@ -6,8 +6,22 @@
  * `p-4` = 16px, `p-6` = 24px, `p-8` = 32px). These are the same increments under the
  * names mobile already used. Unitless — the web maps back to rem/px at its own
  * Tailwind edge, React Native treats a bare number as density-independent pixels.
+ *
+ * **The names below are not the whole scale the web can reach.** Tailwind also has the
+ * half-steps, and the web uses them: `gap-1.5` (6px) 31 times, `mt-0.5` (2px) 21 times,
+ * `py-2.5` (10px) 9 times, `p-3.5` (14px) 3 times, `pb-10` (40px) once. Only `0.5` has a
+ * name here (`xxs`); 6, 10, 14 and 40 stay literals on the mobile side, because inventing
+ * t-shirt names for the gaps between the named steps reads worse than the number does.
+ * `spacingUsesTheScale.test.ts` accepts them for that reason and rejects anything else —
+ * they are on the web's scale, which is the thing being matched, not off it.
  */
 export const spacing = {
+  /**
+   * `0.5` on Tailwind's scale — the optical nudge between two stacked lines of text, not a
+   * gap. The web uses it 31 times (`mt-0.5`, `gap-0.5`, `py-0.5`), so it is part of the
+   * shared vocabulary even though the named steps below start at 4.
+   */
+  xxs: 2,
   xs: 4,
   sm: 8,
   md: 12,

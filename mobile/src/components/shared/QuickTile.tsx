@@ -60,7 +60,7 @@ export function QuickTile({ icon, label, pill, onPress }: QuickTileProps) {
       borderRadius: radius.sm,
       backgroundColor: colors.surfaceMuted,
       paddingHorizontal: spacing.sm,
-      paddingVertical: 2,
+      paddingVertical: spacing.xxs,
     },
     pillText: {
       color: colors.textMuted,
