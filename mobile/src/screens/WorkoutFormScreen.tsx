@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, SegmentedButtons, Text, IconButton, Divider, Card } from 'react-native-paper';
+import { TextInput, SegmentedButtons, Text, Divider } from 'react-native-paper';
+import { Card, Button, IconButton } from '../components/ui';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { WorkoutType, Exercise, WORKOUT_TYPES } from '../types/workout';
@@ -8,6 +9,7 @@ import { toLocalDateString } from '../lib/dateRanges';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
+import { fonts } from '../theme';
 
 function newExercise(): Exercise {
   return { name: '', sets: 3, reps: 10, weight: undefined, notes: undefined };
@@ -39,7 +41,7 @@ export function WorkoutFormScreen() {
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, paddingBottom: 40 },
     input: { marginBottom: 12 },
-    label: { marginTop: 8, marginBottom: 8, fontWeight: '600' },
+    label: { marginTop: 8, marginBottom: 8, fontFamily: fonts.semibold, fontWeight: '600' },
     segment: { marginBottom: 12 },
     divider: { marginVertical: 16 },
     exerciseCard: { marginBottom: 12 },
@@ -153,7 +155,7 @@ export function WorkoutFormScreen() {
         <Text variant="titleMedium" style={styles.label}>Exercises</Text>
 
         {exercises.map((ex, i) => (
-          <Card key={i} style={styles.exerciseCard} mode="outlined">
+          <Card key={i} style={styles.exerciseCard}>
             <Card.Content>
               <View style={styles.exerciseHeader}>
                 <Text variant="labelLarge">Exercise {i + 1}</Text>

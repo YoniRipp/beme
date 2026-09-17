@@ -4,6 +4,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { Text } from 'react-native-paper';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
+import { fonts } from '../../theme';
 
 interface ProgressRingProps {
   value: number; // 0-100
@@ -59,7 +60,7 @@ export function ProgressRing({
   const styles = useThemedStyles((colors) => ({
     container: { alignItems: 'center' },
     textContainer: { position: 'absolute', top: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
-    value: { fontWeight: '700', color: colors.text },
+    value: { fontFamily: fonts.bold, fontWeight: '700', color: colors.text },
     label: { marginTop: 4, color: colors.textMuted, textAlign: 'center' },
   }));
   const radius = (size - strokeWidth) / 2;

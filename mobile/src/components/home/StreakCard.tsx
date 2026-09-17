@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
-import { spacing } from '../../theme';
+import { fonts, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 import { SectionCard } from '../shared/SectionCard';
@@ -48,6 +48,7 @@ export function StreakCard() {
     },
     count: {
       color: colors.sleep,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     label: {
@@ -58,10 +59,11 @@ export function StreakCard() {
     best: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 2,
+      gap: spacing.xxs,
     },
     bestText: {
       color: colors.sleep,
+      fontFamily: fonts.bold,
       fontWeight: '700',
       textTransform: 'uppercase',
     },

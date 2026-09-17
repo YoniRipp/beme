@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
+import { Button } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { useGoals } from '../hooks/useGoals';
 import { useEnergy } from '../hooks/useEnergy';

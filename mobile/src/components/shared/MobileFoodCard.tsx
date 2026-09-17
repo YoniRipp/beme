@@ -1,8 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Card, Icon, IconButton, Text } from 'react-native-paper';
+import { Icon, Text } from 'react-native-paper';
+import { Card, IconButton } from '../ui';
 import { FoodEntry } from '../../types/energy';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 
@@ -16,10 +17,6 @@ export function MobileFoodCard({ entry, onEdit, onDelete }: MobileFoodCardProps)
   const { colors } = useThemeContext();
   const styles = useThemedStyles((colors) => ({
     card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
     content: {
       flexDirection: 'row',
@@ -41,15 +38,16 @@ export function MobileFoodCard({ entry, onEdit, onDelete }: MobileFoodCardProps)
     },
     name: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     meta: {
       color: colors.textMuted,
-      marginTop: 2,
+      marginTop: spacing.xxs,
     },
     macro: {
       color: colors.textMuted,
-      marginTop: 3,
+      marginTop: spacing.xxs,
     },
     calorieBlock: {
       alignItems: 'flex-end',
@@ -57,6 +55,7 @@ export function MobileFoodCard({ entry, onEdit, onDelete }: MobileFoodCardProps)
     },
     calories: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     kcal: {

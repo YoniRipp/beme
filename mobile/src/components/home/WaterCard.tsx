@@ -1,8 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Button, IconButton, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
+import { Button, IconButton } from '../ui';
 import Toast from 'react-native-toast-message';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 import { SectionCard } from '../shared/SectionCard';
 import { useWater } from '../../hooks/useWater';
@@ -36,6 +37,7 @@ export function WaterCard() {
     },
     count: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     goal: {

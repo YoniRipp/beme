@@ -1,5 +1,6 @@
 import React from 'react';
-import { Dialog, Portal, Button, Text } from 'react-native-paper';
+import { Dialog, Portal, Text } from 'react-native-paper';
+import { Button } from '../ui';
 import { useThemeContext } from '../../theme/ThemeContext';
 
 interface ConfirmDialogProps {

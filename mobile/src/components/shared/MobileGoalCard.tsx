@@ -1,9 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Card, Icon, IconButton, ProgressBar, Text } from 'react-native-paper';
+import { Icon, ProgressBar, Text } from 'react-native-paper';
+import { Card, IconButton } from '../ui';
 import { formatGoalValue, GOAL_UNIT_LABELS } from '@trackvibe/shared/domain';
 import { Goal } from '../../types/goals';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 
@@ -44,10 +45,6 @@ export function MobileGoalCard({ goal, current = 0, percentage, onEdit, onDelete
 
   const styles = useThemedStyles((colors) => ({
     card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
     // The web tints the whole card's border with success once a goal is met
     // (`achieved && 'border-success/40'`); this is that, in Paper's vocabulary.
@@ -77,16 +74,17 @@ export function MobileGoalCard({ goal, current = 0, percentage, onEdit, onDelete
     },
     title: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
       textTransform: 'capitalize',
     },
     meta: {
       color: colors.textMuted,
-      marginTop: 2,
+      marginTop: spacing.xxs,
     },
     percent: {
       color: colors.textMuted,
-      marginTop: 2,
+      marginTop: spacing.xxs,
     },
     // The unfilled remainder of the bar. `surfaceMuted` — what this was — maps to the web's
     // `--paper-2`, NOT to the `--muted` the web draws its tracks with, and against this

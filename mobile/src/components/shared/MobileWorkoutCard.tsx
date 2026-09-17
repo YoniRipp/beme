@@ -1,9 +1,10 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
-import { Card, Chip, Icon, IconButton, Text } from 'react-native-paper';
+import { Chip, Icon, Text } from 'react-native-paper';
+import { Card, IconButton } from '../ui';
 import { formatDate, getWeightUnit } from '@trackvibe/shared/domain';
 import { Workout } from '../../types/workout';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useSettings } from '../../hooks/useSettings';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
@@ -37,10 +38,6 @@ export function MobileWorkoutCard({
   const weightUnit = getWeightUnit(settings.units);
   const styles = useThemedStyles((colors) => ({
     card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
     completedCard: {
       opacity: 0.75,
@@ -75,6 +72,7 @@ export function MobileWorkoutCard({
     },
     title: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     titleCompleted: {
@@ -83,7 +81,7 @@ export function MobileWorkoutCard({
     },
     meta: {
       color: colors.textMuted,
-      marginTop: 2,
+      marginTop: spacing.xxs,
     },
     // Both this badge and `exerciseRow` below are filled grounds sitting directly on the
     // card's `colors.surface`, which is 1.03:1 away from `surfaceMuted` in the default
@@ -113,6 +111,7 @@ export function MobileWorkoutCard({
     exerciseName: {
       flex: 1,
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     exerciseMeta: {
@@ -120,6 +119,7 @@ export function MobileWorkoutCard({
     },
     more: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '700',
       paddingHorizontal: spacing.sm,
     },

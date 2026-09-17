@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, SegmentedButtons, RadioButton, Text } from 'react-native-paper';
+import { TextInput, SegmentedButtons, RadioButton, Text } from 'react-native-paper';
+import { Button } from '../components/ui';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { defaultPeriodForType } from '@trackvibe/shared/domain';
 import { useGoals } from '../hooks/useGoals';
 import { GoalType, GoalPeriod, GOAL_TYPES, GOAL_PERIODS, Goal } from '../types/goals';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import Toast from 'react-native-toast-message';
+import { fonts } from '../theme';
 
 /**
  * A new goal starts as a daily calories goal, matching the web's GoalModal. This form used
@@ -83,7 +85,7 @@ export function GoalFormScreen() {
     flex: { flex: 1 },
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16 },
-    label: { marginTop: 16, marginBottom: 8, fontWeight: '600' },
+    label: { marginTop: 16, marginBottom: 8, fontFamily: fonts.semibold, fontWeight: '600' },
     segment: { marginBottom: 8 },
     input: { marginBottom: 8 },
     saveButton: { marginTop: 24, backgroundColor: colors.primary },

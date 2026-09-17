@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, ScrollView } from 'react-native';
-import { Card, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
+import { Card } from '../components/ui';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { useEnergy } from '../hooks/useEnergy';
 import { LoadingView } from '../components/shared/LoadingView';
@@ -15,6 +16,7 @@ import {
 import { useThemedStyles } from '../theme/useThemedStyles';
 import { useThemeContext } from '../theme/ThemeContext';
 import { BarChart, LineChart, PieChart } from 'react-native-gifted-charts';
+import { fonts } from '../theme';
 
 export function InsightsScreen() {
   const { colors } = useThemeContext();
@@ -22,16 +24,20 @@ export function InsightsScreen() {
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, paddingBottom: 32 },
     card: { marginBottom: 16 },
-    cardTitle: { fontWeight: '600', marginBottom: 4 },
+    cardTitle: { fontFamily: fonts.semibold, fontWeight: '600', marginBottom: 4 },
     subtitle: { color: colors.textMuted, marginBottom: 12 },
-    chartLabel: { fontSize: 8, color: colors.textMuted },
+    // 10 is the scale's floor (`caption`); this was 8, the only true size violation in
+    // `mobile/src`. If the axis labels collide at 10, reduce the tick count rather than the
+    // type size — 8px is unreadable on a phone and undoes the a11y pass that produced
+    // `--ink-3`.
+    chartLabel: { fontSize: 10, fontFamily: fonts.regular, color: colors.textMuted },
     pieContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
     legend: { gap: 4 },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     legendDot: { width: 10, height: 10, borderRadius: 5 },
     statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
     statItem: { width: '50%', paddingVertical: 8, alignItems: 'center' },
-    statValue: { fontWeight: '700', color: colors.text },
+    statValue: { fontFamily: fonts.bold, fontWeight: '700', color: colors.text },
     statLabel: { color: colors.textMuted, textAlign: 'center' },
   }));
   const { workouts, workoutsLoading } = useWorkouts();
@@ -64,7 +70,7 @@ export function InsightsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {workouts.length > 0 && (
-        <Card style={styles.card} mode="outlined">
+        <Card style={styles.card}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>Workout Frequency</Text>
             <Text variant="bodySmall" style={styles.subtitle}>Last 12 weeks</Text>
@@ -83,7 +89,7 @@ export function InsightsScreen() {
       )}
 
       {typeCounts.length > 0 && (
-        <Card style={styles.card} mode="outlined">
+        <Card style={styles.card}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>Workout Types</Text>
             <View style={styles.pieContainer}>
@@ -102,7 +108,7 @@ export function InsightsScreen() {
       )}
 
       {foodEntries.length > 0 && (
-        <Card style={styles.card} mode="outlined">
+        <Card style={styles.card}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.cardTitle}>Calorie Trend</Text>
             <Text variant="bodySmall" style={styles.subtitle}>Last 30 days</Text>
@@ -122,7 +128,7 @@ export function InsightsScreen() {
         </Card>
       )}
 
-      <Card style={styles.card} mode="outlined">
+      <Card style={styles.card}>
         <Card.Content>
           <Text variant="titleMedium" style={styles.cardTitle}>Stats</Text>
           <View style={styles.statsGrid}>

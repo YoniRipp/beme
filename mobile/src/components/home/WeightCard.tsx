@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
 import { summarizeWeight } from '@trackvibe/shared/domain';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 import { SectionCard } from '../shared/SectionCard';
@@ -34,10 +34,11 @@ export function WeightCard({ onLogWeight }: WeightCardProps) {
     logHint: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 2,
+      gap: spacing.xxs,
     },
     logHintText: {
       color: colors.primary,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     value: {
@@ -47,6 +48,7 @@ export function WeightCard({ onLogWeight }: WeightCardProps) {
     },
     current: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     unit: {
@@ -68,12 +70,13 @@ export function WeightCard({ onLogWeight }: WeightCardProps) {
     },
     factValue: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     sparkline: {
       flexDirection: 'row',
       alignItems: 'flex-end',
-      gap: 2,
+      gap: spacing.xxs,
       height: 32,
     },
     bar: {
@@ -102,6 +105,7 @@ export function WeightCard({ onLogWeight }: WeightCardProps) {
     },
     emptyCtaText: {
       color: colors.primary,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
   }));

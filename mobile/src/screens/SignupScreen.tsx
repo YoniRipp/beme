@@ -38,6 +38,7 @@ export function SignupScreen() {
     },
     title: {
       fontSize: 24,
+      fontFamily: fonts.bold,
       fontWeight: '800',
       marginBottom: spacing.xl,
       color: colors.text,
@@ -70,9 +71,12 @@ export function SignupScreen() {
       opacity: 0.7,
     },
     buttonText: {
-      fontFamily: fonts.regular,
+      // `fonts.regular` was here beside `fontWeight: '600'` — a named font, and still the
+      // wrong face for the weight it asks for. That is why `rawTextNamesItsFont` passed on
+      // this file while the button still rendered at 400.
       color: colors.primaryForeground,
       fontSize: 16,
+      fontFamily: fonts.semibold,
       fontWeight: '600',
     },
     link: {

@@ -149,8 +149,6 @@ it. That is the mistake this file opens by warning about.
 
 | PR | Scope |
 |---|---|
-| #312 · radii, elevation, primitives | **Implemented** on `claude/expo-design-system`, which stacks on this branch. |
-| #316 · typography | **Implemented** on `claude/expo-design-system`, which stacks on this branch. |
 | #315 · first-run and profile | Scope shrank once #302 added a profile client. Conflicts with #337. |
 | #311 · voice, barcode, meal tools, copy day | **Its spec is materially stale — read the note below before starting.** |
 | #304 · food Journal screen | A whole screen. |
@@ -158,6 +156,50 @@ it. That is the mistake this file opens by warning about.
 | #310 · Insights AI | Expo already has the charts; it is missing the AI half. **1.5–2 engineer-weeks.** |
 | #320 · rest of App Store readiness | Privacy policy reachable in-app, nutrition labels, `PrivacyInfo.xcprivacy`, metadata and age rating, guideline 4.2. Account deletion split out as #337. |
 | #306 · tab set, destinations, screen names | **Last, and alone.** It renames every tab and screen title, so it conflicts with every other Expo PR here. |
+
+### #312 and #316 are implemented on `claude/expo-design-system`
+
+The design-system trio is complete: #308 merged, and radii/elevation/primitives (#312) and
+typography (#316) are on that branch. Both rewrote `mobile/src/theme.ts`, in different places,
+as their specs predicted.
+
+#316 in one line: the app named weights `600`/`700`/`800` in **52 of its 55** `fontWeight`
+declarations and loaded none of them — and on Expo a weight is part of the family name, not a
+number, so not one of those 52 could render. The spec counted 27; #307's five new cards nearly
+quadrupled the 700s in between. Three faces added; deliberately no 800, because the web's own
+`font-extrabold` has no file behind it either.
+
+Two things #316 found that its spec did not:
+
+- **The most-seen text in the app had no font at all.** The six tab labels and every screen
+  header go through React Navigation style props, which never pass through a `<Text>`
+  import — so `rawTextNamesItsFont` was exempt from them by construction. That guard exists
+  because "17 green tests and the sign-in screen still rendered in the system font"; it had
+  the same blind spot one layer over. It sees navigation styles now.
+- **`LoginScreen` and `SignupScreen` were called clean because they DO name fonts** — and
+  their sign-in button named `fonts.regular` beside `fontWeight: '600'`. A named font that is
+  the wrong face for its weight renders exactly as wrong as no font, with every guard green.
+
+### #312's own corrections
+
+All seven tasks, in four commits. The spec was accurate about the shape of the problem and
+wrong about three of its numbers, each corrected in the commit that found it:
+
+- It counted **four** hand-rolled card surfaces. There were **fourteen** — writing the guard
+  first is what found the other ten, including `SectionCard`, which #307 added *after* the
+  spec named the problem and which still grew its own copy at a third radius.
+- It called six spacing values "off-scale entirely". Five of them are on Tailwind's scale —
+  the web uses `gap-1.5` 31 times and `mt-0.5` 21 — and the shared token had simply
+  transcribed six of Tailwind's steps. Following the spec there would have changed the line
+  spacing inside every card to satisfy a test. Exactly one value (a `3`) was genuinely off.
+- It asked for Paper's `containerSize` prop for the 44px target. Paper 5.15 has no such prop;
+  the size comes from `style`.
+
+**Not verified, and it needs a simulator**: cards now render at 22px with a shadow where they
+were flat at 14 or 18, and every icon button's footprint grows 10px. `MobileWorkoutCard`'s
+action row is the tightest place that happens. This is a visual change with no visual
+confirmation — it is the same "every merged Expo change is visually unseen" item below,
+now with more to look at.
 
 ### The date audit is finished — don't redo it
 
@@ -309,7 +351,25 @@ Production is Railway project `distinguished-elegance`, service **BMe**. Present
 
 ---
 
-## What is on `claude/hardening-and-bug-fixes`
+## What is on `claude/expo-design-system`
+
+The design-system half: #312 (radii, elevation, the primitive layer) and #316 (typography),
+**stacked on `claude/hardening-and-bug-fixes`** so this PR shows only the visual diff.
+
+**Nothing here has been seen running.** It changes how every screen looks — 22px corners with
+shadows where there were flat 14s and 18s, six font faces where two were loaded, a 10px-larger
+footprint on every icon button. It is all test-verified and none of it is visually verified,
+which is owner item 6 below with more to look at than before.
+
+Six guards ship with it, each verified to fail against a mutant restoring the behaviour it
+forbids. Keep that check up: one passed its first mutant run for the wrong reason (the
+injection silently missed), and a timezone assertion on the branch below passed against the
+very implementation it was written to replace, because the runner uses UTC and UTC is where
+that bug hides.
+
+---
+
+## What is on `claude/hardening-and-bug-fixes` (the branch below)
 
 Correctness work only. Every change here is test-verified and none of it changes how anything
 looks, which is why it is split from the design-system branch rather than shipped with it.
@@ -324,9 +384,7 @@ looks, which is why it is split from the design-system branch rather than shippe
 Two things found here are **not** fixed, because both change user-visible data and need a
 product call — they are items 7 and 8 under "Needs the owner".
 
-The design-system work (#312, #316) is on `claude/expo-design-system`, branched from this one.
-It changes how every screen looks and nobody has seen it running, so it should not hold this
-up.
+That branch is the base of this one, and should merge first.
 
 ---
 
