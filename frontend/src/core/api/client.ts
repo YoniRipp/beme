@@ -2,7 +2,7 @@
 
 import { STORAGE_KEYS } from '@/lib/storage';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
-import { enqueue } from '@/lib/syncQueue';
+import { enqueue, setAuthTokenProvider } from '@/lib/syncQueue';
 import type { PaginatedResponse } from '@/types/api';
 import { createRequestAllPages } from '@trackvibe/shared/api';
 
@@ -68,6 +68,15 @@ let inMemoryToken: string | null = readStoredToken();
 export function getToken(): string | null {
   return inMemoryToken;
 }
+
+/**
+ * Let the offline queue authenticate its replays.
+ *
+ * Registered rather than imported the other way, to keep the dependency one-directional. It
+ * reads the token when a replay actually goes out, so a request that sat in the queue over a
+ * re-login uses the new one.
+ */
+setAuthTokenProvider(getToken);
 
 export function setToken(token: string | null): void {
   inMemoryToken = token;
