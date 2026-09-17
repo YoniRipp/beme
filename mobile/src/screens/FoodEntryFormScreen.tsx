@@ -16,6 +16,7 @@ import {
 import Toast from 'react-native-toast-message';
 import { parseNumericField } from '../lib/numericField';
 import { messageFor } from '../lib/errorMessage';
+import { DayPicker } from '../components/shared/DayPicker';
 import { fonts, spacing } from '../theme';
 import { useThemedStyles } from '../theme/useThemedStyles';
 
@@ -114,6 +115,10 @@ export function FoodEntryFormScreen() {
   const [showResults, setShowResults] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
+  const [date, setDate] = useState(existing?.date || new Date());
+  // Captured once per mount rather than per render, so the row cannot shift under the user's
+  // finger if a form is left open across midnight.
+  const [today] = useState(() => new Date());
   const [name, setName] = useState(existing?.name || '');
   const [calories, setCalories] = useState(existing?.calories?.toString() || '');
   const [protein, setProtein] = useState(existing?.protein?.toString() || '');
@@ -215,7 +220,7 @@ export function FoodEntryFormScreen() {
     setSaving(true);
     try {
       const data = {
-        date: existing?.date || new Date(),
+        date,
         name: name.trim(),
         calories: caloriesValue ?? 0,
         protein: proteinValue ?? 0,
@@ -267,6 +272,9 @@ export function FoodEntryFormScreen() {
         )}
 
         <TextInput mode="outlined" label="Food name" value={name} onChangeText={setName} style={styles.input} />
+
+        {/* Above the meal selector on purpose: which day comes before which meal of it. */}
+        <DayPicker value={date} onChange={setDate} today={today} />
 
         <Text variant="titleSmall" style={styles.label}>Meal</Text>
         <SegmentedButtons
