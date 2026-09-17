@@ -16,6 +16,7 @@ import { buildActionsFromFunctionCalls, filterHallucinatedActions } from '../ser
 import { VOICE_TOOLS } from '../../voice/tools.js';
 import { executeActions } from '../services/voiceExecutor.js';
 import { checkAiQuota, tryConsumeAiCall } from '../services/aiQuota.js';
+import { isTokenRevoked } from '../lib/tokenBlocklist.js';
 import { logger } from '../lib/logger.js';
 
 const INACTIVITY_TIMEOUT_MS = 30_000;
@@ -36,6 +37,9 @@ async function authenticateWs(req: IncomingMessage): Promise<{ id: string; email
 
     const payload = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] }) as { sub?: string; email?: string; role?: string };
     if (!payload.sub) return null;
+    // Same revocation check every HTTP route runs (middleware/auth.ts): a signature
+    // that still verifies is not enough -- a logged-out token must not open a stream.
+    if (await isTokenRevoked(token)) return null;
     return { id: payload.sub, email: payload.email ?? '', role: payload.role ?? 'user' };
   } catch {
     return null;

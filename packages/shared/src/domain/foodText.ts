@@ -77,20 +77,75 @@ export function inferMealFromTime(now: Date = new Date()): MealType {
   return inferMealTypeFromHour(now.getHours());
 }
 
+/**
+ * The unit vocabulary, spoken and abbreviated, as one alternation shared by both shapes below.
+ *
+ * Only the abbreviations were listed here, so "200 grams of rice" — the form a transcript
+ * actually carries, and `global/domain-conventions.md` calls voice the primary path for food
+ * logging — missed both branches and fell through to the bare-count one, parsing to
+ * `unit: null`. `QuickVoiceEntry` reads a unit-less number as a count of the food's own unit,
+ * so "200 grams of bread" logged 200 slices.
+ *
+ * Longest form first, so "kilograms" is never read as "kg" or "g". What keeps the group
+ * word-bounded is the `\s+` (prefix) and `$` (suffix) that follow it: "200 grapes",
+ * "1 large egg" and "2 programs" match no alternative and stay counts, exactly as before.
+ */
+const UNIT_ALTERNATION =
+  'kilograms?|kilos?|kg|grams?|g|millilitres?|milliliters?|ml|litres?|liters?|l|oz|cups?|tbsp|tsp';
+
+/** "250g chicken" / "250 g chicken" / "200 grams of rice" — amount and unit leading. */
+const AMOUNT_UNIT_PREFIX = new RegExp(
+  `^(\\d+\\.?\\d*)\\s*(${UNIT_ALTERNATION})\\s+(?:of\\s+)?(.+)$`,
+  'i'
+);
+
+/** "chicken breast 200g" / "rice 200 grams" — amount and unit trailing. */
+const AMOUNT_UNIT_SUFFIX = new RegExp(`^(.+?)\\s+(\\d+\\.?\\d*)\\s*(${UNIT_ALTERNATION})$`, 'i');
+
+/**
+ * Spoken units mapped onto the value the parser already emitted for the abbreviation.
+ *
+ * No new unit string is introduced, deliberately: `MEASURED_UNITS` in `QuickVoiceEntry` and
+ * `resolveItem` in `BulkFoodEntryModal` both switch on 'g' | 'kg' | 'ml' | 'l', so a "grams"
+ * left as "grams" would scale no better than the `null` it replaced. Anything unlisted keeps
+ * its own lowercased text — which is what every abbreviation did before, plural included.
+ */
+const CANONICAL_UNITS: Record<string, string> = {
+  gram: 'g',
+  grams: 'g',
+  kilo: 'kg',
+  kilos: 'kg',
+  kilogram: 'kg',
+  kilograms: 'kg',
+  millilitre: 'ml',
+  millilitres: 'ml',
+  milliliter: 'ml',
+  milliliters: 'ml',
+  litre: 'l',
+  litres: 'l',
+  liter: 'l',
+  liters: 'l',
+};
+
+const canonicalUnit = (captured: string): string => {
+  const lower = captured.toLowerCase();
+  return CANONICAL_UNITS[lower] ?? lower;
+};
+
 function extractAmountAndUnit(text: string): { name: string; amount: number | null; unit: string | null } {
   const trimmed = text.trim();
   if (!trimmed) return { name: '', amount: null, unit: null };
 
-  // "250g chicken" / "250 g chicken" — amount and unit leading.
-  const prefixMatch = trimmed.match(/^(\d+\.?\d*)\s*(g|kg|ml|oz|cups?|tbsp|tsp|l)\s+(.+)$/i);
+  // "250g chicken" / "250 g chicken" / "200 grams of rice" — amount and unit leading.
+  const prefixMatch = trimmed.match(AMOUNT_UNIT_PREFIX);
   if (prefixMatch) {
-    return { name: prefixMatch[3].trim(), amount: parseFloat(prefixMatch[1]), unit: prefixMatch[2].toLowerCase() };
+    return { name: prefixMatch[3].trim(), amount: parseFloat(prefixMatch[1]), unit: canonicalUnit(prefixMatch[2]) };
   }
 
-  // "chicken breast 200g" — amount and unit trailing.
-  const suffixMatch = trimmed.match(/^(.+?)\s+(\d+\.?\d*)\s*(g|kg|ml|oz|cups?|tbsp|tsp|l)$/i);
+  // "chicken breast 200g" / "rice 200 grams" — amount and unit trailing.
+  const suffixMatch = trimmed.match(AMOUNT_UNIT_SUFFIX);
   if (suffixMatch) {
-    return { name: suffixMatch[1].trim(), amount: parseFloat(suffixMatch[2]), unit: suffixMatch[3].toLowerCase() };
+    return { name: suffixMatch[1].trim(), amount: parseFloat(suffixMatch[2]), unit: canonicalUnit(suffixMatch[3]) };
   }
 
   // "2 eggs" / "3 slices of bread" — a count, then the item.

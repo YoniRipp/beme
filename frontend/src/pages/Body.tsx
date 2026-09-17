@@ -42,7 +42,7 @@ function groupWorkoutsByDate(workouts: Workout[], ascending = false): { date: st
 }
 
 export function Body() {
-  const { workouts, workoutsLoading, addWorkout, updateWorkout, deleteWorkout, toggleWorkoutCompleted } = useWorkouts();
+  const { workouts, workoutsLoading, workoutsError, addWorkout, updateWorkout, deleteWorkout, toggleWorkoutCompleted } = useWorkouts();
   const [modalOpen, setModalOpen] = useState(false);
   // Hold the id, not the object. The logger persists through the react-query cache, so a
   // snapshot taken at handleEdit goes stale the moment a set is logged — and the editor
@@ -203,7 +203,7 @@ export function Body() {
             />
           </div>
         </div>
-        <ContentWithLoading loading={workoutsLoading} loadingText="Loading workouts...">
+        <ContentWithLoading loading={workoutsLoading} loadingText="Loading workouts..." error={workoutsError}>
           <div className="space-y-8">
             <Card className="p-4">
               <div className="flex justify-between items-start mb-4">
@@ -259,13 +259,18 @@ export function Body() {
             </div>
             {filteredWorkouts.length === 0 ? (
               workouts.length === 0 ? (
-                <EmptyState
-                  icon={Dumbbell}
-                  title="Add your first workout"
-                  description="Start tracking strength, cardio, and weekly consistency."
-                  actionLabel="Add a workout"
-                  onAction={handleAddNew}
-                />
+                // A failed fetch is not an empty history. Without this guard the error sits
+                // above "Add your first workout", telling a user with hundreds of workouts
+                // that they have none — the list is unknown, not empty.
+                workoutsError ? null : (
+                  <EmptyState
+                    icon={Dumbbell}
+                    title="Add your first workout"
+                    description="Start tracking strength, cardio, and weekly consistency."
+                    actionLabel="Add a workout"
+                    onAction={handleAddNew}
+                  />
+                )
               ) : (
                 <EmptyState
                   title="No workouts match"

@@ -29,8 +29,10 @@ export async function handler(event: SQSEvent, context: Context) {
   await closeConnections();
 
   if (failures.length > 0) {
-    throw new Error(`Failed to process ${failures.length} message(s)`);
+    console.error(`Failed to process ${failures.length} message(s)`, {
+      messageIds: failures.map((failure) => failure.itemIdentifier),
+    });
   }
 
-  return { batchItemFailures: [] };
+  return { batchItemFailures: failures };
 }

@@ -68,6 +68,8 @@ Resources:
           Properties:
             Queue: !GetAtt EventQueue.Arn
             BatchSize: 10
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
 
   VoiceHandlerFunction:
     Type: AWS::Serverless::Function

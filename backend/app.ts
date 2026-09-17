@@ -86,6 +86,13 @@ export async function createApp() {
     app.use(createWebhookRouter());
   }
 
+  // The WhatsApp webhook verifies Meta's X-Hub-Signature-256 over the RAW body, so it needs
+  // the same treatment as Lemon Squeezy above: mounted BEFORE express.json(), or the handler
+  // receives a parsed object, cannot recompute the HMAC, and rejects every genuine delivery.
+  // Only the POST path is raw; GET /api/whatsapp/webhook (Meta's challenge) and
+  // GET /api/whatsapp/status carry no body and are unaffected.
+  app.use('/api/whatsapp/webhook', express.raw({ type: 'application/json' }));
+
   app.use(express.json({ limit: '10mb' }));
   app.use(requestIdMiddleware);
   app.use(metricsMiddleware);

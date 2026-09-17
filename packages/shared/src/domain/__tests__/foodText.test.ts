@@ -183,3 +183,152 @@ describe('inferMealFromTime', () => {
     }
   });
 });
+
+/**
+ * Spoken units. Voice is the product's primary input path, but only the ABBREVIATIONS were
+ * listed in the two amount+unit regexes, so "200 grams of rice" missed both and fell through
+ * to the bare-count branch as `{ amount: 200, unit: null }`. Downstream that is not a missing
+ * unit, it is a wrong one: `QuickVoiceEntry` treats a unit-less number as a count of the
+ * food's own unit, so "200 grams of bread" logged 200 slices — roughly a 60x overcount.
+ *
+ * The contract these pin is equivalence: the spoken form must produce the same
+ * `ParsedFoodItem` as the abbreviation, on the canonical values the parser already emitted.
+ */
+describe('parseFoodItems — spoken units', () => {
+  it('parses the spoken form to the same item as the abbreviation', () => {
+    const spoken = parseFoodItems('200 grams of rice');
+    expect(spoken).toEqual([
+      { rawText: '200 grams of rice', name: 'rice', amount: 200, unit: 'g', meal: 'snack' },
+    ]);
+    expect(spoken[0]).toMatchObject({
+      name: parseFoodItems('200g rice')[0].name,
+      amount: parseFoodItems('200g rice')[0].amount,
+      unit: parseFoodItems('200g rice')[0].unit,
+    });
+  });
+
+  it.each([
+    ['200 gram of rice', 200, 'g'],
+    ['200 grams of rice', 200, 'g'],
+    ['200 grams rice', 200, 'g'],
+    ['2 kilogram of rice', 2, 'kg'],
+    ['2 kilograms of rice', 2, 'kg'],
+    ['2 kilo of rice', 2, 'kg'],
+    ['2 kilos of rice', 2, 'kg'],
+    ['250 millilitre of rice', 250, 'ml'],
+    ['250 millilitres of rice', 250, 'ml'],
+    ['250 milliliter of rice', 250, 'ml'],
+    ['250 milliliters of rice', 250, 'ml'],
+    ['1 litre of rice', 1, 'l'],
+    ['1 litres of rice', 1, 'l'],
+    ['1 liter of rice', 1, 'l'],
+    ['1 liters of rice', 1, 'l'],
+  ])('%s is %d %s of rice', (text, amount, unit) => {
+    expect(parseFoodItems(text)[0]).toMatchObject({ name: 'rice', amount, unit });
+  });
+
+  it('never reads "kilograms" as the "kg" or "g" that sit in the same alternation', () => {
+    // The 1000x version of the same bug: matching "kilograms" as "g" would log 2 g of chicken.
+    expect(parseFoodItems('2 kilograms of chicken')[0].unit).toBe('kg');
+    expect(parseFoodItems('2 kilograms chicken')[0]).toMatchObject({
+      name: 'chicken',
+      amount: 2,
+      unit: 'kg',
+    });
+  });
+
+  it('reads a spoken unit trailing the name', () => {
+    expect(parseFoodItems('rice 200 grams')[0]).toMatchObject({
+      name: 'rice',
+      amount: 200,
+      unit: 'g',
+    });
+    expect(parseFoodItems('milk 500 millilitres')[0]).toMatchObject({
+      name: 'milk',
+      amount: 500,
+      unit: 'ml',
+    });
+  });
+
+  it('is case-insensitive, as the abbreviations already were', () => {
+    expect(parseFoodItems('200 Grams Of Rice')[0]).toMatchObject({
+      name: 'Rice',
+      amount: 200,
+      unit: 'g',
+    });
+  });
+
+  it('takes a decimal amount', () => {
+    expect(parseFoodItems('1.5 kilograms of chicken')[0]).toMatchObject({ amount: 1.5, unit: 'kg' });
+  });
+
+  it('carries the spoken unit through a meal-bearing line', () => {
+    // The end-to-end shape of the reported bug: this is what a transcript looks like.
+    expect(parseFoodItems('200 grams of bread for lunch')).toEqual([
+      { rawText: '200 grams of bread', name: 'bread', amount: 200, unit: 'g', meal: 'lunch' },
+    ]);
+  });
+
+  it('drops the "of" from the name, on the spoken and abbreviated forms alike', () => {
+    // Behaviour change, deliberate and reported: "200 g of rice" used to yield the name
+    // "of rice", which is what then went to `GET /api/food/search`. Equivalence with the
+    // spoken form is the point of the fix, so both now say "rice".
+    expect(parseFoodItems('200 g of rice')[0].name).toBe('rice');
+    expect(parseFoodItems('2 cups of rice')[0]).toMatchObject({ name: 'rice', unit: 'cups' });
+  });
+
+  it('does not eat a name that merely starts with "of"', () => {
+    // `(?:of\s+)?` is guarded by its own `\s+`, so "offal" is a food and not an "of".
+    expect(parseFoodItems('200 g offal')[0].name).toBe('offal');
+  });
+});
+
+/**
+ * The word-boundary traps. The unit group has no `\b` of its own — it is bounded by the
+ * `\s+` (prefix shape) and `$` (suffix shape) that follow it. These are the inputs that
+ * would break if that guard were ever loosened, e.g. to `\s*`.
+ */
+describe('parseFoodItems — units must not match inside a word', () => {
+  it.each([
+    ['200 grapes', 'grapes', 200],
+    ['1 large egg', 'large egg', 1],
+    ['2 programs', 'programs', 2],
+    ['3 kilo-somethings', 'kilo-somethings', 3],
+    ['2 litchis', 'litchis', 2],
+    ['5 mlukhiyah', 'mlukhiyah', 5],
+  ])('%s stays a count of %s', (text, name, amount) => {
+    expect(parseFoodItems(text)[0]).toMatchObject({ name, amount, unit: null });
+  });
+});
+
+/**
+ * The regression guard. Everything above is additive; these are the shapes that already
+ * worked and must be untouched by it.
+ */
+describe('parseFoodItems — abbreviated and countable units are unchanged', () => {
+  it.each([
+    ['250g chicken', 'chicken', 250, 'g'],
+    ['250 g chicken', 'chicken', 250, 'g'],
+    ['chicken breast 200g', 'chicken breast', 200, 'g'],
+    ['2kg rice', 'rice', 2, 'kg'],
+    ['500 ml milk', 'milk', 500, 'ml'],
+    ['1 l water', 'water', 1, 'l'],
+    ['4 oz steak', 'steak', 4, 'oz'],
+    ['2 tbsp oil', 'oil', 2, 'tbsp'],
+    ['1 tsp sugar', 'sugar', 1, 'tsp'],
+    ['2 cups rice', 'rice', 2, 'cups'],
+  ])('%s still parses to %s / %d / %s', (text, name, amount, unit) => {
+    expect(parseFoodItems(text)[0]).toMatchObject({ name, amount, unit });
+  });
+
+  it('leaves the countable units alone', () => {
+    expect(parseFoodItems('3 slices of bread')[0]).toMatchObject({
+      name: 'bread',
+      amount: 3,
+      unit: 'slice',
+    });
+    expect(parseFoodItems('2 pieces of chicken')[0]).toMatchObject({ name: 'chicken', unit: 'piece' });
+    expect(parseFoodItems('1 bowl of soup')[0]).toMatchObject({ name: 'soup', unit: 'bowl' });
+    expect(parseFoodItems('2 eggs')[0]).toMatchObject({ name: 'eggs', amount: 2, unit: null });
+  });
+});

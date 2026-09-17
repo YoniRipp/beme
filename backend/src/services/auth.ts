@@ -173,6 +173,25 @@ export async function getUser(userId: string): Promise<User> {
   return userModel.rowToUser(row);
 }
 
+/**
+ * A provider that is rate-limiting us or having an outage has told us nothing about the token.
+ * Collapsing that into 401 fails a VALID sign-in as if the token were forged, and gives the
+ * client no reason to retry, so the transient statuses map to 503 instead.
+ */
+function providerVerificationError(
+  status: number,
+  provider: string
+): UnauthorizedError | ServiceUnavailableError {
+  if (status === 429 || status >= 500) {
+    return new ServiceUnavailableError(
+      `${provider} sign-in is temporarily unavailable. Please try again in a moment.`
+    );
+  }
+  return new UnauthorizedError(
+    `${provider} sign-in failed: token could not be verified. Please try again.`
+  );
+}
+
 export async function loginWithGoogle(
   googleToken: string
 ): Promise<{ user: User; token: string }> {
@@ -207,6 +226,33 @@ export async function loginWithGoogle(
         email ||
         'User';
     } else {
+      // An access token carries no audience of its own, so which client minted it has to be
+      // asked of Google before the identity behind it is trusted: userinfo answers for a
+      // token issued to ANY client with the userinfo scope, so without this check an access
+      // token from an unrelated Google app signs in as that user. `aud` is the client the
+      // token was issued for, `azp` the client that obtained it — they differ only when a
+      // native client requests a token for its project's web client id.
+      const tokenInfoRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(googleToken)}`
+      );
+      if (!tokenInfoRes.ok) {
+        const text = await tokenInfoRes.text();
+        logger.error({ status: tokenInfoRes.status, text }, 'Google tokeninfo error');
+        throw providerVerificationError(tokenInfoRes.status, 'Google');
+      }
+      const tokenInfo = (await tokenInfoRes.json()) as Record<string, unknown>;
+      const audience = tokenInfo?.aud as string | undefined;
+      const authorizedParty = tokenInfo?.azp as string | undefined;
+      if (
+        audience !== config.googleClientId &&
+        authorizedParty !== config.googleClientId
+      ) {
+        logger.error({ audience, authorizedParty }, 'Google token audience mismatch');
+        throw new UnauthorizedError(
+          'Google sign-in failed: token was not issued for this app. Please try again.'
+        );
+      }
+
       const userRes = await fetch(
         'https://www.googleapis.com/oauth2/v2/userinfo',
         { headers: { Authorization: `Bearer ${googleToken}` } }
@@ -214,9 +260,7 @@ export async function loginWithGoogle(
       if (!userRes.ok) {
         const text = await userRes.text();
         logger.error({ status: userRes.status, text }, 'Google userinfo error');
-        throw new UnauthorizedError(
-          'Google sign-in failed: token could not be verified. Please try again.'
-        );
+        throw providerVerificationError(userRes.status, 'Google');
       }
       const data = (await userRes.json()) as Record<string, unknown>;
       sub = data?.id as string;
@@ -228,7 +272,9 @@ export async function loginWithGoogle(
         'User';
     }
   } catch (e: unknown) {
-    if (e instanceof UnauthorizedError) throw e;
+    // ServiceUnavailableError has to pass through too, or the transient case is re-collapsed
+    // into the 401 this catch produces and the retry signal is lost again.
+    if (e instanceof UnauthorizedError || e instanceof ServiceUnavailableError) throw e;
     logger.error({ err: e }, 'loginGoogle error');
     throw new UnauthorizedError(
       'Could not complete Google sign-in. Please try again.'
@@ -262,9 +308,12 @@ export async function loginWithGoogle(
 export async function loginWithFacebook(
   fbToken: string
 ): Promise<{ user: User; token: string }> {
-  if (!config.facebookAppId) {
+  // The app secret is as required as the app id: it is the other half of the app access token
+  // that debug_token is authenticated with, and without that check the identity below cannot
+  // be trusted at all. Refuse rather than fall back to trusting the token.
+  if (!config.facebookAppId || !config.facebookAppSecret) {
     throw new ServiceUnavailableError(
-      'Facebook sign-in is not configured (missing FACEBOOK_APP_ID)'
+      'Facebook sign-in is not configured (missing FACEBOOK_APP_ID/FACEBOOK_APP_SECRET)'
     );
   }
 
@@ -277,6 +326,33 @@ export async function loginWithFacebook(
   let name = 'User';
 
   try {
+    // `graph.facebook.com/me` answers for a token minted by ANY Facebook app, so the identity
+    // behind a caller-supplied token means nothing until Facebook has been asked which app the
+    // token was issued for — otherwise a token obtained by an unrelated app signs in as that
+    // user. debug_token is authenticated with this app's own app access token
+    // (`<app_id>|<app_secret>`) and reports the issuing app in `data.app_id`.
+    const appAccessToken = `${config.facebookAppId}|${config.facebookAppSecret}`;
+    const debugRes = await fetch(
+      `https://graph.facebook.com/debug_token?input_token=${encodeURIComponent(fbToken)}` +
+        `&access_token=${encodeURIComponent(appAccessToken)}`
+    );
+    if (!debugRes.ok) {
+      const text = await debugRes.text();
+      logger.error({ status: debugRes.status, text }, 'Facebook debug_token error');
+      throw providerVerificationError(debugRes.status, 'Facebook');
+    }
+    const debugBody = (await debugRes.json()) as Record<string, unknown>;
+    const debugData = debugBody?.data as Record<string, unknown> | undefined;
+    if (debugData?.is_valid !== true || debugData?.app_id !== config.facebookAppId) {
+      logger.error(
+        { appId: debugData?.app_id, isValid: debugData?.is_valid },
+        'Facebook token app mismatch'
+      );
+      throw new UnauthorizedError(
+        'Facebook sign-in failed: token was not issued for this app. Please try again.'
+      );
+    }
+
     const url = 'https://graph.facebook.com/me?fields=id,email,name';
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${fbToken}` },
@@ -284,16 +360,14 @@ export async function loginWithFacebook(
     if (!response.ok) {
       const text = await response.text();
       logger.error({ status: response.status, text }, 'Facebook Graph error');
-      throw new UnauthorizedError(
-        'Facebook sign-in failed: token could not be verified. Please try again.'
-      );
+      throw providerVerificationError(response.status, 'Facebook');
     }
     const data = (await response.json()) as Record<string, unknown>;
     providerId = data?.id as string;
     email = (data?.email as string) || '';
     name = (data?.name as string) || email || 'User';
   } catch (e: unknown) {
-    if (e instanceof UnauthorizedError) throw e;
+    if (e instanceof UnauthorizedError || e instanceof ServiceUnavailableError) throw e;
     logger.error({ err: e }, 'loginFacebook error');
     throw new UnauthorizedError(
       'Could not complete Facebook sign-in. Please try again.'
@@ -324,70 +398,31 @@ export async function loginWithFacebook(
   return { user, token };
 }
 
+/**
+ * POST /api/auth/twitter used to trust any caller-supplied bearer: `users/me` answers for a
+ * token minted by ANY X application, so a token obtained by an unrelated app signed in as
+ * that user here. The audience check that would close it does not exist — unlike Google's
+ * `tokeninfo` and Facebook's `debug_token`, X publishes no introspection endpoint that
+ * reports which client an OAuth 2.0 user access token was issued for, and inventing a
+ * substitute would only look like a check.
+ *
+ * The supported path is the server-side authorization-code + PKCE flow already in this file:
+ * `GET /api/auth/twitter/redirect` -> `GET /api/auth/twitter/callback` ->
+ * `handleTwitterCallback`, where the token is minted for THIS app's client id in an exchange
+ * authenticated with its client secret, so the audience is known by construction rather than
+ * asserted by the caller. Nothing in `frontend/` or `mobile/` calls this endpoint — both only
+ * declare an API helper no screen invokes — and `TWITTER_CLIENT_ID` ships unset, so refusing
+ * removes an unauthenticated takeover primitive rather than a working feature.
+ *
+ * The export, the signature and the error envelope are kept so the route, the controller and
+ * their tests are unaffected.
+ */
 export async function loginWithTwitter(
-  twitterToken: string
+  _twitterToken: string
 ): Promise<{ user: User; token: string }> {
-  if (!config.twitterClientId) {
-    throw new ServiceUnavailableError(
-      'Twitter sign-in is not configured (missing TWITTER_CLIENT_ID)'
-    );
-  }
-
-  if (!twitterToken) {
-    throw new ValidationError('token is required');
-  }
-
-  let providerId: string | undefined;
-  let name = 'User';
-  const email = '';
-
-  try {
-    const response = await fetch(
-      'https://api.twitter.com/2/users/me?user.fields=id,name,username',
-      { headers: { Authorization: `Bearer ${twitterToken}` } }
-    );
-    if (!response.ok) {
-      const text = await response.text();
-      logger.error({ status: response.status, text }, 'Twitter API error');
-      throw new UnauthorizedError('Invalid Twitter token');
-    }
-    const data = (await response.json()) as Record<string, unknown>;
-    const userData = data?.data as Record<string, unknown> | undefined;
-    providerId = userData?.id as string | undefined;
-    name =
-      (userData?.name as string) ||
-      (userData?.username as string) ||
-      'User';
-  } catch (e: unknown) {
-    if (e instanceof UnauthorizedError) throw e;
-    logger.error({ err: e }, 'loginTwitter error');
-    throw new UnauthorizedError(
-      'Could not complete Twitter sign-in. Please try again.'
-    );
-  }
-
-  if (!providerId) {
-    throw new UnauthorizedError(
-      'Twitter sign-in failed: no user ID returned. Please try again.'
-    );
-  }
-
-  const row = await userModel.findOrCreateProviderUser({
-    authProvider: 'twitter',
-    providerId,
-    email,
-    name,
-  });
-  const user = userModel.rowToUser(row);
-  const token = generateToken(user);
-
-  publishEvent(
-    'auth.UserLoggedIn',
-    { userId: user.id, method: 'twitter' },
-    user.id
-  ).catch((err) => logger.error({ err }, 'Failed to publish event'));
-
-  return { user, token };
+  throw new ServiceUnavailableError(
+    'Twitter sign-in by access token is not supported. Use /api/auth/twitter/redirect.'
+  );
 }
 
 export function getTwitterRedirectUrl(

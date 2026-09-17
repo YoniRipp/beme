@@ -80,12 +80,30 @@ export function createWebhookRouter() {
       return res.status(400).json({ error: 'Missing signature' });
     }
 
-    const rawBody = req.body as Buffer;
+    // express.raw() runs `req.body = req.body || {}` BEFORE it checks the content type, so a
+    // request whose Content-Type is not application/json -- or absent -- reaches here with a
+    // plain object rather than a Buffer. hmac.update({}) then throws TypeError synchronously at
+    // the top of this async handler, with nothing to catch it: an unhandled rejection, and
+    // index.ts exits the process on one. Unauthenticated, and mounted above the rate limiter.
+    // Treat a body that never arrived as the unparseable body it is.
+    const rawBody = req.body;
+    if (!Buffer.isBuffer(rawBody)) {
+      return res.status(400).json({ error: 'Invalid JSON body' });
+    }
+
     const hmac = crypto.createHmac('sha256', config.lemonSqueezyWebhookSecret);
     const digest = hmac.update(rawBody).digest('hex');
 
-    if (signature.length !== digest.length ||
-        !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
+    // Compare the UTF-8 buffers, and size them by their BYTE lengths. String#length counts
+    // UTF-16 code units, and Node decodes header values as latin1, so an x-signature header
+    // carrying a byte >= 0x80 can match the digest's character count and still be a different
+    // number of bytes -- timingSafeEqual then throws, and nothing here catches it, so an
+    // unauthenticated request takes the process down (index.ts exits on unhandledRejection).
+    const signatureBytes = Buffer.from(signature, 'utf8');
+    const digestBytes = Buffer.from(digest, 'utf8');
+
+    if (signatureBytes.length !== digestBytes.length ||
+        !crypto.timingSafeEqual(signatureBytes, digestBytes)) {
       logger.error('Lemon Squeezy webhook signature verification failed');
       return res.status(400).json({ error: 'Invalid signature' });
     }

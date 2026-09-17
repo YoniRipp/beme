@@ -5,6 +5,7 @@
 import { NotFoundError, ValidationError } from '../errors.js';
 import * as foodEntryModel from '../models/foodEntry.js';
 import { publishEvent } from '../events/publish.js';
+import { logger } from '../lib/logger.js';
 import { upsertEmbedding, upsertEmbeddingsBatch, buildEmbeddingText, deleteEmbedding } from './embeddings.js';
 import type { FoodEntry, UpdateFoodEntryInput, PaginationParams, DateRangeParams } from '../types/domain.js';
 import { getPool } from '../db/pool.js';
@@ -107,7 +108,8 @@ export async function createBatch(userId: string, body: CreateFoodEntriesBatchBo
     await client.query('COMMIT');
     // Fire-and-forget after commit: publish events individually, embed in one batch.
     for (const entry of created) {
-      publishEvent('energy.FoodEntryCreated', entry as unknown as Record<string, unknown>, userId);
+      publishEvent('energy.FoodEntryCreated', entry as unknown as Record<string, unknown>, userId)
+        .catch((err) => logger.error({ err }, 'Failed to publish event'));
     }
     upsertEmbeddingsBatch(
       userId,
