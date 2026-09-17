@@ -1,6 +1,6 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. Last verified 2026-09-16 against `main` at `2b3a114`.**
+**Written 2026-09-14. Last verified 2026-09-17 against `main` at `6af35f7`.**
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -61,13 +61,23 @@ listed as in flight**:
 | #299 | AI Coach FAB no longer sits on top of real controls; its footprint is reserved in the scroll container. Dropped `frontend/playwright.local.config.ts`, the workaround #319 made unnecessary. |
 | #307 | Home parity — the five missing cards (streaks, water, weight progress, cycle, recent activity), `health.ts`, the `useWater`/`useWeight`/`useCycle`/`useStreaks` hooks, a weight form screen, and the shared `activity`/`weight` domain modules. |
 
+Merged to `main` on 2026-09-17 — four PRs, in this order, because #343 was stacked on #342:
+
+| PR | What landed |
+|---|---|
+| #342 | Four correctness bugs: two unbounded reads (`useWeight`, `useCycle`), "Day 214 of ~28" with a DST off-by-one, "logged today" wrong for every user west of UTC, and a food parser that filed `"2 eggs for breakfast, chicken for lunch"` as one item named `"eggs for breakfast"`. The parser moved to `packages/shared` on the way, so Expo can reach it. |
+| #343 | The Expo design system: #312 (radii, elevation, the `components/ui/` primitive layer) and #316 (six font faces where two were loaded). **Visually unverified — see owner item 6.** |
+| #344 | `user_profiles.units`, nullable with no default, so the server can finally identify which accounts are imperial. Changes no behaviour and converts nothing — it makes owner item 7 actionable. |
+| #345 | The offline sync queue replayed every queued mutation with **no credential at all** — no header, and a `sameSite: 'strict'` cookie that cannot reach the API cross-site. Every replay 401'd, and the 401 branch `break`s without incrementing retries, so the queue stalled forever after the user had been told the write succeeded. Only `PWA_OFFLINE_SYNC` being off by default kept this from losing real data. |
+
+
 ### Carried out of #307, and now fixed
 
 `frontend/src/hooks/useWeight.ts` called `weightApi.list()` with no arguments, so the web
 read a user's entire weight history to draw a seven-bar sparkline — **critical rule 6**. The
 endpoint had always accepted the bound; the client never sent it.
 
-Fixed on `claude/dazzling-fermi-vf1cv3`. The bound is a LIMIT rather than a date window
+Fixed in #342. The bound is a LIMIT rather than a date window
 (`WEIGHT_HISTORY_LIMIT`, now in `packages/shared/src/domain/weight.ts` so the two clients
 cannot disagree): the model orders `date DESC`, so a limit means "the N most recent
 readings" and always contains the latest one, where a 90-day window would show "No weight
@@ -102,9 +112,11 @@ packages and the root one has not been retried since.
 ## In flight — one PR with code
 
 ### #337 · Self-service account deletion — the App Store blocker
-`claude/appstore-account-deletion` → `491baf0` (the `862455d` in the previous version of this
-file is stale). 28 files, all application code, no spec docs. **Two commits behind `main`
-and it merges clean** — verified with `git merge-tree`, zero conflicts.
+`claude/appstore-account-deletion` → `491baf0`. 28 files, all application code, no spec docs.
+**Now 26 commits behind `main` after the 2026-09-17 batch, and it still merges clean** —
+re-verified with `git merge-tree` against `6af35f7`, zero conflicts. One overlap worth knowing
+about even though git resolves it silently: #344 also edited `mobile/src/screens/SettingsScreen.tsx`,
+which is the file that makes #337 a blocker for #317's implementation and #315.
 
 App Store Guideline 5.1.1(v): an app that creates accounts must let users delete them
 in-app. The only delete route is admin-only and explicitly refuses self-deletion.
@@ -143,9 +155,10 @@ It touches `mobile/src/screens/SettingsScreen.tsx`, which is why #317's implemen
 
 Every PR in this table is **spec only** — verified by diffing each PR head against its merge
 base: zero files outside `agent-os/specs/` and `docs/`. None of them contains application
-code. They are also all **56–58 commits behind `main`**, and four of the PRs they were
-written against have merged since, so re-read each spec against the code before building on
-it. That is the mistake this file opens by warning about.
+code. They are also all **80–82 commits behind `main`** as of 2026-09-17 — re-measured, not
+carried over — and eight of the PRs they were written against have merged since, so re-read
+each spec against the code before building on it. That is the mistake this file opens by
+warning about.
 
 | PR | Scope |
 |---|---|
@@ -157,11 +170,20 @@ it. That is the mistake this file opens by warning about.
 | #320 · rest of App Store readiness | Privacy policy reachable in-app, nutrition labels, `PrivacyInfo.xcprivacy`, metadata and age rating, guideline 4.2. Account deletion split out as #337. |
 | #306 · tab set, destinations, screen names | **Last, and alone.** It renames every tab and screen title, so it conflicts with every other Expo PR here. |
 
-### #312 and #316 are implemented on `claude/expo-design-system`
+### #312 and #316 shipped in #343 — but both PRs are still open
 
-The design-system trio is complete: #308 merged, and radii/elevation/primitives (#312) and
-typography (#316) are on that branch. Both rewrote `mobile/src/theme.ts`, in different places,
-as their specs predicted.
+Read that before you look them up. #343 implemented both; the **spec PRs themselves were never
+merged**, so `agent-os/specs/2026-09-14-1112-parity-radius-elevation-spacing/` and
+`…-1114-parity-typography/` exist only on their own branches and are not in the repo. Anyone
+who finds two open PRs will reasonably conclude the work is outstanding. It is not — and this
+is the mirror image of the #317 trap below, where a merged PR shipped no code.
+
+Neither spec should be merged as-is without reading the corrections below: three of #312's
+numbers and one of #316's are wrong against the code that shipped.
+
+The design-system trio is complete and merged: #308, then radii/elevation/primitives (#312)
+and typography (#316) together in #343. Both rewrote `mobile/src/theme.ts`, in different
+places, as their specs predicted.
 
 #316 in one line: the app named weights `600`/`700`/`800` in **52 of its 55** `fontWeight`
 declarations and loaded none of them — and on Expo a weight is part of the family name, not a
@@ -259,7 +281,8 @@ find a merged PR and reasonably conclude the work shipped. It did not. The spec 
 everything ──► #306      (renames every screen; rebase it last)
 ```
 
-Resolved since the last version: `#319 ──► #299` (both merged) and `#308` as a blocker.
+Resolved: `#319 ──► #299` (both merged), `#308` as a blocker, and `#312`/`#316` themselves,
+which merged as #343 on 2026-09-17. Only the two rows above are still live.
 
 ---
 
@@ -285,10 +308,27 @@ added on 2026-09-17, found while auditing shared logic for drift between the cli
 5. **`backend/.env.example`** needs a note about the native origin. It documents
    `CORS_ORIGIN` and `FRONTEND_ORIGIN` and says nothing about the Expo client. `.env*` paths
    are permission-blocked for agent sessions.
-6. **Every merged Expo change is visually unseen — and this is now due.** #302, #303, #305
-   and #321 were test-verified only. The previous version of this file said to wait for #307
-   and #308 to land, since they rewrite Home and all 33 colour roles. **Both have landed.**
-   Nothing is blocking a look at the simulator now.
+6. **Every merged Expo change is visually unseen — and #343 makes this the most overdue item
+   on the list.** #302, #303, #305 and #321 were test-verified only; #307 and #308 rewrote
+   Home and all 33 colour roles; and #343 has now changed how *every* screen is shaped —
+   22px corners with real shadows where cards were flat at 14 or 18, six font faces where two
+   were loaded, and a 10px-larger footprint on every icon button.
+
+   All of it is test-verified. **None of it has been seen running**, because no agent session
+   here has a simulator, and the hazard list below says not to substitute eyeballed
+   screenshots. Specifically worth a look, in this order:
+
+   - 22px plus a shadow at ~390px, side by side with the web, on Home and Journal.
+   - Shadows on Android, which uses `elevation` rather than the iOS shadow quartet —
+     `shadowStyle()` in `packages/shared/src/tokens/spacing.ts` sets both, and only iOS has
+     been reasoned about.
+   - `MobileWorkoutCard`'s action row, the tightest place an icon button grew.
+   - The six tab labels and every screen header, which now name a font for the first time —
+     they go through React Navigation style props, so no `<Text>` guard ever covered them.
+
+   If something here looks wrong, it is a small fix on top, not a revert: the primitives are
+   one file each (`mobile/src/components/ui/`), and the numbers are tokens in
+   `packages/shared/src/tokens/spacing.ts`.
 7. **Imperial users are storing pounds in a kilograms field, and the server cannot find
    them.** Not a display bug, though it looks like one. `getWeightUnit`
    (`packages/shared/src/domain/units.ts`) relabels `kg` to `lbs` and **no conversion exists
@@ -300,14 +340,18 @@ added on 2026-09-17, found while auditing shared logic for drift between the cli
    raw. Every metric user's view, the MCP server and the AI paths then read those rows as
    kilograms.
 
-   **Why this is yours and not a quick fix.** Adding conversion re-interprets data that
-   already exists — a stored `135` would start rendering as 297 lbs — and the affected rows
-   cannot be identified, because `units` lives only in device-local storage
-   (`trackvibe_settings`) and the backend has never received it. There is no column to query
-   and no way to tell an already-pounds row from a genuine kilograms one. The options are
-   roughly: convert going forward and accept that historical imperial rows are wrong; ask
-   users once and migrate on their answer; or start syncing `units` and only then decide.
-   All three are product calls.
+   **#344 did the one half that was not a product call.** `user_profiles.units` now exists,
+   both clients report the choice when the user changes it, and the column is nullable with
+   no default on purpose: `NULL` means "this account has never told us", which is the honest
+   state of every row today and exactly what a backfill has to be able to find. A default of
+   `'metric'` would have asserted something nobody checked and erased that distinction.
+
+   **What is left is yours.** Adding conversion re-interprets data that already exists — a
+   stored `135` would start rendering as 297 lbs — and until users have actually touched the
+   setting, the affected rows still cannot be identified. The options are roughly: convert
+   going forward and accept that historical imperial rows are wrong; ask users once and
+   migrate on their answer; or wait until enough accounts have reported `units` and migrate
+   on that. All three are product calls; #344 is what makes the third one possible at all.
 
    The `2026-09-14-1204-parity-settings-sections` spec raised the relabelling as an open
    question and recommended "convert, via a shared helper, kg stays stored". That
@@ -351,40 +395,61 @@ Production is Railway project `distinguished-elegance`, service **BMe**. Present
 
 ---
 
-## What is on `claude/expo-design-system`
+## What the 2026-09-17 batch actually contains
 
-The design-system half: #312 (radii, elevation, the primitive layer) and #316 (typography),
-**stacked on `claude/hardening-and-bug-fixes`** so this PR shows only the visual diff.
+All four merged; the branches can be deleted. What is worth carrying forward is why each one
+was split the way it was, and what each one did **not** do.
 
-**Nothing here has been seen running.** It changes how every screen looks — 22px corners with
-shadows where there were flat 14s and 18s, six font faces where two were loaded, a 10px-larger
-footprint on every icon button. It is all test-verified and none of it is visually verified,
-which is owner item 6 below with more to look at than before.
+### #342 — correctness only, so it could not be held up by a simulator
 
-Six guards ship with it, each verified to fail against a mutant restoring the behaviour it
-forbids. Keep that check up: one passed its first mutant run for the wrong reason (the
-injection silently missed), and a timezone assertion on the branch below passed against the
-very implementation it was written to replace, because the runner uses UTC and UTC is where
-that bug hides.
-
----
-
-## What is on `claude/hardening-and-bug-fixes` (the branch below)
-
-Correctness work only. Every change here is test-verified and none of it changes how anything
-looks, which is why it is split from the design-system branch rather than shipped with it.
+Every change is test-verified and none of it changes how anything looks. That is the whole
+reason it was split from #343 rather than shipped with it.
 
 | Fix | What it was |
 |---|---|
 | `useWeight` bound | Read a user's entire weight history on every Home render, to draw seven bars. Critical rule 6. |
 | `useCycle` bound + corrected | Same unbounded read, on an endpoint with no pagination at all — plus "Day 214 of ~28" with a full ring for a stale log, a DST off-by-one, and `YYYY-MM-DD` parsed as UTC midnight. |
-| "Logged today" | `isSameDay(new Date(entry.date), today)` on a bare date string, so the weight tile was wrong for every user west of UTC. |
-| Food parser | Moved to `packages/shared` so Expo can reach it (it had **zero** tests), then fixed: `"2 eggs for breakfast, chicken for lunch"` produced an item named `"eggs for breakfast"`, filed under lunch. |
+| "Logged today" | `isSameDay(new Date(entry.date), today)` on a bare date string, so the weight tile was wrong for every user west of UTC. `isOnLocalDay` in shared compares the strings and builds no `Date` at all — which is what the Expo client had always done. |
+| Food parser | Moved to `packages/shared` so Expo can reach it (it had **zero** tests across 148 lines of regex), then fixed: `"2 eggs for breakfast, chicken for lunch"` produced an item named `"eggs for breakfast"`, filed under lunch, and that string then went to `GET /api/food/search`. |
 
 Two things found here are **not** fixed, because both change user-visible data and need a
-product call — they are items 7 and 8 under "Needs the owner".
+product call — items 7 and 8 under "Needs the owner".
 
-That branch is the base of this one, and should merge first.
+### #343 — six guards, and nothing seen running
+
+Six AST guards ship with it, each verified to fail against a mutant restoring the behaviour it
+forbids. Keep that check up: one of them passed its first mutant run **for the wrong reason**
+— the injection silently failed to match, which looks exactly like a passing test — and a
+timezone assertion on #342 passed against the very implementation it was written to replace,
+because the runner uses UTC and UTC is where that bug hides.
+
+The visual result is unverified. That is owner item 6, with a list of what to look at first.
+
+### #344 — the nullability is the design
+
+`user_profiles.units` is nullable with no default, enforced in three places and mutant-verified
+in two: the model maps a missing column to `undefined` rather than `'metric'`, the zod field is
+`optional()` but deliberately **not** `nullable()` (a client may decline to answer, but may not
+clear an answer already given), and the model patches only supplied fields, so a settings save
+that says nothing about units cannot blank one.
+
+Added to all three bootstrap paths per `backend/data-lifecycle` — the migration, `schema.ts`'s
+`CREATE TABLE`, and `index.ts`'s dev column patches. The `CHECK` rides on `ADD COLUMN IF NOT
+EXISTS` rather than a separate statement, because Postgres has no `ADD CONSTRAINT IF NOT EXISTS`.
+
+### #345 — the token is read at replay time, not stored with the request
+
+A queued mutation can sit for days and across a re-login, so a token captured at enqueue would
+be stale exactly when it is used, and would put a second copy of a live credential in a second
+store. `client.ts` registers a provider instead; `enqueue`'s `headers` parameter stays
+deliberately unstored and now says so. Registered rather than imported because `client` already
+imports `enqueue`, and a static cycle would bite at module-init time.
+
+The replay policy is now a pure function — `ok`/409 → done, 401 → stop, everything else →
+retry — which is what made 20 tests possible over code that had none.
+
+**Not addressed, and flagged rather than decided:** `incrementRetries` silently deletes a
+mutation after 5 failures with no signal to the user that their data was dropped.
 
 ---
 
