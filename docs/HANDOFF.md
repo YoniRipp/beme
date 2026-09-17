@@ -1,6 +1,6 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. Last verified 2026-09-17 against `main` at `6af35f7`.**
+**Written 2026-09-14. Last verified 2026-09-17 against `main` at `1efe954`.**
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -381,12 +381,26 @@ added on 2026-09-17, found while auditing shared logic for drift between the cli
    `packages/shared/src/domain/__tests__/isOnLocalDay.test.ts` pins the mechanism so the next
    reader does not have to rediscover it.
 
-9. **`backend/mcp-server` has never been audited.** The `security-audit` job in
-   `.github/workflows/ci.yml:176-181` runs a matrix of `[backend, frontend, mobile]` — the
-   MCP server is not in it, and it is not a workspace, so no other job reaches it either.
-   #341 and the three dependency bumps that followed will have moved the numbers; the 8
-   vulnerabilities / 5 high figure predates them and has not been re-measured. Re-run the
-   audit before deciding anything. #339's smoke test makes the result verifiable.
+9. ~~**`backend/mcp-server` has never been audited.**~~ **Done on 2026-09-17 — this is now
+   an owner item only in the sense that you should know the result.** The audit had never been
+   run because `security-audit` is a matrix of `[backend, frontend, mobile]` driven by
+   `npm audit --workspace`, and this package is not a workspace.
+
+   Measured: **7 advisories, 4 high, 0 critical** — not the 8/5 this file carried, which
+   predated #341 and the three bumps after it. All seven are gone; `npm audit` now reports
+   zero, and the audit runs in CI on every push, on the job that already installs the lockfile.
+
+   The finding worth keeping is *where* they were. Five of the seven (`hono`,
+   `@hono/node-server`, `path-to-regexp`, `qs`, `body-parser`) reach this package only through
+   `server/streamableHttp.js` and `express` — the HTTP and SSE transports. `index.js:185`
+   constructs a `StdioServerTransport` and nothing else, so none of that code is ever loaded.
+   The other two are a different matter: `ajv` and its `fast-uri` dependency (the high one) are
+   imported by `server/index.js`, the core `Server` class, which every transport goes through —
+   it is what validates each tool call's arguments. So of the four "high" findings, exactly one
+   was on a path this server actually executes.
+
+   That is also the argument for keeping the number at zero rather than triaging each one: the
+   next advisory is much easier to see against a zero than against a standing seven.
 
 Production is Railway project `distinguished-elegance`, service **BMe**. Present:
 `API_NINJAS_KEY`, `CORS_ORIGIN`, `DATABASE_URL`, `DB_SSL_REJECT_UNAUTHORIZED`,

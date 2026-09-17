@@ -119,6 +119,15 @@ jobs:
       - name: Smoke-test the MCP server
         run: npm test
         working-directory: backend/mcp-server
+      # The security-audit matrix below runs `npm audit --workspace <project>`, which cannot
+      # reach this package for the same reason it needed its own job: it is not a workspace and
+      # the root lockfile knows nothing about it. So the audit belongs here, on the job that has
+      # already installed its lockfile. Same threshold and same advisory posture as that matrix
+      # -- it reports rather than blocks.
+      - name: Audit MCP server dependencies
+        run: npm audit --audit-level=critical
+        working-directory: backend/mcp-server
+        continue-on-error: true
 
   migrations:
     runs-on: ubuntu-latest
