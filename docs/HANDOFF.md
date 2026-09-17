@@ -240,6 +240,25 @@ boundary) and parsed `YYYY-MM-DD` as UTC midnight.
 bounded `requestAllPages` on both clients, and goals, streaks and exercises are naturally
 small. Weight and cycle were the two real instances, so that thread is finished.
 
+### The date audit is finished — don't redo it
+
+Dates in this app are local calendar days, and `new Date('2026-09-16')` is UTC midnight. That
+mismatch produced three of the bugs on this branch, so the whole surface was swept. What was
+found and what was cleared:
+
+| surface | verdict |
+|---|---|
+| Backend read path | **Clean.** All seven models (`foodEntry`, `streak`, `dailyCheckIn`, `cycle`, `weight`, `workout`, `water`) render `DATE` columns through `toDateString`, never `.toISOString()`. |
+| Backend "today" defaults | UTC (`new Date().toISOString().slice(0,10)`) in voice, water, chat and insights — but **defensive only**: both clients always send their own local date. Worth knowing if a new client ever omits it. |
+| Web mappers | **Clean.** `features/*/mappers.ts` run every API date through `parseLocalDateString`, so domain types carry real local `Date`s and the ~40 `new Date(x.date)` call sites downstream are harmless copies. |
+| Entries that bypass the mappers | **The bugs.** The raw `Api*` types from `useWeight` and `useCycle` carry strings, and three sites parsed them naively. All fixed. |
+| Client "today" | **Clean.** Both `useWater` implementations use `toLocalDateString`. |
+| Meal inference from `entry.date` | **Broken on both clients, not fixed** — owner item 8. |
+
+The reusable lesson, and it caught me twice: **a timezone test written without setting `TZ`
+proves nothing**, because the runner uses UTC and UTC is where these bugs hide. Both new
+suites set it and assert that the old spelling disagrees.
+
 ### The food parser had no tests, and one real bug
 
 Moving it turned up a defect nobody could have seen: `"2 eggs for breakfast, chicken for
