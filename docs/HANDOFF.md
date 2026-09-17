@@ -901,6 +901,82 @@ them has a fix written yet.
 
 Ordered by severity. The first three are the ones worth acting on before an App Store push.
 
+**STATUS as of the fixes on `claude/audit-fixes`** — this list was written before any of it
+was fixed, so read it with this table rather than as live defects. Every "fixed" row was
+re-reviewed by an adversarial verifier that read the code rather than the fixer's report.
+
+| # | Finding | Status |
+|---|---|---|
+| 1 | Google sign-in audience | **Fixed** — `aud`/`azp` checked against `googleClientId` on the access-token branch |
+| 2 | Non-ASCII token crashes the process | **Fixed** — byte-length gate before `timingSafeEqual` |
+| 3 | WhatsApp webhook unauthenticated | **Fixed** — X-Hub-Signature-256 verified, fails closed when unconfigured. **Needs `WHATSAPP_APP_SECRET` set before deploy**, or the webhook refuses everything |
+| 4 | Admin `?userId=` trusts the JWT role | **Fixed** — actor's role re-read from the DB on the override path |
+| 5 | Password reset does not revoke sessions | **Open** — needs a migration (`users` has no `password_changed_at` / `token_version`) |
+| 6 | Blocklist fails open on Redis error | **Open, deliberately** — see below |
+| 7 | Voice WebSocket skips the blocklist | **Fixed** — shares `lib/tokenBlocklist.ts` with the HTTP path |
+| 8 | `publishEvent` can crash the process | **Fixed** — rejection handler, matching the pattern already in `services/auth.ts` |
+| 9 | Lambda discards `batchItemFailures` | **Fixed** — returned, *and* `FunctionResponseTypes` added to `template.yaml`, without which the return is ignored and messages are silently deleted |
+| 10 | Service worker never takes over | **Fixed** — `skipWaiting()` on install |
+| 11 | Web Workouts page shows a failed fetch as empty | **Fixed** |
+| 12 | Voice entry ignores the parsed portion | **Partly fixed** — see below |
+
+Found by the verifiers, not in the original audit, both **fixed**: the identical byte-length
+crash at `routes/subscription.ts` (unauthenticated, and mounted above the rate limiter), and
+the identical unvalidated-bearer hole in `loginWithFacebook` / `loginWithTwitter`.
+
+### Two fixes were reverted because they were worse than the bug
+
+Both were written, reviewed, and thrown away. That is the process working, but it is worth
+recording so nobody re-attempts them the same way.
+
+**The blocklist mirror-write (#6).** Mirroring `kvSet` into the in-memory map so a Redis read
+failure finds something looked obviously right. It was not:
+
+- It made single-use auth codes redeemable twice. `kvGetAndDelete`'s Redis-failure path
+  returned the mirrored copy while the Redis copy survived, because `GETDEL` never reached
+  the server. `services/auth.ts` stores the full session JWT under `authCode:<code>`, and
+  `POST /api/auth/exchange` is unauthenticated. A new auth hole to partly mitigate an old one
+  is a bad trade.
+- It did not close the finding anyway. `kvGet` prefers Redis, so a logout that happens
+  *during* an outage lands only in one worker's memory and is then ignored forever once Redis
+  recovers — worse than the case it fixed, because it does not end when the outage does.
+
+Do not make the blocklist fail closed either: every authenticated request reads it, so that
+converts a Redis outage into a total outage. **The real amplifier is the 365-day token TTL,
+which is already env-configurable via `SESSION_TTL_DAYS` and needs no code change.** Lowering
+it is the cheapest genuine mitigation and it is a deployment decision.
+
+**The bulk food-entry portion scaling (#12).** `QuickVoiceEntry` is fixed and verified — a
+unit-less amount is no longer read as a count when the resulting macros are implausible, so
+"200 grams of bread" no longer logs ~60x. `BulkFoodEntryModal` was reverted: two successive
+attempts each traded the bug for a worse one. The second removed the only ceiling on count
+scaling (`200 pieces of bread` -> 31,800 cal, past the backend's 99999 cap, which 400s the
+whole batch behind a generic toast) and discarded *correct* gram readings (`600 olive oil`
+5304 -> 884 cal) with nothing on the review screen to show the user their number had been
+thrown away.
+
+What makes this hard, for whoever picks it up: the review screen renders name and macros but
+not amount or unit, so any misread is invisible; `foodLookupGemini` deliberately leaves
+`unit_weight_grams` null for bulk foods, so a bare number cannot be disambiguated by data;
+and the CSV path passes its unit column through as free text, so any gate keyed on "the user
+stated a unit" has a documented way around it. A magnitude heuristic is not enough — the fix
+probably has to surface the interpretation in the UI rather than guess harder.
+
+The shared parser fix underneath both is **kept and verified**: `foodText.ts` now understands
+spelled-out units, so "200 grams of rice" parses like "200g rice". Voice is this app's primary
+input and only the abbreviated form parsed before.
+
+### Still open after this work
+
+- #5 (password-reset revocation) — needs a migration.
+- #6 (blocklist fail-open) — see above; lower the token TTL instead.
+- #12 for the bulk path — see above.
+- The WhatsApp webhook still has **no AI quota gate**. Now that it is authenticated only Meta
+  can drive it, but `handleWebhook` is still an unbounded `entry[] -> changes[] -> messages[]`
+  loop with one Gemini call per element. Who pays for a WhatsApp user's AI calls is a product
+  decision.
+- The pager truncation finding above — unchanged, still no code.
+
 1. **`POST /api/auth/google` accepts any Google OAuth access token — audience is never
    validated.** `backend/src/services/auth.ts:210`. The function branches on
    `const isJwt = googleToken.split('.').length === 3;`. The ID-token branch verifies the

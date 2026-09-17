@@ -119,6 +119,7 @@ const configSchema = z.object({
   whatsappPhoneNumberId: z.string().optional(),
   whatsappVerifyToken: z.string().optional(),
   whatsappBusinessAccountId: z.string().optional(),
+  whatsappAppSecret: z.string().optional(),
   // Per-user data compaction (see services/compaction.ts)
   compactionEnabled: z.boolean(),
   compactionAgeMonths: z.coerce.number().int().min(1).max(120).default(3),
@@ -229,6 +230,7 @@ const rawConfig = {
   whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
   whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'trackvibe-whatsapp-verify',
   whatsappBusinessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
+  whatsappAppSecret: process.env.WHATSAPP_APP_SECRET,
   compactionEnabled: process.env.COMPACTION_ENABLED !== 'false' && process.env.COMPACTION_ENABLED !== '0',
   compactionAgeMonths: process.env.COMPACTION_AGE_MONTHS ?? 3,
   compactionMaxBytesPerUser: process.env.COMPACTION_MAX_BYTES_PER_USER ?? 10 * 1024 * 1024,
@@ -243,6 +245,13 @@ if (!parsed.success) {
 }
 
 export const config = parsed.data;
+
+if (config.whatsappAccessToken && !config.whatsappAppSecret) {
+  logger.warn(
+    'WHATSAPP_APP_SECRET is not set: POST /api/whatsapp/webhook cannot verify Meta\'s X-Hub-Signature-256 ' +
+    'and refuses every request. Set the app secret from the Meta app dashboard to enable the webhook.',
+  );
+}
 
 if (config.isProduction && !config.isRedisConfigured) {
   logger.warn(

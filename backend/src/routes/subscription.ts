@@ -80,7 +80,17 @@ export function createWebhookRouter() {
       return res.status(400).json({ error: 'Missing signature' });
     }
 
-    const rawBody = req.body as Buffer;
+    // express.raw() runs `req.body = req.body || {}` BEFORE it checks the content type, so a
+    // request whose Content-Type is not application/json -- or absent -- reaches here with a
+    // plain object rather than a Buffer. hmac.update({}) then throws TypeError synchronously at
+    // the top of this async handler, with nothing to catch it: an unhandled rejection, and
+    // index.ts exits the process on one. Unauthenticated, and mounted above the rate limiter.
+    // Treat a body that never arrived as the unparseable body it is.
+    const rawBody = req.body;
+    if (!Buffer.isBuffer(rawBody)) {
+      return res.status(400).json({ error: 'Invalid JSON body' });
+    }
+
     const hmac = crypto.createHmac('sha256', config.lemonSqueezyWebhookSecret);
     const digest = hmac.update(rawBody).digest('hex');
 
