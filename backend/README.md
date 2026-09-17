@@ -1018,6 +1018,12 @@ See [docs/event-schema.md](../docs/event-schema.md) and [docs/bounded-contexts.m
 | `/api/daily-check-ins` | List by user | Add check-in | Update `:id` | Delete `:id` |
 | `/api/goals` | List by user | Add goal | Update `:id` | Delete `:id` |
 
+All four lists take `?limit=` (1–200, default 50) and `?offset=`. `/api/workouts`,
+`/api/food-entries` and `/api/daily-check-ins` additionally take an optional inclusive
+day window, `?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD` — either bound may be sent on its
+own, and `total`/`hasMore` are computed over the same window, so a filtered list can be
+paged to its end. Omitting both returns the unfiltered list, as before.
+
 ### Food Search (public)
 
 | Method | Path | Parameters | Description |
