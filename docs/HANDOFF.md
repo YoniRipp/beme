@@ -1,6 +1,6 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. Last verified 2026-09-17 against `main` at `5ca94dd`.**
+**Written 2026-09-14. Last verified 2026-09-17 against `main` at `0f779d6`.**
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -199,7 +199,7 @@ warning about.
 | #304 · food Journal screen | A whole screen. |
 | #313 · workout recording | A whole screen — editor, exercise picker, voice, weight. |
 | #310 · Insights AI | Expo already has the charts; it is missing the AI half. **1.5–2 engineer-weeks.** |
-| #320 · rest of App Store readiness | Privacy policy reachable in-app, nutrition labels, `PrivacyInfo.xcprivacy`, metadata and age rating, guideline 4.2. Account deletion split out as #337. |
+| #320 · rest of App Store readiness | **Partly done — see below.** The in-app policy links and the privacy manifest shipped 2026-09-17; nutrition labels, metadata, screenshots, age rating and guideline 4.2 remain, and most of what remains needs a person. |
 | #306 · tab set, destinations, screen names | **Last, and alone.** It renames every tab and screen title, so it conflicts with every other Expo PR here. |
 
 ### #312 and #316 shipped in #343 — but both PRs are still open
@@ -273,6 +273,47 @@ found and what was cleared:
 The reusable lesson, and it caught me twice: **a timezone test written without setting `TZ`
 proves nothing**, because the runner uses UTC and UTC is where these bugs hide. Both new
 suites set it and assert that the old spelling disagrees.
+
+### #320: what shipped, and what is left (and why what is left needs you)
+
+The code half of Tier 1 landed on 2026-09-17. Its spec is from `34a51d9` and several of its
+Tier 0 items had already been fixed by #321 and #337 — `app.config.js` no longer discards
+`app.json` (there is no `app.json`), the bundle identifier exists, and the permission strings
+are declared. What was still genuinely missing, and is now done:
+
+- **Guideline 5.1.1(i) — the policy was reachable from nowhere.** The Expo client linked to
+  neither a privacy policy nor terms, from any screen. There is a Legal section in Settings
+  now, linking out to the web client's already-public `/privacy` and `/terms` rather than
+  duplicating the copy — one set of words to keep true, and the same URL a reviewer clicks
+  from App Store Connect.
+- **The privacy manifest.** `ios.privacyManifests` is declared in `app.config.js`, mirrored
+  from the `PrivacyInfo.xcprivacy` files actually installed rather than from the spec's
+  guess — which was wrong in a way worth knowing: it assumed `async-storage` needed
+  `UserDefaults`/`CA92.1`; that package asks for `FileTimestamp`/`C617.1`, and `UserDefaults`
+  comes from `expo-constants` and React Native core. Re-read the installed manifests after a
+  dependency bump: `find node_modules -name PrivacyInfo.xcprivacy`.
+- **The policy did not mention the most sensitive table in the schema.** `Privacy.tsx`
+  enumerated workouts, food, sleep, check-ins and goals, and never mentioned menstrual cycle
+  data, body weight history or water. Added.
+
+**One inferred value to confirm.** The in-app links resolve against `extra.webUrl`, defaulting
+to `https://trackvibe.app` — inferred from the address the privacy policy itself gives for
+contact, because `FRONTEND_ORIGIN` is unset in production and nothing in the repo states the
+live origin. Override with `EXPO_PUBLIC_WEB_URL`, and **check both pages actually resolve
+before submitting**: a privacy policy URL that 404s is a rejection, and it is a required App
+Store Connect field regardless.
+
+**What is left is mostly not code.** Privacy nutrition labels (cycle data is health data, and
+arguably sensitive — a questionnaire, not a file), screenshots at 6.9", the support URL, the
+age rating, export compliance, and the EU trader declaration. Plus the one genuine product
+decision in that spec: whether to submit lean and accept a real guideline 4.2 risk, or close
+the parity gap first.
+
+**And one thing the spec flags that this did not touch.** `Privacy.tsx`, `Terms.tsx`,
+`Landing.tsx` and `Contact.tsx` all describe a Lemon Squeezy billing relationship that does
+not exist in production. Submitting a privacy policy describing a payment processor you do not
+use reads worse than having no payments at all — but it is legal copy about a commercial
+relationship, so correcting it is yours rather than an agent's.
 
 ### The unbounded-read audit was not finished — where the rest of it was
 

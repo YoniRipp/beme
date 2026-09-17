@@ -35,8 +35,14 @@ export function Privacy() {
         </li>
         <li>
           <strong>Health and fitness data:</strong> Workout logs (exercises, sets, reps, weight),
-          food entries (calories, macronutrients), sleep duration, and daily wellness check-ins
-          including energy and mood ratings.
+          food entries (calories, macronutrients), sleep duration, body weight measurements over
+          time, water intake, and daily wellness check-ins including energy and mood ratings.
+        </li>
+        <li>
+          <strong>Menstrual cycle data:</strong> If you use cycle tracking, the dates of your
+          period and cycle, and any symptoms and flow levels you record. This is health data and
+          we treat it as such: it is never sold, never shared with advertisers, and never used to
+          target you. It is deleted with the rest of your account when you delete your account.
         </li>
         <li>
           <strong>Goals:</strong> Personal goals related to calories, workouts, and sleep, including

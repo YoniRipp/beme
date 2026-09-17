@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../hooks/useSettings';
 import { useProfile } from '../hooks/useProfile';
+import { LegalLinks } from '../components/settings/LegalLinks';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { fonts, spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
@@ -19,6 +20,7 @@ import { useThemedStyles } from '../theme/useThemedStyles';
 const ACCOUNT_TITLE = 'Account';
 const UNITS_TITLE = 'Units';
 const APPEARANCE_TITLE = 'Appearance';
+const LEGAL_TITLE = 'Legal';
 
 /**
  * Titles of the settings sections this screen renders, in render order. Exported so a test
@@ -33,7 +35,12 @@ const APPEARANCE_TITLE = 'Appearance';
  * `frontend/src/components/settings/AppearanceSection.tsx`. The three remaining titles are
  * in the same relative order the web renders them in.
  */
-export const SETTINGS_SECTION_TITLES = [ACCOUNT_TITLE, UNITS_TITLE, APPEARANCE_TITLE] as const;
+export const SETTINGS_SECTION_TITLES = [
+  ACCOUNT_TITLE,
+  UNITS_TITLE,
+  APPEARANCE_TITLE,
+  LEGAL_TITLE,
+] as const;
 
 type SettingsSectionTitle = (typeof SETTINGS_SECTION_TITLES)[number];
 
@@ -106,6 +113,12 @@ export function SettingsScreen() {
             <RadioButton.Item key={option.value} label={option.label} value={option.value} />
           ))}
         </RadioButton.Group>
+      </SettingsCard>
+
+      {/* Guideline 5.1.1(i) wants the policy reachable from inside the app, so this is a
+          section of its own rather than a line of small print under something else. */}
+      <SettingsCard title={LEGAL_TITLE}>
+        <LegalLinks />
       </SettingsCard>
 
       <Button mode="contained" onPress={logout} buttonColor={colors.danger} style={styles.signOutButton}>
