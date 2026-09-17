@@ -207,6 +207,35 @@ export async function loginWithGoogle(
         email ||
         'User';
     } else {
+      // An access token carries no audience of its own, so which client minted it has to be
+      // asked of Google before the identity behind it is trusted: userinfo answers for a
+      // token issued to ANY client with the userinfo scope, so without this check an access
+      // token from an unrelated Google app signs in as that user. `aud` is the client the
+      // token was issued for, `azp` the client that obtained it — they differ only when a
+      // native client requests a token for its project's web client id.
+      const tokenInfoRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(googleToken)}`
+      );
+      if (!tokenInfoRes.ok) {
+        const text = await tokenInfoRes.text();
+        logger.error({ status: tokenInfoRes.status, text }, 'Google tokeninfo error');
+        throw new UnauthorizedError(
+          'Google sign-in failed: token could not be verified. Please try again.'
+        );
+      }
+      const tokenInfo = (await tokenInfoRes.json()) as Record<string, unknown>;
+      const audience = tokenInfo?.aud as string | undefined;
+      const authorizedParty = tokenInfo?.azp as string | undefined;
+      if (
+        audience !== config.googleClientId &&
+        authorizedParty !== config.googleClientId
+      ) {
+        logger.error({ audience, authorizedParty }, 'Google token audience mismatch');
+        throw new UnauthorizedError(
+          'Google sign-in failed: token was not issued for this app. Please try again.'
+        );
+      }
+
       const userRes = await fetch(
         'https://www.googleapis.com/oauth2/v2/userinfo',
         { headers: { Authorization: `Bearer ${googleToken}` } }

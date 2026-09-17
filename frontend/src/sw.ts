@@ -63,6 +63,15 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
+// Take over as soon as the new worker is installed. Under `registerType: 'autoUpdate'`
+// (vite.config.ts) nothing else ever promotes a waiting worker: no caller sends the
+// SKIP_WAITING message below, and `virtual:pwa-register`'s `updateServiceWorker()` is a
+// no-op in auto mode. Without this a new build sits in `waiting` forever and users keep
+// running the old bundle.
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
 // Auto-update: claim clients immediately
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {

@@ -15,6 +15,10 @@ vi.mock('./embeddings.js', () => ({
   upsertEmbedding: vi.fn(),
   upsertEmbeddingsBatch: vi.fn(),
 }));
+vi.mock('../lib/logger.js', () => ({
+  logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+  createModuleLogger: vi.fn(),
+}));
 
 const client = {
   query: vi.fn().mockResolvedValue({ rows: [] }),
@@ -28,6 +32,8 @@ vi.mock('../db/pool.js', () => ({
 }));
 
 import * as foodEntryModel from '../models/foodEntry.js';
+import { publishEvent } from '../events/publish.js';
+import { logger } from '../lib/logger.js';
 import * as foodEntryService from './foodEntry.js';
 
 describe('foodEntryService', () => {
@@ -98,5 +104,32 @@ describe('foodEntryService', () => {
       date: '2026-05-17',
       mealType: 'dinner',
     }), client);
+  });
+
+  it('logs instead of leaving the post-commit publish rejection unhandled', async () => {
+    vi.mocked(foodEntryModel.create).mockResolvedValue({
+      id: 'food-1',
+      date: '2026-05-17',
+      name: 'Eggs',
+      calories: 155,
+    } as any);
+
+    const publishFailure = new Error('event bus unavailable');
+    const rejected = Promise.reject(publishFailure);
+    // Also handled here so the run never dies on the unhandled rejection —
+    // the assertion below is what reports a missing handler in the service.
+    rejected.catch(() => {});
+    vi.mocked(publishEvent).mockReturnValue(rejected);
+
+    const created = await foodEntryService.createBatch('user-1', {
+      date: '2026-05-17',
+      entries: [{ name: 'Eggs', calories: 155, protein: 13, carbs: 1, fats: 11 }],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(created).toHaveLength(1);
+    expect(logger.error).toHaveBeenCalledWith({ err: publishFailure }, 'Failed to publish event');
+
+    vi.mocked(publishEvent).mockResolvedValue(undefined);
   });
 });

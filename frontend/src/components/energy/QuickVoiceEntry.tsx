@@ -12,6 +12,7 @@ import { parseFoodItems, getMealStartTime, inferMealFromTime, textContainsMealKe
 import type { MealType } from '@/features/energy/parseFoodText';
 import { searchFoods, lookupOrCreateFood } from '@/features/energy/api';
 import type { FoodSearchResult } from '@/features/energy/api';
+import { scalePortion } from '@trackvibe/shared/domain';
 import { AudioWave } from '@/components/ui/audio-wave';
 
 interface ResolvedEntry {
@@ -39,6 +40,67 @@ type Lang = 'en-US' | 'he-IL';
 const MEALS: MealType[] = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 
 const LANG_STORAGE_KEY = 'quickVoiceEntry.lang';
+
+/**
+ * Mass and volume units whose grams-equivalent against a food's reference basis is exact.
+ *
+ * `ml` maps onto the same basis 1:1 — a drink's macros are published per 100 ml, so no
+ * density conversion belongs here; that is what `scalePortion` and `FoodEntryModal` both do.
+ */
+const MEASURED_UNITS: Record<string, { perUnitGrams: number; basis: 'g' | 'ml' }> = {
+  g: { perUnitGrams: 1, basis: 'g' },
+  kg: { perUnitGrams: 1000, basis: 'g' },
+  ml: { perUnitGrams: 1, basis: 'ml' },
+  l: { perUnitGrams: 1000, basis: 'ml' },
+};
+
+/**
+ * The macros to log for one parsed item, scaled to the portion it named.
+ *
+ * `/api/food/search` publishes macros against the food's reference quantity
+ * (`referenceGrams`, 100 today), and `global/domain-conventions.md` is explicit that
+ * `food_entries` stores values "already scaled to the logged portion" and that converting
+ * is the caller's job. This caller parsed the amount, stored it in `portionAmount`, and
+ * then logged the published macros untouched — so "200 grams of rice" logged 100 g of rice.
+ *
+ * Only portions with an unambiguous grams-equivalent are scaled: the measured units above,
+ * and a bare count of a food that publishes what one of its own units weighs ("2 eggs"
+ * against `defaultUnit` + `unitWeightGrams`, the gate `BulkFoodEntryModal` already uses).
+ * `oz`, `cup`, `tbsp`, `tsp` and spoken portion words (`slice`, `piece`, `bowl`) need a
+ * density or a per-food weight this response does not carry, so they keep the published
+ * macros exactly as before rather than take an invented factor — the review screen shows
+ * the calories, and editing a saved entry still corrects them.
+ */
+function scaleToPortion(
+  food: FoodSearchResult,
+  amount: number | null,
+  unit: string | null,
+): Pick<ResolvedEntry, 'calories' | 'protein' | 'carbs' | 'fats'> {
+  const published = {
+    calories: food.calories,
+    protein: food.protein,
+    carbs: food.carbs,
+    fats: food.fat,
+  };
+  if (amount == null || !(amount > 0)) return published;
+
+  const measured = unit ? MEASURED_UNITS[unit] : undefined;
+  if (measured) {
+    const { calories, protein, carbs, fats } = scalePortion(
+      food,
+      amount * measured.perUnitGrams,
+      measured.basis,
+    );
+    return { calories, protein, carbs, fats };
+  }
+
+  if (!unit && food.defaultUnit && food.unitWeightGrams) {
+    const { calories, protein, carbs, fats } = scalePortion(food, amount, food.defaultUnit);
+    return { calories, protein, carbs, fats };
+  }
+
+  return published;
+}
 
 function getInitialLang(): Lang {
   if (typeof window !== 'undefined') {
@@ -130,12 +192,13 @@ export default function QuickVoiceEntry({
 
           if (nutrition) {
             const effectiveMeal = hasExplicitMeals ? item.meal : fallbackMeal;
+            const { calories, protein, carbs, fats } = scaleToPortion(nutrition, item.amount, item.unit);
             resolved.push({
               name: nutrition.name || item.name,
-              calories: nutrition.calories,
-              protein: nutrition.protein,
-              carbs: nutrition.carbs,
-              fats: nutrition.fat,
+              calories,
+              protein,
+              carbs,
+              fats,
               portionAmount: item.amount ?? undefined,
               portionUnit: item.unit ?? undefined,
               startTime: getMealStartTime(effectiveMeal),

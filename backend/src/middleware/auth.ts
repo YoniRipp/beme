@@ -19,12 +19,18 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 
   // MCP server: accept shared secret and impersonate a user (for Cursor MCP integration)
-  if (config.mcpSecret && config.mcpUserId &&
-      token.length === config.mcpSecret.length &&
-      crypto.timingSafeEqual(Buffer.from(token), Buffer.from(config.mcpSecret))) {
-    req.user = { id: config.mcpUserId, email: 'mcp@local', role: 'user' };
-    req.mcpAuth = true;
-    return next();
+  if (config.mcpSecret && config.mcpUserId && typeof token === 'string') {
+    // Compare the UTF-8 buffers, and size them by their BYTE lengths. String#length counts
+    // UTF-16 code units, so a multi-byte token can match the secret's character count and
+    // still be a different number of bytes -- timingSafeEqual then throws, outside the try
+    // below, which takes the process down on an unauthenticated request.
+    const tokenBytes = Buffer.from(token, 'utf8');
+    const secretBytes = Buffer.from(config.mcpSecret, 'utf8');
+    if (tokenBytes.length === secretBytes.length && crypto.timingSafeEqual(tokenBytes, secretBytes)) {
+      req.user = { id: config.mcpUserId, email: 'mcp@local', role: 'user' };
+      req.mcpAuth = true;
+      return next();
+    }
   }
 
   try {
@@ -99,6 +105,14 @@ export async function resolveEffectiveUserId(req: Request, res: Response, next: 
   }
   try {
     const pool = getPool();
+    // The admin claim above comes from the token, which lasts a year. Confirm the caller is
+    // still an admin before letting them act on someone else's data -- requireAdmin re-reads
+    // the role for the same reason, but it is not in the withUser chain these routes use.
+    // Only the override path pays for this; ordinary self-scoped requests still query nothing.
+    const actor = await pool.query('SELECT role FROM users WHERE id = $1', [req.user!.id]);
+    if (actor.rows[0]?.role !== 'admin') {
+      return sendError(res, 403, 'Admin access required', { code: 'FORBIDDEN' });
+    }
     const result = await pool.query('SELECT id FROM users WHERE id = $1', [adminUserId]);
     if (result.rows.length === 0) {
       return sendError(res, 404, 'User not found', { code: 'NOT_FOUND' });

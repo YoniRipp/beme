@@ -244,4 +244,47 @@ describe('Body Page', () => {
       expect(screen.queryByText(/add your first workout/i)).not.toBeInTheDocument();
     });
   });
+
+  // A failed fetch is not an empty account. The Expo client was fixed for this
+  // (mobile/src/lib/listViewState.ts: "empty means empty, not failed"); the web page
+  // dropped the hook's error entirely, so a 500 rendered as "Add your first workout".
+  describe('when the workouts fetch fails', () => {
+    const failed = {
+      ...defaultHookReturn,
+      workouts: [],
+      workoutsError: 'Could not load workouts. Please try again.',
+    };
+
+    it('shows the error instead of inviting a first workout', () => {
+      mockUseWorkouts.mockReturnValue(failed);
+
+      render(<Body />, { wrapper });
+
+      expect(screen.getByText('Could not load workouts. Please try again.')).toBeInTheDocument();
+      expect(screen.queryByText(/add your first workout/i)).not.toBeInTheDocument();
+    });
+
+    it('keeps the workouts it already had, with the error above them', async () => {
+      mockUseWorkouts.mockReturnValue({
+        ...failed,
+        workouts: [
+          {
+            id: '1',
+            date: new Date(),
+            title: 'Chest Day',
+            type: 'strength' as const,
+            durationMinutes: 45,
+            exercises: [],
+            completed: false,
+          },
+        ],
+      });
+
+      render(<Body />, { wrapper });
+
+      await waitFor(() => expect(screen.getByText('Chest Day')).toBeInTheDocument());
+      expect(screen.getByText('Could not load workouts. Please try again.')).toBeInTheDocument();
+      expect(screen.queryByText(/add your first workout/i)).not.toBeInTheDocument();
+    });
+  });
 });
