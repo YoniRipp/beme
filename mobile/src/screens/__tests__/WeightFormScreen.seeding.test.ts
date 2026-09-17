@@ -156,3 +156,63 @@ describe('isValidWeight', () => {
     expect(isValidWeight(Number.POSITIVE_INFINITY)).toBe(false);
   });
 });
+
+/**
+ * The day is selectable now (#361 gave the other three forms a day picker; this one was held
+ * back precisely because of the seeding below). Two rules, and they pull in opposite
+ * directions, which is why both are pinned here.
+ *
+ * `mountForDay` varies the DAY rather than the entries, so `rerender` moves the selected day the
+ * way pressing a chip does.
+ */
+const mountForDay = (entries: Entry[], initialDay: string) =>
+  renderHook((day: string) => useWeightFormState(entries, day), { initialProps: initialDay });
+
+describe('useWeightFormState — changing the day', () => {
+  const ENTRIES: Entry[] = [
+    { date: TODAY, weight: 81.5, notes: 'morning' },
+    { date: YESTERDAY, weight: 82.1, notes: 'post-run' },
+  ];
+
+  it('shows the selected day’s reading, so switching days edits that day', async () => {
+    const { result, rerender } = await mountForDay(ENTRIES, TODAY);
+
+    expect(result.current.weight).toBe('81.5');
+
+    await rerender(YESTERDAY);
+
+    expect(result.current.weight).toBe('82.1');
+    expect(result.current.notes).toBe('post-run');
+  });
+
+  /**
+   * The direction that cannot lose data. Type a number, then realise it was yesterday's
+   * weigh-in and switch — re-seeding at that moment would silently replace what you typed with
+   * yesterday's stored reading, and Save would post that instead. Same class of corruption as
+   * the late-query race above.
+   */
+  it('does not overwrite a typed weight when the day changes', async () => {
+    const { result, rerender } = await mountForDay(ENTRIES, TODAY);
+
+    await act(async () => result.current.setWeight('79.9'));
+    await rerender(YESTERDAY);
+
+    expect(result.current.weight).toBe('79.9');
+  });
+
+  it('leaves the field empty on a day with no reading, rather than showing another day’s', async () => {
+    const { result, rerender } = await mountForDay(
+      [{ date: TODAY, weight: 81.5, notes: 'morning' }],
+      TODAY,
+    );
+
+    expect(result.current.notes).toBe('morning');
+
+    await rerender(YESTERDAY);
+
+    // The weight still falls back to the most recent reading — a scale moves in tenths, so that
+    // is a useful starting point — but the NOTE must not travel: "morning" was written about a
+    // different day.
+    expect(result.current.notes).toBe('');
+  });
+});

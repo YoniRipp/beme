@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
 import { messageFor } from '../lib/errorMessage';
+import { DayPicker } from '../components/shared/DayPicker';
 import { useWeight } from '../hooks/useWeight';
 import { toLocalDateString, parseLocalDateString } from '../lib/dateRanges';
 import { useThemedStyles } from '../theme/useThemedStyles';
@@ -21,21 +22,22 @@ export function isValidWeight(value: number): boolean {
 /**
  * What the form should open with.
  *
- * Today's entry if there is one, so the field EDITS today rather than silently replacing it
+ * The chosen day's entry if there is one, so the field EDITS that day rather than silently
+ * replacing it
  * with a number typed from scratch; otherwise the most recent reading, which is a sensible
  * starting point for a scale that moves in tenths. The web does the same
- * (`WeightLogModal.tsx:30-40`), and its `notes` only carry over from today's own entry —
+ * (`WeightLogModal.tsx:30-40`), and its `notes` only carry over from that day's own entry —
  * yesterday's "post-run" note does not belong on today's row.
  */
 export function weightFormSeed(
   entries: readonly { date: string; weight: number; notes?: string }[],
-  today: string
+  day: string
 ): { weight: string; notes: string } {
-  const todaysEntry = entries.find((e) => e.date === today);
-  const prefill = todaysEntry ?? entries[0];
+  const dayEntry = entries.find((e) => e.date === day);
+  const prefill = dayEntry ?? entries[0];
   return {
     weight: prefill?.weight != null ? String(prefill.weight) : '',
-    notes: todaysEntry?.notes ?? '',
+    notes: dayEntry?.notes ?? '',
   };
 }
 
@@ -58,23 +60,31 @@ export function weightFormSeed(
  * `edited` closes that: the moment the user touches either field, their value is the one
  * that stands, whenever the query gets back. Refs rather than state because neither is
  * rendered and neither should schedule a render.
+ *
+ * It governs the day switch too, and in the direction that cannot lose data. Type 81.5,
+ * realise it was yesterday's weigh-in, switch to Yesterday — the number you typed is still
+ * there and is what Save posts. Re-seeding at that moment would silently replace it with
+ * yesterday's stored reading, which is the same class of corruption the race above describes.
  */
 export function useWeightFormState(
   entries: readonly { date: string; weight: number; notes?: string }[],
-  today: string
+  day: string
 ) {
   const [weight, setWeightState] = useState('');
   const [notes, setNotesState] = useState('');
-  const seeded = useRef(false);
+  // Which day the fields were last seeded for, rather than a boolean: the day is selectable
+  // now, and switching to one that already has a reading must show that reading rather than
+  // leave another day's number in the field.
+  const seededFor = useRef<string | null>(null);
   const edited = useRef(false);
 
   useEffect(() => {
-    if (seeded.current || edited.current || entries.length === 0) return;
-    seeded.current = true;
-    const seed = weightFormSeed(entries, today);
+    if (edited.current || seededFor.current === day || entries.length === 0) return;
+    seededFor.current = day;
+    const seed = weightFormSeed(entries, day);
     setWeightState(seed.weight);
     setNotesState(seed.notes);
-  }, [entries, today]);
+  }, [entries, day]);
 
   const setWeight = useCallback((value: string) => {
     edited.current = true;
@@ -106,9 +116,12 @@ export function WeightFormScreen() {
   }));
   const navigation = useNavigation<any>();
   const { weightEntries, addWeight } = useWeight();
-  const today = toLocalDateString(new Date());
+  // Captured once per mount, so a form left open across midnight keeps the row it rendered.
+  const [today] = useState(() => new Date());
+  const [date, setDate] = useState(today);
+  const day = toLocalDateString(date);
 
-  const { weight, notes, setWeight, setNotes } = useWeightFormState(weightEntries, today);
+  const { weight, notes, setWeight, setNotes } = useWeightFormState(weightEntries, day);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -119,7 +132,7 @@ export function WeightFormScreen() {
     }
     setSaving(true);
     try {
-      await addWeight({ date: today, weight: value, notes: notes || undefined });
+      await addWeight({ date: day, weight: value, notes: notes || undefined });
       Toast.show({ type: 'success', text1: 'Weight saved' });
       navigation.goBack();
     } catch (error) {
@@ -132,8 +145,9 @@ export function WeightFormScreen() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.container}>
+        <DayPicker value={date} onChange={setDate} today={today} />
         <Text variant="bodyMedium" style={styles.date}>
-          {format(parseLocalDateString(today), 'EEEE, MMMM d, yyyy')}
+          {format(parseLocalDateString(day), 'EEEE, MMMM d, yyyy')}
         </Text>
         <TextInput
           mode="outlined"
