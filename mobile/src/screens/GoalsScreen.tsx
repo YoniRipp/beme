@@ -4,6 +4,7 @@ import { Text } from 'react-native-paper';
 import { Button } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { useGoals } from '../hooks/useGoals';
+import { listViewState } from '../lib/listViewState';
 import { useEnergy } from '../hooks/useEnergy';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { LoadingView } from '../components/shared/LoadingView';
@@ -80,16 +81,11 @@ export function goalsViewState(input: {
   error: string | null;
   goalCount: number;
 }): GoalsViewState {
-  if (input.loading) {
-    return { loading: true, error: null, empty: false, list: false };
-  }
-  const hasGoals = input.goalCount > 0;
-  return {
-    loading: false,
-    error: input.error,
-    empty: !hasGoals && !input.error,
-    list: hasGoals,
-  };
+  // The rules moved to `lib/listViewState` so Home, Journal and Workouts could use them too --
+  // they were all still rendering an empty state for a failed request. Kept as a named wrapper
+  // rather than replaced at the call site: `goalCount` reads better here than `count`, and
+  // this screen's tests name this function.
+  return listViewState({ loading: input.loading, error: input.error, count: input.goalCount });
 }
 
 export function GoalsScreen() {

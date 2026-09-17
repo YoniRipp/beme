@@ -20,6 +20,7 @@ import { SettingsProvider } from './src/context/SettingsContext';
 import { ThemeProvider, useThemeContext } from './src/theme/ThemeContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { ErrorBoundary } from './src/components/shared/ErrorBoundary';
 import Toast from 'react-native-toast-message';
 import { queryClient } from './src/lib/queryClient';
 
@@ -55,13 +56,18 @@ export default function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SettingsProvider>
-        <ThemeProvider>
-          <AppShell />
-        </ThemeProvider>
-      </SettingsProvider>
-    </QueryClientProvider>
+    // Outermost, so it also catches a throw from the providers themselves. A render error
+    // anywhere below here unmounts the React Native root and leaves a blank screen with
+    // nothing to tap; this is what stands between that and the user.
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <SettingsProvider>
+          <ThemeProvider>
+            <AppShell />
+          </ThemeProvider>
+        </SettingsProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

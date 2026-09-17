@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { ActivityIndicator, Card, Text } from 'react-native-paper';
 import { Button } from '../components/ui';
@@ -24,6 +24,7 @@ import { useWorkouts } from '../hooks/useWorkouts';
 import { useEnergy } from '../hooks/useEnergy';
 import { useWeight } from '../hooks/useWeight';
 import { MobileScreen } from '../components/shared/MobileScreen';
+import { ErrorNotice } from '../components/shared/ErrorNotice';
 import { MetricCard } from '../components/shared/MetricCard';
 import { QuickTile } from '../components/shared/QuickTile';
 import { SectionCard } from '../components/shared/SectionCard';
@@ -201,9 +202,14 @@ export function HomeScreen() {
   const { user } = useAuth();
   const { goals, goalsLoading } = useGoals();
   const { profile, profileLoading } = useProfile();
-  const { workouts, workoutsLoading } = useWorkouts();
-  const { foodEntries, checkIns, energyLoading } = useEnergy();
+  const { workouts, workoutsLoading, workoutsError, refetchWorkouts } = useWorkouts();
+  const { foodEntries, checkIns, energyLoading, energyError, refetchEnergy } = useEnergy();
   const { weightEntries } = useWeight();
+
+  const refreshHome = useCallback(
+    () => Promise.all([refetchEnergy(), refetchWorkouts()]),
+    [refetchEnergy, refetchWorkouts],
+  );
 
   const progress = useMemo(
     () => buildHomeProgress({ goals, profile, workouts, foodEntries, checkIns }),
@@ -254,7 +260,14 @@ export function HomeScreen() {
       // it unconditionally and has the same flicker; that is a fix for the reference client,
       // not something to copy across.
       subtitle={energyLoading ? undefined : homeProgressMessage(progress.meals)}
+      onRefresh={refreshHome}
     >
+      {/* Home is the first screen anyone sees, including a reviewer, and it renders five
+          cards from three queries. If they fail it showed zeroes and empty rings -- a
+          convincing picture of an account with no data, which is the impression a build
+          pointed at the wrong API URL would give with nothing to explain it. First error
+          wins: two lines saying the same thing is noise. */}
+      <ErrorNotice message={energyError ?? workoutsError} />
       <FuelCard
         todayCalories={progress.todayCalories}
         todayProtein={progress.todayProtein}
