@@ -24,20 +24,44 @@ const UPDATE_SPEC: UpdateBuilder<UpdateCheckInInput> = {
   },
 };
 
-export async function findByUserId(userId: string, pagination?: PaginationParams, client?: pg.Pool | pg.PoolClient): Promise<{ data: DailyCheckIn[]; total: number }> {
+/**
+ * A user's check-ins, newest first, optionally narrowed to an inclusive
+ * `startDate`..`endDate` window so a client does not have to read whole
+ * history to render a month.
+ *
+ * The window is built once and used by BOTH queries: `total` feeds `hasMore`,
+ * so counting the unfiltered table while returning filtered rows would make a
+ * paging client walk past the end of the list forever.
+ */
+export async function findByUserId(userId: string, startDate?: string, endDate?: string, pagination?: PaginationParams, client?: pg.Pool | pg.PoolClient): Promise<{ data: DailyCheckIn[]; total: number }> {
   const db = client ?? getPool('energy');
-  const countResult = await db.query('SELECT COUNT(*)::int AS total FROM daily_check_ins WHERE user_id = $1', [userId]);
-  const total = countResult.rows[0].total;
-
-  let sql = 'SELECT ' + RETURNING + ' FROM daily_check_ins WHERE user_id = $1 ORDER BY date DESC, created_at DESC';
+  let where = 'user_id = $1';
   const params: unknown[] = [userId];
+  let idx = 2;
 
-  if (pagination) {
-    sql += ' LIMIT $2 OFFSET $3';
-    params.push(pagination.limit, pagination.offset);
+  if (startDate) {
+    where += ` AND date >= $${idx}::date`;
+    params.push(startDate);
+    idx++;
+  }
+  if (endDate) {
+    where += ` AND date <= $${idx}::date`;
+    params.push(endDate);
+    idx++;
   }
 
-  const result = await db.query(sql, params);
+  const countResult = await db.query(`SELECT COUNT(*)::int AS total FROM daily_check_ins WHERE ${where}`, params);
+  const total = countResult.rows[0].total;
+
+  let sql = `SELECT ${RETURNING} FROM daily_check_ins WHERE ${where} ORDER BY date DESC, created_at DESC`;
+  const rowParams = [...params];
+
+  if (pagination) {
+    sql += ` LIMIT $${idx} OFFSET $${idx + 1}`;
+    rowParams.push(pagination.limit, pagination.offset);
+  }
+
+  const result = await db.query(sql, rowParams);
   return { data: result.rows.map(rowToCheckIn), total };
 }
 

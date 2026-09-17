@@ -6,12 +6,18 @@ import { NotFoundError, ValidationError } from '../errors.js';
 import * as foodEntryModel from '../models/foodEntry.js';
 import { publishEvent } from '../events/publish.js';
 import { upsertEmbedding, upsertEmbeddingsBatch, buildEmbeddingText, deleteEmbedding } from './embeddings.js';
-import type { FoodEntry, UpdateFoodEntryInput, PaginationParams } from '../types/domain.js';
+import type { FoodEntry, UpdateFoodEntryInput, PaginationParams, DateRangeParams } from '../types/domain.js';
 import { getPool } from '../db/pool.js';
 import type { CreateFoodEntryBody, UpdateFoodEntryBody, CreateFoodEntriesBatchBody } from '../schemas/routeSchemas.js';
 
-export async function list(userId: string, pagination?: PaginationParams) {
-  return foodEntryModel.findByUserId(userId, pagination);
+/**
+ * Paged entries, optionally restricted to an inclusive calendar-day window.
+ * `range` is appended rather than mirroring the model's positional
+ * `(startDate, endDate)` so existing callers (admin routes, chat agent) keep
+ * their two-argument calls and their exact behaviour.
+ */
+export async function list(userId: string, pagination?: PaginationParams, range?: DateRangeParams) {
+  return foodEntryModel.findByUserId(userId, range?.startDate, range?.endDate, pagination);
 }
 
 /** Entries logged on a single date. Targeted query — avoids scanning history. */
