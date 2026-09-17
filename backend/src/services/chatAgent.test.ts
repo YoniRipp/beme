@@ -12,6 +12,8 @@ const mockWorkoutCreate = vi.fn();
 const mockFoodList = vi.fn();
 const mockFoodListByDate = vi.fn();
 const mockDuplicateDay = vi.fn();
+const mockGoalList = vi.fn();
+const mockWeightFindByUserId = vi.fn();
 
 vi.mock('../config/index.js', () => ({ config: { geminiApiKey: 'test-key', geminiModel: 'gemini-test' } }));
 vi.mock('../lib/logger.js', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }));
@@ -37,8 +39,10 @@ vi.mock('./foodEntry.js', () => ({
   duplicateDay: (...args: unknown[]) => mockDuplicateDay(...args),
   create: vi.fn(),
 }));
-vi.mock('./goal.js', () => ({ list: vi.fn() }));
-vi.mock('../models/weight.js', () => ({ findByUserId: vi.fn() }));
+vi.mock('./goal.js', () => ({ list: (...args: unknown[]) => mockGoalList(...args) }));
+vi.mock('../models/weight.js', () => ({
+  findByUserId: (...args: unknown[]) => mockWeightFindByUserId(...args),
+}));
 vi.mock('../models/water.js', () => ({ findByUserAndDate: vi.fn() }));
 
 const { executeReadTool } = await import('./chatAgent.js');
@@ -51,6 +55,8 @@ beforeEach(() => {
   mockFoodList.mockResolvedValue({ data: [], total: 0 });
   mockWorkoutListByDate.mockResolvedValue([]);
   mockFoodListByDate.mockResolvedValue([]);
+  mockGoalList.mockResolvedValue({ data: [], total: 0 });
+  mockWeightFindByUserId.mockResolvedValue([]);
 });
 
 describe('executeReadTool', () => {
@@ -64,6 +70,36 @@ describe('executeReadTool', () => {
     await executeReadTool('get_food_entries', {}, USER);
 
     expect(mockFoodList).toHaveBeenCalledWith(USER, { limit: 30, offset: 0 });
+  });
+
+  /**
+   * `weightModel.findByUserId` treats a missing fourth argument as "no LIMIT clause" — the
+   * same shape as the two client reads fixed in #342. The agent may call this on any chat
+   * turn, and the model omits `startDate`/`endDate` whenever the user just asks about their
+   * weight, so the argument has to be present even when the date range is not.
+   */
+  it('bounds get_weight_entries even when the model sends no date range', async () => {
+    await executeReadTool('get_weight_entries', {}, USER);
+
+    expect(mockWeightFindByUserId).toHaveBeenCalledWith(USER, undefined, undefined, {
+      limit: 30,
+      offset: 0,
+    });
+  });
+
+  it('keeps the bound when the model does send a date range', async () => {
+    await executeReadTool('get_weight_entries', { startDate: '2026-01-01', endDate: '2026-05-01' }, USER);
+
+    expect(mockWeightFindByUserId).toHaveBeenCalledWith(USER, '2026-01-01', '2026-05-01', {
+      limit: 30,
+      offset: 0,
+    });
+  });
+
+  it('bounds get_goals, which passed no pagination at all', async () => {
+    await executeReadTool('get_goals', {}, USER);
+
+    expect(mockGoalList).toHaveBeenCalledWith(USER, { limit: 50, offset: 0 });
   });
 
   it('queries a single date directly when one is given', async () => {

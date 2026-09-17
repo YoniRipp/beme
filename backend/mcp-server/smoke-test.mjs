@@ -263,6 +263,22 @@ try {
     `every tool exposes an input schema${schemaless.length ? ` (missing: ${schemaless.map((t) => t.name).join(', ')})` : ''}`
   );
 
+  // `/api/weight-entries` and `/api/water-entries/history` are the only two list endpoints whose
+  // controller uses `parseOptionalPagination`, which emits no LIMIT at all when the caller sends
+  // neither bound. An LLM omits an optional argument routinely, so `limit` on these two tools has
+  // to carry a default -- otherwise the read is the user's whole table, which is critical rule 6.
+  // Every other list tool hits a controller with `paginationSchema` and its server-side 50, so
+  // this check names exactly two tools rather than sweeping all of them.
+  const MUST_DEFAULT_LIMIT = ['list_weight_entries', 'get_water_history'];
+  const undefaulted = MUST_DEFAULT_LIMIT.filter((name) => {
+    const tool = base.tools.find((t) => t.name === name);
+    return typeof tool?.inputSchema?.properties?.limit?.default !== 'number';
+  });
+  check(
+    undefaulted.length === 0,
+    `the two unbounded-endpoint tools default their limit${undefaulted.length ? ` (missing: ${undefaulted.join(', ')})` : ''}`
+  );
+
   const offUri = base.resources.filter((r) => !r.uri?.startsWith('trackvibe://'));
   check(offUri.length === 0, 'every resource is published under trackvibe://');
 
