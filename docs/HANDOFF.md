@@ -1,6 +1,6 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. Last verified 2026-09-17 against `main` at `ec99cac`.**
+**Written 2026-09-14. Last verified 2026-09-17 against `main` at `5ca94dd`.**
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -112,11 +112,24 @@ packages and the root one has not been retried since.
 ## In flight — one PR with code
 
 ### #337 · Self-service account deletion — the App Store blocker
-`claude/appstore-account-deletion` → `491baf0`. 28 files, all application code, no spec docs.
-**Now 26 commits behind `main` after the 2026-09-17 batch, and it still merges clean** —
-re-verified with `git merge-tree` against `6af35f7`, zero conflicts. One overlap worth knowing
-about even though git resolves it silently: #344 also edited `mobile/src/screens/SettingsScreen.tsx`,
-which is the file that makes #337 a blocker for #317's implementation and #315.
+`claude/appstore-account-deletion` → `953461f`. 28 files of application code, plus a merge of
+`main` and one fix taken on 2026-09-17 (below).
+
+**Correct a claim this file made earlier today: it did NOT merge clean.** An earlier pass said
+so on the strength of `git merge-tree origin/main <branch>` reporting zero conflicts. That
+three-argument form is not a mergeability check — `git merge-tree --write-tree` exits non-zero
+on the same two commits, and the real merge conflicted in `mobile/src/screens/SettingsScreen.tsx`
+and `mobile/src/components/shared/ConfirmDialog.tsx`. **Use `--write-tree`, or do the merge.**
+
+The conflicts are resolved on the branch and the resolution is additive: #344's `reportUnits`
+and this branch's `handleDeleteAccount` now sit side by side, and `ConfirmDialog` takes
+`Button` from #343's `components/ui` primitive rather than from Paper. Two of #343's guards
+caught the rest — `ConfirmDialog` was importing Paper's `Button` directly, and its warning
+style set `fontWeight: '700'` with no family, which on Expo renders in the system font.
+
+Its CI is green, which this file also previously got wrong: it reported `total_count: 0` and
+said not to read that as green. That was the legacy *commit statuses* API, which this repo
+does not use. The **check runs** are all there and all passing.
 
 App Store Guideline 5.1.1(v): an app that creates accounts must let users delete them
 in-app. The only delete route is admin-only and explicitly refuses self-deletion.
@@ -135,9 +148,28 @@ Also reconciles `backend/src/db/schema.ts` with the cascade migration and teache
 `information_schema.columns`, so deletion tests against a dev DB proved nothing about
 production.
 
-Two review rounds have run and both paid for themselves. Round 1 fixed nine findings and
-rejected one with reasoning. **Round 2 found a SQL bug that broke deletion outright**, plus
-four more, and rejected one. It was starting round 3 when it stopped.
+Three review rounds have run and all three paid for themselves. Round 1 fixed nine findings
+and rejected one with reasoning. **Round 2 found a SQL bug that broke deletion outright**, plus
+four more, and rejected one.
+
+**Round 3 (2026-09-17) found one bug, and it was not in the deletion code.**
+`AuthContext.logout` on the Expo client dropped the token and the user and left the React
+Query cache untouched. With `staleTime: 60_000`, the next account to sign in on that device is
+served the previous account's workouts, food entries, weights and goals for a minute — from
+cache, with no refetch to correct it. The web has always cleared its cache there
+(`clearClientSession`); this client had not.
+
+It is a logout bug rather than a deletion bug, but deletion is where it stops being cosmetic:
+the rows are gone server-side by then, so that cache is the only copy of them left anywhere,
+and a deletion that leaves the data on the device is not what Guideline 5.1.1(v) asks for.
+Fixed in `logout`, so the ordinary sign-out path is covered too.
+
+Everything else round 3 looked at came back clean and is not worth re-reading: the S3 prefix
+is `users/<id>/` with a trailing slash and uploads use the same helper, so one user's sweep
+cannot reach another's objects; the self-service route takes its subject from `req.user.id`
+and refuses MCP-authenticated callers; the admin route keeps `requireAdmin`, keeps its refusal
+to delete your own account, and preserves its old response shapes (critical rule 4); and both
+blocklists are consulted by the WebSocket path as well as the HTTP middleware.
 
 **GitHub reports no commit statuses at all on `491baf0`** — `total_count: 0`. Do not read
 that as green. Establish what CI actually says before trusting the branch.
