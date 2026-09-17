@@ -7,10 +7,15 @@ import { getEffectiveUserId } from '../middleware/auth.js';
 import * as cycleModel from '../models/cycle.js';
 import { sendJson, sendCreated, sendNoContent } from '../utils/response.js';
 import { NotFoundError, ValidationError } from '../errors.js';
+import { parseQuery } from '../utils/validation.js';
+import { dateWindowQuerySchema } from '../schemas/routeSchemas.js';
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const userId = getEffectiveUserId(req);
-  const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+  // Validated rather than cast. These reach Postgres as `$n::date`, so a malformed bound used to
+  // surface as an unhandled pg error -- rendered by `errorHandler` as a 500 INTERNAL_ERROR, which
+  // tells the caller the server broke when in fact they sent `?startDate=lastweek`.
+  const { startDate, endDate } = parseQuery(dateWindowQuerySchema, req.query);
   const entries = await cycleModel.findByUserId(userId, startDate, endDate);
   sendJson(res, entries);
 });

@@ -1024,6 +1024,11 @@ day window, `?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD` — either bound may be s
 own, and `total`/`hasMore` are computed over the same window, so a filtered list can be
 paged to its end. Omitting both returns the unfiltered list, as before.
 
+`/api/weight-entries`, `/api/water-entries/history` and `/api/cycle-entries` take the same
+`startDate`/`endDate` window but page differently: they answer with a **bare array** and
+apply `limit`/`offset` only when one is supplied, which is why they are listed separately
+here. On all six, a bound that is not a real `YYYY-MM-DD` calendar date is a 400.
+
 ### Food Search (public)
 
 | Method | Path | Parameters | Description |
