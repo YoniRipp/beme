@@ -6,6 +6,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { WorkoutType, Exercise, WORKOUT_TYPES } from '../types/workout';
 import { toLocalDateString } from '../lib/dateRanges';
+import { workoutFormSchema } from '@trackvibe/shared/schemas';
+import { ApiError } from '../core/api/client';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
@@ -82,17 +84,44 @@ export function WorkoutFormScreen() {
 
   const handleSave = async () => {
     const validExercises = exercises.filter((e) => e.name.trim());
-    if (validExercises.length === 0) {
-      Toast.show({ type: 'error', text1: 'Add at least one exercise' });
+
+    /**
+     * Validate before sending, against the schema the web form already uses.
+     *
+     * The bug this closes: `durationMinutes` was `parseInt(duration) || 0`, and the field
+     * starts empty. The backend requires `min(1)` (`routeSchemas.ts`), so leaving duration
+     * blank produced a 400 that arrived as "Failed to save workout" — a user could not save a
+     * workout and was never told which field was the problem.
+     *
+     * `workoutFormSchema` already says "Duration is required" and is already in
+     * `packages/shared`; nothing had ever imported it here. Its shape is the FORM's, not the
+     * API's — `date` and `durationMinutes` are strings — so the raw field values go in, not
+     * the payload built below.
+     */
+    const parsed = workoutFormSchema.safeParse({
+      title: title.trim() || 'Workout',
+      type,
+      date: toLocalDateString(date),
+      durationMinutes: duration.trim(),
+      notes: notes.trim() || undefined,
+      exercises: validExercises.map(mergeExerciseEdits),
+    });
+
+    if (!parsed.success) {
+      // The first message, not a count. "Duration is required" tells someone what to do;
+      // "3 validation errors" does not, and this form has no per-field error slots yet.
+      const issue = parsed.error.issues[0];
+      Toast.show({ type: 'error', text1: issue?.message ?? 'Check the form and try again' });
       return;
     }
+
     setSaving(true);
     try {
       const data = {
         title: title.trim() || 'Workout',
         type,
         date,
-        durationMinutes: parseInt(duration) || 0,
+        durationMinutes: parseInt(duration, 10),
         exercises: validExercises.map(mergeExerciseEdits),
         notes: notes.trim() || undefined,
         completed: existing?.completed ?? false,
@@ -104,8 +133,14 @@ export function WorkoutFormScreen() {
       }
       Toast.show({ type: 'success', text1: existing ? 'Workout updated' : 'Workout logged' });
       navigation.goBack();
-    } catch {
-      Toast.show({ type: 'error', text1: 'Failed to save workout' });
+    } catch (error) {
+      // Say what the server said. Everything reaching here is already an `ApiError` carrying
+      // the API's own message; swallowing it was how a 400 about one field became an
+      // unactionable "Failed to save workout".
+      Toast.show({
+        type: 'error',
+        text1: error instanceof ApiError && error.message ? error.message : 'Failed to save workout',
+      });
     } finally {
       setSaving(false);
     }
@@ -114,7 +149,17 @@ export function WorkoutFormScreen() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <TextInput mode="outlined" label="Title" value={title} onChangeText={setTitle} style={styles.input} />
+        <TextInput
+          mode="outlined"
+          label="Title"
+          // Paper's `label` is the floating visual label and is NOT forwarded to accessibility, so
+          // without this a screen reader announces an unlabelled text field. Same for every
+          // input below.
+          accessibilityLabel="Title"
+          value={title}
+          onChangeText={setTitle}
+          style={styles.input}
+        />
 
         <Text variant="titleSmall" style={styles.label}>Type</Text>
         <SegmentedButtons
@@ -135,6 +180,7 @@ export function WorkoutFormScreen() {
         <TextInput
           mode="outlined"
           label="Duration (minutes)"
+          accessibilityLabel="Duration (minutes)"
           value={duration}
           onChangeText={setDuration}
           keyboardType="numeric"
@@ -144,6 +190,7 @@ export function WorkoutFormScreen() {
         <TextInput
           mode="outlined"
           label="Notes"
+          accessibilityLabel="Notes"
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -166,6 +213,7 @@ export function WorkoutFormScreen() {
               <TextInput
                 mode="outlined"
                 label="Name"
+                accessibilityLabel="Exercise name"
                 value={ex.name}
                 onChangeText={(v) => updateExercise(i, 'name', v)}
                 dense
@@ -175,6 +223,7 @@ export function WorkoutFormScreen() {
                 <TextInput
                   mode="outlined"
                   label="Sets"
+                  accessibilityLabel="Sets"
                   value={ex.sets?.toString() || ''}
                   onChangeText={(v) => updateExercise(i, 'sets', parseInt(v) || 0)}
                   keyboardType="numeric"
@@ -184,6 +233,7 @@ export function WorkoutFormScreen() {
                 <TextInput
                   mode="outlined"
                   label="Reps"
+                  accessibilityLabel="Reps"
                   value={ex.reps?.toString() || ''}
                   onChangeText={(v) => updateExercise(i, 'reps', parseInt(v) || 0)}
                   keyboardType="numeric"
