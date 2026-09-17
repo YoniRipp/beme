@@ -390,19 +390,30 @@ That branch is the base of this one, and should merge first.
 
 ## Hazards worth knowing before you start
 
-**Tests that assert nothing.** Four shipped in this repo, and they are the reason several
-bugs survived:
+**Tests that assert nothing.** Four shipped in this repo and are the reason several bugs
+survived. **All four are now fixed** — checked on 2026-09-17, because a hazard list that
+describes history as if it were current sends people hunting for problems that are gone:
 
-- A `className` assertion in jsdom, with no Tailwind, no `env()` and no layout engine.
-- A WCAG contrast assertion that **passed while the button rendered purple**, because it
-  measured `colors.primary`/`primaryForeground` while Paper's `Button` reads
-  `paperTheme.colors.onPrimary`.
-- E2E route tests matching free text ("Workouts", "Goals", "Insights") that appears in the
-  **sidebar on every page** — three of five passed against the wrong page.
-- `expect(stroke).not.toBe('#e5e7eb')` against react-native-svg, which normalises a colour
-  prop to `{type: 0, payload: <ARGB int>}` — so it passes against every possible value.
+| The test | Where it stands |
+|---|---|
+| A `className` assertion in jsdom, with no Tailwind, no `env()` and no layout engine | **Fixed.** `Base44Layout.test.tsx` now leads with `expect(bar).toContainElement(docked)` — the structural invariant, which jsdom *can* falsify — with the class checks as supporting detail. |
+| A WCAG contrast assertion that **passed while the button rendered purple** | **Fixed.** `useAppTheme.test.tsx`'s helper throws on anything that is not `#rrggbb` instead of parsing it to `NaN`, and says why in its docstring. `NaN` made every comparison pass. |
+| E2E route tests matching free text that appears in the sidebar on every page | **Fixed.** `navigation.spec.ts` asserts `toHaveURL` plus `getByRole('heading', { name })`, so a match has to be the page's own heading. |
+| `expect(stroke).not.toBe('#e5e7eb')` against react-native-svg's `{type, payload}` normalisation | **Fixed.** `ProgressRing.test.tsx` has a `strokeHex` helper that decodes the payload back to `#rrggbb`, so the comparisons can fail. |
 
-**Prove each new test fails when the fix is reverted.** It is the only cheap defence.
+Two mechanical sweeps on the same date came back clean: **no test block in the repo lacks an
+assertion** (counting `throw`, `.rejects`, and RNTL's throwing `findBy*` as assertions — the
+first two passes of that scan produced only false positives for missing them), and none of the
+27 negative assertions (`.not.toBe`/`.not.toContain`) is of the vacuous kind.
+
+**So the list above is a record of a failure mode, not a backlog.** The failure mode is very
+much live — two tests written on this branch had it, and both were caught only by mutation:
+one "passed" because its mutation script silently failed to mutate anything, and a timezone
+assertion passed against the exact implementation it was written to replace, because the
+runner uses UTC and UTC is where that bug hides.
+
+**Prove each new test fails when the fix is reverted.** It is the only cheap defence, and it
+is the only reason those two were caught.
 
 **Do not eyeball screenshots.** Three bugs were nearly filed off scaled simulator
 screenshots — a wrong progress-bar count, duplicate voice buttons, duplicate headers — and
