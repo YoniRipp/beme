@@ -14,6 +14,7 @@ import { useSettings } from '../hooks/useSettings';
 import { authApi } from '../core/api/auth';
 import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { useProfile } from '../hooks/useProfile';
+import { LegalLinks } from '../components/settings/LegalLinks';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { fonts, spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
@@ -22,6 +23,7 @@ import { useThemedStyles } from '../theme/useThemedStyles';
 const ACCOUNT_TITLE = 'Account';
 const UNITS_TITLE = 'Units';
 const APPEARANCE_TITLE = 'Appearance';
+const LEGAL_TITLE = 'Legal';
 const DELETE_ACCOUNT_TITLE = 'Delete account';
 
 /**
@@ -43,6 +45,8 @@ export const DELETE_ACCOUNT_CONFIRMATION_PHRASE = 'DELETE';
  * `frontend/src/components/settings/AppearanceSection.tsx`. The three remaining titles are
  * in the same relative order the web renders them in.
  *
+ * "Legal" matches `frontend/src/components/settings/LegalSection.tsx`.
+ *
  * "Delete account" is last, and matches `frontend/src/components/settings/
  * DeleteAccountSection.tsx`. It exists because App Store Guideline 5.1.1(v) requires an app
  * that can create an account to let the user delete it from inside the app, and it is
@@ -53,6 +57,7 @@ export const SETTINGS_SECTION_TITLES = [
   ACCOUNT_TITLE,
   UNITS_TITLE,
   APPEARANCE_TITLE,
+  LEGAL_TITLE,
   DELETE_ACCOUNT_TITLE,
 ] as const;
 
@@ -151,6 +156,12 @@ export function SettingsScreen() {
             <RadioButton.Item key={option.value} label={option.label} value={option.value} />
           ))}
         </RadioButton.Group>
+      </SettingsCard>
+
+      {/* Guideline 5.1.1(i) wants the policy reachable from inside the app, so this is a
+          section of its own rather than a line of small print under something else. */}
+      <SettingsCard title={LEGAL_TITLE}>
+        <LegalLinks />
       </SettingsCard>
 
       <Button mode="contained" onPress={logout} buttonColor={colors.danger} style={styles.signOutButton}>

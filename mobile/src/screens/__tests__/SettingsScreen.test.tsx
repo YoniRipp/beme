@@ -49,7 +49,13 @@ describe('SettingsScreen sections', () => {
   });
 
   it("offers exactly the sections that are real, working settings, in the web's order", () => {
-    expect(SETTINGS_SECTION_TITLES).toEqual(['Account', 'Units', 'Appearance', 'Delete account']);
+    expect(SETTINGS_SECTION_TITLES).toEqual([
+      'Account',
+      'Units',
+      'Appearance',
+      'Legal',
+      'Delete account',
+    ]);
   });
 
   // App Store Guideline 5.1.1(v): an app that supports account creation must offer account
@@ -61,6 +67,16 @@ describe('SettingsScreen sections', () => {
 
   it('puts the irreversible control last, not between two preference pickers', () => {
     expect(SETTINGS_SECTION_TITLES[SETTINGS_SECTION_TITLES.length - 1]).toBe('Delete account');
+  });
+
+  /**
+   * Guideline 5.1.1(i) requires the privacy policy to be reachable "within the app in an
+   * easily accessible manner", and this client linked to neither a policy nor terms from
+   * anywhere. Asserted on the exported title list rather than by rendering, because what the
+   * guideline is about is the section existing at all — `LegalLinks` owns what is inside it.
+   */
+  it('offers a Legal section, which App Store review requires and this client had none of', () => {
+    expect(SETTINGS_SECTION_TITLES).toContain('Legal');
   });
 });
 
