@@ -274,8 +274,8 @@ Resolved since the last version: `#319 ──► #299` (both merged) and `#308` 
 
 ## Needs the owner — cannot be done from an agent session
 
-Re-checked against the code on 2026-09-16; every item below is still true. Item 7 was added
-on 2026-09-17, found while auditing shared logic for drift between the clients.
+Re-checked against the code on 2026-09-16; every item below is still true. Items 7 and 8 were
+added on 2026-09-17, found while auditing shared logic for drift between the clients.
 
 1. **`RESEND_API_KEY` is unset in Railway.** `sendMail` is a no-op, so **password reset
    emails are never sent**. #309 built the page; the link still does not arrive. This is
@@ -327,7 +327,26 @@ on 2026-09-17, found while auditing shared logic for drift between the clients.
    hardcodes `label="Weight (kg)"` while `MobileWorkoutCard` relabels to lbs, so on Expo the
    same number is captioned kg going in and lbs coming out.
 
-8. **`backend/mcp-server` has never been audited.** The `security-audit` job in
+8. **Food entries with no meal type all land in Breakfast, on both clients.** The domain
+   standard says "entries **without** `mealType` fall back to time-based inference. Keep that
+   fallback — old rows have no meal type." **That fallback cannot work and never has.**
+   `food_entries.date` is a Postgres `DATE` with no time of day, and both clients' mappers
+   turn it into a local midnight, so `entry.date.getHours()` is always `0` and
+   `mealForHour(0)` is always Breakfast — `frontend/src/features/energy/mealType.ts` and
+   `mobile/src/screens/EnergyScreen.tsx`, which copied the web including the flaw. Both
+   comments described it as inferring from time.
+
+   Only legacy rows are affected: `FoodEntryModal.tsx:434` has set `startTime` for a while, so
+   anything logged recently has a real hour. But those are exactly the rows the standard names.
+
+   **Why it is not fixed here.** There is no time to infer from, so the honest options are to
+   bucket timeless rows as `snack` (the neutral one), to surface them separately, or to keep
+   Breakfast and say so. All three change where a user's history appears, which is a product
+   call. The code now states what it really does at both call sites, and
+   `packages/shared/src/domain/__tests__/isOnLocalDay.test.ts` pins the mechanism so the next
+   reader does not have to rediscover it.
+
+9. **`backend/mcp-server` has never been audited.** The `security-audit` job in
    `.github/workflows/ci.yml:176-181` runs a matrix of `[backend, frontend, mobile]` — the
    MCP server is not in it, and it is not a workspace, so no other job reaches it either.
    #341 and the three dependency bumps that followed will have moved the numbers; the 8
