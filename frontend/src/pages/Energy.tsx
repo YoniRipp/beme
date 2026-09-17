@@ -21,7 +21,7 @@ import { PeriodSelector } from '@/components/shared/PeriodSelector';
 import { Moon, Trash2, Pencil, ChevronDown, ClipboardList, Copy, UtensilsCrossed } from 'lucide-react';
 import { isSameDay, isWithinInterval, format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { getPeriodRange, toLocalDateString } from '@/lib/dateRanges';
-import { targetFraction } from '@trackvibe/shared/domain';
+import { periodNutritionTotals, targetFraction } from '@trackvibe/shared/domain';
 import { Page, PageHeader } from '@/components/ui/page';
 interface FoodGroup {
   key: string;
@@ -204,28 +204,13 @@ export function Energy() {
     [periodFoodEntries, caloriePeriod],
   );
 
-  const periodTotals = useMemo(() => {
-    const totals = periodFoodEntries.reduce(
-      (acc, entry) => ({
-        calories: acc.calories + entry.calories,
-        protein: acc.protein + entry.protein,
-        carbs: acc.carbs + entry.carbs,
-        fats: acc.fats + entry.fats,
-      }),
-      { calories: 0, protein: 0, carbs: 0, fats: 0 }
-    );
-    if (caloriePeriod === 'daily' || periodFoodEntries.length === 0) return totals;
-    // Key by calendar day — Date objects are unique per entry, so a Set of them
-    // would count entries, not days.
-    const uniqueDays = new Set(periodFoodEntries.map(e => new Date(e.date).toDateString())).size;
-    if (uniqueDays <= 1) return totals;
-    return {
-      calories: Math.round(totals.calories / uniqueDays),
-      protein: totals.protein / uniqueDays,
-      carbs: totals.carbs / uniqueDays,
-      fats: totals.fats / uniqueDays,
-    };
-  }, [periodFoodEntries, caloriePeriod]);
+  // Moved to `packages/shared` verbatim — the Expo client summed these raw where this
+  // averaged, so the same week read ~13,000 kcal there against ~1,850 here. One
+  // implementation is the only way that stays fixed.
+  const periodTotals = useMemo(
+    () => periodNutritionTotals(periodFoodEntries, caloriePeriod),
+    [periodFoodEntries, caloriePeriod],
+  );
 
   const sleepData = useMemo(() => {
     const ranges = {

@@ -6,6 +6,7 @@ export * from './foodText';
 export * from './goals';
 export * from './greeting';
 export * from './meals';
+export * from './nutritionTotals';
 export * from './portion';
 export * from './targets';
 export * from './units';

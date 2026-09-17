@@ -18,7 +18,7 @@ import { fonts, radius, spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import { getPeriodRange, PeriodKey } from '../lib/dateRanges';
-import { inferMealTypeFromHour } from '@trackvibe/shared/domain';
+import { inferMealTypeFromHour, periodNutritionTotals } from '@trackvibe/shared/domain';
 import Toast from 'react-native-toast-message';
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -166,12 +166,10 @@ export function EnergyScreen() {
     [checkIns, start, end]
   );
 
-  const totals = useMemo(() => ({
-    calories: periodEntries.reduce((sum, e) => sum + e.calories, 0),
-    protein: periodEntries.reduce((sum, e) => sum + e.protein, 0),
-    carbs: periodEntries.reduce((sum, e) => sum + e.carbs, 0),
-    fats: periodEntries.reduce((sum, e) => sum + e.fats, 0),
-  }), [periodEntries]);
+  // This used to sum raw, for every period. The web has always averaged anything longer than a
+  // day, so the same week read ~13,000 kcal here against ~1,850 there -- under the same heading,
+  // with no way for a user with both to tell which was lying. Same function now.
+  const totals = useMemo(() => periodNutritionTotals(periodEntries, period), [periodEntries, period]);
 
   const avgSleep = periodCheckIns.length > 0
     ? periodCheckIns.reduce((sum, c) => sum + (c.sleepHours || 0), 0) / periodCheckIns.length
@@ -225,7 +223,12 @@ export function EnergyScreen() {
         <>
           <Card mode="contained" style={styles.summaryCard}>
             <Card.Content style={styles.summaryContent}>
-              <Text variant="labelLarge" style={styles.eyebrow}>Calories</Text>
+              {/* Say when the number is an average. A week showing 1,850 under a bare
+                  "Calories" is indistinguishable from a day showing 1,850, and the
+                  difference is the whole point of averaging it. */}
+              <Text variant="labelLarge" style={styles.eyebrow}>
+                {totals.averaged ? 'Calories · daily average' : 'Calories'}
+              </Text>
               <Text variant="displaySmall" style={styles.total}>{Math.round(totals.calories)}</Text>
               <View style={styles.macroRow}>
                 <Text style={styles.macro}>P {Math.round(totals.protein)}g</Text>
