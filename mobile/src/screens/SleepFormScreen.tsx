@@ -8,6 +8,7 @@ import { useThemedStyles } from '../theme/useThemedStyles';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
 import { messageFor } from '../lib/errorMessage';
+import { DayPicker } from '../components/shared/DayPicker';
 
 export function SleepFormScreen() {
   const styles = useThemedStyles((colors) => ({
@@ -23,6 +24,10 @@ export function SleepFormScreen() {
   const { getCheckInById, addCheckIn, updateCheckIn } = useEnergy();
   const existing = checkInId ? getCheckInById(checkInId) : undefined;
 
+  const [date, setDate] = useState(existing?.date || new Date());
+  // Captured once per mount rather than per render, so the row cannot shift under the user's
+  // finger if a form is left open across midnight.
+  const [today] = useState(() => new Date());
   const [hours, setHours] = useState(existing?.sleepHours?.toString() || '');
   const [saving, setSaving] = useState(false);
 
@@ -38,10 +43,12 @@ export function SleepFormScreen() {
     }
     setSaving(true);
     try {
+      // The date travels on both paths. `updateCheckIn` has always accepted one and this
+      // screen never sent it, so an entry logged on the wrong day could not be moved.
       if (existing) {
-        await updateCheckIn(existing.id, { sleepHours: h });
+        await updateCheckIn(existing.id, { sleepHours: h, date });
       } else {
-        await addCheckIn({ date: new Date(), sleepHours: h });
+        await addCheckIn({ date, sleepHours: h });
       }
       Toast.show({ type: 'success', text1: existing ? 'Sleep updated' : 'Sleep logged' });
       navigation.goBack();
@@ -55,8 +62,9 @@ export function SleepFormScreen() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.container}>
+        <DayPicker value={date} onChange={setDate} today={today} />
         <Text variant="bodyMedium" style={styles.date}>
-          {format(existing?.date || new Date(), 'EEEE, MMMM d, yyyy')}
+          {format(date, 'EEEE, MMMM d, yyyy')}
         </Text>
         <TextInput
           mode="outlined"

@@ -8,6 +8,7 @@ import { WorkoutType, Exercise, WORKOUT_TYPES } from '../types/workout';
 import { toLocalDateString } from '../lib/dateRanges';
 import { workoutFormSchema } from '@trackvibe/shared/schemas';
 import { messageFor } from '../lib/errorMessage';
+import { DayPicker } from '../components/shared/DayPicker';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
@@ -43,6 +44,8 @@ export function WorkoutFormScreen() {
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 16, paddingBottom: 40 },
     input: { marginBottom: 12 },
+    // Spells out the day the chips selected, so "Tuesday" is never ambiguous about which one.
+    selectedDate: { color: colors.textMuted, marginBottom: 12 },
     label: { marginTop: 8, marginBottom: 8, fontFamily: fonts.semibold, fontWeight: '600' },
     segment: { marginBottom: 12 },
     divider: { marginVertical: 16 },
@@ -62,7 +65,10 @@ export function WorkoutFormScreen() {
 
   const [title, setTitle] = useState(existing?.title || 'Workout');
   const [type, setType] = useState<WorkoutType>(existing?.type || 'strength');
-  const [date] = useState(existing?.date || new Date());
+  const [date, setDate] = useState(existing?.date || new Date());
+  // Captured once per mount rather than read per render, so the row cannot shift under the
+  // user's finger if a form is left open across midnight.
+  const [today] = useState(() => new Date());
   const [duration, setDuration] = useState(existing?.durationMinutes?.toString() || '');
   const [notes, setNotes] = useState(existing?.notes || '');
   const [exercises, setExercises] = useState<Exercise[]>(
@@ -163,13 +169,12 @@ export function WorkoutFormScreen() {
           style={styles.segment}
         />
 
-        <TextInput
-          mode="outlined"
-          label="Date"
-          value={format(date, 'EEE, MMM d, yyyy')}
-          editable={false}
-          style={styles.input}
-        />
+        {/* Was a read-only field showing today, with no setter anywhere — nothing on this
+            client could be backdated. */}
+        <DayPicker value={date} onChange={setDate} today={today} />
+        <Text variant="bodySmall" style={styles.selectedDate}>
+          {format(date, 'EEEE, MMMM d, yyyy')}
+        </Text>
 
         <TextInput
           mode="outlined"
