@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View, type ViewStyle } from 'react-native';
+import { RefreshControl, ScrollView, View, type ViewStyle } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts, spacing } from '../../theme';
@@ -18,9 +18,34 @@ interface MobileScreenProps {
   children: React.ReactNode;
   scroll?: boolean;
   contentStyle?: ViewStyle;
+  /**
+   * Pull to refresh. Optional, and screens without a refetch simply omit it.
+   *
+   * Worth having rather than relying on React Query's own refetching: `staleTime` is 60s and
+   * a failed query does not retry itself, so recovering from one dropped request meant
+   * force-quitting the app. There was no manual refresh anywhere in this client.
+   *
+   * The spinner state lives here rather than in every call site — a screen passes its
+   * `refetch` and nothing else.
+   */
+  onRefresh?: () => Promise<unknown>;
 }
 
-export function MobileScreen({ kicker, title, subtitle, children, scroll = true, contentStyle }: MobileScreenProps) {
+export function MobileScreen({ kicker, title, subtitle, children, scroll = true, contentStyle, onRefresh }: MobileScreenProps) {
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const handleRefresh = React.useCallback(async () => {
+    if (!onRefresh) return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      // `finally`, so a rejected refetch still clears the spinner. React Query has already
+      // put the failure on the query's `error`, which the screen renders; leaving the wheel
+      // turning would claim it was still trying.
+      setRefreshing(false);
+    }
+  }, [onRefresh]);
   const styles = useThemedStyles((colors) => ({
     container: {
       flex: 1,
@@ -69,7 +94,14 @@ export function MobileScreen({ kicker, title, subtitle, children, scroll = true,
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ flexGrow: 1 }}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} /> : undefined
+      }
+    >
       {content}
     </ScrollView>
   );

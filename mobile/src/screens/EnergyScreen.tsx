@@ -11,6 +11,7 @@ import { LoadingView } from '../components/shared/LoadingView';
 import { EmptyState } from '../components/shared/EmptyState';
 import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { MobileScreen } from '../components/shared/MobileScreen';
+import { ErrorNotice } from '../components/shared/ErrorNotice';
 import { MobileFoodCard } from '../components/shared/MobileFoodCard';
 import { MetricCard } from '../components/shared/MetricCard';
 import { fonts, radius, spacing } from '../theme';
@@ -147,7 +148,8 @@ export function EnergyScreen() {
       flexDirection: 'row',
     },
   }));
-  const { foodEntries, checkIns, energyLoading, deleteFoodEntry, deleteCheckIn } = useEnergy();
+  const { foodEntries, checkIns, energyLoading, energyError, refetchEnergy, deleteFoodEntry, deleteCheckIn } =
+    useEnergy();
   const [tab, setTab] = useState('food');
   const [period, setPeriod] = useState<PeriodKey>('daily');
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'food' | 'sleep'; id: string } | null>(null);
@@ -204,7 +206,11 @@ export function EnergyScreen() {
   );
 
   return (
-    <MobileScreen title="Journal" subtitle="Food, calories, macros, and sleep.">
+    <MobileScreen title="Journal" subtitle="Food, calories, macros, and sleep." onRefresh={refetchEnergy}>
+      {/* `useEnergy` has always computed this and no screen has ever read it. Without it a
+          failed fetch renders `[]`, so "No food entries" is what a user sees when the request
+          500s -- and the empty states below are reachable either way. */}
+      <ErrorNotice message={energyError} />
       <SegmentedButtons
         value={tab}
         onValueChange={setTab}

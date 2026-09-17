@@ -10,6 +10,7 @@ import { Workout, WorkoutType } from '../types/workout';
 import { getPeriodRange, parseLocalDateString, toLocalDateString } from '../lib/dateRanges';
 import { SearchBar } from '../components/shared/SearchBar';
 import { LoadingView } from '../components/shared/LoadingView';
+import { ErrorNotice } from '../components/shared/ErrorNotice';
 import { EmptyState } from '../components/shared/EmptyState';
 import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { MobileScreen } from '../components/shared/MobileScreen';
@@ -299,7 +300,8 @@ export function BodyScreen() {
     },
   }));
   const navigation = useNavigation<any>();
-  const { workouts, workoutsLoading, deleteWorkout, toggleWorkoutCompleted } = useWorkouts();
+  const { workouts, workoutsLoading, workoutsError, refetchWorkouts, deleteWorkout, toggleWorkoutCompleted } =
+    useWorkouts();
   const { goals, goalsLoading } = useGoals();
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -394,7 +396,12 @@ export function BodyScreen() {
   };
 
   return (
-    <MobileScreen title="Workouts" subtitle="Track strength, cardio, and weekly consistency.">
+    <MobileScreen
+      title="Workouts"
+      subtitle="Track strength, cardio, and weekly consistency."
+      onRefresh={refetchWorkouts}
+    >
+      <ErrorNotice message={workoutsError} />
       <Card style={styles.goalCard}>
         <View style={styles.goalTopRow}>
           <View>

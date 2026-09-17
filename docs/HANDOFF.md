@@ -1,6 +1,6 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. Last verified 2026-09-17 against `main` at `0f779d6`.**
+**Written 2026-09-14. Last verified 2026-09-17 against `main` at `fbeb1b3`.**
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -199,7 +199,7 @@ warning about.
 | #304 · food Journal screen | A whole screen. |
 | #313 · workout recording | A whole screen — editor, exercise picker, voice, weight. |
 | #310 · Insights AI | Expo already has the charts; it is missing the AI half. **1.5–2 engineer-weeks.** |
-| #320 · rest of App Store readiness | **Partly done — see below.** The in-app policy links and the privacy manifest shipped 2026-09-17; nutrition labels, metadata, screenshots, age rating and guideline 4.2 remain, and most of what remains needs a person. |
+| #320 · rest of App Store readiness | **Partly done — see below.** The in-app policy links, the privacy manifest and the Tier 2 error handling shipped 2026-09-17; nutrition labels, metadata, screenshots, age rating and guideline 4.2 remain, and most of what remains needs a person. The one sizeable piece of code left is 2.4, below. |
 | #306 · tab set, destinations, screen names | **Last, and alone.** It renames every tab and screen title, so it conflicts with every other Expo PR here. |
 
 ### #312 and #316 shipped in #343 — but both PRs are still open
@@ -315,6 +315,33 @@ not exist in production. Submitting a privacy policy describing a payment proces
 use reads worse than having no payments at all — but it is legal copy about a commercial
 relationship, so correcting it is yours rather than an agent's.
 
+### #320 Tier 2: failures no longer look like empty states
+
+Shipped 2026-09-17, and the finding is worth keeping even though the fix is small.
+
+Every list screen on the Expo client rendered `data ?? []`, so **a failed request and an
+account with no data produced the same screen**. A user whose fetch 500s was told "No food
+entries". `useEnergy` and `useWorkouts` had both been computing an error string for months and
+**no screen ever read it** — only `GoalsScreen` rendered one, via a `goalsViewState` helper it
+kept to itself. That helper is now `lib/listViewState.ts` and Home, Journal and Workouts use
+it; the rule that matters is that `empty` is false while an error is showing.
+
+Combined with the shipped default API URL of `http://localhost:3000`, a build pointed at the
+wrong backend rendered as a polished, permanently empty app with no error anywhere — which is
+the exact impression that earns a guideline 4.2 rejection, with no signal as to why.
+
+Also added: an error boundary (a render throw unmounted the whole RN root and left a blank
+screen with nothing to tap — the web has had `LocalErrorBoundary` for this), and pull-to-refresh
+on `MobileScreen`, because `staleTime` is 60s and a failed query does not retry itself, so
+recovering from one dropped request meant force-quitting the app.
+
+**One thing worth copying from how that went.** The boundary's first fallback used
+`components/ui`'s `Button`, and its own test caught what that meant: the boundary sits *above*
+`ThemeProvider` so it can catch a throw from the providers themselves, so its fallback threw
+`useThemeContext must be used within ThemeProvider` — a blank screen again, with an extra step.
+The fallback is bare React Native primitives now, and its test renders it with **no providers
+at all**, which is the property rather than an incidental detail.
+
 ### The unbounded-read audit was not finished — where the rest of it was
 
 #342 fixed the two client reads. The sweep stopped at the clients, and it should not have:
@@ -337,7 +364,21 @@ gets the user's whole table, silently.
 | `voiceExecutor.ts` | Clean. Every weight and water read there is `findById` / `findByDate` / `findLatest`. |
 | Both clients | Clean. `useWeight` on web and Expo both send `WEIGHT_HISTORY_LIMIT`; nothing on either client calls water history at all. |
 
-So the shim now has exactly two endpoints behind it and every caller of both sends a bound.
+**Still open, and it is #320's item 2.4: `listAll()` on the Expo client.** `useEnergy` and
+`useWorkouts` page through `createRequestAllPages` at `PAGE_LIMIT` 200 × `MAX_PAGES` 25 — **up
+to 5,000 rows per collection**, and that file's own docstring concedes "this is still a
+whole-history read". It names the real fix, and the fix is smaller than it sounds: **optional
+`startDate`/`endDate` on the food-entries, workouts and daily-check-ins list endpoints**, which
+is additive and so does not run into critical rule 4. The three models have no date filtering
+today; `weight` already does, which is the shape to copy.
+
+It was left for a person or a later pass rather than taken here, because the client half is the
+risky half: nine screens use those two hooks, each wanting a different window (Insights a year,
+Home the last few days, Journal the selected period, the forms a single entry), and changing
+their cache keys unsupervised with no simulator is exactly the sort of thing critical rule 1 is
+about. The backend half can land on its own and is worth doing first.
+
+So the pagination shim now has exactly two endpoints behind it and every caller of both sends a bound.
 **If you retire `parseOptionalPagination` in favour of `paginationSchema`'s default, that is
 now a two-endpoint change rather than an unknown one** — which is the state it should have
 been left in.
