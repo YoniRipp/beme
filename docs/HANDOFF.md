@@ -181,7 +181,8 @@ Resolved since the last version: `#319 ──► #299` (both merged) and `#308` 
 
 ## Needs the owner — cannot be done from an agent session
 
-Re-checked against the code on 2026-09-16; every item below is still true.
+Re-checked against the code on 2026-09-16; every item below is still true. Items 7 and 8 were
+added on 2026-09-17, found while auditing shared logic for drift between the clients.
 
 1. **`RESEND_API_KEY` is unset in Railway.** `sendMail` is a no-op, so **password reset
    emails are never sent**. #309 built the page; the link still does not arrive. This is
@@ -204,7 +205,55 @@ Re-checked against the code on 2026-09-16; every item below is still true.
    and #321 were test-verified only. The previous version of this file said to wait for #307
    and #308 to land, since they rewrite Home and all 33 colour roles. **Both have landed.**
    Nothing is blocking a look at the simulator now.
-7. **`backend/mcp-server` has never been audited.** The `security-audit` job in
+7. **Imperial users are storing pounds in a kilograms field, and the server cannot find
+   them.** Not a display bug, though it looks like one. `getWeightUnit`
+   (`packages/shared/src/domain/units.ts`) relabels `kg` to `lbs` and **no conversion exists
+   anywhere in the repo** — verified by grep, there is no `2.20462`, no `0.453592`, nothing.
+   The same label sits above the weight *input* on both clients
+   (`WorkoutModal.tsx:645,1285`, `ExerciseList.tsx:61`, `MobileWorkoutCard.tsx:38`), so an
+   imperial user types a pound number into a field
+   `agent-os/standards/global/domain-conventions.md` defines as kilograms, and it is stored
+   raw. Every metric user's view, the MCP server and the AI paths then read those rows as
+   kilograms.
+
+   **Why this is yours and not a quick fix.** Adding conversion re-interprets data that
+   already exists — a stored `135` would start rendering as 297 lbs — and the affected rows
+   cannot be identified, because `units` lives only in device-local storage
+   (`trackvibe_settings`) and the backend has never received it. There is no column to query
+   and no way to tell an already-pounds row from a genuine kilograms one. The options are
+   roughly: convert going forward and accept that historical imperial rows are wrong; ask
+   users once and migrate on their answer; or start syncing `units` and only then decide.
+   All three are product calls.
+
+   The `2026-09-14-1204-parity-settings-sections` spec raised the relabelling as an open
+   question and recommended "convert, via a shared helper, kg stays stored". That
+   recommendation is right about the destination and does not account for the existing rows
+   or for the setting never reaching the server.
+
+   Mobile also has a smaller inconsistency inside this one: `WorkoutFormScreen.tsx:195`
+   hardcodes `label="Weight (kg)"` while `MobileWorkoutCard` relabels to lbs, so on Expo the
+   same number is captioned kg going in and lbs coming out.
+
+8. **Food entries with no meal type all land in Breakfast, on both clients.** The domain
+   standard says "entries **without** `mealType` fall back to time-based inference. Keep that
+   fallback — old rows have no meal type." **That fallback cannot work and never has.**
+   `food_entries.date` is a Postgres `DATE` with no time of day, and both clients' mappers
+   turn it into a local midnight, so `entry.date.getHours()` is always `0` and
+   `mealForHour(0)` is always Breakfast — `frontend/src/features/energy/mealType.ts` and
+   `mobile/src/screens/EnergyScreen.tsx`, which copied the web including the flaw. Both
+   comments described it as inferring from time.
+
+   Only legacy rows are affected: `FoodEntryModal.tsx:434` has set `startTime` for a while, so
+   anything logged recently has a real hour. But those are exactly the rows the standard names.
+
+   **Why it is not fixed here.** There is no time to infer from, so the honest options are to
+   bucket timeless rows as `snack` (the neutral one), to surface them separately, or to keep
+   Breakfast and say so. All three change where a user's history appears, which is a product
+   call. The code now states what it really does at both call sites, and
+   `packages/shared/src/domain/__tests__/isOnLocalDay.test.ts` pins the mechanism so the next
+   reader does not have to rediscover it.
+
+9. **`backend/mcp-server` has never been audited.** The `security-audit` job in
    `.github/workflows/ci.yml:176-181` runs a matrix of `[backend, frontend, mobile]` — the
    MCP server is not in it, and it is not a workspace, so no other job reaches it either.
    #341 and the three dependency bumps that followed will have moved the numbers; the 8

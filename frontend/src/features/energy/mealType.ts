@@ -36,6 +36,12 @@ export function getMealType(entry: FoodEntry): MealType {
     if (mt === 'Breakfast' || mt === 'Lunch' || mt === 'Dinner' || mt === 'Snack') return mt;
   }
   const time = entry.startTime ?? entry.endTime;
+  // `entry.date` is a Postgres DATE mapped to LOCAL MIDNIGHT — it carries no time of day —
+  // so `getHours()` here is always 0 and this branch always returns Breakfast. It reads as
+  // time-based inference and is not: an entry with no `mealType` and no `startTime` (a legacy
+  // row; the modal has set `startTime` since) lands in Breakfast whenever it was eaten.
+  // Behaviour left as it shipped — which bucket those rows belong in is a product call,
+  // written up in `docs/HANDOFF.md` under "Needs the owner".
   if (!time) return mealForHour(new Date(entry.date).getHours());
   return mealForHour(parseInt(time.split(':')[0], 10));
 }

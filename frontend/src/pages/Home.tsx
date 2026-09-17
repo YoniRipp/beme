@@ -24,7 +24,7 @@ import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
 import { Apple, ChevronRight, Dumbbell, Moon, Pencil, Scale, UtensilsCrossed, User } from 'lucide-react';
-import { buildRecentActivity, firstNameOf, homeProgressMessage, targetFraction } from '@trackvibe/shared/domain';
+import { buildRecentActivity, firstNameOf, homeProgressMessage, isOnLocalDay, targetFraction } from '@trackvibe/shared/domain';
 import { isSameDay, format } from 'date-fns';
 import { toast } from '@/components/shared/ToastProvider';
 import { cn } from '@/lib/utils';
@@ -100,7 +100,9 @@ export function Home() {
   const sleepHours = Number(todayCheckIn?.sleepHours ?? 0);
   const todayDate = format(new Date(), 'EEE · MMM d');
   const todaysWeight = useMemo(
-    () => weightEntries.find((entry) => isSameDay(new Date(entry.date), new Date())),
+    // Same UTC-midnight trap as `WeightLogModal`: this drives the "logged today" state on
+    // the weight tile, which was wrong for every user west of UTC.
+    () => weightEntries.find((entry) => isOnLocalDay(entry.date, new Date())),
     [weightEntries]
   );
 
