@@ -18,6 +18,13 @@
  * is derived from the `expo` column rather than duplicating it, and
  * `mobile/src/theme/__tests__/fontsMatchTheToken.test.ts` fails if the two decouple.
  */
+/**
+ * There is deliberately **no 800 row.** The web writes `font-extrabold` at 34 call sites, but
+ * `frontend/index.html` requests Inter at `wght@300;400;500;600;700` — nothing serves 800, so
+ * the browser synthesises or clamps it. Adding a real 800 face would let mobile render
+ * *heavier* than the reference it exists to match. Whether the web adds 800 to its font URL or
+ * drops those 34 to `font-bold` is a web-side decision; until then, 800 means `bold`.
+ */
 export const typeFaces = {
   regular: { css: 'Inter', weight: 400, expo: 'Inter_400Regular' },
   medium: { css: 'Inter', weight: 500, expo: 'Inter_500Medium' },
@@ -31,14 +38,6 @@ export const typeFaces = {
 
 export type TypeFace = keyof typeof typeFaces;
 
-/**
- * There is deliberately **no 800 row.** The web writes `font-extrabold` at 34 call sites, but
- * `frontend/index.html` requests Inter at `wght@300;400;500;600;700` — nothing serves 800, so
- * the browser synthesises or clamps it. Adding a real 800 face here would let mobile render
- * *heavier* than the reference it exists to match. Whether the web adds 800 to its font URL or
- * drops those 34 to `font-bold` is a web-side decision; until then, 800 means `bold`.
- */
-export const CSS_EXTRABOLD_HAS_NO_FACE = true;
 
 /**
  * Sizes as unitless, px-equivalent numbers. `xs`–`4xl` are Tailwind's stock scale
