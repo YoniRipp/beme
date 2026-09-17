@@ -1,11 +1,14 @@
-import React, { useMemo } from 'react';
-import { View, ScrollView } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View } from 'react-native';
 import { Text } from 'react-native-paper';
 import { Card } from '../components/ui';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { useEnergy } from '../hooks/useEnergy';
 import { LoadingView } from '../components/shared/LoadingView';
 import { EmptyState } from '../components/shared/EmptyState';
+import { ErrorNotice } from '../components/shared/ErrorNotice';
+import { MobileScreen } from '../components/shared/MobileScreen';
+import { insightsHaveData } from '../lib/insightsViewState';
 import {
   getFitnessInsights,
   getHealthInsights,
@@ -21,8 +24,6 @@ import { fonts } from '../theme';
 export function InsightsScreen() {
   const { colors } = useThemeContext();
   const styles = useThemedStyles((colors) => ({
-    container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 16, paddingBottom: 32 },
     card: { marginBottom: 16 },
     cardTitle: { fontFamily: fonts.semibold, fontWeight: '600', marginBottom: 4 },
     subtitle: { color: colors.textMuted, marginBottom: 12 },
@@ -40,9 +41,14 @@ export function InsightsScreen() {
     statValue: { fontFamily: fonts.bold, fontWeight: '700', color: colors.text },
     statLabel: { color: colors.textMuted, textAlign: 'center' },
   }));
-  const { workouts, workoutsLoading } = useWorkouts();
-  const { foodEntries, checkIns, energyLoading } = useEnergy();
+  const { workouts, workoutsLoading, workoutsError, refetchWorkouts } = useWorkouts();
+  const { foodEntries, checkIns, energyLoading, energyError, refetchEnergy } = useEnergy();
   const loading = workoutsLoading || energyLoading;
+
+  const refreshInsights = useCallback(
+    () => Promise.all([refetchEnergy(), refetchWorkouts()]),
+    [refetchEnergy, refetchWorkouts],
+  );
 
   const fitness = useMemo(() => getFitnessInsights(workouts), [workouts]);
   const health = useMemo(() => getHealthInsights(foodEntries, checkIns), [foodEntries, checkIns]);
@@ -60,15 +66,19 @@ export function InsightsScreen() {
   }, [workouts]);
 
   if (loading) return <LoadingView />;
-  if (workouts.length === 0 && foodEntries.length === 0) {
-    return <EmptyState icon="chart-line" title="No data yet" subtitle="Log workouts and food to see insights" />;
+  if (!insightsHaveData({ workouts, foodEntries, checkIns }) && !workoutsError && !energyError) {
+    return <EmptyState icon="chart-line" title="No data yet" subtitle="Log workouts, food or sleep to see insights" />;
   }
 
   const barData = freqData.map((d) => ({ value: d.count, label: d.week, frontColor: colors.primary }));
   const lineData = calorieData.map((d) => ({ value: d.calories, label: d.date }));
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <MobileScreen title="Patterns" subtitle="Trends from your recent activity." onRefresh={refreshInsights}>
+      {/* The last screen still discarding these. `useEnergy` and `useWorkouts` have always
+          returned them; without this a failed fetch renders empty charts and `--` stats, which
+          reads as "you have no history" rather than "we could not load it". */}
+      <ErrorNotice message={energyError ?? workoutsError} />
       {workouts.length > 0 && (
         <Card style={styles.card}>
           <Card.Content>
@@ -148,9 +158,28 @@ export function InsightsScreen() {
               <Text variant="headlineSmall" style={styles.statValue}>{health.averageSleepHours > 0 ? health.averageSleepHours.toFixed(1) : '--'}</Text>
               <Text variant="bodySmall" style={styles.statLabel}>Avg sleep (hrs)</Text>
             </View>
+            {/* The three the web shows and this screen did not. All three are already on the
+                objects above — `getFitnessInsights`/`getHealthInsights` are the same shared
+                functions both clients call, so this is rendering, not computing. */}
+            <View style={styles.statItem}>
+              <Text variant="headlineSmall" style={styles.statValue}>{fitness.mostCommonType || '--'}</Text>
+              <Text variant="bodySmall" style={styles.statLabel}>Most common type</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text variant="headlineSmall" style={styles.statValue}>{health.sleepConsistency > 0 ? `${health.sleepConsistency.toFixed(1)}h` : '--'}</Text>
+              <Text variant="bodySmall" style={styles.statLabel}>Sleep std dev</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text variant="headlineSmall" style={styles.statValue}>
+                {health.averageDailyCalories > 0
+                  ? `P ${Math.round(health.averageMacros.protein)} · C ${Math.round(health.averageMacros.carbs)} · F ${Math.round(health.averageMacros.fats)}`
+                  : '--'}
+              </Text>
+              <Text variant="bodySmall" style={styles.statLabel}>Avg macros (g)</Text>
+            </View>
           </View>
         </Card.Content>
       </Card>
-    </ScrollView>
+    </MobileScreen>
   );
 }
