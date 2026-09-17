@@ -7,6 +7,7 @@ import { useEnergy } from '../hooks/useEnergy';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
+import { messageFor } from '../lib/errorMessage';
 
 export function SleepFormScreen() {
   const styles = useThemedStyles((colors) => ({
@@ -44,8 +45,8 @@ export function SleepFormScreen() {
       }
       Toast.show({ type: 'success', text1: existing ? 'Sleep updated' : 'Sleep logged' });
       navigation.goBack();
-    } catch {
-      Toast.show({ type: 'error', text1: 'Failed to save' });
+    } catch (error) {
+      Toast.show({ type: 'error', text1: messageFor(error, 'Failed to save') });
     } finally {
       setSaving(false);
     }

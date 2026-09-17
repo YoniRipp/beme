@@ -7,7 +7,7 @@ import { useWorkouts } from '../hooks/useWorkouts';
 import { WorkoutType, Exercise, WORKOUT_TYPES } from '../types/workout';
 import { toLocalDateString } from '../lib/dateRanges';
 import { workoutFormSchema } from '@trackvibe/shared/schemas';
-import { ApiError } from '../core/api/client';
+import { messageFor } from '../lib/errorMessage';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
@@ -134,13 +134,7 @@ export function WorkoutFormScreen() {
       Toast.show({ type: 'success', text1: existing ? 'Workout updated' : 'Workout logged' });
       navigation.goBack();
     } catch (error) {
-      // Say what the server said. Everything reaching here is already an `ApiError` carrying
-      // the API's own message; swallowing it was how a 400 about one field became an
-      // unactionable "Failed to save workout".
-      Toast.show({
-        type: 'error',
-        text1: error instanceof ApiError && error.message ? error.message : 'Failed to save workout',
-      });
+      Toast.show({ type: 'error', text1: messageFor(error, 'Failed to save workout') });
     } finally {
       setSaving(false);
     }

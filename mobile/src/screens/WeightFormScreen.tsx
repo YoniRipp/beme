@@ -5,6 +5,7 @@ import { Button } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
+import { messageFor } from '../lib/errorMessage';
 import { useWeight } from '../hooks/useWeight';
 import { toLocalDateString, parseLocalDateString } from '../lib/dateRanges';
 import { useThemedStyles } from '../theme/useThemedStyles';
@@ -121,8 +122,8 @@ export function WeightFormScreen() {
       await addWeight({ date: today, weight: value, notes: notes || undefined });
       Toast.show({ type: 'success', text1: 'Weight saved' });
       navigation.goBack();
-    } catch {
-      Toast.show({ type: 'error', text1: 'Could not save weight' });
+    } catch (error) {
+      Toast.show({ type: 'error', text1: messageFor(error, 'Could not save weight') });
     } finally {
       setSaving(false);
     }

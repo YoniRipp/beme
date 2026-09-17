@@ -8,6 +8,7 @@ import { useGoals } from '../hooks/useGoals';
 import { GoalType, GoalPeriod, GOAL_TYPES, GOAL_PERIODS, Goal } from '../types/goals';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import Toast from 'react-native-toast-message';
+import { messageFor } from '../lib/errorMessage';
 import { fonts } from '../theme';
 
 /**
@@ -122,8 +123,8 @@ export function GoalFormScreen() {
       }
       Toast.show({ type: 'success', text1: existingGoal ? 'Goal updated' : 'Goal created' });
       navigation.goBack();
-    } catch {
-      Toast.show({ type: 'error', text1: 'Failed to save goal' });
+    } catch (error) {
+      Toast.show({ type: 'error', text1: messageFor(error, 'Failed to save goal') });
     } finally {
       setSaving(false);
     }
