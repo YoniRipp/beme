@@ -189,6 +189,14 @@ export interface UserProfile {
   cycleTrackingEnabled: boolean;
   averageCycleLength?: number;
   setupCompleted: boolean;
+  /**
+   * The user's measurement system, or `undefined` when they have never told us.
+   *
+   * Undefined is meaningful and must not be collapsed to `'metric'`: it is the state of every
+   * account that predates the column, and it is what a future backfill has to be able to find.
+   * See `migrations/1776600000000_add-user-profile-units.js`.
+   */
+  units?: 'metric' | 'imperial';
   macroCarbs?: number;
   macroFat?: number;
   macroProtein?: number;
@@ -206,6 +214,7 @@ export interface UpsertProfileInput {
   cycleTrackingEnabled?: boolean;
   averageCycleLength?: number;
   setupCompleted?: boolean;
+  units?: 'metric' | 'imperial';
   macroCarbs?: number;
   macroFat?: number;
   macroProtein?: number;

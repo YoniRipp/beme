@@ -1,4 +1,5 @@
 import { useSettings } from '@/hooks/useSettings';
+import { useProfile } from '@/hooks/useProfile';
 import { Ruler } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import {
@@ -13,10 +14,22 @@ import { SettingsSection } from './SettingsSection';
 
 export function UnitsSection() {
   const { settings, updateSettings } = useSettings();
+  const { updateProfile } = useProfile();
 
   const handleUnitsChange = (value: string) => {
-    updateSettings({ units: value as (typeof settings)['units'] });
+    const units = value as (typeof settings)['units'];
+    updateSettings({ units });
     toast.success('Units updated');
+
+    // Also report it to the server. Settings are device-local by design and that does not
+    // change here — this copy exists so the weight-units migration can eventually find which
+    // accounts have been entering pounds (see `docs/HANDOFF.md`, "Needs the owner").
+    //
+    // Best-effort on purpose: the local setting is what the UI reads, so a failed sync must
+    // not undo the user's choice or raise an error at them. It is logged, not swallowed.
+    void updateProfile({ units }).catch((error) => {
+      console.warn('Could not report unit preference to the server', error);
+    });
   };
 
   return (
