@@ -149,15 +149,57 @@ it. That is the mistake this file opens by warning about.
 
 | PR | Scope |
 |---|---|
-| #312 · radii, elevation, primitives | Small. **#308 has merged, so this is unblocked.** Same file as #316. |
-| #316 · typography | Small. **#308 has merged, so this is unblocked.** Same file as #312. |
+| #312 · radii, elevation, primitives | **Implemented** on `claude/expo-design-system`, which stacks on this branch. |
+| #316 · typography | **Implemented** on `claude/expo-design-system`, which stacks on this branch. |
 | #315 · first-run and profile | Scope shrank once #302 added a profile client. Conflicts with #337. |
-| #311 · voice, barcode, water, meal tools, copy day | Depends on #321's speech foundation, which is merged. |
+| #311 · voice, barcode, meal tools, copy day | **Its spec is materially stale — read the note below before starting.** |
 | #304 · food Journal screen | A whole screen. |
 | #313 · workout recording | A whole screen — editor, exercise picker, voice, weight. |
 | #310 · Insights AI | Expo already has the charts; it is missing the AI half. **1.5–2 engineer-weeks.** |
 | #320 · rest of App Store readiness | Privacy policy reachable in-app, nutrition labels, `PrivacyInfo.xcprivacy`, metadata and age rating, guideline 4.2. Account deletion split out as #337. |
 | #306 · tab set, destinations, screen names | **Last, and alone.** It renames every tab and screen title, so it conflicts with every other Expo PR here. |
+
+### The date audit is finished — don't redo it
+
+Dates in this app are local calendar days, and `new Date('2026-09-16')` is UTC midnight. That
+mismatch produced three of the bugs on this branch, so the whole surface was swept. What was
+found and what was cleared:
+
+| surface | verdict |
+|---|---|
+| Backend read path | **Clean.** All seven models (`foodEntry`, `streak`, `dailyCheckIn`, `cycle`, `weight`, `workout`, `water`) render `DATE` columns through `toDateString`, never `.toISOString()`. |
+| Backend "today" defaults | UTC (`new Date().toISOString().slice(0,10)`) in voice, water, chat and insights — but **defensive only**: both clients always send their own local date. Worth knowing if a new client ever omits it. |
+| Web mappers | **Clean.** `features/*/mappers.ts` run every API date through `parseLocalDateString`, so domain types carry real local `Date`s and the ~40 `new Date(x.date)` call sites downstream are harmless copies. |
+| Entries that bypass the mappers | **The bugs.** The raw `Api*` types from `useWeight` and `useCycle` carry strings, and three sites parsed them naively. All fixed. |
+| Client "today" | **Clean.** Both `useWater` implementations use `toLocalDateString`. |
+| Meal inference from `entry.date` | **Broken on both clients, not fixed** — owner item 8. |
+
+The reusable lesson, and it caught me twice: **a timezone test written without setting `TZ`
+proves nothing**, because the runner uses UTC and UTC is where these bugs hide. Both new
+suites set it and assert that the old spelling disagrees.
+
+### #311's spec is stale in three of its eight rows — check before building
+
+It was written against `34a51d9` and opens with three greps proving absence. Two of the three
+are no longer true, and the table's headline row is one of them:
+
+| spec says | actually |
+|---|---|
+| `grep -ri water mobile/` → **0 hits**, "a whole screen with no counterpart", "the cheapest large win in the audit" | **#307 built it** — `useWater.ts`, `WaterCard.tsx`, 13 files. No dedicated screen yet, but the hook and the Home card exist. Building "water" from that spec means building it twice. |
+| `grep -ri "voice\|speech" mobile/src` → **0 hits** | **#321 added `useSpeechRecognition`** (on-device, `expo-speech-recognition`). The transcript step the spec calls the only missing piece is done. |
+| `grep -ri "barcode\|camera" mobile/src` → **0 hits** | Still true. |
+
+What is genuinely left, and what it costs:
+
+- **Voice food logging.** The pipeline after the transcript — parse, resolve each item through
+  `/api/food/search` with `lookup-or-create` as fallback, review, `POST /api/food-entries/batch`
+  — is real work, but its first piece is done: **the parser now lives in
+  `packages/shared/src/domain/foodText.ts`** and both clients use it.
+- **Barcode. Needs a decision, not an implementation.** `expo-camera` is a native module, and
+  `mobile/CLAUDE.md` is explicit: a new native module means everyone rebuilds their dev client,
+  and it must be flagged rather than added. That is an owner call.
+- **Meal tools (bulk entry), copy day, recent foods, "look up with AI".** No native module, and
+  every endpoint already exists. These are the clean remaining wins.
 
 ### #317 has no open PR — read this before assuming it is done
 
@@ -264,6 +306,27 @@ Production is Railway project `distinguished-elegance`, service **BMe**. Present
 `API_NINJAS_KEY`, `CORS_ORIGIN`, `DATABASE_URL`, `DB_SSL_REJECT_UNAUTHORIZED`,
 `GEMINI_API_KEY`, `GEMINI_MODEL`, `GOOGLE_CLIENT_ID`, `JWT_*`, `NODE_ENV`, `RAILWAY_*`,
 `REDIS_URL`. Absent: `FRONTEND_ORIGIN`, `RESEND_API_KEY`, and any payment provider key.
+
+---
+
+## What is on `claude/hardening-and-bug-fixes`
+
+Correctness work only. Every change here is test-verified and none of it changes how anything
+looks, which is why it is split from the design-system branch rather than shipped with it.
+
+| Fix | What it was |
+|---|---|
+| `useWeight` bound | Read a user's entire weight history on every Home render, to draw seven bars. Critical rule 6. |
+| `useCycle` bound + corrected | Same unbounded read, on an endpoint with no pagination at all — plus "Day 214 of ~28" with a full ring for a stale log, a DST off-by-one, and `YYYY-MM-DD` parsed as UTC midnight. |
+| "Logged today" | `isSameDay(new Date(entry.date), today)` on a bare date string, so the weight tile was wrong for every user west of UTC. |
+| Food parser | Moved to `packages/shared` so Expo can reach it (it had **zero** tests), then fixed: `"2 eggs for breakfast, chicken for lunch"` produced an item named `"eggs for breakfast"`, filed under lunch. |
+
+Two things found here are **not** fixed, because both change user-visible data and need a
+product call — they are items 7 and 8 under "Needs the owner".
+
+The design-system work (#312, #316) is on `claude/expo-design-system`, branched from this one.
+It changes how every screen looks and nobody has seen it running, so it should not hold this
+up.
 
 ---
 
