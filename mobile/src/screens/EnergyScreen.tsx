@@ -29,9 +29,18 @@ const MEALS: Array<{ key: MealType; label: string; icon: string }> = [
 ];
 
 /**
- * Which meal an entry belongs to. The stored `mealType` wins; otherwise the hour comes
- * from `startTime`/`endTime` when present and the entry date otherwise. Only the
- * hour-to-meal bucketing is shared -- this field precedence is unchanged.
+ * Which meal an entry belongs to. The stored `mealType` wins; otherwise the hour comes from
+ * `startTime`/`endTime`. Only the hour-to-meal bucketing is shared -- this field precedence
+ * matches the web's `features/energy/mealType.ts`, including its flaw.
+ *
+ * **The `entry.date.getHours()` fallback cannot work**, and the web's copy cannot either.
+ * `food_entries.date` is a Postgres DATE that the mappers turn into local midnight, so that
+ * expression is always 0 and the branch always returns breakfast. An entry with no `mealType`
+ * and no `startTime` -- a legacy row, since the form has set `startTime` for a while -- lands
+ * in breakfast whenever it was actually eaten.
+ *
+ * Left as it shipped, and matching the web deliberately: which bucket those rows belong in is
+ * a product call, written up in `docs/HANDOFF.md` under "Needs the owner".
  */
 function inferMeal(entry: FoodEntry): MealType {
   if (entry.mealType) return entry.mealType;

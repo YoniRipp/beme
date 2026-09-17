@@ -1,6 +1,6 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. Last updated the same day, with `main` at `e8e9979`.**
+**Written 2026-09-14. Last verified 2026-09-16 against `main` at `2b3a114`.**
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -47,6 +47,39 @@ Merged to `main` on 2026-09-14:
 | #338 | This file. |
 | #339 | The MCP server got a CI job. It ships separately, is not a workspace, and **nothing installed, built, linted or tested it** — so the Dependabot PRs #323 had just enabled were green on checks that never touched the package. |
 
+Merged to `main` on 2026-09-16 — **this is the batch the previous version of this file still
+listed as in flight**:
+
+| PR | What landed |
+|---|---|
+| #340 | Handoff updated to where the four PRs had actually got. |
+| #341 | MCP tool schemas unwrapped, so the SDK could be upgraded at all. |
+| #325, #324, #326 | `backend/mcp-server`: `@modelcontextprotocol/sdk`, zod 3 → 4.6.2, dotenv 16 → 17.4.2. Unblocked by #341. |
+| #308 | MD3 colour roles. `buildPaperTheme` mapped 9 of Paper's 33 keys; the other 24 stayed Material purple. `everyMd3RoleIsMapped.test.ts` now fails if a role is added and left unmapped. |
+| #317 | Settings parity — **spec only, 4 files, no application code.** See the warning under Not started. |
+| #319 | Playwright no longer adopts whichever worktree owns :5173. Also added `tsc --noEmit -p tsconfig.e2e.json` to the frontend lint script, which immediately found a dead helper. |
+| #299 | AI Coach FAB no longer sits on top of real controls; its footprint is reserved in the scroll container. Dropped `frontend/playwright.local.config.ts`, the workaround #319 made unnecessary. |
+| #307 | Home parity — the five missing cards (streaks, water, weight progress, cycle, recent activity), `health.ts`, the `useWater`/`useWeight`/`useCycle`/`useStreaks` hooks, a weight form screen, and the shared `activity`/`weight` domain modules. |
+
+### Carried out of #307, and now fixed
+
+`frontend/src/hooks/useWeight.ts` called `weightApi.list()` with no arguments, so the web
+read a user's entire weight history to draw a seven-bar sparkline — **critical rule 6**. The
+endpoint had always accepted the bound; the client never sent it.
+
+Fixed on `claude/dazzling-fermi-vf1cv3`. The bound is a LIMIT rather than a date window
+(`WEIGHT_HISTORY_LIMIT`, now in `packages/shared/src/domain/weight.ts` so the two clients
+cannot disagree): the model orders `date DESC`, so a limit means "the N most recent
+readings" and always contains the latest one, where a 90-day window would show "No weight
+logged yet" to someone whose last weigh-in was in the spring. 30 is what the web's Insights
+chart plots; the Home card needs 7 of them.
+
+Two things worth knowing if you touch this again. The cache write is capped at the same
+number — bounding the fetch while letting `setQueryData` grow without limit gives back part
+of what the bound is for. And `parseOptionalPagination`, which the whole bound rests on, had
+**no test at all** despite being the only thing that puts a LIMIT into the SQL; it has one
+now (`backend/src/utils/pagination.test.ts`).
+
 ### About #323, because it changed the PR list
 
 npm workspaces keeps one lockfile, at the repo root. Dependabot was aimed at `backend/`,
@@ -59,76 +92,19 @@ Aimed at the root it works: the replacement PRs are green. But the count went **
 because the root entry also sees the root's own devDependencies and every workspace at
 once. If that is too much noise, group minor and patch bumps into one weekly PR.
 
-`#334` (zod 3 → 4) is correctly red — a real breaking change, not the old lockfile problem.
+`#334` (root zod 3 → 4.6.4) is still open and still correctly red — a real breaking change,
+not the old lockfile problem. Note that the *mcp-server's* own zod 4 bump (#324) landed
+separately on 2026-09-16 once #341 unwrapped the tool schemas; the two are different
+packages and the root one has not been retried since.
 
 ---
 
-## In flight — five PRs with code, none merged
-
-All five are pushed. Commit hashes are the state at handoff.
-
-### #319 · Playwright tests whichever worktree owns :5173
-`claude/playwright-tests-wrong-worktree` → `7183131`
-
-**Closest to done.** `reuseExistingServer` meant an E2E run silently tested whichever
-checkout already held port 5173 — green tests against someone else's code. Now
-`frontend/e2e/support/servers.ts` starts the pair on ports it picks itself and
-`global-setup.ts` asserts the app under test is this checkout.
-
-Implementation and two review rounds are in; round 2 kept the E2E types out of the deploy
-build and stopped the checkout path leaking. It was partway into round 3 when it stopped, and
-the guards had been verified by then.
-
-Remaining: finish round 3, and confirm the decoy-server proof is recorded — start a Vite
-server on 5173 from a different directory, run Playwright, confirm it does **not** adopt it.
-Without that proof the change is not demonstrated.
-
-### #308 · MD3 colour roles
-`claude/parity-md3-color-roles` → `5816ea5`
-
-`buildPaperTheme` mapped 9 of React Native Paper's 33 colour keys. The other 24 kept
-Material's default purple, visible on `onPrimary`, the `*Container` roles, `backdrop`,
-`outlineVariant` and `elevation.level1`–`level5`. `everyMd3RoleIsMapped.test.ts` now fails if
-a role is added and left unmapped.
-
-Two review rounds landed and both found real bugs. Round 1: `inversePrimary` was invisible
-and two tracks were missed by the sweep. Round 2: finished the muted sweep, guarded the
-frozen Paper themes, and made the contrast helper refuse input it cannot parse instead of
-scoring it `NaN` — a helper that returns `NaN` makes every contrast assertion pass silently.
-It was starting round 3 when it stopped. Remaining: finish the loop.
-
-> **Trap, hit twice by two different agents.** `surfaceMuted` against `colors.surface`
-> (`#191715` dark) is **1.03:1** — invisible, so a progress ring reads as complete at every
-> value. The web uses `--muted` at all five ring call sites, and `--muted` is not `--paper-2`
-> (which is what `surfaceMuted` maps to). `colors.border` is 1.27:1. Compute the ratio; do
-> not trust the name.
-
-### #307 · Home parity — the missing half of the dashboard
-`claude/parity-home-surface` → `dc2519c`
-
-Expo's Home renders about half of the web's. Five whole cards are missing — streaks, water,
-weight progress, cycle, recent activity — because `mobile/src/core/api/` has no `health.ts`
-and `mobile/src/hooks/` has five hooks against the web's forty-plus. **Every backend endpoint
-already exists and is mounted.** This is a client gap, not a product gap; the backend should
-not need to change.
-
-What is pushed: `useWater`, `useWeight`, `useCycle`, `useStreaks`, `QuickTile`,
-`SectionCard`, a weight form screen, the shared `activity`/`weight` domain modules, and the
-five cards wired into Home.
-
-**Least finished of the four.** It reached review round 3 but the final commit is
-mid-round and unreviewed. One thing it did along the way is worth keeping: it went back and
-made its two weakest new tests actually catch their bugs, and separately rejected a proposed
-"fix" on the grounds that the mutant was a pure short-circuit and semantically identical —
-the tests were right to pass. Both are the behaviour you want; don't undo either.
-
-Two questions the spec deliberately leaves open, so do not resolve them silently: the
-greeting (Expo has a time-of-day greeting and the full name; the web uses first name only)
-and the double heading (the tab navigator paints "TrackVibe" and `MobileScreen` paints a
-second title underneath).
+## In flight — one PR with code
 
 ### #337 · Self-service account deletion — the App Store blocker
-`claude/appstore-account-deletion` → `862455d`
+`claude/appstore-account-deletion` → `491baf0` (the `862455d` in the previous version of this
+file is stale). 28 files, all application code, no spec docs. **Two commits behind `main`
+and it merges clean** — verified with `git merge-tree`, zero conflicts.
 
 App Store Guideline 5.1.1(v): an app that creates accounts must let users delete them
 in-app. The only delete route is admin-only and explicitly refuses self-deletion.
@@ -151,69 +127,180 @@ Two review rounds have run and both paid for themselves. Round 1 fixed nine find
 rejected one with reasoning. **Round 2 found a SQL bug that broke deletion outright**, plus
 four more, and rejected one. It was starting round 3 when it stopped.
 
+**GitHub reports no commit statuses at all on `491baf0`** — `total_count: 0`. Do not read
+that as green. Establish what CI actually says before trusting the branch.
+
 **Still do not merge without reading it.** It deletes user data, and one decision was made
 unilaterally and needs a second opinion: scrubbing PII on deletion, versus not writing PII
 into those tables in the first place.
 
-### #299 · AI Coach FAB overlaps real controls
-
-Was queued behind #319, because it carried a `frontend/playwright.local.config.ts` as a
-workaround for the port trap. #319 landed the real fix, so that file is gone and #299 is
-just the layout change: the FAB is fixed above the bottom nav and covered the primary action
-on Energy and Water, so its footprint is reserved in the scroll container instead.
+It touches `mobile/src/screens/SettingsScreen.tsx`, which is why #317's implementation and
+#315 have to follow it.
 
 ---
 
 ## Not started
 
-Ordered by how much they unblock, not by number.
+Every PR in this table is **spec only** — verified by diffing each PR head against its merge
+base: zero files outside `agent-os/specs/` and `docs/`. None of them contains application
+code. They are also all **56–58 commits behind `main`**, and four of the PRs they were
+written against have merged since, so re-read each spec against the code before building on
+it. That is the mistake this file opens by warning about.
 
 | PR | Scope |
 |---|---|
-| #312 · radii, elevation, primitives | Small. **Must follow #308** — same file. |
-| #316 · typography | Small. **Must follow #308** — same file. |
-| #317 · settings sections | Nine on the web, three on Expo. Conflicts with #337 on `SettingsScreen`. |
+| #312 · radii, elevation, primitives | **Implemented** on `claude/expo-design-system`, which stacks on this branch. |
+| #316 · typography | **Implemented** on `claude/expo-design-system`, which stacks on this branch. |
 | #315 · first-run and profile | Scope shrank once #302 added a profile client. Conflicts with #337. |
-| #311 · voice, barcode, water, meal tools, copy day | Depends on #321's speech foundation, which is merged. |
+| #311 · voice, barcode, meal tools, copy day | **Its spec is materially stale — read the note below before starting.** |
 | #304 · food Journal screen | A whole screen. |
 | #313 · workout recording | A whole screen — editor, exercise picker, voice, weight. |
 | #310 · Insights AI | Expo already has the charts; it is missing the AI half. **1.5–2 engineer-weeks.** |
 | #320 · rest of App Store readiness | Privacy policy reachable in-app, nutrition labels, `PrivacyInfo.xcprivacy`, metadata and age rating, guideline 4.2. Account deletion split out as #337. |
 | #306 · tab set, destinations, screen names | **Last, and alone.** It renames every tab and screen title, so it conflicts with every other Expo PR here. |
 
+### The date audit is finished — don't redo it
+
+Dates in this app are local calendar days, and `new Date('2026-09-16')` is UTC midnight. That
+mismatch produced three of the bugs on this branch, so the whole surface was swept. What was
+found and what was cleared:
+
+| surface | verdict |
+|---|---|
+| Backend read path | **Clean.** All seven models (`foodEntry`, `streak`, `dailyCheckIn`, `cycle`, `weight`, `workout`, `water`) render `DATE` columns through `toDateString`, never `.toISOString()`. |
+| Backend "today" defaults | UTC (`new Date().toISOString().slice(0,10)`) in voice, water, chat and insights — but **defensive only**: both clients always send their own local date. Worth knowing if a new client ever omits it. |
+| Web mappers | **Clean.** `features/*/mappers.ts` run every API date through `parseLocalDateString`, so domain types carry real local `Date`s and the ~40 `new Date(x.date)` call sites downstream are harmless copies. |
+| Entries that bypass the mappers | **The bugs.** The raw `Api*` types from `useWeight` and `useCycle` carry strings, and three sites parsed them naively. All fixed. |
+| Client "today" | **Clean.** Both `useWater` implementations use `toLocalDateString`. |
+| Meal inference from `entry.date` | **Broken on both clients, not fixed** — owner item 8. |
+
+The reusable lesson, and it caught me twice: **a timezone test written without setting `TZ`
+proves nothing**, because the runner uses UTC and UTC is where these bugs hide. Both new
+suites set it and assert that the old spelling disagrees.
+
+### #311's spec is stale in three of its eight rows — check before building
+
+It was written against `34a51d9` and opens with three greps proving absence. Two of the three
+are no longer true, and the table's headline row is one of them:
+
+| spec says | actually |
+|---|---|
+| `grep -ri water mobile/` → **0 hits**, "a whole screen with no counterpart", "the cheapest large win in the audit" | **#307 built it** — `useWater.ts`, `WaterCard.tsx`, 13 files. No dedicated screen yet, but the hook and the Home card exist. Building "water" from that spec means building it twice. |
+| `grep -ri "voice\|speech" mobile/src` → **0 hits** | **#321 added `useSpeechRecognition`** (on-device, `expo-speech-recognition`). The transcript step the spec calls the only missing piece is done. |
+| `grep -ri "barcode\|camera" mobile/src` → **0 hits** | Still true. |
+
+What is genuinely left, and what it costs:
+
+- **Voice food logging.** The pipeline after the transcript — parse, resolve each item through
+  `/api/food/search` with `lookup-or-create` as fallback, review, `POST /api/food-entries/batch`
+  — is real work, but its first piece is done: **the parser now lives in
+  `packages/shared/src/domain/foodText.ts`** and both clients use it.
+- **Barcode. Needs a decision, not an implementation.** `expo-camera` is a native module, and
+  `mobile/CLAUDE.md` is explicit: a new native module means everyone rebuilds their dev client,
+  and it must be flagged rather than added. That is an owner call.
+- **Meal tools (bulk entry), copy day, recent foods, "look up with AI".** No native module, and
+  every endpoint already exists. These are the clean remaining wins.
+
+### #317 has no open PR — read this before assuming it is done
+
+PR #317 **merged on 2026-09-16 and shipped four documentation files and nothing else.** The
+settings-parity *implementation* — nine sections on the web against three on Expo, of which
+two do nothing — has never been written and has no branch. Anyone who looks up "#317" will
+find a merged PR and reasonably conclude the work shipped. It did not. The spec is at
+`agent-os/specs/2026-09-14-1204-parity-settings-sections/`.
+
 ### Sequencing that matters
 
 ```
-#319 ──► #299            (#299 drops its local-config workaround once #319 lands)
-#308 ──► #312, #316      (all three rewrite mobile/src/theme.ts)
-#337 ──► #317, #315      (all three touch SettingsScreen)
+#308 ──► #312, #316      (both rewrite mobile/src/theme.ts; #308 has landed, so both are open)
+#337 ──► #317-impl, #315 (all three touch SettingsScreen)
 everything ──► #306      (renames every screen; rebase it last)
 ```
+
+Resolved since the last version: `#319 ──► #299` (both merged) and `#308` as a blocker.
 
 ---
 
 ## Needs the owner — cannot be done from an agent session
 
+Re-checked against the code on 2026-09-16; every item below is still true. Items 7 and 8 were
+added on 2026-09-17, found while auditing shared logic for drift between the clients.
+
 1. **`RESEND_API_KEY` is unset in Railway.** `sendMail` is a no-op, so **password reset
    emails are never sent**. #309 built the page; the link still does not arrive. This is
    broken in production right now.
-2. **The AI quota gate is bypassed in production.** With no payment provider configured,
-   `tryConsumeAiCall` returns `{ allowed: true, isPro: true }` for **everyone**. The free
-   tier is unenforced and Gemini spend is uncapped. Decide the gate.
+2. **The AI quota gate is bypassed in production.** `backend/src/services/aiQuota.ts:31-34`
+   returns `{ allowed: true, remaining: -1, isPro: true }` whenever `config.lemonSqueezyApiKey`
+   is unset — which it is, no payment provider is configured. The free tier is unenforced for
+   **everyone** and Gemini spend is uncapped. Decide the gate.
 3. **`eas login` and `eas init`**, then paste the printed `extra.eas.projectId` into
-   `mobile/app.config.js` by hand, and `eas env:create` for `EXPO_PUBLIC_API_URL`. Nothing
-   in the Expo backlog can produce a build until this exists.
+   `mobile/app.config.js` by hand, and `eas env:create` for `EXPO_PUBLIC_API_URL`. Still
+   absent — `app.config.js:87-88` only spreads `config.extra` so that a value written by
+   `eas init` survives; nothing has written one. Nothing in the Expo backlog can produce a
+   build until this exists.
 4. **Confirm `com.trackvibe.app` is unclaimed** on App Store Connect and the Play Console.
    That it is free was inferred from repo evidence; nobody queried Apple or Google.
-5. **`backend/.env.example`** needs a note about the native origin. `.env*` paths are
-   permission-blocked for agent sessions.
-6. **Every merged Expo change is visually unseen.** #302, #303, #305 and #321 are
-   test-verified only — the simulator was never free to look at them. Worth doing *after*
-   #307 and #308 land, since those rewrite Home and all 33 colour roles.
-7. **`backend/mcp-server` has 8 npm vulnerabilities, 5 of them high** (`qs` among others).
-   The `security-audit` job uses `--workspace`, which cannot reach a non-workspace package,
-   so it has never been audited. `npm audit fix` offers a non-major path, and #339's smoke
-   test now makes the result verifiable — but taking it is your call.
+5. **`backend/.env.example`** needs a note about the native origin. It documents
+   `CORS_ORIGIN` and `FRONTEND_ORIGIN` and says nothing about the Expo client. `.env*` paths
+   are permission-blocked for agent sessions.
+6. **Every merged Expo change is visually unseen — and this is now due.** #302, #303, #305
+   and #321 were test-verified only. The previous version of this file said to wait for #307
+   and #308 to land, since they rewrite Home and all 33 colour roles. **Both have landed.**
+   Nothing is blocking a look at the simulator now.
+7. **Imperial users are storing pounds in a kilograms field, and the server cannot find
+   them.** Not a display bug, though it looks like one. `getWeightUnit`
+   (`packages/shared/src/domain/units.ts`) relabels `kg` to `lbs` and **no conversion exists
+   anywhere in the repo** — verified by grep, there is no `2.20462`, no `0.453592`, nothing.
+   The same label sits above the weight *input* on both clients
+   (`WorkoutModal.tsx:645,1285`, `ExerciseList.tsx:61`, `MobileWorkoutCard.tsx:38`), so an
+   imperial user types a pound number into a field
+   `agent-os/standards/global/domain-conventions.md` defines as kilograms, and it is stored
+   raw. Every metric user's view, the MCP server and the AI paths then read those rows as
+   kilograms.
+
+   **Why this is yours and not a quick fix.** Adding conversion re-interprets data that
+   already exists — a stored `135` would start rendering as 297 lbs — and the affected rows
+   cannot be identified, because `units` lives only in device-local storage
+   (`trackvibe_settings`) and the backend has never received it. There is no column to query
+   and no way to tell an already-pounds row from a genuine kilograms one. The options are
+   roughly: convert going forward and accept that historical imperial rows are wrong; ask
+   users once and migrate on their answer; or start syncing `units` and only then decide.
+   All three are product calls.
+
+   The `2026-09-14-1204-parity-settings-sections` spec raised the relabelling as an open
+   question and recommended "convert, via a shared helper, kg stays stored". That
+   recommendation is right about the destination and does not account for the existing rows
+   or for the setting never reaching the server.
+
+   Mobile also has a smaller inconsistency inside this one: `WorkoutFormScreen.tsx:195`
+   hardcodes `label="Weight (kg)"` while `MobileWorkoutCard` relabels to lbs, so on Expo the
+   same number is captioned kg going in and lbs coming out.
+
+8. **Food entries with no meal type all land in Breakfast, on both clients.** The domain
+   standard says "entries **without** `mealType` fall back to time-based inference. Keep that
+   fallback — old rows have no meal type." **That fallback cannot work and never has.**
+   `food_entries.date` is a Postgres `DATE` with no time of day, and both clients' mappers
+   turn it into a local midnight, so `entry.date.getHours()` is always `0` and
+   `mealForHour(0)` is always Breakfast — `frontend/src/features/energy/mealType.ts` and
+   `mobile/src/screens/EnergyScreen.tsx`, which copied the web including the flaw. Both
+   comments described it as inferring from time.
+
+   Only legacy rows are affected: `FoodEntryModal.tsx:434` has set `startTime` for a while, so
+   anything logged recently has a real hour. But those are exactly the rows the standard names.
+
+   **Why it is not fixed here.** There is no time to infer from, so the honest options are to
+   bucket timeless rows as `snack` (the neutral one), to surface them separately, or to keep
+   Breakfast and say so. All three change where a user's history appears, which is a product
+   call. The code now states what it really does at both call sites, and
+   `packages/shared/src/domain/__tests__/isOnLocalDay.test.ts` pins the mechanism so the next
+   reader does not have to rediscover it.
+
+9. **`backend/mcp-server` has never been audited.** The `security-audit` job in
+   `.github/workflows/ci.yml:176-181` runs a matrix of `[backend, frontend, mobile]` — the
+   MCP server is not in it, and it is not a workspace, so no other job reaches it either.
+   #341 and the three dependency bumps that followed will have moved the numbers; the 8
+   vulnerabilities / 5 high figure predates them and has not been re-measured. Re-run the
+   audit before deciding anything. #339's smoke test makes the result verifiable.
 
 Production is Railway project `distinguished-elegance`, service **BMe**. Present:
 `API_NINJAS_KEY`, `CORS_ORIGIN`, `DATABASE_URL`, `DB_SSL_REJECT_UNAUTHORIZED`,
@@ -222,21 +309,53 @@ Production is Railway project `distinguished-elegance`, service **BMe**. Present
 
 ---
 
+## What is on `claude/hardening-and-bug-fixes`
+
+Correctness work only. Every change here is test-verified and none of it changes how anything
+looks, which is why it is split from the design-system branch rather than shipped with it.
+
+| Fix | What it was |
+|---|---|
+| `useWeight` bound | Read a user's entire weight history on every Home render, to draw seven bars. Critical rule 6. |
+| `useCycle` bound + corrected | Same unbounded read, on an endpoint with no pagination at all — plus "Day 214 of ~28" with a full ring for a stale log, a DST off-by-one, and `YYYY-MM-DD` parsed as UTC midnight. |
+| "Logged today" | `isSameDay(new Date(entry.date), today)` on a bare date string, so the weight tile was wrong for every user west of UTC. |
+| Food parser | Moved to `packages/shared` so Expo can reach it (it had **zero** tests), then fixed: `"2 eggs for breakfast, chicken for lunch"` produced an item named `"eggs for breakfast"`, filed under lunch. |
+
+Two things found here are **not** fixed, because both change user-visible data and need a
+product call — they are items 7 and 8 under "Needs the owner".
+
+The design-system work (#312, #316) is on `claude/expo-design-system`, branched from this one.
+It changes how every screen looks and nobody has seen it running, so it should not hold this
+up.
+
+---
+
 ## Hazards worth knowing before you start
 
-**Tests that assert nothing.** Four shipped in this repo, and they are the reason several
-bugs survived:
+**Tests that assert nothing.** Four shipped in this repo and are the reason several bugs
+survived. **All four are now fixed** — checked on 2026-09-17, because a hazard list that
+describes history as if it were current sends people hunting for problems that are gone:
 
-- A `className` assertion in jsdom, with no Tailwind, no `env()` and no layout engine.
-- A WCAG contrast assertion that **passed while the button rendered purple**, because it
-  measured `colors.primary`/`primaryForeground` while Paper's `Button` reads
-  `paperTheme.colors.onPrimary`.
-- E2E route tests matching free text ("Workouts", "Goals", "Insights") that appears in the
-  **sidebar on every page** — three of five passed against the wrong page.
-- `expect(stroke).not.toBe('#e5e7eb')` against react-native-svg, which normalises a colour
-  prop to `{type: 0, payload: <ARGB int>}` — so it passes against every possible value.
+| The test | Where it stands |
+|---|---|
+| A `className` assertion in jsdom, with no Tailwind, no `env()` and no layout engine | **Fixed.** `Base44Layout.test.tsx` now leads with `expect(bar).toContainElement(docked)` — the structural invariant, which jsdom *can* falsify — with the class checks as supporting detail. |
+| A WCAG contrast assertion that **passed while the button rendered purple** | **Fixed.** `useAppTheme.test.tsx`'s helper throws on anything that is not `#rrggbb` instead of parsing it to `NaN`, and says why in its docstring. `NaN` made every comparison pass. |
+| E2E route tests matching free text that appears in the sidebar on every page | **Fixed.** `navigation.spec.ts` asserts `toHaveURL` plus `getByRole('heading', { name })`, so a match has to be the page's own heading. |
+| `expect(stroke).not.toBe('#e5e7eb')` against react-native-svg's `{type, payload}` normalisation | **Fixed.** `ProgressRing.test.tsx` has a `strokeHex` helper that decodes the payload back to `#rrggbb`, so the comparisons can fail. |
 
-**Prove each new test fails when the fix is reverted.** It is the only cheap defence.
+Two mechanical sweeps on the same date came back clean: **no test block in the repo lacks an
+assertion** (counting `throw`, `.rejects`, and RNTL's throwing `findBy*` as assertions — the
+first two passes of that scan produced only false positives for missing them), and none of the
+27 negative assertions (`.not.toBe`/`.not.toContain`) is of the vacuous kind.
+
+**So the list above is a record of a failure mode, not a backlog.** The failure mode is very
+much live — two tests written on this branch had it, and both were caught only by mutation:
+one "passed" because its mutation script silently failed to mutate anything, and a timezone
+assertion passed against the exact implementation it was written to replace, because the
+runner uses UTC and UTC is where that bug hides.
+
+**Prove each new test fails when the fix is reverted.** It is the only cheap defence, and it
+is the only reason those two were caught.
 
 **Do not eyeball screenshots.** Three bugs were nearly filed off scaled simulator
 screenshots — a wrong progress-bar count, duplicate voice buttons, duplicate headers — and

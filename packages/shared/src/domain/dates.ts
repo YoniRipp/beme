@@ -33,6 +33,25 @@ export function parseLocalDateString(dateStr: string): Date {
   return new Date(y, m - 1, d);
 }
 
+/**
+ * Is an API date string (`YYYY-MM-DD`) the same local calendar day as `day`?
+ *
+ * Exists because the obvious spelling is wrong. `isSameDay(new Date(entry.date), now)` parses
+ * a bare date string as **UTC midnight**, so anywhere west of UTC it lands on the previous
+ * local day — and the question this answers is almost always "has the user logged this
+ * today?", where being a day out is the whole answer. Two call sites on the web got it wrong
+ * that way, and the Home card told users in the Americas they had not logged a weight on the
+ * day they logged it.
+ *
+ * Compares the strings rather than parsing either side, which is what the Expo client already
+ * did (`WeightFormScreen.tsx`). The API's dates are produced by the backend's `toDateString`,
+ * so both sides are the same local-calendar-day format and no `Date` need be built at all.
+ */
+export function isOnLocalDay(apiDate: string | null | undefined, day: Date): boolean {
+  if (!apiDate) return false;
+  return apiDate === toLocalDateString(day);
+}
+
 /** Week starts Sunday (0), ends Saturday. Use for all weekly ranges. */
 export const WEEK_SUNDAY = { weekStartsOn: 0 } as const;
 
