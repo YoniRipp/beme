@@ -1,6 +1,6 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. Last verified 2026-09-17 against `main` at `fbeb1b3`.**
+**Written 2026-09-14. Last verified 2026-09-17 against `main` at `c025adf`.**
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -69,6 +69,23 @@ Merged to `main` on 2026-09-17 — four PRs, in this order, because #343 was sta
 | #343 | The Expo design system: #312 (radii, elevation, the `components/ui/` primitive layer) and #316 (six font faces where two were loaded). **Visually unverified — see owner item 6.** |
 | #344 | `user_profiles.units`, nullable with no default, so the server can finally identify which accounts are imperial. Changes no behaviour and converts nothing — it makes owner item 7 actionable. |
 | #345 | The offline sync queue replayed every queued mutation with **no credential at all** — no header, and a `sameSite: 'strict'` cookie that cannot reach the API cross-site. Every replay 401'd, and the 401 branch `break`s without incrementing retries, so the queue stalled forever after the user had been told the write succeeded. Only `PWA_OFFLINE_SYNC` being off by default kept this from losing real data. |
+
+Merged to `main` later the same day, 2026-09-17:
+
+| PR | What landed |
+|---|---|
+| #346, #351 | Handoff corrections. #351 fixes two things this file got wrong about #337: it did **not** merge clean (`git merge-tree` in its three-argument form is not a mergeability check — use `--write-tree`), and its CI is green (the `total_count: 0` was the legacy commit-statuses API). |
+| #347 | The MCP server's 7 advisories closed and its audit added to CI. Of the four "high" findings exactly one was on a path a stdio-only server executes. |
+| #348 | Four more unbounded reads — `chatAgent`'s `get_weight_entries` read the **entire weight table into an LLM prompt** on any chat turn mentioning weight, in a file whose own docstring says these limits are load-bearing. |
+| #349 | `express` 4.22.2 → 4.22.3, dropping two vulnerable nested `qs` copies off the production request path, plus a reachability analysis of every remaining advisory (owner item 10). |
+| #350 | The app registered **6 font faces and shipped 36**. The iOS export went 13 MB → 7.1 MB with a byte-identical JS bundle. |
+| #352 | The App Store blockers that are code: in-app privacy/terms links (5.1.1(i)), the `ios.privacyManifests` declaration, and cycle/weight/water added to the privacy policy. |
+| #353 | Every mobile list screen rendered an empty state for a failed request. The errors had been computed for months and no screen read them. |
+| #354 | Optional `startDate`/`endDate` on the three paged list endpoints — the prerequisite for bounding `listAll()`. |
+| #355 | **The two clients printed different calorie totals for the same rows** — a seven-day week read ~13,000 kcal on Expo against ~1,850 on the web. |
+| #356 | A malformed date param returned 500 rather than 400 on `weight`, `water` and `cycle` — they cast `req.query` and let Postgres raise the cast error. |
+| #357 | Insights was the screen #353 missed. Also: an account logging **only sleep** was told it had no data, while two of that screen's four stats are computed from check-ins. |
+
 
 
 ### Carried out of #307, and now fixed
@@ -187,18 +204,23 @@ It touches `mobile/src/screens/SettingsScreen.tsx`, which is why #317's implemen
 
 Every PR in this table is **spec only** — verified by diffing each PR head against its merge
 base: zero files outside `agent-os/specs/` and `docs/`. None of them contains application
-code. They are also all **80–82 commits behind `main`** as of 2026-09-17 — re-measured, not
-carried over — and eight of the PRs they were written against have merged since, so re-read
-each spec against the code before building on it. That is the mistake this file opens by
-warning about.
+code. They are all **94+ commits behind `main`**, and more than a dozen of the PRs they were
+written against have merged since.
+
+**Four of them were re-derived from the code on 2026-09-17, one agent per PR, and every one came
+back smaller than its spec.** The sizes in the table below are those measurements, not the
+specs'. The per-PR notes further down carry the `file:line` evidence and name the specific lines
+where each spec is now false. **Read those notes before the spec**, in every case — three of the
+four specs list files as "new" that already exist and are complete, which is the exact mistake
+this file opens by warning about.
 
 | PR | Scope |
 |---|---|
-| #315 · first-run and profile | Scope shrank once #302 added a profile client. Conflicts with #337. |
-| #311 · voice, barcode, meal tools, copy day | **Its spec is materially stale — read the note below before starting.** |
-| #304 · food Journal screen | A whole screen. |
-| #313 · workout recording | A whole screen — editor, exercise picker, voice, weight. |
-| #310 · Insights AI | Expo already has the charts; it is missing the AI half. **1.5–2 engineer-weeks.** |
+| #315 · first-run and profile | Scope shrank once #302 added a profile client. Conflicts with #337. **Not re-derived** — the only one of these still sized from its spec. |
+| #311 · voice, barcode, meal tools, copy day | Three of its eight rows are already built. What is left is one **M** (voice), two **XS** (batch plumbing, "look up with AI") and an owner decision (barcode). |
+| #304 · food Journal screen | ~~A whole screen~~ — **S**. `EnergyScreen` already renders the Journal; what is left is four numeric/layout deltas and five polish items. Its Task 3 shipped elsewhere. |
+| #313 · workout recording | One of its five tasks is **already shipped** (weight). Voice is ~half its stated size. **Per-set logging is the genuine L** and the one capability that makes Expo feel like a different product. |
+| #310 · Insights AI | ~~1.5–2 engineer-weeks~~ — **~1 week with chat, ~2–2.5 days without.** The AI narrative is **~1 day and needs no backend work**; see the note below. |
 | #320 · rest of App Store readiness | **Partly done — see below.** The in-app policy links, the privacy manifest and the Tier 2 error handling shipped 2026-09-17; nutrition labels, metadata, screenshots, age rating and guideline 4.2 remain, and most of what remains needs a person. The one sizeable piece of code left is 2.4, below. |
 | #306 · tab set, destinations, screen names | **Last, and alone.** It renames every tab and screen title, so it conflicts with every other Expo PR here. |
 
@@ -364,24 +386,101 @@ gets the user's whole table, silently.
 | `voiceExecutor.ts` | Clean. Every weight and water read there is `findById` / `findByDate` / `findLatest`. |
 | Both clients | Clean. `useWeight` on web and Expo both send `WEIGHT_HISTORY_LIMIT`; nothing on either client calls water history at all. |
 
-**Still open, and it is #320's item 2.4: `listAll()` on the Expo client.** `useEnergy` and
+**The backend half is done (#354), and the client half is still open — #320's item 2.4.** `useEnergy` and
 `useWorkouts` page through `createRequestAllPages` at `PAGE_LIMIT` 200 × `MAX_PAGES` 25 — **up
 to 5,000 rows per collection**, and that file's own docstring concedes "this is still a
-whole-history read". It names the real fix, and the fix is smaller than it sounds: **optional
-`startDate`/`endDate` on the food-entries, workouts and daily-check-ins list endpoints**, which
-is additive and so does not run into critical rule 4. The three models have no date filtering
-today; `weight` already does, which is the shape to copy.
+whole-history read". The endpoints take that window now: #354 added optional `startDate`/`endDate` to all three,
+additively, with `total` computed over the same window so a filtered list pages to its end.
+**Nothing is blocking the client change any more.**
 
-It was left for a person or a later pass rather than taken here, because the client half is the
-risky half: nine screens use those two hooks, each wanting a different window (Insights a year,
-Home the last few days, Journal the selected period, the forms a single entry), and changing
-their cache keys unsupervised with no simulator is exactly the sort of thing critical rule 1 is
-about. The backend half can land on its own and is worth doing first.
+What is left is the risky half: nine screens use those two hooks, each wanting a different window
+(Insights a year, Home the last few days, Journal the selected period, the forms a single entry),
+and changing their cache keys unsupervised with no simulator is exactly the sort of thing
+critical rule 1 is about. Do it per screen, not in one sweep.
 
 So the pagination shim now has exactly two endpoints behind it and every caller of both sends a bound.
 **If you retire `parseOptionalPagination` in favour of `paginationSchema`'s default, that is
 now a two-endpoint change rather than an unknown one** — which is the state it should have
 been left in.
+
+### The four re-derivations, 2026-09-17 — read these before the specs
+
+Each was measured against the code with `file:line` evidence. The common failure across all four
+specs is the same: they list already-built files as "new".
+
+#### #310 — the AI narrative is a day, and the gate is already open
+
+The single highest-value slice is **~1 day with no backend work, no subscription plumbing and no
+new auth**: mobile can call `GET /api/insights` today and get a 200 with real Gemini output.
+
+- `aiQuota.ts` returns `{allowed: true, isPro: true}` whenever `lemonSqueezyApiKey` is unset,
+  which is the production state, and `GEMINI_API_KEY` **is** set on Railway.
+- `requireAuth` reads `Authorization: Bearer` before the cookie — exactly and only what Expo
+  sends.
+- `grep -rn "X-Client-Platform" backend/src` returns nothing: no endpoint gates on platform.
+
+So Expo gets the same cached `ai_insights` row the web generated. **Spec Task 5 — mirroring the
+web's subscription gate — should be deleted, not sequenced**: it ports a gate that is inert in
+production and would only ever start *hiding* the feature. Handling 403 `free_quota_exhausted`
+and 503 as states replaces it, and that also moots the spec's open question about App Store IAP.
+
+Two of its factual claims are now false: `mobile/src/core/api/health.ts` and `useWeight.ts` are
+listed as new and both already exist and are complete; and "Expo has no speech dependency at all"
+— `expo-speech-recognition` is in `package.json` and the hook exists.
+
+Also live and consumed by neither client: `GET /api/insights/stats`, ungated and free.
+
+#### #304 — not a whole screen
+
+`EnergyScreen.tsx` already has the period selector, per-meal grouping with per-meal add, food
+cards with edit and delete, macro totals, the sleep half and the delete confirmation. Its Task 3
+(profile client + macro targets) shipped elsewhere — `useProfile` exists and `resolveDailyTargets`
+is in `packages/shared/src/domain/targets.ts`.
+
+**The one correctness item in it has already been fixed** (the per-day averaging, 2026-09-17 —
+see Shipped). What remains is presentation: calorie and macro rings wired to targets that already
+resolve, a per-period summary on the selector, collapsible date grouping on non-daily periods,
+sleep on the same scroll with its own period, and a polish batch. **Zero backend work** — every
+endpoint exists.
+
+#### #313 — per-set logging is the real one
+
+Its Task 5 (weight) is shipped: `mobile/src/hooks/useWeight.ts` and `core/api/health.ts` both
+exist. Its Task 4 (voice) is roughly halved, because the backend already **parses and executes**:
+`voiceExecuteOnServer` defaults on, so the web's client-side executor is a fallback for a
+flag-off case, not a thing Expo needs. Minimum viable mobile voice is ~100–150 lines.
+
+The genuine **L** is per-set reps/weight editing, per-set completion, add/remove set and the
+debounced autosave. Worth knowing before starting: `mobile/src/features/body/mappers.ts` spreads
+rather than enumerates, so `repsPerSet`/`weightPerSet`/`completedPerSet` **already round-trip
+intact** — the wire is not the blocker, only the UI is.
+
+Two live bugs it found on the way, neither of them in the spec: the workout form has no
+validation, so an empty duration becomes `0`, fails the backend's `min(1)` and surfaces as a
+generic toast; and `react-hook-form`, `@hookform/resolvers` and `zod` are all in
+`mobile/package.json` with **zero imports** in `mobile/src`, while `workoutFormSchema` is already
+shared.
+
+#### #311 — three of its eight rows are already built
+
+Water (#307) and speech (#321) are done; the food parser moved to `packages/shared` in #342 —
+though note **`mobile/src` has no caller for it yet**, so the handoff's earlier "both clients use
+it" was only half true.
+
+Two traps neither the spec nor the web's own comments mention:
+
+- **The web already shows users a raw error code.** `aiAccess.ts` returns
+  `{error: 'free_quota_exhausted'}`, the shared transport puts that string into
+  `ApiError.message`, and `FoodEntryModal` pipes it straight to the UI. Porting "as the web does"
+  ships the same wart — branch on `status === 403`.
+- **The web's bulk save does not chunk.** The batch schema caps `entries` at 50 and
+  `BulkFoodEntryModal` posts the whole array, so more than 50 items is a 400. It also never sends
+  `mealType`, so bulk rows land with `meal_type` null and get bucketed by hour.
+
+And the barcode endpoint is weaker than both the spec and the web's own comment claim: it is one
+`getByBarcode` read with a 404 on miss — **no Open Food Facts call and no caching anywhere in
+`backend/src`**. The web's OFF direct fallback is what actually answers for most products, so a
+mobile port relying on the backend endpoint alone would 404 on nearly everything.
 
 ### #311's spec is stale in three of its eight rows — check before building
 
