@@ -8,14 +8,8 @@ vi.mock('../config/index.js', () => ({
 }));
 vi.mock('../services/workout.js');
 vi.mock('../middleware/auth.js');
-vi.mock('../schemas/routeSchemas.js', () => ({
-  paginationSchema: {
-    parse: (q: Record<string, unknown> = {}) => ({
-      limit: Number(q?.limit) || 50,
-      offset: Number(q?.offset) || 0,
-    }),
-  },
-}));
+// The real route schemas are used here — they are pure Zod with no side effects,
+// and stubbing them would hide the query parsing this controller depends on.
 
 describe('workout controller', () => {
   let req;
@@ -49,7 +43,13 @@ describe('workout controller', () => {
       req.query = {};
       await workoutController.list(req, res);
 
-      expect(workoutService.list).toHaveBeenCalledWith('user-1', { limit: 50, offset: 0 });
+      // No date params supplied: the window is empty on both ends, which is the
+      // unfiltered list this endpoint has always returned.
+      expect(workoutService.list).toHaveBeenCalledWith(
+        'user-1',
+        { limit: 50, offset: 0 },
+        { startDate: undefined, endDate: undefined },
+      );
       expect(res.json).toHaveBeenCalledWith({
         data: workouts,
         total: 1,

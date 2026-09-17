@@ -5,11 +5,17 @@
 import { NotFoundError, ValidationError } from '../errors.js';
 import * as dailyCheckInModel from '../models/dailyCheckIn.js';
 import { publishEvent } from '../events/publish.js';
-import type { DailyCheckIn, UpdateCheckInInput, PaginationParams } from '../types/domain.js';
+import type { DailyCheckIn, UpdateCheckInInput, PaginationParams, DateRangeParams } from '../types/domain.js';
 import type { CreateCheckInBody, UpdateCheckInBody } from '../schemas/routeSchemas.js';
 
-export async function list(userId: string, pagination?: PaginationParams) {
-  return dailyCheckInModel.findByUserId(userId, pagination);
+/**
+ * Paged check-ins, optionally restricted to an inclusive calendar-day window.
+ * `range` is appended rather than mirroring the model's positional
+ * `(startDate, endDate)` so existing callers (admin routes) keep their
+ * two-argument calls and their exact behaviour.
+ */
+export async function list(userId: string, pagination?: PaginationParams, range?: DateRangeParams) {
+  return dailyCheckInModel.findByUserId(userId, range?.startDate, range?.endDate, pagination);
 }
 
 /** Resolve the check-in for a specific date (voice sleep edit/delete). */

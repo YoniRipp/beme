@@ -34,6 +34,22 @@ export const paginationSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+/**
+ * Pagination plus an optional inclusive calendar-day window, for the list
+ * endpoints a client would otherwise have to read in full (food entries,
+ * workouts, daily check-ins).
+ *
+ * Both bounds are optional and purely additive: send neither and the request is
+ * the unfiltered list these endpoints have always returned. `dateString` is
+ * reused deliberately — the bounds are compared against DATE columns as
+ * `YYYY-MM-DD` strings, so a value that is not a real calendar day must be
+ * rejected here rather than reaching Postgres as a cast error (a 500).
+ */
+export const listRangeQuerySchema = paginationSchema.extend({
+  startDate: dateString.optional(),
+  endDate: dateString.optional(),
+});
+
 // ─── Workout schemas ────────────────────────────────────────
 export const createWorkoutSchema = z.object({
   date: dateString,
@@ -259,6 +275,7 @@ export type UpdateCheckInBody = z.infer<typeof updateCheckInSchema>;
 export type CreateGoalBody = z.infer<typeof createGoalSchema>;
 export type UpdateGoalBody = z.infer<typeof updateGoalSchema>;
 export type PaginationQuery = z.infer<typeof paginationSchema>;
+export type ListRangeQuery = z.infer<typeof listRangeQuerySchema>;
 export type UpsertProfileBody = z.infer<typeof upsertProfileSchema>;
 export type CreateWeightEntryBody = z.infer<typeof createWeightEntrySchema>;
 export type UpdateWeightEntryBody = z.infer<typeof updateWeightEntrySchema>;

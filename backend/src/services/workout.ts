@@ -6,11 +6,17 @@ import { NotFoundError, ValidationError } from '../errors.js';
 import * as workoutModel from '../models/workout.js';
 import { publishEvent } from '../events/publish.js';
 import { upsertEmbedding, buildEmbeddingText, deleteEmbedding } from './embeddings.js';
-import type { Workout, UpdateWorkoutInput, PaginationParams } from '../types/domain.js';
+import type { Workout, UpdateWorkoutInput, PaginationParams, DateRangeParams } from '../types/domain.js';
 import type { CreateWorkoutBody, UpdateWorkoutBody } from '../schemas/routeSchemas.js';
 
-export async function list(userId: string, pagination?: PaginationParams) {
-  return workoutModel.findByUserId(userId, pagination);
+/**
+ * Paged workouts, optionally restricted to an inclusive calendar-day window.
+ * `range` is appended rather than mirroring the model's positional
+ * `(startDate, endDate)` so existing callers (admin routes, chat agent) keep
+ * their two-argument calls and their exact behaviour.
+ */
+export async function list(userId: string, pagination?: PaginationParams, range?: DateRangeParams) {
+  return workoutModel.findByUserId(userId, range?.startDate, range?.endDate, pagination);
 }
 
 /** Workouts logged on a single date. Targeted query — avoids scanning history. */

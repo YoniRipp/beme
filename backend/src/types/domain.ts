@@ -159,6 +159,18 @@ export interface PaginationParams {
   offset: number;
 }
 
+/**
+ * Inclusive calendar-day window for list queries. Both ends are optional —
+ * an omitted end means "unbounded in that direction", and omitting both means
+ * the whole history. Values are `YYYY-MM-DD` strings compared against DATE
+ * columns, never Date objects: `new Date('YYYY-MM-DD')` is UTC midnight and
+ * shifts the day for anyone east of UTC.
+ */
+export interface DateRangeParams {
+  startDate?: string;
+  endDate?: string;
+}
+
 export interface PaginatedResult<T> {
   data: T[];
   total: number;

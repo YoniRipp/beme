@@ -6,12 +6,18 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { getEffectiveUserId } from '../middleware/auth.js';
 import * as workoutService from '../services/workout.js';
 import { sendJson, sendCreated, sendNoContent, sendPaginated } from '../utils/response.js';
-import { paginationSchema } from '../schemas/routeSchemas.js';
+import { listRangeQuerySchema } from '../schemas/routeSchemas.js';
+import { parseQuery } from '../utils/validation.js';
 
+/**
+ * Paged list, newest first. `startDate`/`endDate` are optional and narrow it to
+ * an inclusive calendar-day window; `total` (and therefore `hasMore`) reflects
+ * the same window, so a client can page a filtered list to its end.
+ */
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const userId = getEffectiveUserId(req);
-  const { limit, offset } = paginationSchema.parse(req.query ?? {});
-  const { data, total } = await workoutService.list(userId, { limit, offset });
+  const { limit, offset, startDate, endDate } = parseQuery(listRangeQuerySchema, req.query);
+  const { data, total } = await workoutService.list(userId, { limit, offset }, { startDate, endDate });
   sendPaginated(res, data, total, limit, offset);
 });
 
