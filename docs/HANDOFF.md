@@ -1,6 +1,6 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. Last verified 2026-09-17 against `main` at `c025adf`.**
+**Written 2026-09-14. Last verified 2026-09-17 against `main` at `0d8511d`.**
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -187,9 +187,6 @@ cannot reach another's objects; the self-service route takes its subject from `r
 and refuses MCP-authenticated callers; the admin route keeps `requireAdmin`, keeps its refusal
 to delete your own account, and preserves its old response shapes (critical rule 4); and both
 blocklists are consulted by the WebSocket path as well as the HTTP middleware.
-
-**GitHub reports no commit statuses at all on `491baf0`** — `total_count: 0`. Do not read
-that as green. Establish what CI actually says before trusting the branch.
 
 **Still do not merge without reading it.** It deletes user data, and one decision was made
 unilaterally and needs a second opinion: scrubbing PII on deletion, versus not writing PII
@@ -811,3 +808,208 @@ Only relevant on the machine this was written on:
   delete.
 - An `e2e-mobile@localhost.test` user in the local dev database.
 - The Railway CLI linked to project `distinguished-elegance`.
+
+---
+
+## Where 2026-09-17 stopped
+
+Work was halted by the owner mid-investigation. `main` is at `0d8511d` (after #362) and
+everything below is either merged or is a written-down finding with no code yet. Nothing
+is half-applied to the tree — the working tree was clean at the stop.
+
+### Merged today (21 PRs)
+
+Derived from `git log --merges --since="2026-09-17 00:00" origin/main`, not from memory.
+The "What the 2026-09-17 batch actually contains" section above details only the first
+four (#342-#345); the rest are listed here.
+
+| PR | What it did |
+|---|---|
+| #342 | Four correctness bugs, and the tests that found them |
+| #343 | Expo design system: the primitive layer, and the font weights the app was already asking for |
+| #344 | Record the user's measurement system, so the weight data can be fixed later |
+| #345 | The offline queue replayed every mutation with no credential at all |
+| #346 | Handoff, after the four merges |
+| #347 | Close the seven MCP server advisories, and put the audit in CI |
+| #348 | Bound the four reads that still pulled a user's whole table |
+| #349 | Patch the two qs advisories on the request path, and measure the rest |
+| #350 | Stop shipping thirty-six font faces to register six (13MB -> 7.1MB export) |
+| #351 | Correct two things the handoff said about #337 |
+| #352 | The App Store blockers that are code, not paperwork |
+| #353 | A failed request no longer renders as an empty account |
+| #354 | Let the list endpoints take a date window |
+| #355 | The two clients showed different calorie totals for the same rows |
+| #356 | A malformed date param returned 500, not 400 |
+| #357 | Insights was the screen #353 missed |
+| #358 | Re-scope four PRs from the code, not their specs |
+| #359 | You could not save a workout, and were not told why |
+| #360 | A typo in a macro field was saved as zero |
+| #361 | You can log something that happened yesterday |
+| #362 | The weight form can log another day too |
+
+### Open finding with no code yet — truncation is silently presented as completeness
+
+This was the live investigation when work stopped. It is **confirmed in both clients** and
+is not written anywhere else.
+
+`createRequestAllPages` (`packages/shared/src/api/pagination.ts:36`) is honest about its own
+bound. It stops at `MAX_PAGES = 25` × `PAGE_LIMIT = 200` = **5,000 rows** and reports that
+it stopped, on both of its paths:
+
+```ts
+// total-known path (pagination.ts:65)
+return { data, total: first.total, limit: data.length, offset: 0, hasMore: data.length < first.total };
+// hasMore-walk path (pagination.ts:75)
+return { data, total: data.length, limit: data.length, offset: 0, hasMore: more };
+```
+
+Every caller throws that signal away.
+
+| Client | Call site | What it does |
+|---|---|---|
+| Expo | `mobile/src/core/api/food.ts:38` (`foodApi.listAll`) | `return result.data` |
+| Expo | `mobile/src/core/api/food.ts:76` (`dailyCheckInsApi.listAll`) | `return result.data` |
+| Expo | `mobile/src/core/api/workouts.ts:43` (`workoutsApi.listAll`) | `return result.data` |
+| Web | `frontend/src/hooks/useEnergy.ts:20,29` | `return result.data.map(...)` |
+| Web | `frontend/src/hooks/useWorkouts.ts:22` | `return result.data.map(...)` |
+
+So a user past 5,000 food entries sees Insights, Energy and Body render a **truncated
+history as if it were complete** — the charts, the averages and the streaks are all
+computed off a silently short list. Nothing errors and nothing warns.
+
+Note the interaction with what shipped today: the mobile screens now render `ErrorNotice`
+for a failed fetch, so there is already a place on each screen for this to surface. The
+symmetric fix is to propagate `hasMore` out of `listAll()`, expose it on `useEnergy` /
+`useWorkouts`, and show it where `ErrorNotice` already renders.
+
+**Not urgent for correctness of the app today** — 5,000 entries is a lot of history — but
+it is the kind of defect that only shows up on the most engaged users, and they are the
+ones least likely to be believed when they report the numbers look wrong.
+
+The real fix underneath is the one the helper's own comment already names: filter by date
+server-side rather than reading a whole history in a request path (`backend/data-lifecycle`,
+critical rule 6). That changes endpoint contracts, so it is separate work.
+
+### Adversarial audit — findings that survived refutation
+
+A 12-lens audit workflow (run id `wf_dfc39657-a23`) was still running when work stopped.
+**Its journal is machine-local and did not travel** — everything worth keeping from it is
+reproduced below, so nothing here depends on that file still existing.
+Each finding below was passed to independent refuter agents (code-truth, is-it-defended,
+does-it-reproduce) and **survived all of them** — these are not first-pass guesses. None of
+them has a fix written yet.
+
+Ordered by severity. The first three are the ones worth acting on before an App Store push.
+
+1. **`POST /api/auth/google` accepts any Google OAuth access token — audience is never
+   validated.** `backend/src/services/auth.ts:210`. The function branches on
+   `const isJwt = googleToken.split('.').length === 3;`. The ID-token branch verifies the
+   audience properly (`client.verifyIdToken({ audience: config.googleClientId })`). The
+   `else` branch just calls `https://www.googleapis.com/oauth2/v2/userinfo` with the token
+   as a bearer — and that endpoint accepts a token minted for *any* client. So an access
+   token obtained by any other Google app with the `userinfo` scope is enough to sign in as
+   that user here. The route is unauthenticated (`routes/auth.ts:12`), the only thing in
+   front of it is a rate limiter (`app.ts:159`), and `authPayload` hands the minted
+   TrackVibe JWT straight back in the response body. One request, full account takeover.
+   All three refuters confirmed the chain end to end.
+
+2. **A non-ASCII token crashes the API process.** `backend/src/middleware/auth.ts:23`. The
+   MCP shared-secret check guards `timingSafeEqual` with `token.length === config.mcpSecret.length`
+   — but `String.length` counts UTF-16 code units while `timingSafeEqual` compares UTF-8
+   **byte** buffers. A token of 16 multi-byte characters passes the length guard, then
+   `timingSafeEqual` throws on the length mismatch. The throw is *before* the `try` block
+   (which opens at line 30), `requireAuth` is never wrapped in `asyncHandler`, and Express
+   4 does not catch an async rejection — so it reaches the process. Reachable unauthenticated
+   via `GET /api/auth/me` with `Cookie: token=%C3%A9...` (cookie-parser percent-decodes
+   before the check). A refuter **reproduced the crash** against this repo's own installed
+   dependencies. Only live where `MCP_SECRET` is configured.
+
+3. **The WhatsApp webhook is unauthenticated, unsigned, and runs the full Gemini pipeline.**
+   `backend/src/routes/whatsapp.ts:40`. No `requireAuth`, no HMAC signature check (a grep
+   for `x-hub-signature` / `WHATSAPP_APP_SECRET` across `backend/src` returns nothing), and
+   no `requireAiQuota`. Contrast the Lemon Squeezy webhook in the same codebase, which does
+   `createHmac('sha256', …)` + `timingSafeEqual` (`routes/subscription.ts:78-90`). The route
+   is mounted unconditionally (`routes/index.ts:55`). The IP rate limiter bounds *requests*,
+   not the unbounded per-request fan-out — so this is both an open door and a direct
+   AI-spend hole.
+
+4. **Admin `?userId=` impersonation trusts the stale JWT role claim.**
+   `backend/src/middleware/auth.ts:91`. `resolveEffectiveUserId` decides whether to honour a
+   caller-supplied `userId` from `req.user.role` — the token claim — and its only DB query
+   (line 102) validates the *target* user exists, not that the *actor* is still an admin.
+   `requireAdmin` deliberately re-reads the DB for exactly this reason, and carries a comment
+   saying so ("tokens now last a year"), but it is not in the `withUser` chain
+   (`routes/helpers.ts:17`) that the eight `?userId=`-honouring route files use. A demoted
+   admin keeps cross-user read/write for up to a year (`SESSION_TTL_DEFAULT_DAYS = 365`).
+
+5. **Password reset does not revoke existing sessions.** `backend/src/services/auth.ts:583-584`.
+   `resetPassword` ends at `bcrypt.hash` + `userModel.updatePassword`; `updatePassword`
+   (`models/user.ts:195`) is one UPDATE and nothing else. There is no `token_version`, no
+   `password_changed_at`, no bulk `blockToken`. Logout *does* revoke properly, which makes
+   the asymmetry the bug: someone who resets a password because it leaked stays compromised
+   for the remaining life of the attacker's year-long token.
+
+6. **The revocation blocklist fails open when Redis errors.**
+   `backend/src/lib/keyValueStore.ts:42-61`. `kvSet` returns inside the Redis branch
+   (line 74) so a blocklist entry is written to Redis and *never* to `memoryStore`; `kvGet`
+   catches a Redis error, logs "falling back to memory", finds nothing in the empty map and
+   returns `null` — which `requireAuth` reads as "not revoked". `isRedisHealthy()` exists
+   (`redis/client.ts:18`) and is referenced nowhere, so nothing stops the API serving while
+   Redis is erroring. Every logged-out token becomes valid again for the duration.
+
+7. **The voice WebSocket skips the blocklist entirely.** `backend/src/ws/voiceStreaming.ts:37`.
+   `authenticateWs` verifies the JWT signature and stops; the HTTP path additionally checks
+   the revoked-token blocklist (`middleware/auth.ts:33-38`). A logged-out token still opens
+   a voice stream.
+
+8. **`createBatch` can crash the process on a publish failure.**
+   `backend/src/services/foodEntry.ts:104`. After `COMMIT` it calls `publishEvent(...)` in a
+   loop without `await` and without `.catch` — and `publishEvent` is async over a network
+   call (`events/bus.ts:50,55`). An unhandled rejection takes the API down.
+
+9. **The SQS event Lambda discards its own `batchItemFailures`.**
+   `backend/lambdas/event-handler.ts:32`. It builds the per-message failure list in exactly
+   the shape partial-batch reporting expects, then throws instead of returning it — the only
+   `batchItemFailures` it ever emits is the hardcoded `[]` on line 35, reached only when
+   nothing failed. So one bad message redelivers the entire batch.
+
+10. **The service worker never calls `skipWaiting` on install.** `frontend/src/sw.ts:67`.
+    It only fires on a `SKIP_WAITING` postMessage, and nothing sends that message. Under
+    `registerType: 'autoUpdate'` (`vite.config.ts:56-60`) a new build sits in `waiting`
+    forever and users keep running the old bundle.
+
+11. **The web Workouts page turns a failed fetch into "Add your first workout".**
+    `frontend/src/pages/Body.tsx:206`. Same class of bug as the mobile ones fixed today —
+    `useWorkouts()` computes `workoutsError` (`hooks/useWorkouts.ts:26-28`) and
+    `ContentWithLoading` accepts an `error` prop (`shared/ContentWithLoading.tsx:13`), but
+    `Body.tsx` destructures without it and never passes it. **The web still has the defect
+    the Expo client was fixed for.**
+
+12. **Quick voice food entry ignores the portion it parsed.**
+    `frontend/src/components/energy/QuickVoiceEntry.tsx:135`. It pushes the food search
+    result's per-100g macros through unscaled, while capturing `item.amount` into
+    `portionAmount` on line 139 — so "two hundred grams of rice" logs 100g of rice's
+    calories. The amount is parsed, stored, and not used in the arithmetic.
+
+### Suggested order if this is picked back up
+
+1, 2 and 3 are the security work and are independent of each other. 11 and 12 are small,
+self-contained user-visible bugs in the web client and are the cheapest wins. The
+truncation finding above is the one that needs a decision rather than a patch — surface it
+in the UI now, or do the server-side date filtering properly.
+
+### The `claude/dazzling-fermi-vf1cv3` branch was already redundant
+
+It carried 19 commits that were never merged as commits, which is why it looked like
+unmerged work. It was not. Every one of today's 21 PRs had reimplemented the same changes,
+so merging the branch into `main` produces **a net code diff of zero** — verified with
+`git diff --stat origin/main HEAD`, which reports only this file.
+
+The trap worth remembering: `git merge-base --is-ancestor <sha> origin/main` answers
+"is this *commit* in main", not "is this *content* in main". All 19 answered NO while every
+file they touched was already byte-identical on `main`. Compare the trees, not the commits.
+
+The merge was still made rather than the branch deleted, so the history records that the
+line was folded in deliberately. The conflicts were all cases where `main`'s newer work
+wins — notably `App.tsx`, where taking the branch's side would have restored the
+`@expo-google-fonts` barrel import and undone #350's 13MB -> 7.1MB export fix.
