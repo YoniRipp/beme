@@ -26,7 +26,8 @@ async function applyColumnPatches(db: { query: (sql: string) => Promise<unknown>
     ALTER TABLE user_profiles
       ADD COLUMN IF NOT EXISTS macro_carbs   numeric,
       ADD COLUMN IF NOT EXISTS macro_fat     numeric,
-      ADD COLUMN IF NOT EXISTS macro_protein numeric
+      ADD COLUMN IF NOT EXISTS macro_protein numeric,
+      ADD COLUMN IF NOT EXISTS units         text
   `);
 }
 

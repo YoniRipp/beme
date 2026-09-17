@@ -150,6 +150,10 @@ export const upsertProfileSchema = z.object({
   cycleTrackingEnabled: z.boolean().optional(),
   averageCycleLength: z.number().int().min(15).max(60).optional().nullable(),
   setupCompleted: z.boolean().optional(),
+  // Optional but NOT nullable: a client may decline to say, and it may say metric or
+  // imperial, but it may not actively unset a value once given — clearing it would put the
+  // account back into the "never told us" state a backfill relies on being truthful.
+  units: z.enum(['metric', 'imperial']).optional(),
   macroCarbs: z.number().int().min(1).max(1500).optional().nullable(),
   macroFat: z.number().int().min(1).max(500).optional().nullable(),
   macroProtein: z.number().int().min(1).max(500).optional().nullable(),

@@ -30,6 +30,15 @@ export interface ApiProfile {
   cycleTrackingEnabled: boolean;
   averageCycleLength?: number;
   setupCompleted: boolean;
+  /**
+   * The user's measurement system, absent when the account has never reported one.
+   *
+   * Sent so the SERVER knows which stored weights are actually in pounds — `getWeightUnit`
+   * relabels without converting, so an imperial user's numbers sit in a kilograms field. The
+   * device's own `AppSettings.units` stays the source of truth for what the UI renders; this
+   * copy exists only so the eventual migration can find the affected rows.
+   */
+  units?: 'metric' | 'imperial';
   macroCarbs?: number;
   macroFat?: number;
   macroProtein?: number;
