@@ -1,6 +1,13 @@
 # Mobile UI
 
-This is a mobile app that runs in a browser. Design for a thumb, not a mouse.
+Design for a thumb, not a mouse.
+
+**This applies to both clients.** It was written when the only mobile surface was the PWA
+("a mobile app that runs in a browser"), which stopped being the whole picture on
+2026-09-12 when the Expo client came back into active development. The rules below were
+always right; only that framing was stale. `rounded-2xl`, `shadow-card` and the 44px touch
+target are as binding on `mobile/` as on `frontend/` — the Expo client reaches them through
+`mobile/src/components/ui/` and the shared tokens rather than through Tailwind classes.
 
 - Vertical scrolling, one column. No desktop dashboard grids.
 - Card-based: every food, workout, and exercise item is a card — `rounded-2xl`, `shadow-card`, generous padding.

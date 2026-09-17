@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
+import { Card } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { format, isToday, isYesterday, subWeeks } from 'date-fns';
 import { useWorkouts } from '../hooks/useWorkouts';
@@ -15,7 +16,7 @@ import { MobileScreen } from '../components/shared/MobileScreen';
 import { MobileWorkoutCard } from '../components/shared/MobileWorkoutCard';
 import { AddAnotherCard } from '../components/shared/AddAnotherCard';
 import { ProgressRing } from '../components/shared/ProgressRing';
-import { radius, spacing } from '../theme';
+import { fonts, radius, spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
 import Toast from 'react-native-toast-message';
@@ -169,10 +170,6 @@ export function BodyScreen() {
   const { colors } = useThemeContext();
   const styles = useThemedStyles((colors) => ({
     goalCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
       padding: spacing.lg,
       gap: spacing.lg,
     },
@@ -186,15 +183,18 @@ export function BodyScreen() {
       color: colors.textMuted,
       letterSpacing: 1,
       textTransform: 'uppercase',
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     goalCount: {
       marginTop: spacing.xs,
+      fontFamily: fonts.bold,
       fontWeight: '800',
       color: colors.primary,
     },
     goalTarget: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '800',
     },
     dayStrip: {
@@ -207,6 +207,7 @@ export function BodyScreen() {
     },
     dayLetter: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     // An unlogged day is an EMPTY box — no tick, no label inside — so its own fill is the
@@ -254,6 +255,7 @@ export function BodyScreen() {
     },
     filterLabel: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '700',
     },
     filterLabelSelected: {
@@ -272,6 +274,7 @@ export function BodyScreen() {
     },
     dayGroupLabel: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '700',
       paddingLeft: spacing.xs,
     },
@@ -289,6 +292,7 @@ export function BodyScreen() {
     },
     showMoreLabel: {
       color: colors.textMuted,
+      fontFamily: fonts.bold,
       fontWeight: '700',
       letterSpacing: 0.6,
       textTransform: 'uppercase',
@@ -391,7 +395,7 @@ export function BodyScreen() {
 
   return (
     <MobileScreen title="Workouts" subtitle="Track strength, cardio, and weekly consistency.">
-      <View style={styles.goalCard}>
+      <Card style={styles.goalCard}>
         <View style={styles.goalTopRow}>
           <View>
             <Text variant="labelSmall" style={styles.eyebrow}>Goal · {weeklyGoal}/week</Text>
@@ -432,7 +436,7 @@ export function BodyScreen() {
             </View>
           ))}
         </View>
-      </View>
+      </Card>
 
       <SearchBar value={search} onChangeText={setSearch} placeholder="Search workouts..." />
 

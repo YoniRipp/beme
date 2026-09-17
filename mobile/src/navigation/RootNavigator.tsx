@@ -9,6 +9,7 @@ import { WorkoutFormScreen } from '../screens/WorkoutFormScreen';
 import { FoodEntryFormScreen } from '../screens/FoodEntryFormScreen';
 import { SleepFormScreen } from '../screens/SleepFormScreen';
 import { GoalFormScreen } from '../screens/GoalFormScreen';
+import { WeightFormScreen } from '../screens/WeightFormScreen';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { fonts } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
@@ -33,7 +34,13 @@ function AppStack() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.background },
         headerShadowVisible: false,
-        headerTitleStyle: { color: colors.text, fontWeight: '800' },
+        // Same app bar title as the tab screens — `Base44Layout.tsx:228`, Fraunces 600 at 18.
+        headerTitleStyle: {
+          color: colors.text,
+          fontFamily: fonts.displaySemibold,
+          fontWeight: '600',
+          fontSize: 18,
+        },
         contentStyle: { backgroundColor: colors.background },
       }}
     >
@@ -57,6 +64,11 @@ function AppStack() {
         name="GoalForm"
         component={GoalFormScreen}
         options={{ title: 'Goal', presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="WeightForm"
+        component={WeightFormScreen}
+        options={{ title: 'Log Weight', presentation: 'modal' }}
       />
     </Stack.Navigator>
   );

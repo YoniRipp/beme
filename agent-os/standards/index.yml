@@ -20,17 +20,17 @@ frontend:
   api-client:
     description: request() wrapper, auth, timeouts, offline mutation queue, error unwrapping
   components:
-    description: Component grouping, reusable cards, pages compose, performance rules
+    description: Component grouping, reach for components/ui first (both clients), pages compose, performance rules
   data-fetching:
     description: TanStack Query keys, staleTime, mappers, setQueryData mutations
   design-tokens:
-    description: Color/typography tokens, shadow and radius scale, no hardcoded colors
+    description: Color/typography tokens, the weight-to-face table (on Expo a weight is a family name), shadow and radius scale, no hardcoded colors
   mobile-ui:
-    description: Mobile-first layout, spacing scale, safe areas, bottom nav, touch targets
+    description: Mobile-first layout, spacing scale, safe areas, bottom nav, touch targets — applies to the PWA and the Expo client alike
 
 mobile:
   design-tokens:
-    description: MD3 role map, no inherited Paper defaults, muted vs surfaceMuted, allowlist claims
+    description: MD3 role map, no inherited Paper defaults, roundness is a multiplier not a radius, the components/ui primitive layer and its guards, shadows, muted vs surfaceMuted, allowlist claims
 
 global:
   critical-rules:

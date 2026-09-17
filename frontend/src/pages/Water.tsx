@@ -35,7 +35,7 @@ export function Water() {
   const adjustBy = (delta: number) => setTarget(glasses + delta);
 
   return (
-    <Page narrow className="pb-28">
+    <Page narrow>
       <PageHeader
         kicker="Today"
         title="Water"

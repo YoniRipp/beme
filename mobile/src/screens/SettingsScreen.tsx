@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Card, List, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
+import { List, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
+import { Button, Card } from '../components/ui';
 import {
   BALANCE_DISPLAY_COLORS,
   type BalanceDisplayColor,
@@ -12,8 +13,9 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../hooks/useSettings';
 import { authApi } from '../core/api/auth';
 import { ConfirmDialog } from '../components/shared/ConfirmDialog';
+import { useProfile } from '../hooks/useProfile';
 import { MobileScreen } from '../components/shared/MobileScreen';
-import { radius, spacing } from '../theme';
+import { fonts, spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
 
@@ -69,8 +71,28 @@ export function SettingsScreen() {
   const { user, logout } = useAuth();
   const { colors } = useThemeContext();
   const { settings, updateSettings } = useSettings();
+  const { updateProfile } = useProfile();
   const [deleteVisible, setDeleteVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  /**
+   * Save the unit choice on the device, and report it to the server.
+   *
+   * Settings are device-local by design and that does not change here — `AppSettings.units`
+   * stays what the UI reads. The server copy exists because `getWeightUnit` relabels `kg` to
+   * `lbs` without converting, so imperial users' weights sit in a kilograms field, and until
+   * now nothing server-side knew which accounts those were. See `docs/HANDOFF.md`,
+   * "Needs the owner".
+   *
+   * Best-effort: a failed report must not undo the user's choice or surface an error at them,
+   * so it is logged rather than thrown or swallowed.
+   */
+  const reportUnits = (units: Units) => {
+    updateSettings({ units });
+    void updateProfile({ units }).catch((error) => {
+      console.warn('Could not report unit preference to the server', error);
+    });
+  };
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
@@ -103,7 +125,7 @@ export function SettingsScreen() {
 
       <SettingsCard title={UNITS_TITLE}>
         <RadioButton.Group
-          onValueChange={(value) => updateSettings({ units: value as Units })}
+          onValueChange={(value) => reportUnits(value as Units)}
           value={settings.units}
         >
           <RadioButton.Item label="Metric (kg, cm)" value="metric" />
@@ -169,14 +191,10 @@ export function SettingsScreen() {
 
 function SettingsCard({ title, children }: { title: SettingsSectionTitle; children: React.ReactNode }) {
   const styles = useThemedStyles((colors) => ({
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
+    card: {},
     sectionTitle: {
       color: colors.text,
+      fontFamily: fonts.bold,
       fontWeight: '800',
       marginBottom: spacing.sm,
     },

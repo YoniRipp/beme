@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
-import { radius, spacing } from '../../theme';
+import { fonts, radius, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 
@@ -27,7 +27,9 @@ export function AddAnotherCard({ onPress, icon = 'plus', label }: AddAnotherCard
       gap: spacing.sm,
       minHeight: 44,
       paddingVertical: spacing.lg,
-      borderRadius: radius.lg,
+      // `rounded-2xl` on the web, same as a real card -- it sits in a list of them. It keeps
+      // its own dashed border and no shadow, so it stays a Pressable rather than `ui/Card`.
+      borderRadius: radius.xxl,
       borderWidth: 1,
       borderStyle: 'dashed',
       borderColor: colors.border,
@@ -35,6 +37,7 @@ export function AddAnotherCard({ onPress, icon = 'plus', label }: AddAnotherCard
     },
     label: {
       color: colors.textMuted,
+      fontFamily: fonts.semibold,
       fontWeight: '600',
     },
   }));

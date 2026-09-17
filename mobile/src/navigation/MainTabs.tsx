@@ -8,6 +8,7 @@ import { InsightsScreen } from '../screens/InsightsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { Icon } from 'react-native-paper';
 import { useThemeContext } from '../theme/ThemeContext';
+import { fonts } from '../theme';
 
 const Tab = createBottomTabNavigator();
 
@@ -26,10 +27,27 @@ export function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '700' },
+        // `BottomNavigation.tsx:30` on the web: `text-caption font-bold uppercase
+        // tracking-[0.06em]` — Inter 700 at 10px, uppercased, +0.06em (≈0.6px at this size).
+        // The size and the weight number were already right; the face, the casing and the
+        // tracking were not, and React Navigation style props never pass through a `<Text>`
+        // import, so `rawTextNamesItsFont` could not see any of it.
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontFamily: fonts.bold,
+          fontWeight: '700',
+          textTransform: 'uppercase',
+          letterSpacing: 0.6,
+        },
         headerStyle: { backgroundColor: colors.background },
         headerShadowVisible: false,
-        headerTitleStyle: { fontWeight: '800', color: colors.text },
+        // `Base44Layout.tsx:228`: `font-display text-lg font-semibold` — Fraunces 600 at 18.
+        headerTitleStyle: {
+          fontFamily: fonts.displaySemibold,
+          fontWeight: '600',
+          fontSize: 18,
+          color: colors.text,
+        },
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,

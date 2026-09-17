@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useEffect, useState } from 'react';
 import { User } from '../types/user';
 import { authApi } from '../core/api/auth';
 import { getToken, setToken, setOnUnauthorized } from '../core/api/client';
+import { queryClient } from '../lib/queryClient';
 
 interface AuthContextType {
   user: User | null;
@@ -66,6 +67,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     void setToken(null);
     setUser(null);
+    // Every cached query belongs to the account that just went away. The web clears its
+    // cache in `AuthContext.clearClientSession`; this client did not, and `queryClient`'s
+    // `staleTime: 60_000` means the next account to sign in on the same device is served the
+    // previous one's workouts, food, weights and goals for a minute — from cache, with no
+    // refetch to correct it.
+    //
+    // It matters most after account deletion, where the rows are gone server-side and this
+    // cache is the only copy of them left anywhere. A deletion that leaves the data on the
+    // device is not the deletion App Store Guideline 5.1.1(v) asks for.
+    queryClient.clear();
   }, []);
 
   const register = useCallback(async (email: string, password: string, name: string) => {

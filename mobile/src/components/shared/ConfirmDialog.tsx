@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
-import { Dialog, Portal, Button, Text, TextInput } from 'react-native-paper';
-import { spacing } from '../../theme';
+import { Dialog, Portal, Text, TextInput } from 'react-native-paper';
+import { Button } from '../ui';
+import { fonts, spacing } from '../../theme';
 import { useThemeContext } from '../../theme/ThemeContext';
 
 interface ConfirmDialogProps {
@@ -101,6 +102,9 @@ export function ConfirmDialog({
 const styles = StyleSheet.create({
   warning: {
     marginTop: spacing.sm,
+    // A weight is a family here, not a number -- `fontWeight: '700'` on its own renders in
+    // the system font. See the mapping table in `theme.ts`.
+    fontFamily: fonts.bold,
     fontWeight: '700',
   },
   input: {

@@ -24,6 +24,14 @@ const MAX_TOOL_ROUNDS = 5;
  */
 const MAX_WORKOUTS_PER_READ = 20;
 const MAX_FOOD_ENTRIES_PER_READ = 30;
+// Ordered `date DESC`, so a LIMIT here means "the N most recent readings" and always contains
+// the latest one -- which a date window would not, for someone whose last weigh-in was months
+// ago. Sized for a prompt, not for a chart: this is deliberately its own number rather than the
+// clients' WEIGHT_HISTORY_LIMIT, which answers "how many bars does the sparkline draw".
+const MAX_WEIGHT_ENTRIES_PER_READ = 30;
+// A user has a handful of goals, one per type, so this bound will not bite in practice. It is
+// here because "small today" is not a bound, and nothing stops a future goal type per exercise.
+const MAX_GOALS_PER_READ = 50;
 
 // ─── Read tool execution ─────────────────────────────────────────────────────
 
@@ -47,13 +55,19 @@ export async function executeReadTool(name: string, args: Record<string, unknown
       return result.data;
     }
     case 'get_goals': {
-      const result = await goalService.list(userId);
+      const result = await goalService.list(userId, { limit: MAX_GOALS_PER_READ, offset: 0 });
       return result.data;
     }
     case 'get_weight_entries': {
+      // The model omits these whenever it just asks "what's my weight history", and both models
+      // treat a missing pagination argument as "no LIMIT clause" -- so this read was the user's
+      // entire weight table, on a tool the agent may call on any chat turn.
       const startDate = args.startDate as string | undefined;
       const endDate = args.endDate as string | undefined;
-      return await weightModel.findByUserId(userId, startDate, endDate);
+      return await weightModel.findByUserId(userId, startDate, endDate, {
+        limit: MAX_WEIGHT_ENTRIES_PER_READ,
+        offset: 0,
+      });
     }
     case 'get_water_today': {
       const date = (args.date as string) || todayStr;

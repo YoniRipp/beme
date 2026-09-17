@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../../context/AuthContext';
 import { loadStoredSettings, SettingsProvider } from '../../context/SettingsContext';
 import { ThemeProvider } from '../../theme/ThemeContext';
@@ -63,15 +64,30 @@ describe('SettingsScreen sections', () => {
   });
 });
 
+/**
+ * The screen reads server state now, so it needs a `QueryClientProvider` the way it has one in
+ * `App.tsx`. It gained that dependency when the unit choice started being reported to the
+ * profile — the device's `AppSettings.units` is still what the UI renders, but the server
+ * needs a copy so the weight-units migration can find which accounts entered pounds.
+ *
+ * A client per render, with retries off: a shared one would carry a cached profile between
+ * cases, and a retrying one would hold the test open on the failed fetch this stack has no
+ * server for.
+ */
 function renderScreen() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return render(
-    <SettingsProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <SettingsScreen />
-        </AuthProvider>
-      </ThemeProvider>
-    </SettingsProvider>
+    <QueryClientProvider client={queryClient}>
+      <SettingsProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <SettingsScreen />
+          </AuthProvider>
+        </ThemeProvider>
+      </SettingsProvider>
+    </QueryClientProvider>
   );
 }
 

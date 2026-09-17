@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { summarizeWeight } from '@trackvibe/shared/domain';
 import { useWeight } from '@/hooks/useWeight';
 import { useProfile } from '@/hooks/useProfile';
 import { Scale, TrendingDown, TrendingUp, Minus, Plus } from 'lucide-react';
@@ -6,18 +7,16 @@ import { WeightLogModal } from './WeightLogModal';
 import { Card } from '@/components/ui/card';
 
 export function WeightProgress() {
-  const { weightEntries, latestWeight } = useWeight();
+  const { weightEntries } = useWeight();
   const { profile } = useProfile();
   const [modalOpen, setModalOpen] = useState(false);
 
-  const target = profile.targetWeight;
-  const current = latestWeight?.weight;
-  const diff = current && target ? current - target : null;
-
-  const recentEntries = weightEntries.slice(0, 7);
-  const trend = recentEntries.length >= 2
-    ? recentEntries[0].weight - recentEntries[recentEntries.length - 1].weight
-    : null;
+  // The arithmetic — latest, delta, trend and the normalised sparkline — is shared with the
+  // Expo weight card so the two cannot disagree about what "trend" means.
+  const { current, target, diffToTarget: diff, trend, bars } = summarizeWeight(
+    weightEntries,
+    profile.targetWeight
+  );
 
   return (
     <>
@@ -80,22 +79,16 @@ export function WeightProgress() {
                 )}
               </div>
 
-              {recentEntries.length >= 2 && (
+              {bars.length > 0 && (
                 <div className="flex items-end gap-[2px] h-8 mt-1">
-                  {[...recentEntries].reverse().map((entry, i) => {
-                    const min = Math.min(...recentEntries.map((e) => e.weight));
-                    const max = Math.max(...recentEntries.map((e) => e.weight));
-                    const range = max - min || 1;
-                    const height = ((entry.weight - min) / range) * 100;
-                    return (
-                      <div
-                        key={entry.id || i}
-                        className="flex-1 bg-primary/60 rounded-t-sm transition-all"
-                        style={{ height: `${Math.max(height, 10)}%` }}
-                        title={`${entry.weight} kg`}
-                      />
-                    );
-                  })}
+                  {bars.map((bar) => (
+                    <div
+                      key={bar.key}
+                      className="flex-1 bg-primary/60 rounded-t-sm transition-all"
+                      style={{ height: `${bar.heightPercent}%` }}
+                      title={`${bar.weight} kg`}
+                    />
+                  ))}
                 </div>
               )}
             </div>

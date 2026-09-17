@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { isSameDay } from 'date-fns';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { isOnLocalDay } from '@trackvibe/shared/domain';
 import { useWeight } from '@/hooks/useWeight';
 import { toast } from '@/components/shared/ToastProvider';
 import { toLocalDateString } from '@/lib/dateRanges';
@@ -30,9 +30,10 @@ export function WeightLogModal({ open, onOpenChange }: WeightLogModalProps) {
   useEffect(() => {
     if (!open) return;
     const today = new Date();
-    const todaysEntry = weightEntries.find((e) => {
-      try { return isSameDay(new Date(e.date), today); } catch { return false; }
-    });
+    // `isSameDay(new Date(e.date), today)` read the API's bare `YYYY-MM-DD` as UTC midnight,
+    // so west of UTC it never found today's entry — the modal then prefilled from the
+    // previous reading and offered to "add" a weight the user had already logged.
+    const todaysEntry = weightEntries.find((e) => isOnLocalDay(e.date, today));
     const prefill = todaysEntry ?? latestWeight;
     setWeight(prefill?.weight?.toString() ?? '');
     setNotes(todaysEntry?.notes ?? '');

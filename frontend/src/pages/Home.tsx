@@ -24,7 +24,7 @@ import { Goal } from '@/types/goals';
 import { FoodEntry } from '@/types/energy';
 import { Workout } from '@/types/workout';
 import { Apple, ChevronRight, Dumbbell, Moon, Pencil, Scale, UtensilsCrossed, User } from 'lucide-react';
-import { targetFraction } from '@trackvibe/shared/domain';
+import { buildRecentActivity, firstNameOf, homeProgressMessage, isOnLocalDay, targetFraction } from '@trackvibe/shared/domain';
 import { isSameDay, format } from 'date-fns';
 import { toast } from '@/components/shared/ToastProvider';
 import { cn } from '@/lib/utils';
@@ -43,7 +43,8 @@ export function Home() {
   const { profile, profileLoading } = useProfile();
   const { weightEntries } = useWeight();
   const { user } = useApp();
-  const firstName = user?.name?.split(' ')[0] ?? 'there';
+  // Shared with the Expo Home so the two clients greet the same account the same way.
+  const firstName = firstNameOf(user?.name);
 
   // State
   const [goalModalOpen, setGoalModalOpen] = useState(false);
@@ -79,32 +80,16 @@ export function Home() {
     { label: 'Fat',     current: Math.round(todaySummary.totalFats),    goal: targets.fat,     color: 'bg-terracotta' },
   ];
 
-  const progressMessage = useMemo(() => {
-    if (todaySummary.mealsCount === 0) return 'Start tracking your progress';
-    if (todaySummary.mealsCount >= 3) return 'Crushing it!';
-    if (todaySummary.mealsCount >= 2) return 'Great progress!';
-    return 'Keep going!';
-  }, [todaySummary.mealsCount]);
+  const progressMessage = homeProgressMessage(todaySummary.mealsCount);
 
-  const recentActivity = useMemo(() => {
-    const foodItems = foodEntries.slice(0, 10).map((f) => ({
-      id: f.id,
-      type: 'food' as const,
-      name: f.name,
-      detail: `${f.calories} cal`,
-      date: new Date(f.date),
-    }));
-    const workoutItems = workouts.slice(0, 10).map((w) => ({
-      id: w.id,
-      type: 'workout' as const,
-      name: w.title,
-      detail: `${w.exercises.length} exercise${w.exercises.length !== 1 ? 's' : ''}`,
-      date: new Date(w.date),
-    }));
-    return [...foodItems, ...workoutItems]
-      .sort((a, b) => b.date.getTime() - a.date.getTime())
-      .slice(0, 5);
-  }, [foodEntries, workouts]);
+  // The merge lives in @trackvibe/shared/domain now, shared with the Expo Home. It also
+  // drops the `slice(0, 10)` prefix each source used to take: that assumed the array was
+  // still in the API's newest-first order, which stops being true the moment a client
+  // writes its own cache — see the module's docblock.
+  const recentActivity = useMemo(
+    () => buildRecentActivity(foodEntries, workouts),
+    [foodEntries, workouts]
+  );
 
   // `null` target is not a 0% ring: one says "nothing logged yet against your goal", the
   // other says "there is no goal". The card renders them differently.
@@ -115,7 +100,9 @@ export function Home() {
   const sleepHours = Number(todayCheckIn?.sleepHours ?? 0);
   const todayDate = format(new Date(), 'EEE · MMM d');
   const todaysWeight = useMemo(
-    () => weightEntries.find((entry) => isSameDay(new Date(entry.date), new Date())),
+    // Same UTC-midnight trap as `WeightLogModal`: this drives the "logged today" state on
+    // the weight tile, which was wrong for every user west of UTC.
+    () => weightEntries.find((entry) => isOnLocalDay(entry.date, new Date())),
     [weightEntries]
   );
 

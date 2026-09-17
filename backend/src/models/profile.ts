@@ -5,7 +5,7 @@ import pg from 'pg';
 import { getPool } from '../db/pool.js';
 import type { UserProfile, UpsertProfileInput } from '../types/domain.js';
 
-const RETURNING = 'id, date_of_birth, sex, height_cm, current_weight, target_weight, activity_level, water_goal_glasses, cycle_tracking_enabled, average_cycle_length, setup_completed, macro_carbs, macro_fat, macro_protein';
+const RETURNING = 'id, date_of_birth, sex, height_cm, current_weight, target_weight, activity_level, water_goal_glasses, cycle_tracking_enabled, average_cycle_length, setup_completed, units, macro_carbs, macro_fat, macro_protein';
 
 function formatDate(value: unknown): string | undefined {
   if (!value) return undefined;
@@ -35,6 +35,9 @@ function rowToProfile(row: Record<string, unknown>): UserProfile {
     cycleTrackingEnabled: Boolean(row.cycle_tracking_enabled),
     averageCycleLength: row.average_cycle_length != null ? Number(row.average_cycle_length) : undefined,
     setupCompleted: Boolean(row.setup_completed),
+    // Left `undefined` rather than defaulted: "never told us" is a distinct state from
+    // "metric", and only the first can be backfilled later.
+    units: (row.units as 'metric' | 'imperial' | null) ?? undefined,
     macroCarbs: row.macro_carbs != null ? Number(row.macro_carbs) : undefined,
     macroFat: row.macro_fat != null ? Number(row.macro_fat) : undefined,
     macroProtein: row.macro_protein != null ? Number(row.macro_protein) : undefined,
@@ -61,6 +64,7 @@ const UPSERT_COLUMNS: ReadonlyArray<[Exclude<keyof UpsertProfileInput, 'userId'>
   ['cycleTrackingEnabled', 'cycle_tracking_enabled'],
   ['averageCycleLength', 'average_cycle_length'],
   ['setupCompleted', 'setup_completed'],
+  ['units', 'units'],
   ['macroCarbs', 'macro_carbs'],
   ['macroFat', 'macro_fat'],
   ['macroProtein', 'macro_protein'],
