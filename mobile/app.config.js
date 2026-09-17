@@ -38,6 +38,55 @@ const MICROPHONE_PERMISSION = 'TrackVibe needs microphone access to capture your
  */
 const BUNDLE_ID = 'com.trackvibe.app';
 
+/**
+ * Apple's privacy manifest, required on every upload since 2024-05-01: an approved reason for
+ * each "required reason" API the binary touches, app code and third-party SDKs alike.
+ *
+ * Expo does not fully automate this. SDK packages ship their own `PrivacyInfo.xcprivacy`, but
+ * Apple does not reliably pick those up from static CocoaPods dependencies, so the app config
+ * has to restate them. Missing declarations come back as an email minutes after upload -- fast
+ * feedback, but each round trip costs a build.
+ *
+ * Mirrored from the manifests actually installed in this app's dependency tree, not guessed:
+ *
+ * | package | category | reasons |
+ * |---|---|---|
+ * | `@react-native-async-storage/async-storage` | FileTimestamp | C617.1 |
+ * | `expo-file-system` (via `expo`) | FileTimestamp, DiskSpace | 0A2A.1, 3B52.1 / E174.1, 85F4.1 |
+ * | `expo-constants` | UserDefaults | CA92.1 |
+ * | `react-native` core | FileTimestamp, UserDefaults | C617.1, CA92.1 |
+ *
+ * Worth knowing when the spec and the packages disagree: the readiness spec assumed
+ * async-storage needed `UserDefaults`/`CA92.1`. Its manifest asks for `FileTimestamp`/`C617.1`
+ * instead -- `UserDefaults` comes from `expo-constants` and React Native core. Re-read the
+ * installed manifests after any dependency bump rather than trusting this table:
+ * `find node_modules -name PrivacyInfo.xcprivacy`.
+ *
+ * `NSPrivacyTracking: false` because nothing here tracks across apps or sites; there is no ad
+ * SDK and no IDFA access, so `NSPrivacyTrackingDomains` stays empty. `NSPrivacyCollectedDataTypes`
+ * is deliberately left out: what the app collects is declared in App Store Connect's privacy
+ * questionnaire, which is a person's job and is where Apple reads it from.
+ */
+const PRIVACY_MANIFESTS = {
+  NSPrivacyTracking: false,
+  NSPrivacyTrackingDomains: [],
+  NSPrivacyCollectedDataTypes: [],
+  NSPrivacyAccessedAPITypes: [
+    {
+      NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryFileTimestamp',
+      NSPrivacyAccessedAPITypeReasons: ['C617.1', '0A2A.1', '3B52.1'],
+    },
+    {
+      NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace',
+      NSPrivacyAccessedAPITypeReasons: ['E174.1', '85F4.1'],
+    },
+    {
+      NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults',
+      NSPrivacyAccessedAPITypeReasons: ['CA92.1'],
+    },
+  ],
+};
+
 export default ({ config }) => ({
   ...config,
   name: 'TrackVibe',
@@ -59,6 +108,7 @@ export default ({ config }) => ({
       NSSpeechRecognitionUsageDescription: SPEECH_RECOGNITION_PERMISSION,
       NSMicrophoneUsageDescription: MICROPHONE_PERMISSION,
     },
+    privacyManifests: PRIVACY_MANIFESTS,
   },
   android: {
     package: BUNDLE_ID,
@@ -87,5 +137,10 @@ export default ({ config }) => ({
     // Spread first so an `extra.eas.projectId` written by `eas init` survives.
     ...config.extra,
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000',
+    // Where the in-app privacy and terms links point. The default is inferred from the
+    // address the privacy policy itself gives (`privacy@trackvibe.app`) -- `FRONTEND_ORIGIN`
+    // is unset in production, so nothing in the repo states the live origin. See
+    // `src/lib/appUrls.ts`, and confirm both pages resolve before submitting.
+    webUrl: process.env.EXPO_PUBLIC_WEB_URL ?? 'https://trackvibe.app',
   },
 });
