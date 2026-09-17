@@ -1,6 +1,6 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. Last verified 2026-09-17 against `main` at `1efe954`.**
+**Written 2026-09-14. Last verified 2026-09-17 against `main` at `ec99cac`.**
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -428,6 +428,25 @@ added on 2026-09-17, found while auditing shared logic for drift between the cli
 
    That is also the argument for keeping the number at zero rather than triaging each one: the
    next advisory is much easier to see against a zero than against a standing seven.
+
+10. **The other three packages were measured too, and the only remaining fixes are majors.**
+    The `security-audit` matrix runs `--audit-level=critical` with `continue-on-error`, so it
+    is green today and would stay green through every one of these. That is by design; it also
+    means the numbers below are not visible anywhere until someone runs the command.
+
+    Measured 2026-09-17 on `main`, and the count is not the interesting part — **what is
+    reachable from shipped code** is:
+
+    | package | advisories | actually reachable |
+    |---|---|---|
+    | `backend` | 1 low | **Nothing.** The two `qs` moderates were on the production request path — `express` parses every query string through it — and they are fixed: `express` 4.22.2 → 4.22.3 drops both vulnerable nested copies onto the already-fixed root `qs@6.16.0`. Three lockfile entries. The remaining low is `esbuild`'s dev server. |
+    | `frontend` | 1 high, 2 moderate, 1 low | **The two `react-router` moderates** (open redirect via a backslash in `<Link>`; constructor injection in `deserializeErrors`) — shipped code, and the fix is `react-router-dom@7`, a real migration. The **high is `sharp`**, a devDependency used by `scripts/generate-pwa-icons.mjs` and nothing else; it is not in the bundle, not in CI, and needs a major. |
+    | `mobile` | 9 high, 11 moderate | **One moderate.** Only four packages carry their own advisory: `postcss` (4 highs) and `image-size` (2 highs) are reached through `@expo/metro-config` and `metro` — the bundler, which never ships in the binary; `uuid` comes through `xcode`, which generates the iOS project. The one that ships is `decode-uri-component`, via `query-string` via **`@react-navigation/core`** — a DoS on malformed URI decoding, so it needs an attacker-supplied URL to reach, i.e. a deep link. Every one of the nine highs rolls up to a single fix: `expo@57.0.23`, three SDK majors from the pinned `~54.0.37`. |
+
+    **So: nothing here is both reachable and cheap.** The decisions are an Expo SDK
+    upgrade, a React Router 7 migration, and a `sharp` major — three scheduled pieces of work,
+    none of them a drive-by, and none of them urgent on this evidence. What was cheap
+    (`express`/`qs`) is already done.
 
 Production is Railway project `distinguished-elegance`, service **BMe**. Present:
 `API_NINJAS_KEY`, `CORS_ORIGIN`, `DATABASE_URL`, `DB_SSL_REJECT_UNAUTHORIZED`,
