@@ -475,6 +475,33 @@ reason it was split from #343 rather than shipped with it.
 Two things found here are **not** fixed, because both change user-visible data and need a
 product call — items 7 and 8 under "Needs the owner".
 
+### What `npx expo export` says, and the six megabytes it found
+
+Worth running before anyone reaches for a simulator, because it needs no device and it is the
+only check here that exercises Metro end to end: `npx expo export --platform ios` resolves
+every import, collects every asset, and compiles the app to a Hermes bundle. It passes.
+
+It also weighs the result, which nothing else does. The app registers **six** font faces and
+was shipping **thirty-six** — every Inter and Fraunces weight, italics included, **7.65 MB of
+fonts against 1.52 MB used**. `@expo-google-fonts/inter/index.js` is a generated barrel that
+`require()`s all eighteen weights, and Metro cannot tree-shake a `require` of an asset, so
+naming six exports off the package root shipped the lot. Importing per weight
+(`@expo-google-fonts/inter/400Regular`) took the export from **13 MB to 7.1 MB** with an
+identical 4.3 MB JS bundle.
+
+That predates #343 — the same barrel import was there when only two faces were loaded — so it
+is not a regression from the design system, and nothing was ever going to catch it: it
+typechecks, every test passes, the app renders correctly, and the only symptom is size.
+`src/theme/__tests__/fontsImportPerWeight.test.ts` guards it now, scanning the **app root**
+rather than `src/`, because `App.tsx` is where fonts are registered and sits outside it.
+
+`npx expo-doctor` is 15/18. Two of the three failures are this sandbox's network (the config
+schema and the React Native Directory check both need to reach out); the third is real but
+deliberate — it objects to `metro.config.js` replacing `watchFolders` and setting
+`disableHierarchicalLookup: true`, which is the monorepo setup Expo's own guide prescribes.
+Worth knowing that `getDefaultConfig` now derives the workspace list by itself, so the
+override is doing less than it looks.
+
 ### #343 — six guards, and nothing seen running
 
 Six AST guards ship with it, each verified to fail against a mutant restoring the behaviour it
