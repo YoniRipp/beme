@@ -13,6 +13,7 @@ import type { MealType } from '@/features/energy/parseFoodText';
 import { searchFoods, lookupOrCreateFood } from '@/features/energy/api';
 import type { FoodSearchResult } from '@/features/energy/api';
 import { scalePortion } from '@trackvibe/shared/domain';
+import { LIMITS } from '@trackvibe/shared/constants';
 import { AudioWave } from '@/components/ui/audio-wave';
 
 interface ResolvedEntry {
@@ -46,13 +47,47 @@ const LANG_STORAGE_KEY = 'quickVoiceEntry.lang';
  *
  * `ml` maps onto the same basis 1:1 — a drink's macros are published per 100 ml, so no
  * density conversion belongs here; that is what `scalePortion` and `FoodEntryModal` both do.
+ *
+ * The spelled-out spellings are here because a spoken transcript says "200 grams of rice",
+ * never "200g rice". Whether the shared parser hands this component `'g'` or `'grams'` is
+ * its business, not ours; both spellings mean the same portion, so both are accepted and
+ * the component is correct either way.
  */
 const MEASURED_UNITS: Record<string, { perUnitGrams: number; basis: 'g' | 'ml' }> = {
   g: { perUnitGrams: 1, basis: 'g' },
+  gram: { perUnitGrams: 1, basis: 'g' },
+  grams: { perUnitGrams: 1, basis: 'g' },
   kg: { perUnitGrams: 1000, basis: 'g' },
+  kilogram: { perUnitGrams: 1000, basis: 'g' },
+  kilograms: { perUnitGrams: 1000, basis: 'g' },
   ml: { perUnitGrams: 1, basis: 'ml' },
+  milliliter: { perUnitGrams: 1, basis: 'ml' },
+  milliliters: { perUnitGrams: 1, basis: 'ml' },
+  millilitre: { perUnitGrams: 1, basis: 'ml' },
+  millilitres: { perUnitGrams: 1, basis: 'ml' },
   l: { perUnitGrams: 1000, basis: 'ml' },
+  liter: { perUnitGrams: 1000, basis: 'ml' },
+  liters: { perUnitGrams: 1000, basis: 'ml' },
+  litre: { perUnitGrams: 1000, basis: 'ml' },
+  litres: { perUnitGrams: 1000, basis: 'ml' },
 };
+
+/**
+ * Whether a set of macros is an entry this product considers valid.
+ *
+ * `packages/shared/src/schemas/foodEntry.ts` is the form both clients validate a
+ * hand-typed food entry against, and it refuses anything past `LIMITS`. Voice writes to
+ * the same table through the same API, so a portion reading that produces macros the form
+ * would reject is not a reading to take silently — it is a misread.
+ */
+function isPlausibleEntry(macros: Pick<ResolvedEntry, 'calories' | 'protein' | 'carbs' | 'fats'>): boolean {
+  return (
+    macros.calories <= LIMITS.MAX_CALORIES &&
+    macros.protein <= LIMITS.MAX_PROTEIN &&
+    macros.carbs <= LIMITS.MAX_CARBS &&
+    macros.fats <= LIMITS.MAX_FATS
+  );
+}
 
 /**
  * The macros to log for one parsed item, scaled to the portion it named.
@@ -70,6 +105,17 @@ const MEASURED_UNITS: Record<string, { perUnitGrams: number; basis: 'g' | 'ml' }
  * density or a per-food weight this response does not carry, so they keep the published
  * macros exactly as before rather than take an invented factor — the review screen shows
  * the calories, and editing a saved entry still corrects them.
+ *
+ * **The bare count is gated on the result being a believable entry.** A unit-less number is
+ * only a count when it reads as one, and "200" in front of a countable food does not: while
+ * a transcript's mass unit goes unrecognised ("200 grams of bread" parsing to
+ * `amount: 200, unit: null`), the count branch turned one slice of bread into two hundred
+ * and wrote five figures of calories into the user's log. Rather than pick a count ceiling
+ * out of the air, the test is the one the product already applies to a food entry —
+ * `isPlausibleEntry` — so a reading is taken exactly when the hand-entry form would accept
+ * what it produces. A rejected count falls back to the published macros, which is where
+ * this code stood before any scaling existed: no invented number, and visible on the review
+ * screen before it is saved.
  */
 function scaleToPortion(
   food: FoodSearchResult,
@@ -84,7 +130,7 @@ function scaleToPortion(
   };
   if (amount == null || !(amount > 0)) return published;
 
-  const measured = unit ? MEASURED_UNITS[unit] : undefined;
+  const measured = unit ? MEASURED_UNITS[unit.toLowerCase()] : undefined;
   if (measured) {
     const { calories, protein, carbs, fats } = scalePortion(
       food,
@@ -96,7 +142,8 @@ function scaleToPortion(
 
   if (!unit && food.defaultUnit && food.unitWeightGrams) {
     const { calories, protein, carbs, fats } = scalePortion(food, amount, food.defaultUnit);
-    return { calories, protein, carbs, fats };
+    const counted = { calories, protein, carbs, fats };
+    if (isPlausibleEntry(counted)) return counted;
   }
 
   return published;

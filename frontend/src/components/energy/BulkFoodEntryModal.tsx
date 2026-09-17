@@ -15,9 +15,10 @@ import { Loader2, Mic, MicOff, Upload, Check, AlertCircle, X, Type } from 'lucid
 import { toast } from '@/components/shared/ToastProvider';
 import { parseFoodItems, getMealStartTime, type MealType, type ParsedFoodItem } from '@/features/energy/parseFoodText';
 import { parseCsvFile, type CsvParsedItem } from '@/features/energy/parseCsv';
-import { searchFoods, lookupOrCreateFood } from '@/features/energy/api';
+import { searchFoods, lookupOrCreateFood, type FoodSearchResult } from '@/features/energy/api';
 import { useBrowserSpeech } from '@/hooks/useBrowserSpeech';
 import { toLocalDateString } from '@/lib/dateRanges';
+import { LIMITS } from '@trackvibe/shared/constants';
 
 interface BulkFoodEntryModalProps {
   open: boolean;
@@ -61,6 +62,71 @@ function nextId() {
 
 const MEAL_ORDER: MealType[] = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 
+/**
+ * Grams per unit for the mass and volume words a portion can be spoken or typed in.
+ *
+ * `ml` counts as grams 1:1, which is what this file's `item.unit === 'g' || item.unit ===
+ * 'ml'` branch already did — a drink's macros are published per 100 ml, so the reference
+ * basis is volumetric and no density conversion belongs here.
+ *
+ * The spelled-out spellings matter because the voice tab's own placeholder tells the user to
+ * say "250 grams of chicken". Recognising only `g`/`kg` sends that portion down the
+ * per-unit-weight branch below, where 250 becomes 250 chicken breasts.
+ */
+const MEASURED_GRAMS: Record<string, number> = {
+  g: 1, gram: 1, grams: 1,
+  kg: 1000, kilogram: 1000, kilograms: 1000,
+  ml: 1, milliliter: 1, milliliters: 1, millilitre: 1, millilitres: 1,
+  l: 1000, liter: 1000, liters: 1000, litre: 1000, litres: 1000,
+};
+
+/**
+ * Whether scaling a food by `factor` produces an entry this product considers valid.
+ *
+ * `packages/shared/src/schemas/foodEntry.ts` is the form a hand-typed food entry is
+ * validated against, and it refuses anything past `LIMITS`. Bulk entry writes to the same
+ * table through the same API, so a portion reading whose macros the form would reject is
+ * not a reading to take silently.
+ */
+function isPlausibleEntry(food: FoodSearchResult, factor: number): boolean {
+  return (
+    food.calories * factor <= LIMITS.MAX_CALORIES &&
+    food.protein * factor <= LIMITS.MAX_PROTEIN &&
+    food.carbs * factor <= LIMITS.MAX_CARBS &&
+    food.fat * factor <= LIMITS.MAX_FATS
+  );
+}
+
+/**
+ * Grams the parsed portion stands for — the numerator of the scale factor.
+ *
+ * Shared by the search and AI-lookup paths, which held two copies of this that had already
+ * drifted: only one of them knew `kg`, so "2kg rice" logged two grams down the other.
+ *
+ * The per-unit-weight branch is what reads a number as a COUNT of the food's own units
+ * ("3 slices of bread" against `unitWeightGrams`), and it is gated: a unit-less number is
+ * only a count when it reads as one. A transcript whose mass unit goes unrecognised —
+ * "200 grams of bread" parsing to `amount: 200, unit: null` — would otherwise log two
+ * hundred slices and five figures of calories. Rather than invent a ceiling on counts, the
+ * test is the one the product already applies to a food entry. A rejected count falls
+ * through to this file's existing "assume grams", which is the right reading for exactly
+ * the phrasing that triggers it.
+ */
+function portionGramsFor(item: { amount: number | null; unit: string | null }, food: FoodSearchResult): number {
+  const refGrams = food.referenceGrams ?? 100;
+  if (item.amount == null) return 100;
+
+  const measured = item.unit ? MEASURED_GRAMS[item.unit.toLowerCase()] : undefined;
+  if (measured) return item.amount * measured;
+
+  if (food.unitWeightGrams) {
+    const counted = item.amount * food.unitWeightGrams;
+    if (isPlausibleEntry(food, counted / refGrams)) return counted;
+  }
+
+  return item.amount; // assume grams
+}
+
 async function resolveItem(item: ParsedFoodItem | CsvParsedItem): Promise<Omit<ResolvedItem, 'id' | 'status'>> {
   // If CSV already has calories, use them
   const csvItem = item as CsvParsedItem;
@@ -82,21 +148,7 @@ async function resolveItem(item: ParsedFoodItem | CsvParsedItem): Promise<Omit<R
   if (results.length > 0) {
     const food = results[0];
     const refGrams = food.referenceGrams ?? 100;
-    let portionGrams = 100;
-    if (item.amount != null) {
-      if (item.unit === 'g' || item.unit === 'ml') {
-        portionGrams = item.amount;
-      } else if (item.unit === 'kg') {
-        portionGrams = item.amount * 1000;
-      } else if (food.defaultUnit && food.unitWeightGrams && !item.unit) {
-        portionGrams = item.amount * food.unitWeightGrams;
-      } else if (food.unitWeightGrams) {
-        portionGrams = item.amount * food.unitWeightGrams;
-      } else {
-        portionGrams = item.amount; // assume grams
-      }
-    }
-    const factor = portionGrams / refGrams;
+    const factor = portionGramsFor(item, food) / refGrams;
     return {
       name: food.name,
       amount: item.amount,
@@ -113,17 +165,7 @@ async function resolveItem(item: ParsedFoodItem | CsvParsedItem): Promise<Omit<R
   try {
     const food = await lookupOrCreateFood(item.name);
     const refGrams = food.referenceGrams ?? 100;
-    let portionGrams = 100;
-    if (item.amount != null) {
-      if (item.unit === 'g' || item.unit === 'ml') {
-        portionGrams = item.amount;
-      } else if (food.unitWeightGrams) {
-        portionGrams = item.amount * food.unitWeightGrams;
-      } else {
-        portionGrams = item.amount;
-      }
-    }
-    const factor = portionGrams / refGrams;
+    const factor = portionGramsFor(item, food) / refGrams;
     return {
       name: food.name,
       amount: item.amount,

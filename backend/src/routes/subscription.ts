@@ -84,8 +84,16 @@ export function createWebhookRouter() {
     const hmac = crypto.createHmac('sha256', config.lemonSqueezyWebhookSecret);
     const digest = hmac.update(rawBody).digest('hex');
 
-    if (signature.length !== digest.length ||
-        !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
+    // Compare the UTF-8 buffers, and size them by their BYTE lengths. String#length counts
+    // UTF-16 code units, and Node decodes header values as latin1, so an x-signature header
+    // carrying a byte >= 0x80 can match the digest's character count and still be a different
+    // number of bytes -- timingSafeEqual then throws, and nothing here catches it, so an
+    // unauthenticated request takes the process down (index.ts exits on unhandledRejection).
+    const signatureBytes = Buffer.from(signature, 'utf8');
+    const digestBytes = Buffer.from(digest, 'utf8');
+
+    if (signatureBytes.length !== digestBytes.length ||
+        !crypto.timingSafeEqual(signatureBytes, digestBytes)) {
       logger.error('Lemon Squeezy webhook signature verification failed');
       return res.status(400).json({ error: 'Invalid signature' });
     }
