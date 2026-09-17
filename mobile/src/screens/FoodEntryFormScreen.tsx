@@ -14,6 +14,8 @@ import {
   type PortionUnit,
 } from '@trackvibe/shared/domain';
 import Toast from 'react-native-toast-message';
+import { parseNumericField } from '../lib/numericField';
+import { messageFor } from '../lib/errorMessage';
 import { fonts, spacing } from '../theme';
 import { useThemedStyles } from '../theme/useThemedStyles';
 
@@ -186,16 +188,40 @@ export function FoodEntryFormScreen() {
       Toast.show({ type: 'error', text1: 'Please enter a food name' });
       return;
     }
+
+    /**
+     * Every numeric field used to be `parseFloat(x) || 0`, which cannot tell a blank field from
+     * a typo. Blank means "not logging this" and 0 is right; `12o` means the user meant 120 and
+     * got an entry recorded as **0 kcal with a success toast**. Blank still means blank — see
+     * `lib/numericField.ts` for why the shared schema is not used here instead.
+     */
+    const fields = [
+      { raw: calories, label: 'Calories', blank: 0 as number | undefined },
+      { raw: protein, label: 'Protein', blank: 0 as number | undefined },
+      { raw: carbs, label: 'Carbs', blank: 0 as number | undefined },
+      { raw: fats, label: 'Fats', blank: 0 as number | undefined },
+      { raw: portionAmount, label: 'Amount', blank: undefined },
+    ];
+    const parsedFields = fields.map((f) => parseNumericField(f.raw, f.label, f.blank));
+    const badField = parsedFields.find((r) => !r.ok);
+    if (badField && !badField.ok) {
+      Toast.show({ type: 'error', text1: badField.message });
+      return;
+    }
+    const [caloriesValue, proteinValue, carbsValue, fatsValue, amountValue] = parsedFields.map(
+      (r) => (r.ok ? r.value : undefined),
+    );
+
     setSaving(true);
     try {
       const data = {
         date: existing?.date || new Date(),
         name: name.trim(),
-        calories: parseFloat(calories) || 0,
-        protein: parseFloat(protein) || 0,
-        carbs: parseFloat(carbs) || 0,
-        fats: parseFloat(fats) || 0,
-        portionAmount: parseFloat(portionAmount) || undefined,
+        calories: caloriesValue ?? 0,
+        protein: proteinValue ?? 0,
+        carbs: carbsValue ?? 0,
+        fats: fatsValue ?? 0,
+        portionAmount: amountValue,
         portionUnit,
         mealType,
         startTime: existing?.startTime || MEAL_START_TIMES[mealType],
@@ -207,8 +233,8 @@ export function FoodEntryFormScreen() {
       }
       Toast.show({ type: 'success', text1: existing ? 'Entry updated' : 'Food logged' });
       navigation.goBack();
-    } catch {
-      Toast.show({ type: 'error', text1: 'Failed to save' });
+    } catch (error) {
+      Toast.show({ type: 'error', text1: messageFor(error, 'Failed to save') });
     } finally {
       setSaving(false);
     }
