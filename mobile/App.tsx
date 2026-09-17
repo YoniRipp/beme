@@ -1,14 +1,20 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import {
-  useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
-import { Fraunces_500Medium, Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
+import { useFonts } from 'expo-font';
+// Per-weight subpaths, never the package root. `@expo-google-fonts/inter/index.js` is a
+// barrel that `require()`s all 18 Inter weights, and Metro cannot tree-shake a `require` of
+// an asset -- so importing six names from the root shipped all 36 Inter and Fraunces faces,
+// italics included, in the binary. Measured with `npx expo export --platform ios`.
+// Each weight directory exports only its own file, which is why these are directories and
+// not the flat names. `useFonts` comes from `expo-font`, which the root barrel re-exports
+// anyway; importing it from there would pull the whole barrel back in.
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
+import { Fraunces_500Medium } from '@expo-google-fonts/fraunces/500Medium';
+import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces/600SemiBold';
 import { AuthProvider } from './src/context/AuthContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import { ThemeProvider, useThemeContext } from './src/theme/ThemeContext';
