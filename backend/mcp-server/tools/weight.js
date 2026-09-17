@@ -5,15 +5,18 @@ export function register(server, api) {
     'list_weight_entries',
     'List weight log entries. Returns body weight measurements over time with dates and optional notes.',
     {
-      limit: z.number().int().min(1).max(200).optional().describe('Max number of entries to return'),
+      // `.default()` rather than `.optional()`, and unconditional below. These are the only two
+      // endpoints whose controller uses `parseOptionalPagination`, which returns undefined when
+      // the caller sends neither bound -- and the model then gets no LIMIT clause and the user's
+      // whole table. Every other list tool here hits a controller with `paginationSchema`, which
+      // defaults to 50 server-side, so they stay `.optional()` on purpose.
+      limit: z.number().int().min(1).max(200).default(30).describe('Max number of entries to return (default 30)'),
       offset: z.number().int().min(0).optional().describe('Number of entries to skip for pagination'),
     },
     async ({ limit, offset }) => {
-      const params = new URLSearchParams();
-      if (limit !== undefined) params.set('limit', String(limit));
+      const params = new URLSearchParams({ limit: String(limit) });
       if (offset !== undefined) params.set('offset', String(offset));
-      const qs = params.toString();
-      const result = await api.get(`/api/weight-entries${qs ? `?${qs}` : ''}`);
+      const result = await api.get(`/api/weight-entries?${params}`);
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     }
   );

@@ -242,6 +242,33 @@ The reusable lesson, and it caught me twice: **a timezone test written without s
 proves nothing**, because the runner uses UTC and UTC is where these bugs hide. Both new
 suites set it and assert that the old spelling disagrees.
 
+### The unbounded-read audit was not finished — where the rest of it was
+
+#342 fixed the two client reads. The sweep stopped at the clients, and it should not have:
+the same shape was live on the server and in the MCP tools, and #348 closes it.
+
+The mechanism is one helper. `parseOptionalPagination`
+(`backend/src/utils/pagination.ts`) returns `undefined` when the caller sends **neither**
+`limit` nor `offset`, and every model treats a missing pagination argument as "emit no LIMIT
+clause". That is deliberate — it is a compatibility shim so older clients keep their
+unpaginated responses — but it means a caller that simply does not think about pagination
+gets the user's whole table, silently.
+
+| caller | verdict |
+|---|---|
+| `chatAgent.ts` `get_weight_entries` | **Was unbounded.** It passed `startDate`/`endDate` straight from the model's tool args and no pagination at all, so a chat turn that asked about weight without naming dates read the entire `weight_entries` table into a prompt. Two lines above it, the file's own docstring says these limits are load-bearing "because the agent runs on every chat turn". |
+| `chatAgent.ts` `get_goals` | **Was unbounded.** Small in practice — a user has one goal per type — but the same shape, and nothing stops a future per-exercise goal type. |
+| `chatAgent.ts` `get_workouts`, `get_food_entries`, `get_water_today` | Clean. Already bounded by `MAX_WORKOUTS_PER_READ` / `MAX_FOOD_ENTRIES_PER_READ` / a single date. |
+| MCP `list_weight_entries`, `get_water_history` | **Were unbounded.** `limit` was `.optional()` and only forwarded `if (limit !== undefined)` — and an LLM omits an optional argument routinely. |
+| MCP's other list tools | Clean, and for a reason worth knowing: `food-entries`, `workouts`, `goals` and `daily-check-ins` hit controllers that use `paginationSchema`, which **defaults** to `limit: 50`. Only weight and water history use the shim. |
+| `voiceExecutor.ts` | Clean. Every weight and water read there is `findById` / `findByDate` / `findLatest`. |
+| Both clients | Clean. `useWeight` on web and Expo both send `WEIGHT_HISTORY_LIMIT`; nothing on either client calls water history at all. |
+
+So the shim now has exactly two endpoints behind it and every caller of both sends a bound.
+**If you retire `parseOptionalPagination` in favour of `paginationSchema`'s default, that is
+now a two-endpoint change rather than an unknown one** — which is the state it should have
+been left in.
+
 ### #311's spec is stale in three of its eight rows — check before building
 
 It was written against `34a51d9` and opens with three greps proving absence. Two of the three
