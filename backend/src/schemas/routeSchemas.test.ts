@@ -5,6 +5,7 @@ import {
   createExerciseSchema,
   updateExerciseSchema,
   exerciseListQuerySchema,
+  upsertProfileSchema,
 } from './routeSchemas.js';
 
 describe('exercise catalog schemas', () => {
@@ -73,5 +74,25 @@ describe('workout route schemas — per-set fields', () => {
       exercises: [{ name: 'OHP', sets: 2, reps: 5, weightPerSet: [null, 40] }],
     });
     expect(parsed.exercises[0].weightPerSet).toEqual([null, 40]);
+  });
+});
+
+describe('upsertProfileSchema units', () => {
+  it('accepts the two measurement systems', () => {
+    expect(upsertProfileSchema.safeParse({ units: 'metric' }).success).toBe(true);
+    expect(upsertProfileSchema.safeParse({ units: 'imperial' }).success).toBe(true);
+  });
+
+  it('accepts a payload that says nothing about units', () => {
+    expect(upsertProfileSchema.safeParse({ waterGoalGlasses: 8 }).success).toBe(true);
+  });
+
+  it('rejects anything else, including null', () => {
+    // Optional but not nullable, deliberately. A client may decline to say; it may not clear
+    // an answer already given, because that would put the account back into the "never told
+    // us" state the weight-units backfill relies on being truthful.
+    expect(upsertProfileSchema.safeParse({ units: null }).success).toBe(false);
+    expect(upsertProfileSchema.safeParse({ units: 'kg' }).success).toBe(false);
+    expect(upsertProfileSchema.safeParse({ units: '' }).success).toBe(false);
   });
 });

@@ -229,6 +229,10 @@ export async function initSchema() {
         cycle_tracking_enabled boolean NOT NULL DEFAULT false,
         average_cycle_length int,
         setup_completed boolean NOT NULL DEFAULT false,
+        -- Nullable with no default on purpose: NULL means "this account has never told us",
+        -- which is the honest state of every row that predates the column. See
+        -- migrations/1776600000000_add-user-profile-units.js.
+        units text CHECK (units IN ('metric', 'imperial')),
         macro_carbs numeric,
         macro_fat numeric,
         macro_protein numeric,

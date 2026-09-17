@@ -10,6 +10,7 @@ import {
 } from '@trackvibe/shared/settings';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../hooks/useSettings';
+import { useProfile } from '../hooks/useProfile';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { fonts, spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
@@ -49,6 +50,26 @@ export function SettingsScreen() {
   const { user, logout } = useAuth();
   const { colors } = useThemeContext();
   const { settings, updateSettings } = useSettings();
+  const { updateProfile } = useProfile();
+
+  /**
+   * Save the unit choice on the device, and report it to the server.
+   *
+   * Settings are device-local by design and that does not change here — `AppSettings.units`
+   * stays what the UI reads. The server copy exists because `getWeightUnit` relabels `kg` to
+   * `lbs` without converting, so imperial users' weights sit in a kilograms field, and until
+   * now nothing server-side knew which accounts those were. See `docs/HANDOFF.md`,
+   * "Needs the owner".
+   *
+   * Best-effort: a failed report must not undo the user's choice or surface an error at them,
+   * so it is logged rather than thrown or swallowed.
+   */
+  const reportUnits = (units: Units) => {
+    updateSettings({ units });
+    void updateProfile({ units }).catch((error) => {
+      console.warn('Could not report unit preference to the server', error);
+    });
+  };
 
   return (
     <MobileScreen title="Settings" subtitle="Manage your account, preferences, and data.">
@@ -59,7 +80,7 @@ export function SettingsScreen() {
 
       <SettingsCard title={UNITS_TITLE}>
         <RadioButton.Group
-          onValueChange={(value) => updateSettings({ units: value as Units })}
+          onValueChange={(value) => reportUnits(value as Units)}
           value={settings.units}
         >
           <RadioButton.Item label="Metric (kg, cm)" value="metric" />

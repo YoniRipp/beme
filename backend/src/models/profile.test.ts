@@ -139,3 +139,50 @@ describe('profile model', () => {
     });
   });
 });
+
+/**
+ * The unit preference, which exists so a future migration can find the rows it has to fix.
+ *
+ * `getWeightUnit` relabels `kg` to `lbs` and converts nothing, so an imperial user's weights
+ * are pounds sitting in a kilograms field. Nothing server-side knew which accounts those were,
+ * because `units` lived only in device-local storage. These cases pin the two properties that
+ * make the eventual backfill possible: the value round-trips, and "never told us" stays
+ * distinguishable from "metric".
+ */
+describe('profile units', () => {
+  beforeEach(() => {
+    mockQuery.mockReset().mockResolvedValue({ rows: [ROW] });
+  });
+
+  it('writes units when supplied', async () => {
+    await upsert({ userId: 'u1', units: 'imperial' });
+
+    const sql = mockQuery.mock.calls[0][0] as string;
+    expect(insertedColumns(sql)).toContain('units');
+    expect(updatedColumns(sql)).toContain('units');
+    expect(mockQuery.mock.calls[0][1]).toContain('imperial');
+  });
+
+  it('leaves units alone when the caller does not mention it', async () => {
+    // The model patches only the fields actually supplied. A settings save that says nothing
+    // about units must not blank an answer the account already gave.
+    await upsert({ userId: 'u1', waterGoalGlasses: 10 });
+
+    const sql = mockQuery.mock.calls[0][0] as string;
+    expect(insertedColumns(sql)).not.toContain('units');
+    expect(updatedColumns(sql)).not.toContain('units');
+  });
+
+  it('reads a missing column as undefined rather than metric', async () => {
+    // The distinction the whole column exists for: `undefined` means the account has never
+    // reported one, and only those rows are safe to leave alone in a backfill. Defaulting to
+    // metric here would erase that and make the migration unwritable.
+    mockQuery.mockResolvedValue({ rows: [{ ...ROW, units: null }] });
+    const withoutUnits = await upsert({ userId: 'u1' });
+    expect(withoutUnits.units).toBeUndefined();
+
+    mockQuery.mockResolvedValue({ rows: [{ ...ROW, units: 'imperial' }] });
+    const withUnits = await upsert({ userId: 'u1' });
+    expect(withUnits.units).toBe('imperial');
+  });
+});
