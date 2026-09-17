@@ -188,9 +188,6 @@ and refuses MCP-authenticated callers; the admin route keeps `requireAdmin`, kee
 to delete your own account, and preserves its old response shapes (critical rule 4); and both
 blocklists are consulted by the WebSocket path as well as the HTTP middleware.
 
-**GitHub reports no commit statuses at all on `491baf0`** — `total_count: 0`. Do not read
-that as green. Establish what CI actually says before trusting the branch.
-
 **Still do not merge without reading it.** It deletes user data, and one decision was made
 unilaterally and needs a second opinion: scrubbing PII on deletion, versus not writing PII
 into those tables in the first place.
@@ -822,9 +819,33 @@ is half-applied to the tree — the working tree was clean at the stop.
 
 ### Merged today (21 PRs)
 
-The day's batch is itemised in "What the 2026-09-17 batch actually contains" above. The
-last three to land were #360 (forms say what failed), #361 (backdating entries) and #362
-(the weight form can log another day too).
+Derived from `git log --merges --since="2026-09-17 00:00" origin/main`, not from memory.
+The "What the 2026-09-17 batch actually contains" section above details only the first
+four (#342-#345); the rest are listed here.
+
+| PR | What it did |
+|---|---|
+| #342 | Four correctness bugs, and the tests that found them |
+| #343 | Expo design system: the primitive layer, and the font weights the app was already asking for |
+| #344 | Record the user's measurement system, so the weight data can be fixed later |
+| #345 | The offline queue replayed every mutation with no credential at all |
+| #346 | Handoff, after the four merges |
+| #347 | Close the seven MCP server advisories, and put the audit in CI |
+| #348 | Bound the four reads that still pulled a user's whole table |
+| #349 | Patch the two qs advisories on the request path, and measure the rest |
+| #350 | Stop shipping thirty-six font faces to register six (13MB -> 7.1MB export) |
+| #351 | Correct two things the handoff said about #337 |
+| #352 | The App Store blockers that are code, not paperwork |
+| #353 | A failed request no longer renders as an empty account |
+| #354 | Let the list endpoints take a date window |
+| #355 | The two clients showed different calorie totals for the same rows |
+| #356 | A malformed date param returned 500, not 400 |
+| #357 | Insights was the screen #353 missed |
+| #358 | Re-scope four PRs from the code, not their specs |
+| #359 | You could not save a workout, and were not told why |
+| #360 | A typo in a macro field was saved as zero |
+| #361 | You can log something that happened yesterday |
+| #362 | The weight form can log another day too |
 
 ### Open finding with no code yet — truncation is silently presented as completeness
 
@@ -871,9 +892,9 @@ critical rule 6). That changes endpoint contracts, so it is separate work.
 
 ### Adversarial audit — findings that survived refutation
 
-A 12-lens audit workflow (run id `wf_dfc39657-a23`) was still running when work stopped;
-its journal is at
-`~/.claude/projects/-home-user/<session>/subagents/workflows/wf_dfc39657-a23/journal.jsonl`.
+A 12-lens audit workflow (run id `wf_dfc39657-a23`) was still running when work stopped.
+**Its journal is machine-local and did not travel** — everything worth keeping from it is
+reproduced below, so nothing here depends on that file still existing.
 Each finding below was passed to independent refuter agents (code-truth, is-it-defended,
 does-it-reproduce) and **survived all of them** — these are not first-pass guesses. None of
 them has a fix written yet.
@@ -976,3 +997,19 @@ Ordered by severity. The first three are the ones worth acting on before an App 
 self-contained user-visible bugs in the web client and are the cheapest wins. The
 truncation finding above is the one that needs a decision rather than a patch — surface it
 in the UI now, or do the server-side date filtering properly.
+
+### The `claude/dazzling-fermi-vf1cv3` branch was already redundant
+
+It carried 19 commits that were never merged as commits, which is why it looked like
+unmerged work. It was not. Every one of today's 21 PRs had reimplemented the same changes,
+so merging the branch into `main` produces **a net code diff of zero** — verified with
+`git diff --stat origin/main HEAD`, which reports only this file.
+
+The trap worth remembering: `git merge-base --is-ancestor <sha> origin/main` answers
+"is this *commit* in main", not "is this *content* in main". All 19 answered NO while every
+file they touched was already byte-identical on `main`. Compare the trees, not the commits.
+
+The merge was still made rather than the branch deleted, so the history records that the
+line was folded in deliberately. The conflicts were all cases where `main`'s newer work
+wins — notably `App.tsx`, where taking the branch's side would have restored the
+`@expo-google-fonts` barrel import and undone #350's 13MB -> 7.1MB export fix.
