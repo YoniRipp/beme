@@ -50,6 +50,24 @@ export const listRangeQuerySchema = paginationSchema.extend({
   endDate: dateString.optional(),
 });
 
+/**
+ * The date window on its own, for the three endpoints that take one but page differently.
+ *
+ * `weight`, `water` and `cycle` predate `paginationSchema`: the first two use
+ * `parseOptionalPagination`, which deliberately returns `undefined` when neither bound is sent so
+ * they keep answering with a bare array, and `cycle` has no pagination at all. Extending
+ * `paginationSchema` here would force a `limit` default onto them and change three response
+ * shapes, which critical rule 4 forbids — so this validates the dates and nothing else, and the
+ * pagination each controller already had is left exactly as it was.
+ *
+ * Unknown keys are stripped rather than rejected, so `?limit=`/`?offset=` still reach
+ * `parseOptionalPagination` untouched.
+ */
+export const dateWindowQuerySchema = z.object({
+  startDate: dateString.optional(),
+  endDate: dateString.optional(),
+});
+
 // ─── Workout schemas ────────────────────────────────────────
 export const createWorkoutSchema = z.object({
   date: dateString,
@@ -276,6 +294,7 @@ export type CreateGoalBody = z.infer<typeof createGoalSchema>;
 export type UpdateGoalBody = z.infer<typeof updateGoalSchema>;
 export type PaginationQuery = z.infer<typeof paginationSchema>;
 export type ListRangeQuery = z.infer<typeof listRangeQuerySchema>;
+export type DateWindowQuery = z.infer<typeof dateWindowQuerySchema>;
 export type UpsertProfileBody = z.infer<typeof upsertProfileSchema>;
 export type CreateWeightEntryBody = z.infer<typeof createWeightEntrySchema>;
 export type UpdateWeightEntryBody = z.infer<typeof updateWeightEntrySchema>;

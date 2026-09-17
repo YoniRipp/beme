@@ -7,6 +7,8 @@ import { getEffectiveUserId } from '../middleware/auth.js';
 import * as waterModel from '../models/water.js';
 import { sendJson } from '../utils/response.js';
 import { parseOptionalPagination } from '../utils/pagination.js';
+import { parseQuery } from '../utils/validation.js';
+import { dateWindowQuerySchema } from '../schemas/routeSchemas.js';
 
 export const getToday = asyncHandler(async (req: Request, res: Response) => {
   const userId = getEffectiveUserId(req);
@@ -17,7 +19,10 @@ export const getToday = asyncHandler(async (req: Request, res: Response) => {
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const userId = getEffectiveUserId(req);
-  const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+  // Validated rather than cast. These reach Postgres as `$n::date`, so a malformed bound used to
+  // surface as an unhandled pg error -- rendered by `errorHandler` as a 500 INTERNAL_ERROR, which
+  // tells the caller the server broke when in fact they sent `?startDate=lastweek`.
+  const { startDate, endDate } = parseQuery(dateWindowQuerySchema, req.query);
   const entries = await waterModel.findByUserId(userId, startDate, endDate, parseOptionalPagination(req.query));
   sendJson(res, entries);
 });
