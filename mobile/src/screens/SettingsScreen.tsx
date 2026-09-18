@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { List, RadioButton, SegmentedButtons, Text } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
+import { messageFor } from '../lib/errorMessage';
 import { Button, Card } from '../components/ui';
 import {
   BALANCE_DISPLAY_COLORS,
@@ -103,8 +104,14 @@ export function SettingsScreen() {
     setDeleting(true);
     try {
       await authApi.deleteAccount();
-    } catch {
-      Toast.show({ type: 'error', text1: 'Could not delete your account. Please try again.' });
+    } catch (error) {
+      // Not a bare catch: the service raises a ConflictError for the one case the user can
+      // actually act on, and "Please try again" is advice that can never succeed there. The
+      // web client already surfaces the server's message; this matches it.
+      Toast.show({
+        type: 'error',
+        text1: messageFor(error, 'Could not delete your account. Please try again.'),
+      });
       setDeleting(false);
       return;
     }

@@ -136,6 +136,48 @@ describe('user model — deleteWithOwnedData', () => {
       expect(redaction).toContain("- 'name'");
     });
 
+    /**
+     * The summary column is free text the consumer builds from the user's own content --
+     * `Logged food entry: ${p.name}`, `Logged workout: ${p.title}`
+     * (events/consumers/userActivityLog.ts:23,29). Stripping `payload.name` while leaving
+     * that in place meant a deleted account's food and workout names survived in plain text,
+     * in the same table the payload redaction exists to clean, while both clients tell the
+     * user deletion is permanent.
+     */
+    it('scrubs the free-text summary, not just the structured payload', async () => {
+      const { client, sqls } = recordingClient();
+
+      await deleteWithOwnedData(USER_ID, client);
+
+      const redaction = sqls().find((sql) => /UPDATE user_activity_log\s+SET summary/.test(sql));
+      expect(redaction, 'user_activity_log.summary is never redacted').toBeDefined();
+      // NOT NULL, so it is replaced rather than nulled -- the row stays countable for
+      // aggregates without saying what the person logged.
+      expect(redaction).toContain('SET summary = event_type');
+    });
+
+    /**
+     * runTolerantly rolls back to its savepoint and swallows the listed codes. Tolerating a
+     * missing COLUMN here let the redaction fail silently while the delete went on to commit
+     * and return 204 with the email and name still in the logs.
+     */
+    it('does not tolerate a missing column on a privacy statement', async () => {
+      const { client } = recordingClient();
+      const undefinedColumn = Object.assign(new Error('column does not exist'), { code: '42703' });
+      let seenRedaction = false;
+      (client.query as any).mockImplementation(async (sql: string) => {
+        if (/UPDATE (app_logs|user_activity_log)/.test(sql)) {
+          seenRedaction = true;
+          throw undefinedColumn;
+        }
+        if (/^SELECT email FROM users/.test(sql)) return { rowCount: 1, rows: [{ email: USER_EMAIL }] };
+        return { rowCount: 1, rows: [{ id: USER_ID }] };
+      });
+
+      await expect(deleteWithOwnedData(USER_ID, client)).rejects.toThrow(/column does not exist/);
+      expect(seenRedaction, 'no redaction statement ran').toBe(true);
+    });
+
     it('runs both redactions before user_id is set to NULL, or they would match no rows', async () => {
       const { client, sqls } = recordingClient();
 

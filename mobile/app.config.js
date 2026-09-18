@@ -107,6 +107,13 @@ export default ({ config }) => ({
     infoPlist: {
       NSSpeechRecognitionUsageDescription: SPEECH_RECOGNITION_PERMISSION,
       NSMicrophoneUsageDescription: MICROPHONE_PERMISSION,
+      // Export-compliance declaration. Without it App Store Connect asks the encryption
+      // question on every single submission and holds the build until it is answered.
+      // `false` is the accurate answer here: the app ships no cryptography of its own --
+      // grep finds no crypto/cipher use in `mobile/src` -- and only relies on the OS's
+      // standard HTTPS and the Keychain via expo-secure-store, both of which are exempt.
+      // Revisit this if custom encryption is ever added.
+      ITSAppUsesNonExemptEncryption: false,
     },
     privacyManifests: PRIVACY_MANIFESTS,
   },

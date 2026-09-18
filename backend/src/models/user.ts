@@ -307,6 +307,23 @@ const PII_REDACTION_STATEMENTS: RedactionStatement[] = [
       AND (user_id = $1 OR payload->>'userId' = $2 OR lower(payload->>'email') = lower($3))`,
     params: (userId, email) => [userId, userId, email],
   },
+  {
+    // `summary` is free text the user wrote, not a structured field: the consumer builds it
+    // as `Logged food entry: ${p.name}` / `Logged workout: ${p.title}`
+    // (events/consumers/userActivityLog.ts), so a deleted account's food and workout names
+    // survive in plain text in the exact table the statement above exists to clean. Stripping
+    // `payload.name` while leaving that summary also left the two disagreeing about the same
+    // row. The column is NOT NULL, so it is replaced with the event type rather than nulled --
+    // which keeps the row countable for aggregates without saying what the person logged.
+    // $1 the id as uuid, $2 the same id as text, $3 the email.
+    sql: `UPDATE user_activity_log
+      SET summary = event_type
+    WHERE summary IS DISTINCT FROM event_type
+      AND (user_id = $1
+           OR (jsonb_typeof(payload) = 'object'
+               AND (payload->>'userId' = $2 OR lower(payload->>'email') = lower($3))))`,
+    params: (userId, email) => [userId, userId, email],
+  },
 ];
 
 /** Exported for the placeholder/arity test only. */
@@ -378,8 +395,14 @@ export async function deleteWithOwnedData(userId: string, client: pg.PoolClient)
   if (existing.rowCount === 0) return false;
   const email: string = existing.rows[0].email ?? '';
 
+  // Deliberately NOT tolerant of MISSING_COLUMN, unlike the two loops below. A missing table
+  // means there is no PII there to redact, which is fine on a database predating it. A missing
+  // *column* means the table exists and our assumption about its shape is wrong -- and because
+  // runTolerantly rolls back to its savepoint, swallowing that would let the delete commit and
+  // return success with the email and name still sitting in the logs. Failing the whole
+  // transaction is the right outcome for the privacy-critical step.
   for (const { sql, params } of PII_REDACTION_STATEMENTS) {
-    await runTolerantly(client, sql, params(userId, email), [MISSING_TABLE, MISSING_COLUMN]);
+    await runTolerantly(client, sql, params(userId, email), [MISSING_TABLE]);
   }
   for (const sql of SET_NULL_STATEMENTS) {
     await runTolerantly(client, sql, [userId], [MISSING_TABLE, MISSING_COLUMN]);

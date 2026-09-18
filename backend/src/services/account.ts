@@ -107,6 +107,11 @@ export async function deleteAccount(options: DeleteAccountOptions): Promise<Dele
   try {
     filesDeleted = await deleteUserFiles(userId);
   } catch (err) {
+    // `deleteUserFiles` attempts the whole prefix and attaches the count it *did* delete to
+    // the error (services/storage.ts:120-121). Leaving this at 0 audited a partial sweep as
+    // having removed nothing, which is the opposite of what an operator re-running it needs.
+    const partial = (err as { deleted?: unknown }).deleted;
+    if (typeof partial === 'number') filesDeleted = partial;
     logger.error({ err, userId }, 'delete account: S3 sweep failed');
     // The prefix is in the message on purpose — with the user row gone it is the only thing
     // left to re-run the sweep from.
