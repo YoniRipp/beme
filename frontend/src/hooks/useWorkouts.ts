@@ -5,12 +5,13 @@ import { workoutsApi } from '@/features/body/api';
 import { apiWorkoutToWorkout } from '@/features/body/mappers';
 import { queryKeys } from '@/lib/queryClient';
 import { toLocalDateString } from '@/lib/dateRanges';
+import { updateCachedList } from '@/lib/cachedList';
 
 export function useWorkouts() {
   const queryClient = useQueryClient();
 
   const {
-    data: workouts = [],
+    data: workoutsData,
     isLoading: workoutsLoading,
     error: workoutsQueryError,
     refetch: refetchWorkoutsQuery,
@@ -19,9 +20,14 @@ export function useWorkouts() {
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const result = await workoutsApi.list();
-      return result.data.map(apiWorkoutToWorkout);
+      return { items: result.data.map(apiWorkoutToWorkout), truncated: result.hasMore };
     },
   });
+
+  const workouts = workoutsData?.items ?? [];
+  // The pager stops at a bound (packages/shared/src/api/pagination.ts) and reports it. This
+  // hook used to drop that, so a clipped history rendered as a complete one.
+  const workoutsTruncated = workoutsData?.truncated ?? false;
 
   const workoutsError = workoutsQueryError
     ? (workoutsQueryError instanceof Error ? workoutsQueryError.message : 'Could not load workouts. Please try again.')
@@ -43,8 +49,8 @@ export function useWorkouts() {
         completed: workout.completed,
       }),
     onSuccess: (created) => {
-      queryClient.setQueryData(queryKeys.workouts, (prev: Workout[] | undefined) =>
-        prev ? [...prev, apiWorkoutToWorkout(created)] : [apiWorkoutToWorkout(created)]
+      updateCachedList<Workout>(queryClient, queryKeys.workouts, (prev) =>
+        [...prev, apiWorkoutToWorkout(created)]
       );
     },
   });
@@ -62,8 +68,8 @@ export function useWorkouts() {
       return workoutsApi.update(id, body);
     },
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.workouts, (prev: Workout[] | undefined) =>
-        prev ? prev.map((w) => (w.id === updated.id ? apiWorkoutToWorkout(updated) : w)) : [apiWorkoutToWorkout(updated)]
+      updateCachedList<Workout>(queryClient, queryKeys.workouts, (prev) =>
+        prev.map((w) => (w.id === updated.id ? apiWorkoutToWorkout(updated) : w))
       );
     },
   });
@@ -71,8 +77,8 @@ export function useWorkouts() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => workoutsApi.delete(id),
     onSuccess: (_, id) => {
-      queryClient.setQueryData(queryKeys.workouts, (prev: Workout[] | undefined) =>
-        prev ? prev.filter((w) => w.id !== id) : []
+      updateCachedList<Workout>(queryClient, queryKeys.workouts, (prev) =>
+        prev.filter((w) => w.id !== id)
       );
     },
   });
@@ -109,6 +115,7 @@ export function useWorkouts() {
     workouts,
     workoutsLoading,
     workoutsError,
+    workoutsTruncated,
     refetchWorkouts,
     addWorkout,
     updateWorkout,

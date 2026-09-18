@@ -11,6 +11,7 @@ import { getPeriodRange, parseLocalDateString, toLocalDateString } from '../lib/
 import { SearchBar } from '../components/shared/SearchBar';
 import { LoadingView } from '../components/shared/LoadingView';
 import { ErrorNotice } from '../components/shared/ErrorNotice';
+import { TruncationNotice } from '../components/shared/TruncationNotice';
 import { EmptyState } from '../components/shared/EmptyState';
 import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { MobileScreen } from '../components/shared/MobileScreen';
@@ -300,7 +301,7 @@ export function BodyScreen() {
     },
   }));
   const navigation = useNavigation<any>();
-  const { workouts, workoutsLoading, workoutsError, refetchWorkouts, deleteWorkout, toggleWorkoutCompleted } =
+  const { workouts, workoutsLoading, workoutsError, workoutsTruncated, refetchWorkouts, deleteWorkout, toggleWorkoutCompleted } =
     useWorkouts();
   const { goals, goalsLoading } = useGoals();
   const [search, setSearch] = useState('');
@@ -402,6 +403,7 @@ export function BodyScreen() {
       onRefresh={refetchWorkouts}
     >
       <ErrorNotice message={workoutsError} />
+      <TruncationNotice truncated={workoutsTruncated} />
       <Card style={styles.goalCard}>
         <View style={styles.goalTopRow}>
           <View>

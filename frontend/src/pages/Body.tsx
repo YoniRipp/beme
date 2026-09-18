@@ -5,6 +5,7 @@ import { WorkoutCard } from '@/components/body/WorkoutCard';
 import { WorkoutModal } from '@/components/body/WorkoutModal';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
+import { TruncationNotice } from '@/components/shared/TruncationNotice';
 import { SearchBar } from '@/components/shared/SearchBar';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
@@ -42,7 +43,7 @@ function groupWorkoutsByDate(workouts: Workout[], ascending = false): { date: st
 }
 
 export function Body() {
-  const { workouts, workoutsLoading, workoutsError, addWorkout, updateWorkout, deleteWorkout, toggleWorkoutCompleted } = useWorkouts();
+  const { workouts, workoutsLoading, workoutsError, workoutsTruncated, addWorkout, updateWorkout, deleteWorkout, toggleWorkoutCompleted } = useWorkouts();
   const [modalOpen, setModalOpen] = useState(false);
   // Hold the id, not the object. The logger persists through the react-query cache, so a
   // snapshot taken at handleEdit goes stale the moment a set is logged — and the editor
@@ -204,6 +205,7 @@ export function Body() {
           </div>
         </div>
         <ContentWithLoading loading={workoutsLoading} loadingText="Loading workouts..." error={workoutsError}>
+          <TruncationNotice truncated={workoutsTruncated} />
           <div className="space-y-8">
             <Card className="p-4">
               <div className="flex justify-between items-start mb-4">

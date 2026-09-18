@@ -16,6 +16,7 @@ import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { TruncationNotice } from '@/components/shared/TruncationNotice';
 import { AddAnotherCard } from '@/components/shared/AddAnotherCard';
 import { PeriodSelector } from '@/components/shared/PeriodSelector';
 import { Moon, Trash2, Pencil, ChevronDown, ClipboardList, Copy, UtensilsCrossed } from 'lucide-react';
@@ -149,7 +150,7 @@ function CollapsibleGroup({
 }
 
 export function Energy() {
-  const { checkIns, foodEntries, energyLoading, addCheckIn, updateCheckIn, deleteCheckIn, addFoodEntry, updateFoodEntry, deleteFoodEntry, addFoodEntriesBatch, duplicateDay } = useEnergy();
+  const { checkIns, foodEntries, energyLoading, energyError, energyTruncated, addCheckIn, updateCheckIn, deleteCheckIn, addFoodEntry, updateFoodEntry, deleteFoodEntry, addFoodEntriesBatch, duplicateDay } = useEnergy();
   // Same resolver Home uses, so the two rings can never print different targets again.
   const { targets, saveDailyTargets } = useDailyTargets();
   const [sleepModalOpen, setSleepModalOpen] = useState(false);
@@ -351,7 +352,8 @@ export function Energy() {
 
   return (
     <Page>
-      <ContentWithLoading loading={energyLoading} loadingText="Loading energy...">
+      <ContentWithLoading loading={energyLoading} loadingText="Loading energy..." error={energyError}>
+        <TruncationNotice truncated={energyTruncated} />
         <div className="space-y-6">
           <PageHeader
             kicker="Energy"
@@ -470,13 +472,17 @@ export function Energy() {
                 ))}
               </div>
             ) : periodFoodEntries.length === 0 ? (
-              <EmptyState
-                icon={UtensilsCrossed}
-                title="Add your first food entry"
-                description="Log what you ate to start tracking calories and macros."
-                actionLabel="Log food"
-                onAction={() => handleAddFood()}
-              />
+              // An error is not an empty account -- with no cached rows this told a user with
+              // a full history to "add your first food entry". Same rule as listViewState.
+              energyError ? null : (
+                <EmptyState
+                  icon={UtensilsCrossed}
+                  title="Add your first food entry"
+                  description="Log what you ate to start tracking calories and macros."
+                  actionLabel="Log food"
+                  onAction={() => handleAddFood()}
+                />
+              )
             ) : (
               <div className="space-y-4">
                 <Card className="overflow-hidden divide-y divide-border">

@@ -8,6 +8,7 @@ import {
 } from '@/features/energy/mappers';
 import { queryKeys } from '@/lib/queryClient';
 import { toLocalDateString } from '@/lib/dateRanges';
+import { updateCachedList } from '@/lib/cachedList';
 
 export function useEnergy() {
   const queryClient = useQueryClient();
@@ -17,7 +18,7 @@ export function useEnergy() {
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const result = await dailyCheckInsApi.list();
-      return result.data.map(apiCheckInToDailyCheckIn);
+      return { items: result.data.map(apiCheckInToDailyCheckIn), truncated: result.hasMore };
     },
   });
 
@@ -26,12 +27,17 @@ export function useEnergy() {
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const result = await foodEntriesApi.list();
-      return result.data.map(apiFoodEntryToFoodEntry);
+      return { items: result.data.map(apiFoodEntryToFoodEntry), truncated: result.hasMore };
     },
   });
 
-  const checkIns = checkInsQuery.data ?? [];
-  const foodEntries = foodEntriesQuery.data ?? [];
+  const checkIns = checkInsQuery.data?.items ?? [];
+  const foodEntries = foodEntriesQuery.data?.items ?? [];
+  // The pager stops at a bound (packages/shared/src/api/pagination.ts) and reports it. Both
+  // flags are surfaced together because a page mixing the two datasets shows a partial
+  // history if EITHER was cut short.
+  const energyTruncated =
+    (checkInsQuery.data?.truncated ?? false) || (foodEntriesQuery.data?.truncated ?? false);
   const energyLoading = checkInsQuery.isLoading || foodEntriesQuery.isLoading;
   const energyError =
     checkInsQuery.error
@@ -51,8 +57,8 @@ export function useEnergy() {
         sleepHours: checkIn.sleepHours,
       }),
     onSuccess: (created) => {
-      queryClient.setQueryData(queryKeys.checkIns, (prev: DailyCheckIn[] | undefined) =>
-        prev ? [...prev, apiCheckInToDailyCheckIn(created)] : [apiCheckInToDailyCheckIn(created)]
+      updateCachedList<DailyCheckIn>(queryClient, queryKeys.checkIns, (prev) =>
+        [...prev, apiCheckInToDailyCheckIn(created)]
       );
     },
   });
@@ -65,8 +71,8 @@ export function useEnergy() {
       return dailyCheckInsApi.update(id, body);
     },
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.checkIns, (prev: DailyCheckIn[] | undefined) =>
-        prev ? prev.map((c) => (c.id === updated.id ? apiCheckInToDailyCheckIn(updated) : c)) : [apiCheckInToDailyCheckIn(updated)]
+      updateCachedList<DailyCheckIn>(queryClient, queryKeys.checkIns, (prev) =>
+        prev.map((c) => (c.id === updated.id ? apiCheckInToDailyCheckIn(updated) : c))
       );
     },
   });
@@ -74,8 +80,8 @@ export function useEnergy() {
   const deleteCheckInMutation = useMutation({
     mutationFn: (id: string) => dailyCheckInsApi.delete(id),
     onSuccess: (_, id) => {
-      queryClient.setQueryData(queryKeys.checkIns, (prev: DailyCheckIn[] | undefined) =>
-        prev ? prev.filter((c) => c.id !== id) : []
+      updateCachedList<DailyCheckIn>(queryClient, queryKeys.checkIns, (prev) =>
+        prev.filter((c) => c.id !== id)
       );
     },
   });
@@ -97,8 +103,8 @@ export function useEnergy() {
         ...(entry.mealType && { mealType: entry.mealType }),
       }),
     onSuccess: (created) => {
-      queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
-        prev ? [...prev, apiFoodEntryToFoodEntry(created)] : [apiFoodEntryToFoodEntry(created)]
+      updateCachedList<FoodEntry>(queryClient, queryKeys.foodEntries, (prev) =>
+        [...prev, apiFoodEntryToFoodEntry(created)]
       );
     },
   });
@@ -121,8 +127,8 @@ export function useEnergy() {
       return foodEntriesApi.update(id, body);
     },
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
-        prev ? prev.map((e) => (e.id === updated.id ? apiFoodEntryToFoodEntry(updated) : e)) : [apiFoodEntryToFoodEntry(updated)]
+      updateCachedList<FoodEntry>(queryClient, queryKeys.foodEntries, (prev) =>
+        prev.map((e) => (e.id === updated.id ? apiFoodEntryToFoodEntry(updated) : e))
       );
     },
   });
@@ -130,8 +136,8 @@ export function useEnergy() {
   const deleteFoodEntryMutation = useMutation({
     mutationFn: (id: string) => foodEntriesApi.delete(id),
     onSuccess: (_, id) => {
-      queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
-        prev ? prev.filter((e) => e.id !== id) : []
+      updateCachedList<FoodEntry>(queryClient, queryKeys.foodEntries, (prev) =>
+        prev.filter((e) => e.id !== id)
       );
     },
   });
@@ -155,8 +161,8 @@ export function useEnergy() {
         })),
       }),
     onSuccess: (created) => {
-      queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
-        prev ? [...prev, ...created.map(apiFoodEntryToFoodEntry)] : created.map(apiFoodEntryToFoodEntry)
+      updateCachedList<FoodEntry>(queryClient, queryKeys.foodEntries, (prev) =>
+        [...prev, ...created.map(apiFoodEntryToFoodEntry)]
       );
     },
   });
@@ -165,8 +171,8 @@ export function useEnergy() {
     mutationFn: ({ sourceDate, targetDate }: { sourceDate: string; targetDate: string }) =>
       foodEntriesApi.duplicateDay(sourceDate, targetDate),
     onSuccess: (created) => {
-      queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
-        prev ? [...prev, ...created.map(apiFoodEntryToFoodEntry)] : created.map(apiFoodEntryToFoodEntry)
+      updateCachedList<FoodEntry>(queryClient, queryKeys.foodEntries, (prev) =>
+        [...prev, ...created.map(apiFoodEntryToFoodEntry)]
       );
     },
   });
@@ -228,6 +234,7 @@ export function useEnergy() {
     foodEntries,
     energyLoading,
     energyError,
+    energyTruncated,
     refetchEnergy,
     addCheckIn,
     updateCheckIn,

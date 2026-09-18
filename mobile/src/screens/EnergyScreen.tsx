@@ -12,6 +12,7 @@ import { EmptyState } from '../components/shared/EmptyState';
 import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { ErrorNotice } from '../components/shared/ErrorNotice';
+import { TruncationNotice } from '../components/shared/TruncationNotice';
 import { MobileFoodCard } from '../components/shared/MobileFoodCard';
 import { MetricCard } from '../components/shared/MetricCard';
 import { fonts, radius, spacing } from '../theme';
@@ -148,7 +149,7 @@ export function EnergyScreen() {
       flexDirection: 'row',
     },
   }));
-  const { foodEntries, checkIns, energyLoading, energyError, refetchEnergy, deleteFoodEntry, deleteCheckIn } =
+  const { foodEntries, checkIns, energyLoading, energyError, energyTruncated, refetchEnergy, deleteFoodEntry, deleteCheckIn } =
     useEnergy();
   const [tab, setTab] = useState('food');
   const [period, setPeriod] = useState<PeriodKey>('daily');
@@ -209,6 +210,7 @@ export function EnergyScreen() {
           failed fetch renders `[]`, so "No food entries" is what a user sees when the request
           500s -- and the empty states below are reachable either way. */}
       <ErrorNotice message={energyError} />
+      <TruncationNotice truncated={energyTruncated} />
       <SegmentedButtons
         value={tab}
         onValueChange={setTab}
