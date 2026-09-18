@@ -294,10 +294,10 @@ export function Terms() {
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         <a
-          href="mailto:legal@trackvibe.app"
+          href="mailto:legal@trackvibe.org"
           className="text-primary underline hover:no-underline"
         >
-          legal@trackvibe.app
+          legal@trackvibe.org
         </a>
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">

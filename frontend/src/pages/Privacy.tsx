@@ -351,10 +351,10 @@ export function Privacy() {
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
         <strong>Email:</strong>{" "}
         <a
-          href="mailto:privacy@trackvibe.app"
+          href="mailto:privacy@trackvibe.org"
           className="text-primary underline hover:no-underline"
         >
-          privacy@trackvibe.app
+          privacy@trackvibe.org
         </a>
       </p>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">

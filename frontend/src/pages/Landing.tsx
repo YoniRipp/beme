@@ -532,8 +532,8 @@ export function Landing() {
                 <Mail className="mt-1 h-5 w-5 text-primary" aria-hidden="true" />
                 <div>
                   <p className="font-medium">Email us</p>
-                  <a href="mailto:support@trackvibe.app" className="text-sm text-primary hover:underline">
-                    support@trackvibe.app
+                  <a href="mailto:support@trackvibe.org" className="text-sm text-primary hover:underline">
+                    support@trackvibe.org
                   </a>
                 </div>
               </div>
@@ -576,7 +576,7 @@ export function Landing() {
                     const message = (document.getElementById('contact-message') as HTMLTextAreaElement)?.value || '';
                     const subject = encodeURIComponent(`TrackVibe Contact: Message from ${name || 'Website Visitor'}`);
                     const body = encodeURIComponent(`From: ${name}\nEmail: ${email}\n\n${message}`);
-                    window.location.href = `mailto:support@trackvibe.app?subject=${subject}&body=${body}`;
+                    window.location.href = `mailto:support@trackvibe.org?subject=${subject}&body=${body}`;
                   }}
                 >
                   Send Message
