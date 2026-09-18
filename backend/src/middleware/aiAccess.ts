@@ -12,7 +12,8 @@
  *
  * Rules for both:
  * - Pro users: unlimited access.
- * - Free users: up to FREE_TIER_LIMIT (10) AI calls per calendar month.
+ * - Every user: up to `config.aiMonthlyLimit` AI calls per calendar month. There is no paid
+ * tier; the cap bounds Gemini spend per account, it does not sell anything.
  * - When Lemon Squeezy is not configured, all users are allowed (dev convenience).
  *
  * If you add a route behind either of these, add it to the classification table in

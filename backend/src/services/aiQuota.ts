@@ -1,12 +1,29 @@
 /**
- * AI quota management for free-tier users.
- * Pro users have unlimited access.
- * Free users get FREE_TIER_LIMIT calls per calendar month.
+ * Per-user AI call quota.
+ *
+ * TrackVibe is free and has no paid tier, so this is NOT a paywall — it is the ceiling on
+ * Gemini spend any single account can cause. Every user gets `config.aiMonthlyLimit` calls
+ * per calendar month across chat, voice, insights and food search.
+ *
+ * This used to be inert in production. Both entry points opened with
+ * `if (!config.lemonSqueezyApiKey) return { allowed: true, remaining: -1, isPro: true }`,
+ * labelled "dev mode" — but no payment provider is configured, so the branch was always
+ * taken and every user had unlimited calls on the owner's bill. Not having a payment
+ * provider is exactly what disabled the cost control.
+ *
+ * The `PRO_STATUSES` path is kept: the subscription code is dormant rather than deleted, and
+ * if a row is ever marked `pro` it should still mean unlimited.
  */
 import { getPool } from '../db/pool.js';
 import { config } from '../config/index.js';
 
-export const FREE_TIER_LIMIT = 10;
+/**
+ * The monthly allowance. Reads config so it can be tuned by env without a code deploy.
+ * A function rather than a constant because `config` is resolved at import time in tests.
+ */
+export function monthlyLimit(): number {
+  return config.aiMonthlyLimit;
+}
 
 const PRO_STATUSES = ['pro'];
 
@@ -24,15 +41,10 @@ export interface QuotaResult {
 /**
  * Check whether the user can make an AI call and consume one unit if allowed.
  * - Pro users: always allowed, remaining = -1 (unlimited).
- * - Free users: allowed if ai_calls_used < FREE_TIER_LIMIT; atomically increments.
+ * - Free users: allowed if ai_calls_used < the monthly limit; atomically increments.
  * - Month rollover is handled inline (no cron needed).
  */
 export async function tryConsumeAiCall(userId: string): Promise<QuotaResult> {
-  // Dev mode: skip when Lemon Squeezy not configured
-  if (!config.lemonSqueezyApiKey) {
-    return { allowed: true, remaining: -1, isPro: true };
-  }
-
   const pool = getPool();
   const month = currentMonth();
 
@@ -61,7 +73,7 @@ export async function tryConsumeAiCall(userId: string): Promise<QuotaResult> {
          OR ai_calls_used < $3
        )
      RETURNING ai_calls_used`,
-    [userId, month, FREE_TIER_LIMIT],
+    [userId, month, monthlyLimit()],
   );
 
   if (rows.length === 0) {
@@ -70,7 +82,7 @@ export async function tryConsumeAiCall(userId: string): Promise<QuotaResult> {
   }
 
   const used = rows[0].ai_calls_used as number;
-  return { allowed: true, remaining: FREE_TIER_LIMIT - used, isPro: false };
+  return { allowed: true, remaining: monthlyLimit() - used, isPro: false };
 }
 
 /**
@@ -80,10 +92,6 @@ export async function tryConsumeAiCall(userId: string): Promise<QuotaResult> {
  * failed attempts don't burn a free-tier call.
  */
 export async function checkAiQuota(userId: string): Promise<QuotaResult> {
-  if (!config.lemonSqueezyApiKey) {
-    return { allowed: true, remaining: -1, isPro: true };
-  }
-
   const pool = getPool();
   const { rows } = await pool.query(
     'SELECT subscription_status, ai_calls_used, ai_calls_reset_month FROM users WHERE id = $1',
@@ -96,7 +104,7 @@ export async function checkAiQuota(userId: string): Promise<QuotaResult> {
   }
 
   const used = row?.ai_calls_reset_month === currentMonth() ? Number(row?.ai_calls_used || 0) : 0;
-  const remaining = Math.max(0, FREE_TIER_LIMIT - used);
+  const remaining = Math.max(0, monthlyLimit() - used);
   return { allowed: remaining > 0, remaining, isPro: false };
 }
 
@@ -115,10 +123,10 @@ export async function getAiCallsRemaining(userId: string, subscriptionStatus?: s
     [userId],
   );
 
-  if (rows.length === 0) return FREE_TIER_LIMIT;
+  if (rows.length === 0) return monthlyLimit();
 
   const row = rows[0];
-  if (row.ai_calls_reset_month !== month) return FREE_TIER_LIMIT;
+  if (row.ai_calls_reset_month !== month) return monthlyLimit();
 
-  return Math.max(0, FREE_TIER_LIMIT - (row.ai_calls_used || 0));
+  return Math.max(0, monthlyLimit() - (row.ai_calls_used || 0));
 }

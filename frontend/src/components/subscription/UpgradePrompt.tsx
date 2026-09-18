@@ -32,6 +32,15 @@ export function UpgradePrompt({ feature, description, compact, quotaExhausted }:
     );
   }
 
+  /**
+   * The exhausted-allowance state, and the only branch of this component that production
+   * reaches. It deliberately offers NOTHING to buy.
+   *
+   * TrackVibe is free and has no payment provider configured, so `subscribe()` would call
+   * `createCheckout`, fail, and toast "Could not start checkout. Please try again." — a dead
+   * end presented as a purchase. The monthly allowance is a cost ceiling on AI calls, not a
+   * paywall, so the honest thing to say is when it comes back.
+   */
   if (quotaExhausted) {
     return (
       <Card className="border-info/30 bg-info/5">
@@ -41,14 +50,10 @@ export function UpgradePrompt({ feature, description, compact, quotaExhausted }:
           </div>
           <CardTitle className="text-lg">{feature}</CardTitle>
           <CardDescription>
-            {description || "You've used all your free AI calls this month. Exciting updates coming soon!"}
+            {description ||
+              "You've used this month's AI allowance. It resets at the start of next month — everything else in the app keeps working."}
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-center">
-          <Button variant="outline" onClick={subscribe} className="px-8">
-            Upgrade to Pro for unlimited access
-          </Button>
-        </CardContent>
       </Card>
     );
   }

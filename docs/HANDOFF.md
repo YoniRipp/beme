@@ -531,10 +531,31 @@ added on 2026-09-17, found while auditing shared logic for drift between the cli
 1. **`RESEND_API_KEY` is unset in Railway.** `sendMail` is a no-op, so **password reset
    emails are never sent**. #309 built the page; the link still does not arrive. This is
    broken in production right now.
-2. **The AI quota gate is bypassed in production.** `backend/src/services/aiQuota.ts:31-34`
-   returns `{ allowed: true, remaining: -1, isPro: true }` whenever `config.lemonSqueezyApiKey`
-   is unset — which it is, no payment provider is configured. The free tier is unenforced for
-   **everyone** and Gemini spend is uncapped. Decide the gate.
+
+   **It matters more than it looks.** The Expo app is email+password only — there is no
+   social button on `LoginScreen` at all — and there is no admin password-reset path in the
+   backend. So a user who forgets their password today has no recovery route whatsoever.
+
+   **Two settings, not one.** Resend's free plan (3,000/month, 100/day, one domain, no card)
+   is ample for resets and the code already uses Resend, so no code change is needed. But
+   `backend/src/lib/email.ts:14` defaults to `onboarding@resend.dev`, Resend's shared sandbox
+   sender, which **only delivers to the Resend account's own address**. An API key alone
+   produces a reset flow that works when you test it on yourself and silently reaches nobody
+   else. Verify a domain (`trackvibe.app` is already referenced in `mobile/app.config.js`)
+   and set **both** `RESEND_API_KEY` and `RESEND_FROM`.
+2. ~~**The AI quota gate is bypassed in production.**~~ **Fixed.** Both entry points opened
+   with `if (!config.lemonSqueezyApiKey) return { allowed: true, remaining: -1, isPro: true }`,
+   labelled "dev mode" — but no payment provider is configured, so the branch was always taken
+   and Gemini spend had no ceiling. The owner's decision was: keep the product free, but cap
+   the cost. Both bypasses are gone, the allowance is `AI_MONTHLY_LIMIT` (default **100/month**
+   per user across chat, voice, insights and food search), and `aiQuota.ts` now has direct
+   tests — it had none, which is why the bypass survived.
+
+   The exhausted-allowance UI changed with it: it used to offer "Upgrade to Pro — $7.99/mo",
+   which called `createCheckout`, failed for want of a payment provider, and toasted "Could
+   not start checkout". It now states when the allowance resets and offers nothing to buy.
+   The Lemon Squeezy code is left dormant rather than deleted, and a row marked `pro` still
+   means unlimited.
 3. **`eas login` and `eas init`**, then paste the printed `extra.eas.projectId` into
    `mobile/app.config.js` by hand, and `eas env:create` for `EXPO_PUBLIC_API_URL`. Still
    absent — `app.config.js:87-88` only spreads `config.extra` so that a value written by
@@ -971,10 +992,12 @@ input and only the abbreviated form parsed before.
 - #5 (password-reset revocation) — needs a migration.
 - #6 (blocklist fail-open) — see above; lower the token TTL instead.
 - #12 for the bulk path — see above.
-- The WhatsApp webhook still has **no AI quota gate**. Now that it is authenticated only Meta
-  can drive it, but `handleWebhook` is still an unbounded `entry[] -> changes[] -> messages[]`
-  loop with one Gemini call per element. Who pays for a WhatsApp user's AI calls is a product
-  decision.
+- ~~The WhatsApp webhook still has no AI quota gate.~~ **Removed entirely.** The owner
+  confirmed there is no use for it, so the route, service, config keys and env entries are
+  deleted rather than left dormant — that takes the unbounded
+  `entry[] -> changes[] -> messages[]` Gemini fan-out and the outbound-send surface with it,
+  and drops the `WHATSAPP_APP_SECRET` deploy prerequisite #364 introduced. Nothing else
+  imported the service; it only consumed shared ones.
 - ~~The pager truncation finding above~~ — **fixed.** `listAll()` returns `{ items, truncated }` on Expo, the web hooks keep `result.hasMore`, and Energy/Body/Insights say so on both clients. `TruncationNotice` is deliberately not an error: every row shown is real, there is just more of it. The cached shape changed to carry the flag (a `getQueryData` read does not re-render), so the optimistic updates go through `updateCachedList`, which cannot drop it while adding a row.
 
 1. **`POST /api/auth/google` accepts any Google OAuth access token — audience is never
