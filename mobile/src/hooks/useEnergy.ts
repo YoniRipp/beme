@@ -5,6 +5,7 @@ import { foodApi, dailyCheckInsApi } from '../core/api/food';
 import { apiCheckInToDailyCheckIn, apiFoodEntryToFoodEntry } from '../features/energy/mappers';
 import { queryKeys } from '../lib/queryKeys';
 import { toLocalDateString } from '../lib/dateRanges';
+import { type CachedList, updateCachedList } from '../lib/cachedList';
 
 export function useEnergy() {
   const queryClient = useQueryClient();
@@ -16,8 +17,8 @@ export function useEnergy() {
     // Goals screen mixed one-minute-old food data with five-minute-old goals.
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
-      const checkIns = await dailyCheckInsApi.listAll();
-      return checkIns.map(apiCheckInToDailyCheckIn);
+      const { items, truncated } = await dailyCheckInsApi.listAll();
+      return { items: items.map(apiCheckInToDailyCheckIn), truncated };
     },
   });
 
@@ -25,13 +26,18 @@ export function useEnergy() {
     queryKey: queryKeys.foodEntries,
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
-      const entries = await foodApi.listAll();
-      return entries.map(apiFoodEntryToFoodEntry);
+      const { items, truncated } = await foodApi.listAll();
+      return { items: items.map(apiFoodEntryToFoodEntry), truncated };
     },
   });
 
-  const checkIns = checkInsQuery.data ?? [];
-  const foodEntries = foodEntriesQuery.data ?? [];
+  const checkIns = checkInsQuery.data?.items ?? [];
+  const foodEntries = foodEntriesQuery.data?.items ?? [];
+  // The pager stops at a bound (see packages/shared/src/api/pagination.ts) and says so. Both
+  // flags are surfaced together because a screen mixing the two datasets is showing a partial
+  // history if EITHER was cut short.
+  const energyTruncated =
+    (checkInsQuery.data?.truncated ?? false) || (foodEntriesQuery.data?.truncated ?? false);
   const energyLoading = checkInsQuery.isLoading || foodEntriesQuery.isLoading;
   const energyError =
     checkInsQuery.error
@@ -51,8 +57,8 @@ export function useEnergy() {
         sleepHours: checkIn.sleepHours,
       }),
     onSuccess: (created) => {
-      queryClient.setQueryData(queryKeys.checkIns, (prev: DailyCheckIn[] | undefined) =>
-        prev ? [...prev, apiCheckInToDailyCheckIn(created)] : [apiCheckInToDailyCheckIn(created)]
+      updateCachedList<DailyCheckIn>(queryClient, queryKeys.checkIns, (prev) =>
+        [...prev, apiCheckInToDailyCheckIn(created)]
       );
     },
   });
@@ -65,8 +71,8 @@ export function useEnergy() {
       return dailyCheckInsApi.update(id, body);
     },
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.checkIns, (prev: DailyCheckIn[] | undefined) =>
-        prev ? prev.map((c) => (c.id === updated.id ? apiCheckInToDailyCheckIn(updated) : c)) : [apiCheckInToDailyCheckIn(updated)]
+      updateCachedList<DailyCheckIn>(queryClient, queryKeys.checkIns, (prev) =>
+        prev.map((c) => (c.id === updated.id ? apiCheckInToDailyCheckIn(updated) : c))
       );
     },
   });
@@ -74,8 +80,8 @@ export function useEnergy() {
   const deleteCheckInMutation = useMutation({
     mutationFn: (id: string) => dailyCheckInsApi.delete(id),
     onSuccess: (_, id) => {
-      queryClient.setQueryData(queryKeys.checkIns, (prev: DailyCheckIn[] | undefined) =>
-        prev ? prev.filter((c) => c.id !== id) : []
+      updateCachedList<DailyCheckIn>(queryClient, queryKeys.checkIns, (prev) =>
+        prev.filter((c) => c.id !== id)
       );
     },
   });
@@ -97,8 +103,8 @@ export function useEnergy() {
         ...(entry.mealType && { mealType: entry.mealType }),
       }),
     onSuccess: (created) => {
-      queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
-        prev ? [...prev, apiFoodEntryToFoodEntry(created)] : [apiFoodEntryToFoodEntry(created)]
+      updateCachedList<FoodEntry>(queryClient, queryKeys.foodEntries, (prev) =>
+        [...prev, apiFoodEntryToFoodEntry(created)]
       );
     },
   });
@@ -121,8 +127,8 @@ export function useEnergy() {
       return foodApi.update(id, body);
     },
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
-        prev ? prev.map((e) => (e.id === updated.id ? apiFoodEntryToFoodEntry(updated) : e)) : [apiFoodEntryToFoodEntry(updated)]
+      updateCachedList<FoodEntry>(queryClient, queryKeys.foodEntries, (prev) =>
+        prev.map((e) => (e.id === updated.id ? apiFoodEntryToFoodEntry(updated) : e))
       );
     },
   });
@@ -130,8 +136,8 @@ export function useEnergy() {
   const deleteFoodEntryMutation = useMutation({
     mutationFn: (id: string) => foodApi.delete(id),
     onSuccess: (_, id) => {
-      queryClient.setQueryData(queryKeys.foodEntries, (prev: FoodEntry[] | undefined) =>
-        prev ? prev.filter((e) => e.id !== id) : []
+      updateCachedList<FoodEntry>(queryClient, queryKeys.foodEntries, (prev) =>
+        prev.filter((e) => e.id !== id)
       );
     },
   });
@@ -182,6 +188,7 @@ export function useEnergy() {
     foodEntries,
     energyLoading,
     energyError,
+    energyTruncated,
     refetchEnergy,
     addCheckIn,
     updateCheckIn,

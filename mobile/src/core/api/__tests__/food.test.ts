@@ -23,8 +23,24 @@ describe('foodApi.list', () => {
 
     const all = await foodApi.listAll();
 
-    expect(all).toHaveLength(250);
+    expect(all.items).toHaveLength(250);
+    expect(all.truncated).toBe(false);
     expect(mockRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports truncation when the pager stops before the end of the history', async () => {
+    mockRequest.mockResolvedValue({
+      data: new Array(200).fill({ id: 'x' }),
+      total: 1_000_000,
+      limit: 200,
+      offset: 0,
+      hasMore: true,
+    });
+
+    const all = await foodApi.listAll();
+
+    expect(all.truncated).toBe(true);
+    expect(all.items).toHaveLength(5000); // PAGE_LIMIT * MAX_PAGES
   });
 });
 
@@ -41,7 +57,8 @@ describe('dailyCheckInsApi.listAll', () => {
 
     const all = await dailyCheckInsApi.listAll();
 
-    expect(all).toHaveLength(250);
+    expect(all.items).toHaveLength(250);
+    expect(all.truncated).toBe(false);
     expect(mockRequest).toHaveBeenCalledTimes(2);
   });
 });

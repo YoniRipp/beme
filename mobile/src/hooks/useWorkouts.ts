@@ -4,6 +4,7 @@ import { Workout } from '../types/workout';
 import { workoutsApi } from '../core/api/workouts';
 import { apiWorkoutToWorkout, workoutToApiWorkout } from '../features/body/mappers';
 import { queryKeys } from '../lib/queryKeys';
+import { updateCachedList } from '../lib/cachedList';
 import { toLocalDateString } from '../lib/dateRanges';
 
 /**
@@ -30,7 +31,7 @@ export function useWorkouts() {
   const queryClient = useQueryClient();
 
   const {
-    data: workouts = [],
+    data: workoutsData,
     isLoading: workoutsLoading,
     error: workoutsQueryError,
     refetch: refetchWorkoutsQuery,
@@ -38,10 +39,15 @@ export function useWorkouts() {
     queryKey: queryKeys.workouts,
     staleTime: 2 * 60 * 1000, // explicit, matching frontend/src/hooks/useWorkouts.ts
     queryFn: async () => {
-      const workouts = await workoutsApi.listAll();
-      return workouts.map(apiWorkoutToWorkout);
+      const { items, truncated } = await workoutsApi.listAll();
+      return { items: items.map(apiWorkoutToWorkout), truncated };
     },
   });
+
+  const workouts = workoutsData?.items ?? [];
+  // The pager stops at a bound (packages/shared/src/api/pagination.ts) and reports it. Every
+  // caller used to discard that, so a clipped history rendered as a complete one.
+  const workoutsTruncated = workoutsData?.truncated ?? false;
 
   const workoutsError = workoutsQueryError
     ? (workoutsQueryError instanceof Error ? workoutsQueryError.message : 'Could not load workouts.')
@@ -54,8 +60,8 @@ export function useWorkouts() {
   const addMutation = useMutation({
     mutationFn: (workout: Omit<Workout, 'id'>) => workoutsApi.add(workoutToApiWorkout(workout)),
     onSuccess: (created) => {
-      queryClient.setQueryData(queryKeys.workouts, (prev: Workout[] | undefined) =>
-        prev ? [...prev, apiWorkoutToWorkout(created)] : [apiWorkoutToWorkout(created)]
+      updateCachedList<Workout>(queryClient, queryKeys.workouts, (prev) =>
+        [...prev, apiWorkoutToWorkout(created)]
       );
     },
   });
@@ -64,8 +70,8 @@ export function useWorkouts() {
     mutationFn: ({ id, updates }: { id: string; updates: Partial<Workout> }) =>
       workoutsApi.update(id, buildWorkoutUpdateBody(updates)),
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.workouts, (prev: Workout[] | undefined) =>
-        prev ? prev.map((w) => (w.id === updated.id ? apiWorkoutToWorkout(updated) : w)) : [apiWorkoutToWorkout(updated)]
+      updateCachedList<Workout>(queryClient, queryKeys.workouts, (prev) =>
+        prev.map((w) => (w.id === updated.id ? apiWorkoutToWorkout(updated) : w))
       );
     },
   });
@@ -73,8 +79,8 @@ export function useWorkouts() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => workoutsApi.delete(id),
     onSuccess: (_, id) => {
-      queryClient.setQueryData(queryKeys.workouts, (prev: Workout[] | undefined) =>
-        prev ? prev.filter((w) => w.id !== id) : []
+      updateCachedList<Workout>(queryClient, queryKeys.workouts, (prev) =>
+        prev.filter((w) => w.id !== id)
       );
     },
   });
@@ -117,6 +123,7 @@ export function useWorkouts() {
     workouts,
     workoutsLoading,
     workoutsError,
+    workoutsTruncated,
     refetchWorkouts,
     addWorkout,
     updateWorkout,

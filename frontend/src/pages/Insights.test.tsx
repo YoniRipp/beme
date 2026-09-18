@@ -120,4 +120,36 @@ it('displays workout frequency', async () => {
     await waitFor(() => expect(screen.getByText(/no patterns yet/i)).toBeInTheDocument());
     expect(screen.queryByRole('heading', { name: /fitness insights/i })).not.toBeInTheDocument();
   });
+
+  /**
+   * A failed fetch is not an empty account. This page dropped both hooks' errors entirely, so
+   * a user with years of history whose request failed was told they had logged nothing --
+   * the same defect #353 fixed on the Expo client and #364 fixed on the web Workouts page.
+   */
+  it('does not report an empty account when the request failed', async () => {
+    const { workoutsApi } = await import('@/features/body/api');
+    const { foodEntriesApi } = await import('@/features/energy/api');
+    vi.mocked(workoutsApi.list).mockRejectedValueOnce(new Error('Network down'));
+    vi.mocked(foodEntriesApi.list).mockRejectedValueOnce(new Error('Network down'));
+
+    render(<Insights />, { wrapper: freshWrapper() });
+
+    await waitFor(() => expect(screen.getByText(/network down/i)).toBeInTheDocument());
+    expect(screen.queryByText(/no patterns yet/i)).not.toBeInTheDocument();
+  });
+
+  /**
+   * The pager stops at MAX_PAGES x PAGE_LIMIT and reports it; this hook used to discard that,
+   * so every average and trend on this page described a clipped history as a complete one.
+   */
+  it('says so when the pager could not read the whole history', async () => {
+    const { workoutsApi } = await import('@/features/body/api');
+    const { foodEntriesApi } = await import('@/features/energy/api');
+    vi.mocked(workoutsApi.list).mockResolvedValueOnce({ data: [sampleWorkout], hasMore: true } as never);
+    vi.mocked(foodEntriesApi.list).mockResolvedValueOnce({ data: [sampleFood], hasMore: false } as never);
+
+    render(<Insights />, { wrapper: freshWrapper() });
+
+    await waitFor(() => expect(screen.getByTestId('truncation-notice')).toBeInTheDocument());
+  });
 });

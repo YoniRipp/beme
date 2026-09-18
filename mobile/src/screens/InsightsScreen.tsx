@@ -7,6 +7,7 @@ import { useEnergy } from '../hooks/useEnergy';
 import { LoadingView } from '../components/shared/LoadingView';
 import { EmptyState } from '../components/shared/EmptyState';
 import { ErrorNotice } from '../components/shared/ErrorNotice';
+import { TruncationNotice } from '../components/shared/TruncationNotice';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { insightsHaveData } from '../lib/insightsViewState';
 import {
@@ -41,8 +42,8 @@ export function InsightsScreen() {
     statValue: { fontFamily: fonts.bold, fontWeight: '700', color: colors.text },
     statLabel: { color: colors.textMuted, textAlign: 'center' },
   }));
-  const { workouts, workoutsLoading, workoutsError, refetchWorkouts } = useWorkouts();
-  const { foodEntries, checkIns, energyLoading, energyError, refetchEnergy } = useEnergy();
+  const { workouts, workoutsLoading, workoutsError, workoutsTruncated, refetchWorkouts } = useWorkouts();
+  const { foodEntries, checkIns, energyLoading, energyError, energyTruncated, refetchEnergy } = useEnergy();
   const loading = workoutsLoading || energyLoading;
 
   const refreshInsights = useCallback(
@@ -79,6 +80,9 @@ export function InsightsScreen() {
           returned them; without this a failed fetch renders empty charts and `--` stats, which
           reads as "you have no history" rather than "we could not load it". */}
       <ErrorNotice message={energyError ?? workoutsError} />
+      {/* Every stat on this screen is an average or a trend over the rows below. If the pager
+          clipped them, the numbers are real but they are not the user's whole history. */}
+      <TruncationNotice truncated={energyTruncated || workoutsTruncated} />
       {workouts.length > 0 && (
         <Card style={styles.card}>
           <Card.Content>

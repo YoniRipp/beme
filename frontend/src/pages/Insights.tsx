@@ -19,6 +19,7 @@ import { Page, PageHeader } from '@/components/ui/page';
 import { Card } from '@/components/ui/card';
 import { ContentWithLoading } from '@/components/shared/ContentWithLoading';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { TruncationNotice } from '@/components/shared/TruncationNotice';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -26,8 +27,8 @@ import { useNavigate } from 'react-router-dom';
 export function Insights() {
   const navigate = useNavigate();
   const { hasAiAccess } = useSubscription();
-  const { workouts, workoutsLoading } = useWorkouts();
-  const { foodEntries, checkIns, energyLoading } = useEnergy();
+  const { workouts, workoutsLoading, workoutsError, workoutsTruncated } = useWorkouts();
+  const { foodEntries, checkIns, energyLoading, energyError, energyTruncated } = useEnergy();
   const { weightEntries, weightLoading } = useWeight();
 
   const loading = workoutsLoading || energyLoading || weightLoading;
@@ -84,6 +85,7 @@ export function Insights() {
 
       <ContentWithLoading
         loading={loading}
+        error={energyError ?? workoutsError}
         skeleton={
           <div className="space-y-6">
             {[0, 1].map((i) => (
@@ -95,6 +97,9 @@ export function Insights() {
           </div>
         }
       >
+        <TruncationNotice truncated={energyTruncated || workoutsTruncated} />
+        {/* An error is not an empty account: with no cached rows this page used to tell a user
+            with years of history that they had logged nothing. Same rule as listViewState. */}
         {hasAnyData ? (
           <div className="space-y-6">
             <FitnessInsightsSection
@@ -109,7 +114,7 @@ export function Insights() {
               healthInsights={healthInsights}
             />
           </div>
-        ) : (
+        ) : energyError || workoutsError ? null : (
           <EmptyState
             icon={TrendingUp}
             title="No patterns yet"

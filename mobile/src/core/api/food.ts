@@ -1,5 +1,5 @@
 import { request } from './client';
-import { requestAllPages } from './pagination';
+import { listAllPages, type ListAllResult } from './pagination';
 import type { MealType, PaginatedResponse } from '../../types/api';
 
 export interface ApiFoodEntry {
@@ -34,10 +34,8 @@ export const foodApi = {
    * Used by totals and trend views that need the complete dataset. A view that genuinely
    * wants a single page should call `list()` directly instead.
    */
-  listAll: async (): Promise<ApiFoodEntry[]> => {
-    const result = await requestAllPages<ApiFoodEntry>('/api/food-entries');
-    return result.data;
-  },
+  listAll: (): Promise<ListAllResult<ApiFoodEntry>> =>
+    listAllPages<ApiFoodEntry>('/api/food-entries'),
 
   add: (e: {
     date?: string;
@@ -72,10 +70,8 @@ export const dailyCheckInsApi = {
    * Used by views that need the complete dataset. A view that genuinely wants a single
    * page should call `list()` directly instead.
    */
-  listAll: async (): Promise<ApiDailyCheckIn[]> => {
-    const result = await requestAllPages<ApiDailyCheckIn>('/api/daily-check-ins');
-    return result.data;
-  },
+  listAll: (): Promise<ListAllResult<ApiDailyCheckIn>> =>
+    listAllPages<ApiDailyCheckIn>('/api/daily-check-ins'),
 
   add: (c: { date?: string; sleepHours?: number }) =>
     request<ApiDailyCheckIn>('/api/daily-check-ins', { method: 'POST', body: c }),
