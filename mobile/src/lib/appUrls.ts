@@ -9,18 +9,18 @@ import Constants from 'expo-constants';
  * catch-all), so this client links out rather than duplicating the copy — one set of words to
  * keep true, and the same URL a reviewer will click from App Store Connect.
  *
- * **The default origin is inferred, not confirmed.** It comes from the address the privacy
- * policy gives for contact (`privacy@trackvibe.app`); `FRONTEND_ORIGIN` is unset in
- * production, so nothing in the repo states the live origin outright. Override it with
- * `EXPO_PUBLIC_WEB_URL`, and verify both pages resolve before submitting — a privacy policy
- * URL that 404s is a rejection, and it is a required App Store Connect field either way.
+ * **The default origin is the live one, confirmed by the owner.** It used to be inferred from
+ * the address the privacy policy gives for contact (`privacy@trackvibe.app`) — a domain we do
+ * not own, so both links 404'd. A privacy policy URL that 404s is an App Store rejection, and
+ * it is a required App Store Connect field either way. Override with `EXPO_PUBLIC_WEB_URL` if
+ * the app moves to its own domain.
  *
  * Read the same way `client.ts` reads `apiUrl`: the resolved config first, the env var second,
  * the default last, per call rather than captured at module load.
  */
 export function getWebUrl(): string {
   const extra = Constants.expoConfig?.extra as { webUrl?: string } | undefined;
-  const url = extra?.webUrl ?? process.env.EXPO_PUBLIC_WEB_URL ?? 'https://trackvibe.app';
+  const url = extra?.webUrl ?? process.env.EXPO_PUBLIC_WEB_URL ?? 'https://beme.up.railway.app';
   return url.replace(/\/+$/, '');
 }
 

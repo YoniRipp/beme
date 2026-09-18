@@ -137,10 +137,11 @@ export default ({ config }) => ({
     // Spread first so an `extra.eas.projectId` written by `eas init` survives.
     ...config.extra,
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000',
-    // Where the in-app privacy and terms links point. The default is inferred from the
-    // address the privacy policy itself gives (`privacy@trackvibe.app`) -- `FRONTEND_ORIGIN`
-    // is unset in production, so nothing in the repo states the live origin. See
-    // `src/lib/appUrls.ts`, and confirm both pages resolve before submitting.
-    webUrl: process.env.EXPO_PUBLIC_WEB_URL ?? 'https://trackvibe.app',
+    // Where the in-app privacy and terms links point -- the live web origin, confirmed by
+    // the owner rather than inferred. It previously defaulted to `https://trackvibe.app`,
+    // guessed from the address the privacy policy gives, and that domain is not ours: both
+    // links 404'd, which App Store Guideline 5.1.1(i) treats as a rejection. Override with
+    // `EXPO_PUBLIC_WEB_URL` if the app moves to its own domain. See `src/lib/appUrls.ts`.
+    webUrl: process.env.EXPO_PUBLIC_WEB_URL ?? 'https://beme.up.railway.app',
   },
 });

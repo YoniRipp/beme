@@ -12,19 +12,19 @@ const CONTACT_METHODS = [
     icon: Mail,
     title: 'General Support',
     description: 'Questions about your account, features, or billing.',
-    email: 'support@trackvibe.app',
+    email: 'support@trackvibe.org',
   },
   {
     icon: Bug,
     title: 'Bug Reports',
     description: 'Found something broken? Let us know and we\'ll fix it.',
-    email: 'support@trackvibe.app',
+    email: 'support@trackvibe.org',
   },
   {
     icon: MessageSquare,
     title: 'Partnerships',
     description: 'Interested in working together? We\'d love to hear from you.',
-    email: 'hello@trackvibe.app',
+    email: 'hello@trackvibe.org',
   },
 ];
 
@@ -37,7 +37,7 @@ export function Contact() {
   function handleSend() {
     const mailSubject = encodeURIComponent(subject || `TrackVibe Contact: Message from ${name || 'Website Visitor'}`);
     const mailBody = encodeURIComponent(`From: ${name}\nEmail: ${email}\n\n${message}`);
-    window.location.href = `mailto:support@trackvibe.app?subject=${mailSubject}&body=${mailBody}`;
+    window.location.href = `mailto:support@trackvibe.org?subject=${mailSubject}&body=${mailBody}`;
   }
 
   return (
@@ -148,10 +148,10 @@ export function Contact() {
                     <div>
                       <p className="font-medium">Email Us Directly</p>
                       <a
-                        href="mailto:support@trackvibe.app"
+                        href="mailto:support@trackvibe.org"
                         className="text-sm text-primary hover:underline"
                       >
-                        support@trackvibe.app
+                        support@trackvibe.org
                       </a>
                     </div>
                   </div>
