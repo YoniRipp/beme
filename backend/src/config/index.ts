@@ -54,10 +54,11 @@ const configSchema = z.object({
   // logged out early. Long by design: the session rolls forward on every app open
   // (POST /api/auth/refresh), so an active user never sees the login screen again.
   sessionTtlMs: z.coerce.number().int().min(60 * 1000).default(SESSION_TTL_DEFAULT_MS),
-  // AI calls allowed per user per calendar month. The product is free and has no paid tier,
-  // so this is not a paywall -- it is the ceiling on Gemini spend a single account can cause.
-  // Env-tunable so the number can be changed without a code deploy.
-  aiMonthlyLimit: z.coerce.number().int().min(1).default(100),
+  // AI calls allowed per user per calendar month, across chat, voice, insights and food
+  // lookup. `requireAiQuota` debits one per request, so this is roughly "how many voice
+  // entries a month" -- see backend/src/routes/{voice,chat,insights,foodSearch}.ts for the
+  // exact set. Env-tunable, so the number can be changed without a code deploy.
+  aiMonthlyLimit: z.coerce.number().int().min(1).default(10),
   // CORS_ORIGIN is one origin or a comma-separated list, so the parser below yields a string
   // or a string[]. `.min(1)` rather than `.nonempty()` on the array -- same runtime check,
   // without widening the exported type with a `[string, ...string[]]` tuple no caller wants.
