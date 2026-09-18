@@ -975,7 +975,7 @@ input and only the abbreviated form parsed before.
   can drive it, but `handleWebhook` is still an unbounded `entry[] -> changes[] -> messages[]`
   loop with one Gemini call per element. Who pays for a WhatsApp user's AI calls is a product
   decision.
-- The pager truncation finding above — unchanged, still no code.
+- ~~The pager truncation finding above~~ — **fixed.** `listAll()` returns `{ items, truncated }` on Expo, the web hooks keep `result.hasMore`, and Energy/Body/Insights say so on both clients. `TruncationNotice` is deliberately not an error: every row shown is real, there is just more of it. The cached shape changed to carry the flag (a `getQueryData` read does not re-render), so the optimistic updates go through `updateCachedList`, which cannot drop it while adding a row.
 
 1. **`POST /api/auth/google` accepts any Google OAuth access token — audience is never
    validated.** `backend/src/services/auth.ts:210`. The function branches on
