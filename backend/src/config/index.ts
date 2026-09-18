@@ -54,6 +54,10 @@ const configSchema = z.object({
   // logged out early. Long by design: the session rolls forward on every app open
   // (POST /api/auth/refresh), so an active user never sees the login screen again.
   sessionTtlMs: z.coerce.number().int().min(60 * 1000).default(SESSION_TTL_DEFAULT_MS),
+  // AI calls allowed per user per calendar month. The product is free and has no paid tier,
+  // so this is not a paywall -- it is the ceiling on Gemini spend a single account can cause.
+  // Env-tunable so the number can be changed without a code deploy.
+  aiMonthlyLimit: z.coerce.number().int().min(1).default(100),
   // CORS_ORIGIN is one origin or a comma-separated list, so the parser below yields a string
   // or a string[]. `.min(1)` rather than `.nonempty()` on the array -- same runtime check,
   // without widening the exported type with a `[string, ...string[]]` tuple no caller wants.
@@ -115,11 +119,6 @@ const configSchema = z.object({
   lemonSqueezyWebhookSecret: z.string().optional(),
   lemonSqueezyVariantIdMonthly: z.string().optional(),
   lemonSqueezyVariantIdYearly: z.string().optional(),
-  whatsappAccessToken: z.string().optional(),
-  whatsappPhoneNumberId: z.string().optional(),
-  whatsappVerifyToken: z.string().optional(),
-  whatsappBusinessAccountId: z.string().optional(),
-  whatsappAppSecret: z.string().optional(),
   // Per-user data compaction (see services/compaction.ts)
   compactionEnabled: z.boolean(),
   compactionAgeMonths: z.coerce.number().int().min(1).max(120).default(3),
@@ -191,6 +190,7 @@ const rawConfig = {
   geminiModel: process.env.GEMINI_MODEL,
   jwtSecret: JWT_SECRET,
   sessionTtlMs: resolveSessionTtlMs(),
+  aiMonthlyLimit: process.env.AI_MONTHLY_LIMIT,
   corsOrigin: CORS_ORIGIN,
   frontendOrigin: FRONTEND_ORIGIN,
   googleClientId: process.env.GOOGLE_CLIENT_ID,
@@ -226,11 +226,6 @@ const rawConfig = {
   lemonSqueezyWebhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET,
   lemonSqueezyVariantIdMonthly: process.env.LEMONSQUEEZY_VARIANT_ID_MONTHLY,
   lemonSqueezyVariantIdYearly: process.env.LEMONSQUEEZY_VARIANT_ID_YEARLY,
-  whatsappAccessToken: process.env.WHATSAPP_ACCESS_TOKEN,
-  whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
-  whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'trackvibe-whatsapp-verify',
-  whatsappBusinessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
-  whatsappAppSecret: process.env.WHATSAPP_APP_SECRET,
   compactionEnabled: process.env.COMPACTION_ENABLED !== 'false' && process.env.COMPACTION_ENABLED !== '0',
   compactionAgeMonths: process.env.COMPACTION_AGE_MONTHS ?? 3,
   compactionMaxBytesPerUser: process.env.COMPACTION_MAX_BYTES_PER_USER ?? 10 * 1024 * 1024,
@@ -245,13 +240,6 @@ if (!parsed.success) {
 }
 
 export const config = parsed.data;
-
-if (config.whatsappAccessToken && !config.whatsappAppSecret) {
-  logger.warn(
-    'WHATSAPP_APP_SECRET is not set: POST /api/whatsapp/webhook cannot verify Meta\'s X-Hub-Signature-256 ' +
-    'and refuses every request. Set the app secret from the Meta app dashboard to enable the webhook.',
-  );
-}
 
 if (config.isProduction && !config.isRedisConfigured) {
   logger.warn(

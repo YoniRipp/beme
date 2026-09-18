@@ -7,7 +7,7 @@ import { getModel, SAFETY_BLOCK_NONE } from '../../lib/genai.js';
 import { HANDLERS } from './actionBuilders.js';
 
 /**
- * Get the (cached) Gemini model used for voice/whatsapp parsing.
+ * Get the (cached) Gemini model used for voice parsing.
  * Pass a `systemInstruction` to bake the static prompt into the model so it is
  * not re-sent as user content on every request (and can be server-side cached).
  */

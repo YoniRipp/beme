@@ -80,7 +80,7 @@ export function Insights() {
       {hasAiAccess ? (
         <AiInsightsSection />
       ) : (
-        <UpgradePrompt feature="AI Insights" description="You've used all your free AI calls this month. Exciting updates coming soon!" quotaExhausted />
+        <UpgradePrompt feature="AI Insights" quotaExhausted />
       )}
 
       <ContentWithLoading
