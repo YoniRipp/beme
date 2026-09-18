@@ -11,7 +11,10 @@ if (config.resendApiKey) {
   resend = new Resend(config.resendApiKey);
 }
 
-const FROM = process.env.RESEND_FROM || 'TrackVibe <onboarding@resend.dev>';
+// Falls back to Resend's shared sandbox sender, which only delivers to your own Resend
+// account address. `config/index.ts` warns at boot when a key is set without this, because
+// the failure is invisible: the send succeeds and reaches nobody.
+const FROM = config.resendFrom || 'TrackVibe <onboarding@resend.dev>';
 
 /**
  * Send an email. No-op if Resend is not configured.
