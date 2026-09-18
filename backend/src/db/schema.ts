@@ -11,6 +11,27 @@
 import { getPool } from './pool.js';
 import { logger } from '../lib/logger.js';
 
+/**
+ * Every foreign key that references `users(id)` whose ON DELETE action was added by
+ * `migrations/1776000000000_cascade-user-delete-fks.js`, mirrored here so both bootstrap
+ * paths agree. `CASCADE` for user-owned data, `SET NULL` for attribution columns whose rows
+ * outlive their creator.
+ *
+ * Keep this in step with `FK_TARGETS` in that migration.
+ * `backend/scripts/check-schema-drift.mjs` compares the two databases' FK actions and fails
+ * the `migrations` CI job when they diverge.
+ */
+const USER_FK_ACTIONS: ReadonlyArray<readonly [table: string, column: string, action: 'CASCADE' | 'SET NULL']> = [
+  ['workouts', 'user_id', 'CASCADE'],
+  ['food_entries', 'user_id', 'CASCADE'],
+  ['goals', 'user_id', 'CASCADE'],
+  ['daily_check_ins', 'user_id', 'CASCADE'],
+  ['app_logs', 'user_id', 'SET NULL'],
+  ['user_activity_log', 'user_id', 'SET NULL'],
+  ['exercises', 'created_by', 'SET NULL'],
+  ['foods', 'verified_by', 'SET NULL'],
+];
+
 export async function initSchema() {
   logger.info('Running development schema initialization (use migrations in production)');
   const client = await getPool().connect();
@@ -48,7 +69,7 @@ export async function initSchema() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS workouts (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id uuid NOT NULL REFERENCES users(id),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         date date NOT NULL,
         title text NOT NULL,
         type text NOT NULL CHECK (type IN ('strength', 'cardio', 'flexibility', 'sports')),
@@ -64,7 +85,7 @@ export async function initSchema() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS food_entries (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id uuid NOT NULL REFERENCES users(id),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         date date NOT NULL,
         name text NOT NULL,
         calories numeric NOT NULL,
@@ -85,7 +106,7 @@ export async function initSchema() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS daily_check_ins (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id uuid NOT NULL REFERENCES users(id),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         date date NOT NULL,
         sleep_hours numeric,
         created_at timestamptz DEFAULT now()
@@ -98,7 +119,7 @@ export async function initSchema() {
         type text NOT NULL,
         target numeric NOT NULL,
         period text NOT NULL,
-        user_id uuid REFERENCES users(id),
+        user_id uuid REFERENCES users(id) ON DELETE CASCADE,
         created_at timestamptz DEFAULT now(),
         updated_at timestamptz DEFAULT now()
       );
@@ -127,7 +148,7 @@ export async function initSchema() {
         name_tsv tsvector,
         verified boolean NOT NULL DEFAULT false,
         verified_at timestamptz,
-        verified_by uuid REFERENCES users(id),
+        verified_by uuid REFERENCES users(id) ON DELETE SET NULL,
         created_at timestamptz DEFAULT now()
       );
     `);
@@ -136,7 +157,7 @@ export async function initSchema() {
       ALTER TABLE foods
         ADD COLUMN IF NOT EXISTS verified boolean NOT NULL DEFAULT false,
         ADD COLUMN IF NOT EXISTS verified_at timestamptz,
-        ADD COLUMN IF NOT EXISTS verified_by uuid REFERENCES users(id);
+        ADD COLUMN IF NOT EXISTS verified_by uuid REFERENCES users(id) ON DELETE SET NULL;
     `);
 
     await client.query(`
@@ -156,7 +177,7 @@ export async function initSchema() {
         level text NOT NULL CHECK (level IN ('action', 'error')),
         message text NOT NULL,
         details jsonb,
-        user_id uuid REFERENCES users(id),
+        user_id uuid REFERENCES users(id) ON DELETE SET NULL,
         created_at timestamptz DEFAULT now()
       );
     `);
@@ -164,7 +185,7 @@ export async function initSchema() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS user_activity_log (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id uuid REFERENCES users(id),
+        user_id uuid REFERENCES users(id) ON DELETE SET NULL,
         event_type text NOT NULL,
         event_id text NOT NULL UNIQUE,
         summary text NOT NULL,
@@ -335,7 +356,7 @@ export async function initSchema() {
         secondary_muscles text[],
         instructions text[],
         image_url_2 text,
-        created_by uuid REFERENCES users(id),
+        created_by uuid REFERENCES users(id) ON DELETE SET NULL,
         is_custom boolean NOT NULL DEFAULT false,
         created_at timestamptz DEFAULT now(),
         updated_at timestamptz DEFAULT now()
@@ -416,6 +437,88 @@ export async function initSchema() {
         last_cutoff date
       );
     `);
+
+    // Reconcile the users(id) foreign keys with
+    // `migrations/1776000000000_cascade-user-delete-fks.js`.
+    //
+    // The CREATE TABLE statements above now declare the right ON DELETE action, but
+    // CREATE TABLE IF NOT EXISTS is a no-op on a database that already has the table, so on
+    // every dev machine bootstrapped before this change the old actionless FKs are still
+    // there. Production never runs initSchema at all (`config.skipSchemaInit` is forced true
+    // when isProduction), so without this block deleting a user behaves differently in a dev
+    // database than in the one the code actually ships against -- and account-deletion tests
+    // written against dev would prove nothing about production.
+    //
+    // Same introspect-drop-recreate shape as the migration: the existing constraint's name
+    // varies between baseline tables and ALTER-added columns, so it has to be looked up.
+    //
+    // Each statement runs inside its own savepoint. `to_regclass` guards a missing *table*
+    // but nothing guards a missing *column*, and `exercises.created_by` is declared only in
+    // its CREATE TABLE -- never in an `ADD COLUMN IF NOT EXISTS` block -- so a database
+    // whose `exercises` predates that column answers the ADD CONSTRAINT with 42703. A raw
+    // failure there poisons the transaction and turns the COMMIT below into a rollback that
+    // discards every table this run created, which is exactly what the pgvector savepoint
+    // further down exists to prevent.
+    for (const [table, column, action] of USER_FK_ACTIONS) {
+      await client.query(`SAVEPOINT user_fk_${table}_${column}`);
+      try {
+        await client.query(`
+        DO $$
+        DECLARE
+          fk_name text;
+        BEGIN
+          IF to_regclass('public.${table}') IS NULL THEN
+            RETURN;
+          END IF;
+
+          -- Already correct? Then do nothing. Dropping and re-adding takes an ACCESS
+          -- EXCLUSIVE lock and revalidates the whole table, and initSchema runs on every
+          -- dev boot -- so without this, eight tables (including the seeded exercise and
+          -- food catalogs) get a full scan each time, and two processes bootstrapping the
+          -- same database concurrently can block on each other's locks.
+          IF EXISTS (
+            SELECT 1
+            FROM pg_constraint con
+            JOIN pg_attribute att
+              ON att.attrelid = con.conrelid AND att.attnum = con.conkey[1]
+            WHERE con.contype = 'f'
+              AND con.conrelid = to_regclass('public.${table}')
+              AND array_length(con.conkey, 1) = 1
+              AND att.attname = '${column}'
+              AND con.confdeltype = '${action === 'CASCADE' ? 'c' : 'n'}'
+          ) THEN
+            RETURN;
+          END IF;
+
+          SELECT tc.constraint_name INTO fk_name
+          FROM information_schema.table_constraints tc
+          JOIN information_schema.key_column_usage kcu
+            ON tc.constraint_name = kcu.constraint_name
+           AND tc.table_schema = kcu.table_schema
+          WHERE tc.table_schema = 'public'
+            AND tc.table_name = '${table}'
+            AND tc.constraint_type = 'FOREIGN KEY'
+            AND kcu.column_name = '${column}'
+          LIMIT 1;
+
+          IF fk_name IS NOT NULL THEN
+            EXECUTE format('ALTER TABLE %I DROP CONSTRAINT %I', '${table}', fk_name);
+          END IF;
+
+          EXECUTE 'ALTER TABLE ${table}
+                   ADD CONSTRAINT ${table}_${column}_fkey
+                   FOREIGN KEY (${column}) REFERENCES users(id) ON DELETE ${action}';
+        END $$;
+      `);
+        await client.query(`RELEASE SAVEPOINT user_fk_${table}_${column}`);
+      } catch (e) {
+        await client.query(`ROLLBACK TO SAVEPOINT user_fk_${table}_${column}`);
+        logger.warn(
+          { err: e, table, column },
+          'Could not reconcile a users(id) foreign key -- deletion may behave differently here than in production',
+        );
+      }
+    }
 
     // Indexes
     await client.query('CREATE INDEX IF NOT EXISTS idx_goals_user ON goals(user_id)');

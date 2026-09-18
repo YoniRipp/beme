@@ -59,4 +59,18 @@ export const authApi = {
       suppressUnauthorizedEvent: true,
       skipOfflineQueue: true,
     }),
+  /**
+   * Irreversibly deletes the signed-in user's account. Takes no id: the backend's subject is
+   * the token holder and nothing else.
+   *
+   * `skipOfflineQueue` is not optional. A queued deletion would resolve optimistically —
+   * telling someone their account is gone while the request sat in the replay queue — and
+   * `flush` replays without an Authorization header, so it could never have succeeded
+   * anyway. It must fail loudly while the user is looking at it.
+   */
+  deleteAccount: () =>
+    request<void>('/api/auth/account', {
+      method: 'DELETE',
+      skipOfflineQueue: true,
+    }),
 };

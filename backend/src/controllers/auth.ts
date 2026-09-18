@@ -5,9 +5,10 @@ import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { config } from '../config/index.js';
+import * as accountService from '../services/account.js';
 import * as authService from '../services/auth.js';
-import { sendJson, sendCreated } from '../utils/response.js';
-import { ServiceUnavailableError, ValidationError } from '../errors.js';
+import { sendJson, sendCreated, sendNoContent } from '../utils/response.js';
+import { ForbiddenError, ServiceUnavailableError, ValidationError } from '../errors.js';
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -139,12 +140,42 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
   sendJson(res, authPayload(req, result));
 });
 
-export const logout = asyncHandler(async (req: Request, res: Response) => {
+/** The bearer token this request authenticated with, from the header or the cookie. */
+function presentedToken(req: Request): string | undefined {
   const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : req.cookies?.token;
+  return authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : req.cookies?.token;
+}
+
+export const logout = asyncHandler(async (req: Request, res: Response) => {
+  const token = presentedToken(req);
   if (token) {
     await authService.blockToken(token);
   }
   clearTokenCookie(res);
   sendJson(res, { message: 'Logged out' });
+});
+
+/**
+ * DELETE /api/auth/account — the user deletes their own account.
+ *
+ * Required by App Store Guideline 5.1.1(v). Deliberately takes no id: the subject is
+ * `req.user.id` and nothing else. It is also mounted with plain `requireAuth` rather than
+ * `withUser`, because `resolveEffectiveUserId` honours an admin's `?userId=` override, which
+ * would quietly turn this into the admin delete route with a weaker guard.
+ */
+export const deleteAccount = asyncHandler(async (req: Request, res: Response) => {
+  // Same reasoning as `refresh`: the MCP shared secret authenticates as a configured user
+  // but is a server-side integration credential, not that person sitting at their phone
+  // asking to close their account.
+  if (req.mcpAuth) {
+    throw new ForbiddenError('Account deletion is not available for MCP-authenticated requests');
+  }
+  await accountService.deleteAccount({
+    userId: req.user!.id,
+    // Null, not req.user.id: the row is gone by the time the audit entry is written.
+    actorId: null,
+    revokeToken: presentedToken(req),
+  });
+  clearTokenCookie(res);
+  sendNoContent(res);
 });

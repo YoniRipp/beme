@@ -103,7 +103,9 @@ describe('requireAuth', () => {
       email: 'user@example.com',
       role: 'user',
     });
-    (kvGet as any).mockResolvedValueOnce('1');
+    (kvGet as any).mockImplementation(async (key: string) =>
+      key.startsWith('blocked:') ? '1' : null,
+    );
 
     await requireAuth(req, res, next);
 
@@ -175,6 +177,48 @@ describe('requireAuth', () => {
       expect(res.status).toHaveBeenCalledWith(401);
       expect(next).not.toHaveBeenCalled();
     });
+  });
+
+  // Account deletion blocklists the whole user, not just the token that asked for it. This
+  // middleware never looks the user up, so without the per-user entry every *other* device
+  // the deleted user was signed in on keeps authenticating until its own token expires --
+  // up to a year on the 365-day default TTL.
+  it('returns 401 for a still-valid token belonging to a deleted user', async () => {
+    req.headers.authorization = 'Bearer someone-elses-live-token';
+    (jwt.verify as any).mockReturnValue({
+      sub: 'user-123',
+      email: 'user@example.com',
+      role: 'user',
+    });
+    // This exact token was never blocklisted -- only the user was.
+    (kvGet as any).mockImplementation(async (key: string) =>
+      key === 'blockedUser:user-123' ? '1' : null,
+    );
+
+    await requireAuth(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('checks both blocklists in one round trip rather than serially', async () => {
+    req.headers.authorization = 'Bearer live-token';
+    (jwt.verify as any).mockReturnValue({
+      sub: 'user-123',
+      email: 'user@example.com',
+      role: 'user',
+    });
+    // Explicit: `clearAllMocks` resets recorded calls but keeps an implementation set by an
+    // earlier test, so nothing else here guarantees a clean blocklist.
+    (kvGet as any).mockImplementation(async () => null);
+
+    await requireAuth(req, res, next);
+
+    const keys = (kvGet as any).mock.calls.map(([key]: [string]) => key);
+    expect(keys).toHaveLength(2);
+    expect(keys.some((k: string) => k.startsWith('blocked:'))).toBe(true);
+    expect(keys).toContain('blockedUser:user-123');
+    expect(next).toHaveBeenCalled();
   });
 });
 

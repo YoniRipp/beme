@@ -11,12 +11,12 @@ import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { IncomingMessage } from 'http';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
+import { isRevoked } from '../lib/tokenBlocklist.js';
 import { VOICE_PROMPT } from '../services/voice.js';
 import { buildActionsFromFunctionCalls, filterHallucinatedActions } from '../services/voice/geminiClient.js';
 import { VOICE_TOOLS } from '../../voice/tools.js';
 import { executeActions } from '../services/voiceExecutor.js';
 import { checkAiQuota, tryConsumeAiCall } from '../services/aiQuota.js';
-import { isTokenRevoked } from '../lib/tokenBlocklist.js';
 import { logger } from '../lib/logger.js';
 
 const INACTIVITY_TIMEOUT_MS = 30_000;
@@ -28,7 +28,15 @@ function getCookie(req: IncomingMessage, name: string): string | null {
   return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
 }
 
-/** Extract and verify JWT from query string ?token=... or the auth cookie. */
+/**
+ * Extract and verify JWT from query string ?token=... or the auth cookie.
+ *
+ * Consults the same two blocklists as `middleware/auth.ts`, and for the same reason: a
+ * signature check alone says a token was once valid, not that it still is. Without the
+ * per-user entry a deleted account could keep opening voice sessions — burning AI quota and
+ * running the executor against a `userId` with no `users` row — for the rest of that token's
+ * 365-day life. Without the per-token entry, so could a logged-out one.
+ */
 async function authenticateWs(req: IncomingMessage): Promise<{ id: string; email: string; role: string } | null> {
   try {
     const url = new URL(req.url ?? '', `http://${req.headers.host}`);
@@ -38,8 +46,10 @@ async function authenticateWs(req: IncomingMessage): Promise<{ id: string; email
     const payload = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] }) as { sub?: string; email?: string; role?: string };
     if (!payload.sub) return null;
     // Same revocation check every HTTP route runs (middleware/auth.ts): a signature
-    // that still verifies is not enough -- a logged-out token must not open a stream.
-    if (await isTokenRevoked(token)) return null;
+    // that still verifies is not enough -- a logged-out token must not open a stream, and
+    // neither must a token belonging to a deleted account, whose every device is revoked
+    // at once by user id rather than one token at a time.
+    if (await isRevoked(token, payload.sub)) return null;
     return { id: payload.sub, email: payload.email ?? '', role: payload.role ?? 'user' };
   } catch {
     return null;
