@@ -96,6 +96,7 @@ const configSchema = z.object({
   mcpUserId: z.string().optional(),
   appBaseUrl: z.string().optional(),
   resendApiKey: z.string().optional(),
+  resendFrom: z.string().optional(),
   redisUrl: z.string().optional(),
   isRedisConfigured: z.boolean(),
   eventTransport: z.enum(['redis', 'sqs']).optional(),
@@ -203,6 +204,7 @@ const rawConfig = {
   mcpUserId: process.env.TRACKVIBE_MCP_USER_ID,
   appBaseUrl: process.env.APP_BASE_URL || process.env.FRONTEND_URL,
   resendApiKey: process.env.RESEND_API_KEY,
+  resendFrom: process.env.RESEND_FROM,
   redisUrl: process.env.REDIS_URL ?? process.env.REDIS_PRIVATE_URL,
   isRedisConfigured: !!(process.env.REDIS_URL ?? process.env.REDIS_PRIVATE_URL),
   eventTransport: process.env.EVENT_TRANSPORT === 'sqs' ? 'sqs' : 'redis',
@@ -240,6 +242,23 @@ if (!parsed.success) {
 }
 
 export const config = parsed.data;
+
+/**
+ * The silent-failure configuration, called out because testing it on yourself cannot catch it.
+ *
+ * `onboarding@resend.dev` is Resend's shared sandbox sender, and it only delivers to the
+ * Resend account's OWN address. With a key but no verified sending domain, password reset
+ * appears to work when the operator tries it and reaches no other user at all — the request
+ * succeeds, the API returns 200, and nothing in the logs says the mail went nowhere.
+ */
+if (config.resendApiKey && !config.resendFrom) {
+  logger.warn(
+    'RESEND_API_KEY is set but RESEND_FROM is not, so email is sent from Resend\'s shared ' +
+    'sandbox sender (onboarding@resend.dev). That address only delivers to your own Resend ' +
+    'account address: password reset emails will NOT reach your users. Verify a domain in ' +
+    'Resend and set RESEND_FROM to an address on it.',
+  );
+}
 
 if (config.isProduction && !config.isRedisConfigured) {
   logger.warn(
