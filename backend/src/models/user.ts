@@ -227,3 +227,190 @@ export async function getSubscriptionGrant(userId: string): Promise<Subscription
  * Historical `subscription_source = 'trainer'` grants are left alone. The role that created
  * them is gone, but the Pro they bought those users is theirs to keep.
  */
+
+// ---------------------------------------------------------------------------
+// Account deletion
+//
+// One definition of "delete this user and everything hanging off them", shared by the admin
+// route (`DELETE /api/users/:id`) and self-service deletion (`DELETE /api/auth/account`).
+// This used to live inline in `routes/users.ts`; a second caller is the moment to extract
+// it, not the moment to copy it.
+// ---------------------------------------------------------------------------
+
+/**
+ * Strip the deleted user's own PII out of the two tables whose rows outlive them.
+ *
+ * `migrations/1776000000000_cascade-user-delete-fks.js` sets `app_logs.user_id` and
+ * `user_activity_log.user_id` to NULL on delete, which drops the *link* and keeps the
+ * *payload*. Three writers put PII into that payload:
+ *
+ *   - `services/auth.ts` publishes `auth.UserRegistered` as `{ userId, email, name }`, and
+ *     `events/consumers/userActivityLog.ts` stores the event body verbatim.
+ *   - `routes/users.ts` logs `'User updated'` as `{ targetId, email, ... }`.
+ *   - `routes/users.ts` logs `'User created'` as `{ email, role }` — **no id of any kind**.
+ *
+ * Without this a "deleted" user's email and name survive in both tables, which makes the
+ * privacy policy false.
+ *
+ * The two tables need different predicates, because they are different kinds of log:
+ *
+ *   - **`app_logs` is an actor log.** `user_id` is whoever *performed* the action, not who
+ *     it was about: all three rows above are filed under the admin's id. Matching on
+ *     `user_id` would therefore both miss the subject's rows and, when the deleted user is
+ *     themselves an admin, strip other people's emails out of unrelated audit entries. So
+ *     match the address itself (which also catches the id-less `'User created'` row), plus
+ *     the subject-id keys for rows that name a target without repeating their email.
+ *   - **`user_activity_log` is a subject log.** The consumer files every row under
+ *     `event.metadata.userId`, so `user_id` *is* the subject and matching on it is correct.
+ *
+ * Runs before the `SET NULL` statements below, while `user_id` still points at the user.
+ *
+ * `jsonb - 'key'` is a no-op when the key is absent but raises `cannot delete from scalar`
+ * on a non-object value, hence the `jsonb_typeof` guard. The `?` pre-filter keeps the UPDATE
+ * from rewriting every log row in order to remove nothing.
+ *
+ * Each statement carries its own parameter list, because they need different bindings and
+ * Postgres numbers parameters up to the highest `$n` the SQL mentions: a shared list would
+ * leave the app_logs statement with an unreferenced `$1` whose type cannot be inferred, and
+ * the statement would fail to *parse* with 42P18 -- turning every account deletion into a
+ * 500, with or without any log rows to redact. The placeholder/arity test in `user.test.ts`
+ * guards that, because the stub-driven tests around it never parse SQL and cannot.
+ *
+ * Where the same id appears as both uuid and text it is bound twice on purpose: one
+ * statement cannot deduce two different types for a single placeholder. The JSON arms are a
+ * sequential scan either way -- account deletion is rare and off the request-latency path.
+ */
+type RedactionStatement = { sql: string; params: (userId: string, email: string) => unknown[] };
+
+const PII_REDACTION_STATEMENTS: RedactionStatement[] = [
+  {
+    // $1 the id as text, $2 the email. No uuid comparison here: app_logs.user_id is the
+    // actor, and matching it would strip other people's addresses out of an admin's rows.
+    sql: `UPDATE app_logs
+      SET details = details - 'email' - 'targetEmail' - 'name'
+    WHERE jsonb_typeof(details) = 'object'
+      AND (details ? 'email' OR details ? 'targetEmail' OR details ? 'name')
+      AND (
+        lower(details->>'email') = lower($2)
+        OR lower(details->>'targetEmail') = lower($2)
+        OR details->>'targetId' = $1
+        OR details->>'userId' = $1
+      )`,
+    params: (userId, email) => [userId, email],
+  },
+  {
+    // $1 the id as uuid, $2 the same id as text, $3 the email.
+    sql: `UPDATE user_activity_log
+      SET payload = payload - 'email' - 'name'
+    WHERE jsonb_typeof(payload) = 'object'
+      AND (payload ? 'email' OR payload ? 'name')
+      AND (user_id = $1 OR payload->>'userId' = $2 OR lower(payload->>'email') = lower($3))`,
+    params: (userId, email) => [userId, userId, email],
+  },
+  {
+    // `summary` is free text the user wrote, not a structured field: the consumer builds it
+    // as `Logged food entry: ${p.name}` / `Logged workout: ${p.title}`
+    // (events/consumers/userActivityLog.ts), so a deleted account's food and workout names
+    // survive in plain text in the exact table the statement above exists to clean. Stripping
+    // `payload.name` while leaving that summary also left the two disagreeing about the same
+    // row. The column is NOT NULL, so it is replaced with the event type rather than nulled --
+    // which keeps the row countable for aggregates without saying what the person logged.
+    // $1 the id as uuid, $2 the same id as text, $3 the email.
+    sql: `UPDATE user_activity_log
+      SET summary = event_type
+    WHERE summary IS DISTINCT FROM event_type
+      AND (user_id = $1
+           OR (jsonb_typeof(payload) = 'object'
+               AND (payload->>'userId' = $2 OR lower(payload->>'email') = lower($3))))`,
+    params: (userId, email) => [userId, userId, email],
+  },
+];
+
+/** Exported for the placeholder/arity test only. */
+export const __piiRedactionStatements = PII_REDACTION_STATEMENTS;
+
+/**
+ * Drop the link to the user without removing the row. The cascade migration also sets these
+ * FKs to `ON DELETE SET NULL`, so on a migrated database this is belt-and-braces -- but it
+ * is the only thing that does it on a database that predates the migration.
+ */
+const SET_NULL_STATEMENTS = [
+  `UPDATE app_logs SET user_id = NULL WHERE user_id = $1`,
+  `UPDATE user_activity_log SET user_id = NULL WHERE user_id = $1`,
+  `UPDATE exercises SET created_by = NULL WHERE created_by = $1`,
+  `UPDATE foods SET verified_by = NULL WHERE verified_by = $1`,
+];
+
+/**
+ * Delete user-owned rows. Most have `ON DELETE CASCADE` in newer migrations, but the
+ * baseline tables don't on a database that predates the cascade migration.
+ */
+const DELETE_STATEMENTS = [
+  `DELETE FROM food_entries WHERE user_id = $1`,
+  `DELETE FROM workouts WHERE user_id = $1`,
+  `DELETE FROM goals WHERE user_id = $1`,
+  `DELETE FROM daily_check_ins WHERE user_id = $1`,
+];
+
+/** Postgres codes for "no such table" and "no such column". */
+const MISSING_TABLE = '42P01';
+const MISSING_COLUMN = '42703';
+
+/**
+ * Run one cleanup statement inside a savepoint. A failed statement aborts the whole
+ * transaction otherwise, so catching the error is not enough -- the savepoint is what makes
+ * "this table is not in this database" survivable.
+ */
+async function runTolerantly(
+  client: pg.PoolClient,
+  sql: string,
+  params: unknown[],
+  tolerated: readonly string[],
+): Promise<void> {
+  await client.query('SAVEPOINT delete_user_stmt');
+  try {
+    await client.query(sql, params);
+    await client.query('RELEASE SAVEPOINT delete_user_stmt');
+  } catch (err: unknown) {
+    const code = (err as { code?: string } | null)?.code;
+    if (!code || !tolerated.includes(code)) throw err;
+    await client.query('ROLLBACK TO SAVEPOINT delete_user_stmt');
+  }
+}
+
+/**
+ * Redact the user's PII from surviving log rows, clear attribution columns, delete owned
+ * rows, then delete the user. Must run inside a transaction -- it uses savepoints.
+ *
+ * The address is read up front, under `FOR UPDATE`, because the redaction predicates match
+ * on it and it is gone by the end. The lock also serialises two concurrent deletions of the
+ * same account: the second waits, then finds no row. The address is used only inside this
+ * function and is never returned -- `services/account.ts` deliberately has no way to log it.
+ *
+ * @returns false when no such user existed, so a repeated delete of the same account is a
+ *   clean no-op at this layer rather than an error.
+ */
+export async function deleteWithOwnedData(userId: string, client: pg.PoolClient): Promise<boolean> {
+  const existing = await client.query('SELECT email FROM users WHERE id = $1 FOR UPDATE', [userId]);
+  if (existing.rowCount === 0) return false;
+  const email: string = existing.rows[0].email ?? '';
+
+  // Deliberately NOT tolerant of MISSING_COLUMN, unlike the two loops below. A missing table
+  // means there is no PII there to redact, which is fine on a database predating it. A missing
+  // *column* means the table exists and our assumption about its shape is wrong -- and because
+  // runTolerantly rolls back to its savepoint, swallowing that would let the delete commit and
+  // return success with the email and name still sitting in the logs. Failing the whole
+  // transaction is the right outcome for the privacy-critical step.
+  for (const { sql, params } of PII_REDACTION_STATEMENTS) {
+    await runTolerantly(client, sql, params(userId, email), [MISSING_TABLE]);
+  }
+  for (const sql of SET_NULL_STATEMENTS) {
+    await runTolerantly(client, sql, [userId], [MISSING_TABLE, MISSING_COLUMN]);
+  }
+  for (const sql of DELETE_STATEMENTS) {
+    await runTolerantly(client, sql, [userId], [MISSING_TABLE]);
+  }
+
+  const result = await client.query('DELETE FROM users WHERE id = $1 RETURNING id', [userId]);
+  return (result.rowCount ?? 0) > 0;
+}
