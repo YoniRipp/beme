@@ -24,6 +24,17 @@ export const authApi = {
     request<AuthResponse>('/api/auth/facebook', { method: 'POST', body: { token } }),
   loginWithTwitter: (token: string) =>
     request<AuthResponse>('/api/auth/twitter', { method: 'POST', body: { token } }),
+  /**
+   * Asks for a reset link. The reply is the same whether or not the address has an account
+   * -- "If an account exists, a reset link has been sent." -- so the caller must not treat
+   * success as proof the address is registered. Telling an anonymous caller which emails are
+   * registered is the enumeration this wording exists to prevent.
+   */
+  forgotPassword: (email: string) =>
+    request<{ message: string }>('/api/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+    }),
   me: () => request<ApiUser>('/api/auth/me'),
   /**
    * Irreversibly deletes the signed-in user's account, as App Store Guideline 5.1.1(v)

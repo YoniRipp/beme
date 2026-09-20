@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
+import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
 import { MainTabs } from './MainTabs';
 import { WorkoutFormScreen } from '../screens/WorkoutFormScreen';
 import { FoodEntryFormScreen } from '../screens/FoodEntryFormScreen';
@@ -22,6 +23,7 @@ function AuthStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </Stack.Navigator>
   );
 }
