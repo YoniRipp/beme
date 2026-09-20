@@ -1,5 +1,10 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import { loadGoogleSignin, resetGoogleSigninCacheForTests } from '../useGoogleSignIn';
+import { Platform } from 'react-native';
+import {
+  isBlockedByAppleGuideline,
+  loadGoogleSignin,
+  resetGoogleSigninCacheForTests,
+} from '../useGoogleSignIn';
 
 /**
  * The one behaviour worth pinning here is NOT that Google sign-in works — that needs a dev
@@ -60,5 +65,38 @@ describe('loadGoogleSignin', () => {
     // Under Jest the native side is not registered, so this exercises the catch rather than a
     // successful load. Either way it must return, not throw — a throw here is the crash.
     expect(() => loadGoogleSignin()).not.toThrow();
+  });
+});
+
+/**
+ * The iOS gate is one line, and deleting it looks harmless — the feature works on iOS, which
+ * is exactly the trap. App Store guideline 4.8 requires Sign in with Apple alongside any
+ * third-party sign-in, and this app has no Apple provider: no backend endpoint, no client
+ * code. A Google button on iOS is therefore a rejection at submission, the most expensive
+ * place to discover it.
+ *
+ * This fails if the gate is removed, so removing it has to be a decision rather than a tidy-up.
+ * Delete this test WITH the gate, once Apple sign-in exists.
+ */
+describe('App Store guideline 4.8 gate', () => {
+  const realOS = Platform.OS;
+
+  // `Platform.OS` is a plain property on React Native's Jest mock, not a getter, so
+  // `jest.spyOn(Platform, 'OS', 'get')` throws "property is not declared as a getter".
+  // Assigning and restoring is the form that works here.
+  const setOS = (os: string) => {
+    (Platform as { OS: string }).OS = os;
+  };
+
+  afterEach(() => setOS(realOS));
+
+  it('blocks Google sign-in on iOS while there is no Apple provider', () => {
+    setOS('ios');
+    expect(isBlockedByAppleGuideline()).toBe(true);
+  });
+
+  it('leaves Android alone — the obligation is Apple’s, not Google’s', () => {
+    setOS('android');
+    expect(isBlockedByAppleGuideline()).toBe(false);
   });
 });

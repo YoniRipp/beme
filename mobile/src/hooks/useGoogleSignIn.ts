@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useAuth } from '../context/AuthContext';
 
@@ -75,6 +76,11 @@ interface GoogleClientIds {
   ios?: string;
 }
 
+/** Exported so the guard test can assert the gate exists without rendering the hook. */
+export function isBlockedByAppleGuideline(): boolean {
+  return Platform.OS === 'ios';
+}
+
 export function googleClientIds(): GoogleClientIds {
   const extra = Constants.expoConfig?.extra as { googleClientId?: GoogleClientIds } | undefined;
   return extra?.googleClientId ?? {};
@@ -83,8 +89,8 @@ export function googleClientIds(): GoogleClientIds {
 export interface UseGoogleSignIn {
   /** False when the native module is absent OR no web client id is configured. */
   isAvailable: boolean;
-  /** Distinguishes "this build cannot" from "this build is not set up", for the message. */
-  unavailableReason: 'unsupported-build' | 'not-configured' | null;
+  /** Distinguishes the three reasons this can be off, so the caller can word itself. */
+  unavailableReason: 'ios-needs-apple-signin' | 'unsupported-build' | 'not-configured' | null;
   isSigningIn: boolean;
   error: string | null;
   signIn: () => Promise<void>;
@@ -97,16 +103,35 @@ export function useGoogleSignIn(): UseGoogleSignIn {
 
   const ids = googleClientIds();
   const hasModule = loadGoogleSignin() !== null;
+
+  /**
+   * OFF ON iOS, DELIBERATELY, and not because it cannot work there.
+   *
+   * App Store guideline 4.8: an app offering third-party sign-in must offer Sign in with
+   * Apple as well. This codebase has `google`, `facebook` and `twitter` on the backend and
+   * no Apple provider anywhere — no endpoint, no client, no Services ID. Shipping a Google
+   * button on iOS before that exists is a rejection at submission, which is the worst place
+   * to find out.
+   *
+   * `agent-os/specs/2026-09-14-1200-parity-auth-surface/shape.md` (open question 1) reached
+   * this conclusion before the feature was built and recommended deferring all of it.
+   * Android carries no such obligation, so the feature ships there and waits here.
+   *
+   * REMOVE THIS the moment an Apple provider lands — not before.
+   */
+  const blockedByAppleGuideline = isBlockedByAppleGuideline();
   /**
    * The WEB id is what makes this work, so its absence — not the platform one's — counts as
    * unconfigured. Without it the picker would still open and the server would then refuse
    * every token it produced, which is a worse failure than a disabled button.
    */
   const hasWebClientId = Boolean(ids.web);
-  const isAvailable = hasModule && hasWebClientId;
+  const isAvailable = hasModule && hasWebClientId && !blockedByAppleGuideline;
 
-  const unavailableReason = !hasModule
-    ? ('unsupported-build' as const)
+  const unavailableReason = blockedByAppleGuideline
+    ? ('ios-needs-apple-signin' as const)
+    : !hasModule
+      ? ('unsupported-build' as const)
     : !hasWebClientId
       ? ('not-configured' as const)
       : null;

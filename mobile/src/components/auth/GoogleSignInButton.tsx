@@ -47,13 +47,20 @@ export function GoogleSignInButton({ disabled = false }: { disabled?: boolean })
   }));
 
   /**
-   * Rendered at all only when this build COULD sign in. In Expo Go the native module is
-   * absent and no amount of configuration changes that, so a permanently dead button on the
-   * sign-in screen would be noise to someone with no way to act on it. A dev client missing
-   * only the client id does show it, disabled and explained, because that IS actionable by
-   * whoever is running the build.
+   * Rendered at all only where signing in is both possible AND permitted.
+   *
+   * Two reasons to render nothing, and they are different in kind. In Expo Go the native
+   * module is absent and no configuration changes that. On iOS it would work — and must not
+   * be offered, because App Store guideline 4.8 requires Sign in with Apple alongside it and
+   * this app has no Apple provider (see `useGoogleSignIn`). Either way a control the user
+   * cannot act on is noise, so it is absent rather than disabled.
+   *
+   * A dev client missing only the client id DOES show it, disabled and explained, because
+   * that one is actionable by whoever is running the build.
    */
-  if (unavailableReason === 'unsupported-build') return null;
+  if (unavailableReason === 'unsupported-build' || unavailableReason === 'ios-needs-apple-signin') {
+    return null;
+  }
 
   return (
     <View style={styles.wrap}>
