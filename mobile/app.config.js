@@ -132,6 +132,16 @@ export default ({ config }) => ({
     favicon: './assets/favicon.png',
   },
   plugins: [
+    /**
+     * SDK 57 requires these three to be declared explicitly -- they are no longer implied
+     * by their presence in `dependencies`. `expo install --fix` prints them but cannot write
+     * them itself, because this config is dynamic (see the file header). Omitting them means
+     * the generated native project loses their config, so fonts, the secure store and the
+     * status bar silently ship unconfigured.
+     */
+    'expo-font',
+    'expo-secure-store',
+    'expo-status-bar',
     [
       'expo-speech-recognition',
       {
