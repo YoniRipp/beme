@@ -14,8 +14,9 @@ export type Scheme = 'light' | 'dark';
  * Mirrors next-themes' semantics on the web: `ThemeProvider` is mounted with
  * `defaultTheme="dark" enableSystem` (`frontend/src/App.tsx:14`). 'light'/'dark' pin
  * the scheme regardless of the OS; 'system' defers to it. React Native's
- * `useColorScheme()` reports `null` when the OS scheme is unavailable (rather than
- * throwing or guessing) — that case falls back to the app default, dark, matching
+ * `useColorScheme()` reports `null` -- or, since RN 0.86, `'unspecified'` -- when the OS
+ * scheme is unavailable (rather than throwing or guessing); the caller normalises both to
+ * `null`, and that case falls back to the app default, dark, matching
  * `DEFAULT_SETTINGS.theme` (`packages/shared/src/settings/types.ts`).
  */
 export function resolveScheme(themeSetting: ThemeSetting, osScheme: 'light' | 'dark' | null): Scheme {
@@ -57,7 +58,12 @@ export interface AppTheme {
 export function useAppTheme(): AppTheme {
   const { settings } = useSettings();
   const osScheme = useColorScheme();
-  const scheme = resolveScheme(settings.theme, osScheme ?? null);
+  // React Native 0.86 widened `ColorSchemeName` to include `'unspecified'`, which `?? null`
+  // does not catch. It means what `null` already meant here -- the OS reported no scheme --
+  // so it is normalised at this boundary, keeping `resolveScheme` a pure function over the
+  // app's own domain type rather than one that tracks React Native's.
+  const osSchemeOrNull = osScheme === 'light' || osScheme === 'dark' ? osScheme : null;
+  const scheme = resolveScheme(settings.theme, osSchemeOrNull);
 
   const basePalette = scheme === 'dark' ? darkColors : lightColors;
   const accent = accentHex[settings.balanceDisplayColor];
