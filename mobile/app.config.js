@@ -162,6 +162,14 @@ export default ({ config }) => ({
   extra: {
     // Spread first so an `extra.eas.projectId` written by `eas init` survives.
     ...config.extra,
+    /**
+     * Written by hand because `eas init` could not: it refuses to edit a dynamic config and
+     * exits telling you to add this yourself. The spread above is what would have preserved
+     * it had a static `app.json` ever carried it.
+     *
+     * Not a secret — it identifies the project on expo.dev, it does not authorise anything.
+     */
+    eas: { projectId: '561fb07d-ba67-4c13-b813-eea1707055f6' },
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000',
     // Where the in-app privacy and terms links point -- the live web origin, confirmed by
     // the owner rather than inferred. It previously defaulted to `https://trackvibe.app`,
