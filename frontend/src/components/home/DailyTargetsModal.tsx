@@ -10,7 +10,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { caloriesFromMacros, SUGGESTED_MACRO_TARGETS, type DailyTargets } from '@trackvibe/shared/domain';
+import {
+  caloriesFromMacros,
+  MACRO_TARGET_MAX,
+  SUGGESTED_MACRO_TARGETS,
+  type DailyTargets,
+} from '@trackvibe/shared/domain';
 import type { DailyTargetsInput } from '@/hooks/useDailyTargets';
 
 /**
@@ -32,7 +37,9 @@ interface DailyTargetsModalProps {
 }
 
 /** Backend bounds (backend/src/schemas/routeSchemas.ts) — surfaced here so Save can't 400. */
-const MACRO_MAX = { carbs: 1500, fat: 500, protein: 500 } as const;
+// Was a local copy of the server's caps. It lives in `@trackvibe/shared/domain` now so the
+// Expo client's macro editor clamps to the same numbers rather than carrying a third copy.
+const MACRO_MAX = MACRO_TARGET_MAX;
 const CALORIE_MAX = 999999;
 
 const clampMacro = (value: number, key: keyof typeof MACRO_MAX) =>

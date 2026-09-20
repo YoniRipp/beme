@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import type { DailyTargets } from '@trackvibe/shared/domain';
 import { SettingsProvider } from '../../../context/SettingsContext';
 import { ThemeProvider } from '../../../theme/ThemeContext';
@@ -37,6 +37,7 @@ const renderCard = (over: Partial<React.ComponentProps<typeof FuelCard>> = {}) =
           loading={false}
           targetsLoading={false}
           onEditCalorieTarget={() => {}}
+          onEditMacroTargets={() => {}}
           {...over}
         />
       </ThemeProvider>
@@ -110,5 +111,36 @@ describe('FuelCard — macros', () => {
     const without = await renderCard();
     expect(await without.findByText('kcal in')).toBeTruthy();
     expect(without.queryByText(/of \d+ kcal/)).toBeNull();
+  });
+});
+
+/**
+ * The macro bars were inert for the whole life of this client — able to fill, never filling,
+ * with nowhere in the app to set what they fill against. They are a control now, and the
+ * thing worth pinning is that tapping them reaches the MACRO editor and not the calorie one:
+ * the two write different stores (profile grams vs the goals table's kcal row), so crossing
+ * the wires would silently edit the wrong number.
+ */
+describe('FuelCard — the macro bars are a control', () => {
+  it('opens the macro editor, not the calorie one', async () => {
+    const onEditMacroTargets = jest.fn();
+    const onEditCalorieTarget = jest.fn();
+    const r = await renderCard({ onEditMacroTargets, onEditCalorieTarget });
+
+    fireEvent.press(r.getByLabelText('Edit daily macro targets'));
+
+    expect(onEditMacroTargets).toHaveBeenCalledTimes(1);
+    expect(onEditCalorieTarget).not.toHaveBeenCalled();
+  });
+
+  it('keeps the calorie affordance on its own separate control', async () => {
+    const onEditMacroTargets = jest.fn();
+    const onEditCalorieTarget = jest.fn();
+    const r = await renderCard({ onEditMacroTargets, onEditCalorieTarget });
+
+    fireEvent.press(r.getByLabelText('Set a daily calorie target'));
+
+    expect(onEditCalorieTarget).toHaveBeenCalledTimes(1);
+    expect(onEditMacroTargets).not.toHaveBeenCalled();
   });
 });
