@@ -40,7 +40,7 @@ RC branch from `main` if they land in a different order.
 ## What the first run found
 
 Claude ran the whole plan on a signed preview APK against the live API on 2026-09-21, on an
-emulator. **51 of 56 checks pass.** Results per check are in the artifact linked above.
+emulator. **52 of 56 checks pass.** Results per check are in the artifact linked above.
 
 **Four genuine defects.** Two are fixed, one is known and tracked, one is open:
 
@@ -48,13 +48,17 @@ emulator. **51 of 56 checks pass.** Results per check are in the artifact linked
 |---|---|---|
 | **P2** | Tab labels struck through by the home indicator — no bottom safe-area inset | **fixed**, `5e98fd3`, confirmed on device |
 | **M5 / M7** | A macro target can never be cleared, on any client | **fixed** in two layers, [#380](https://github.com/YoniRipp/beme/pull/380) + [#374](https://github.com/YoniRipp/beme/pull/374); needs #380 deployed |
-| **P5** | Saving offline gives no feedback at all — silent failure | **open** |
 | **T4** | Imperial relabels `kg`→`lbs` without converting, and only on the workout card | known; groundwork for the migration already in place |
 
-**P5 is the one still worth fixing.** With airplane mode on, tapping Save produced nothing for
-55 seconds — no error, no spinner, no toast. It doesn't crash, hang or falsely succeed, but a
-user gets no signal and would navigate away having lost the entry. Proven to be the offline
-path and not a dead button: the same tap saved instantly once the network returned.
+**P5 was recorded as a failure and was not one.** Saving offline does show a toast — *"Could
+not save weight"* — within a second, keeps the typed value, and retries cleanly when the
+network returns. The original finding was a measurement error twice over: the toast auto-hides
+after a few seconds and the first samples were at 10s and 55s, and `uiautomator` does not
+capture toast overlays at all, so even 2-second polling of the view tree showed nothing. Only
+a screenshot taken ~1s after the tap revealed it.
+
+**So verify toasts with a screenshot within ~2 seconds, never with a view-tree dump.** That
+applies to every toast-based confirmation in this plan, and to the iOS run.
 
 **M5/M7 was the most interesting.** The clear-a-target path was broken *twice over*, and either
 half alone would have hidden the other: the mobile client converted the deliberate `null` to
@@ -65,7 +69,7 @@ test on purpose, so changing it was a decision, not just a fix.
 
 **D3 cleared.** The `@expo/vector-icons` regression is genuinely gone on a signed build.
 
-**Three checks were mis-specified by Claude, not failing** — A10, D1 and L4, each corrected in
+**Four checks were wrong in this plan, not in the app** — A10, D1 and L4 were mis-specified, and P5 was mis-measured. Each is corrected in
 place below. That is worth knowing as a pattern: on a first run through a new plan, a
 surprising result is about as likely to be a wrong expectation as a real defect. Read the code
 before filing it.
