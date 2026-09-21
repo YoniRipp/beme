@@ -30,6 +30,14 @@ export const queryKeys = {
   cycleEntries: ['cycleEntries'] as const,
   streaks: ['streaks'] as const,
   /**
+   * The AI coach conversation. The one key here with no line to mirror in the web's
+   * registry — `AiChatPanel` inlines `['chat-history']` at the `useQuery` call instead of
+   * registering it, which is the thing `frontend/data-fetching.md` tells both clients not
+   * to do. Named in this file rather than copying the inline, and spelled in this
+   * registry's camelCase so it reads with its neighbours.
+   */
+  chatHistory: ['chatHistory'] as const,
+  /**
    * The three AI Insights reads. The string values match what the web uses so the two clients
    * still name the same read the same thing — but note the web **inlines** these at the call
    * site (`frontend/src/components/insights/AiInsightsSection.tsx`) rather than registering

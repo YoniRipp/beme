@@ -12,6 +12,7 @@ import { SleepFormScreen } from '../screens/SleepFormScreen';
 import { GoalFormScreen } from '../screens/GoalFormScreen';
 import { WeightFormScreen } from '../screens/WeightFormScreen';
 import { ExercisesScreen } from '../screens/ExercisesScreen';
+import { ChatScreen } from '../screens/ChatScreen';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { fonts } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
@@ -93,6 +94,25 @@ function AppStack() {
         name="Exercises"
         component={ExercisesScreen}
         options={{ title: 'Exercises', presentation: 'modal' }}
+      />
+
+      {/*
+        AI chat, for the same reason as Exercises above and one more.
+
+        This arrived as a seventh TAB, with a comment conceding the web has no tab for it --
+        it is a Sparkles button pinned beside the bottom bar -- and adding one anyway because
+        a tab bar had no equivalent. The bar now has that equivalent: the coach button docked
+        next to the voice mic, which is what `BottomNavigation.tsx` does with `showAiCoach`.
+
+        The web's reason for keeping it off the bar is worth restating, because it is about
+        behaviour rather than taste: AI access is conditional, so a tab would appear and
+        disappear as a user's monthly allowance ran out, shifting the four fixed tabs under
+        their thumb mid-session.
+      */}
+      <Stack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{ title: 'AI Fitness Coach', presentation: 'modal' }}
       />
     </Stack.Navigator>
   );

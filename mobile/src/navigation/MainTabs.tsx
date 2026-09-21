@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { DrawerActions } from '@react-navigation/native';
+import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { Pressable, View } from 'react-native';
 import { HomeScreen } from '../screens/HomeScreen';
 import { BodyScreen } from '../screens/BodyScreen';
@@ -42,10 +42,14 @@ const TAB_BAR_PADDING_BOTTOM = 8;
  * inset, so the button is offset from THAT and the two cannot drift apart on a device with a
  * different inset — which is the bug the tab bar itself had.
  */
+/** The docked coach button: `--dock-size` / `--dock-gap` on the web. */
+const DOCK_SIZE = 44;
+const DOCK_GAP = 12;
 const FAB_SIZE = 60;
 const FAB_RISE = 22;
 
 export function MainTabs() {
+  const navigation = useNavigation<any>();
   const { colors } = useThemeContext();
   const insets = useSafeAreaInsets();
 
@@ -138,6 +142,35 @@ export function MainTabs() {
         }}
       >
         <Icon source="microphone" size={26} color={colors.primaryForeground} />
+      </Pressable>
+      {/*
+        The AI coach, docked above the bar's right edge — `BottomNavigation.tsx`'s
+        `showAiCoach` button, in the same relationship to the bar.
+
+        Deliberately not a tab. The web's own note explains why in behavioural terms: AI
+        access is conditional, so a tab would appear and disappear as a user's monthly
+        allowance ran out and shift the four fixed tabs under their thumb. Secondary chrome
+        beside the primary mic, so it takes the surface colour rather than the accent.
+      */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open AI Coach"
+        onPress={() => navigation.navigate('Chat')}
+        style={{
+          position: 'absolute',
+          right: spacing.lg,
+          bottom: TAB_BAR_HEIGHT + insets.bottom + DOCK_GAP,
+          width: DOCK_SIZE,
+          height: DOCK_SIZE,
+          borderRadius: DOCK_SIZE / 2,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.text,
+          borderWidth: 3,
+          borderColor: colors.background,
+        }}
+      >
+        <Icon source="auto-fix" size={20} color={colors.background} />
       </Pressable>
       <VoiceSheet visible={voiceOpen} onDismiss={() => setVoiceOpen(false)} />
     </View>
