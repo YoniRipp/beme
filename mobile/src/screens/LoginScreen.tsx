@@ -142,6 +142,15 @@ export function LoginScreen() {
         <Pressable onPress={() => navigation.navigate('Signup' as never)} disabled={loading}>
           <Text style={styles.link}>Create an account</Text>
         </Pressable>
+        {/* Below "Create an account", where the web puts it (`Login.tsx`). Until now this
+            client had no route out of a forgotten password at all. */}
+        <Pressable
+          onPress={() => navigation.navigate('ForgotPassword' as never)}
+          disabled={loading}
+          style={{ marginTop: spacing.md }}
+        >
+          <Text style={styles.link}>Forgot your password?</Text>
+        </Pressable>
       </View>
     </KeyboardAvoidingView>
   );
