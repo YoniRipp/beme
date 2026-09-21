@@ -77,12 +77,11 @@ const configSchema = z.object({
             .array(z.string().min(1, 'CORS_ORIGIN must not contain an empty origin'))
             .min(1, 'CORS_ORIGIN must list at least one origin'),
         ],
-        { errorMap: () => ({ message: 'CORS_ORIGIN must be set to an explicit origin in production' }) },
+        // zod 4 renamed `errorMap` to `error`, and accepts a plain string for the simple case.
+        { error: 'CORS_ORIGIN must be set to an explicit origin in production' },
       )
     : z.union([z.string(), z.array(z.string()), z.boolean(), z.undefined()], {
-        errorMap: () => ({
-          message: 'CORS_ORIGIN must be an origin, a comma-separated list of origins, or unset',
-        }),
+        error: 'CORS_ORIGIN must be an origin, a comma-separated list of origins, or unset',
       }),
   frontendOrigin: isProduction
     ? z.string().min(1, 'FRONTEND_ORIGIN must be set in production')
@@ -238,7 +237,8 @@ const rawConfig = {
 
 const parsed = configSchema.safeParse(rawConfig);
 if (!parsed.success) {
-  const first = parsed.error.errors[0];
+  // zod 4 renamed `ZodError.errors` to `.issues`.
+  const first = parsed.error.issues[0];
   throw new Error(first ? `${first.path.join('.')}: ${first.message}` : 'Invalid configuration');
 }
 

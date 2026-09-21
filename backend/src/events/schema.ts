@@ -15,7 +15,8 @@ export const eventMetadataSchema = z.object({
 export const eventEnvelopeSchema = z.object({
   eventId: z.string().uuid(),
   type: z.string().min(1),
-  payload: z.record(z.unknown()),
+  // zod 4 requires an explicit key type; `z.record(v)` is no longer a valid single-arg call.
+  payload: z.record(z.string(), z.unknown()),
   metadata: eventMetadataSchema,
 });
 

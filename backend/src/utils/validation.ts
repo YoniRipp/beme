@@ -6,7 +6,8 @@ import { toDateString } from './date.js';
 
 /** Format the first issue of a ZodError as "path: message" — shared by body and query validation. */
 export function firstZodErrorMessage(error: z.ZodError, fallback = 'Validation failed'): string {
-  const first = error.errors[0];
+  // zod 4 renamed `ZodError.errors` to `.issues`.
+  const first = error.issues[0];
   return first ? `${first.path.length ? first.path.join('.') + ': ' : ''}${first.message}` : fallback;
 }
 
