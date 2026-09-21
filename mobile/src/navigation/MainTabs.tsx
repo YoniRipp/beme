@@ -9,6 +9,7 @@ import { GoalsScreen } from '../screens/GoalsScreen';
 import { InsightsScreen } from '../screens/InsightsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { Icon } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeContext } from '../theme/ThemeContext';
 import { fonts, spacing } from '../theme';
 
@@ -23,8 +24,22 @@ const TAB_ICONS: Record<string, string> = {
   Settings: 'cog',
 };
 
+/**
+ * Bare height of the tab bar, before the device's bottom inset is added.
+ *
+ * Edge-to-edge is mandatory from Android 16, so the app draws BEHIND the gesture bar and has
+ * to inset its own content. Without this the system home indicator is painted straight across
+ * the tab labels -- on a 1080x2400 gesture-nav device it struck through 'ENERGY' and
+ * 'GOALS' on every screen. `MobileScreen` and `AppDrawer` already take their insets
+ * from `react-native-safe-area-context`; the tab bar was the one piece of chrome still
+ * using a hardcoded height.
+ */
+const TAB_BAR_HEIGHT = 64;
+const TAB_BAR_PADDING_BOTTOM = 8;
+
 export function MainTabs() {
   const { colors } = useThemeContext();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -71,8 +86,8 @@ export function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
-          height: 64,
-          paddingBottom: 8,
+          height: TAB_BAR_HEIGHT + insets.bottom,
+          paddingBottom: TAB_BAR_PADDING_BOTTOM + insets.bottom,
           paddingTop: 6,
         },
         tabBarIcon: ({ color, size }) => (
