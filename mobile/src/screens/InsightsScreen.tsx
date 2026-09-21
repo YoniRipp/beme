@@ -9,6 +9,7 @@ import { EmptyState } from '../components/shared/EmptyState';
 import { ErrorNotice } from '../components/shared/ErrorNotice';
 import { TruncationNotice } from '../components/shared/TruncationNotice';
 import { MobileScreen } from '../components/shared/MobileScreen';
+import { AiInsightsSection } from '../components/insights/AiInsightsSection';
 import { insightsHaveData } from '../lib/insightsViewState';
 import {
   getFitnessInsights,
@@ -66,16 +67,23 @@ export function InsightsScreen() {
     }));
   }, [workouts]);
 
-  if (loading) return <LoadingView />;
-  if (!insightsHaveData({ workouts, foodEntries, checkIns }) && !workoutsError && !energyError) {
-    return <EmptyState icon="chart-line" title="No data yet" subtitle="Log workouts, food or sleep to see insights" />;
-  }
-
   const barData = freqData.map((d) => ({ value: d.count, label: d.week, frontColor: colors.primary }));
   const lineData = calorieData.map((d) => ({ value: d.calories, label: d.date }));
+  const chartsHaveData = insightsHaveData({ workouts, foodEntries, checkIns });
 
+  /**
+   * The loading and empty gates used to be early `return`s that replaced the whole screen.
+   * They are inline now for one reason: the AI section does not depend on any of the data
+   * they gate on, and an early return meant an account with nothing logged — the account most
+   * likely to want a coach — got a bare "No data yet" and no AI section at all. The web has
+   * always rendered `AiInsightsSection` above its `ContentWithLoading` block
+   * (`frontend/src/pages/Insights.tsx`), so this is what parity looks like rather than a
+   * restructure for its own sake. Both components, both conditions and every card below are
+   * unchanged; only where the two gates sit has moved.
+   */
   return (
     <MobileScreen title="Patterns" subtitle="Trends from your recent activity." onRefresh={refreshInsights}>
+      <AiInsightsSection />
       {/* The last screen still discarding these. `useEnergy` and `useWorkouts` have always
           returned them; without this a failed fetch renders empty charts and `--` stats, which
           reads as "you have no history" rather than "we could not load it". */}
@@ -83,107 +91,115 @@ export function InsightsScreen() {
       {/* Every stat on this screen is an average or a trend over the rows below. If the pager
           clipped them, the numbers are real but they are not the user's whole history. */}
       <TruncationNotice truncated={energyTruncated || workoutsTruncated} />
-      {workouts.length > 0 && (
-        <Card style={styles.card}>
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.cardTitle}>Workout Frequency</Text>
-            <Text variant="bodySmall" style={styles.subtitle}>Last 12 weeks</Text>
-            <BarChart
-              data={barData}
-              barWidth={16}
-              spacing={8}
-              noOfSections={5}
-              xAxisLabelTextStyle={styles.chartLabel}
-              yAxisTextStyle={styles.chartLabel}
-              hideRules
-              height={150}
-            />
-          </Card.Content>
-        </Card>
-      )}
+      {loading ? (
+        <LoadingView />
+      ) : !chartsHaveData && !workoutsError && !energyError ? (
+        <EmptyState icon="chart-line" title="No data yet" subtitle="Log workouts, food or sleep to see insights" />
+      ) : (
+        <>
+        {workouts.length > 0 && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.cardTitle}>Workout Frequency</Text>
+              <Text variant="bodySmall" style={styles.subtitle}>Last 12 weeks</Text>
+              <BarChart
+                data={barData}
+                barWidth={16}
+                spacing={8}
+                noOfSections={5}
+                xAxisLabelTextStyle={styles.chartLabel}
+                yAxisTextStyle={styles.chartLabel}
+                hideRules
+                height={150}
+              />
+            </Card.Content>
+          </Card>
+        )}
 
-      {typeCounts.length > 0 && (
+        {typeCounts.length > 0 && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.cardTitle}>Workout Types</Text>
+              <View style={styles.pieContainer}>
+                <PieChart data={typeCounts} radius={60} textColor="#fff" textSize={10} showText />
+                <View style={styles.legend}>
+                  {typeCounts.map((t) => (
+                    <View key={t.text} style={styles.legendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: t.color }]} />
+                      <Text variant="bodySmall">{t.text}: {t.value}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+        )}
+
+        {foodEntries.length > 0 && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.cardTitle}>Calorie Trend</Text>
+              <Text variant="bodySmall" style={styles.subtitle}>Last 30 days</Text>
+              <LineChart
+                data={lineData}
+                color="#ef4444"
+                thickness={2}
+                noOfSections={5}
+                xAxisLabelTextStyle={styles.chartLabel}
+                yAxisTextStyle={styles.chartLabel}
+                hideRules
+                height={150}
+                hideDataPoints
+                curved
+              />
+            </Card.Content>
+          </Card>
+        )}
+
         <Card style={styles.card}>
           <Card.Content>
-            <Text variant="titleMedium" style={styles.cardTitle}>Workout Types</Text>
-            <View style={styles.pieContainer}>
-              <PieChart data={typeCounts} radius={60} textColor="#fff" textSize={10} showText />
-              <View style={styles.legend}>
-                {typeCounts.map((t) => (
-                  <View key={t.text} style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: t.color }]} />
-                    <Text variant="bodySmall">{t.text}: {t.value}</Text>
-                  </View>
-                ))}
+            <Text variant="titleMedium" style={styles.cardTitle}>Stats</Text>
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <Text variant="headlineSmall" style={styles.statValue}>{fitness.workoutFrequency}</Text>
+                <Text variant="bodySmall" style={styles.statLabel}>Workouts/week</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text variant="headlineSmall" style={styles.statValue}>{fitness.averageDuration > 0 ? `${Math.round(fitness.averageDuration)}` : '--'}</Text>
+                <Text variant="bodySmall" style={styles.statLabel}>Avg duration (min)</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text variant="headlineSmall" style={styles.statValue}>{health.averageDailyCalories > 0 ? Math.round(health.averageDailyCalories) : '--'}</Text>
+                <Text variant="bodySmall" style={styles.statLabel}>Avg daily cal</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text variant="headlineSmall" style={styles.statValue}>{health.averageSleepHours > 0 ? health.averageSleepHours.toFixed(1) : '--'}</Text>
+                <Text variant="bodySmall" style={styles.statLabel}>Avg sleep (hrs)</Text>
+              </View>
+              {/* The three the web shows and this screen did not. All three are already on the
+                  objects above — `getFitnessInsights`/`getHealthInsights` are the same shared
+                  functions both clients call, so this is rendering, not computing. */}
+              <View style={styles.statItem}>
+                <Text variant="headlineSmall" style={styles.statValue}>{fitness.mostCommonType || '--'}</Text>
+                <Text variant="bodySmall" style={styles.statLabel}>Most common type</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text variant="headlineSmall" style={styles.statValue}>{health.sleepConsistency > 0 ? `${health.sleepConsistency.toFixed(1)}h` : '--'}</Text>
+                <Text variant="bodySmall" style={styles.statLabel}>Sleep std dev</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text variant="headlineSmall" style={styles.statValue}>
+                  {health.averageDailyCalories > 0
+                    ? `P ${Math.round(health.averageMacros.protein)} · C ${Math.round(health.averageMacros.carbs)} · F ${Math.round(health.averageMacros.fats)}`
+                    : '--'}
+                </Text>
+                <Text variant="bodySmall" style={styles.statLabel}>Avg macros (g)</Text>
               </View>
             </View>
           </Card.Content>
         </Card>
+        </>
       )}
-
-      {foodEntries.length > 0 && (
-        <Card style={styles.card}>
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.cardTitle}>Calorie Trend</Text>
-            <Text variant="bodySmall" style={styles.subtitle}>Last 30 days</Text>
-            <LineChart
-              data={lineData}
-              color="#ef4444"
-              thickness={2}
-              noOfSections={5}
-              xAxisLabelTextStyle={styles.chartLabel}
-              yAxisTextStyle={styles.chartLabel}
-              hideRules
-              height={150}
-              hideDataPoints
-              curved
-            />
-          </Card.Content>
-        </Card>
-      )}
-
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.cardTitle}>Stats</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text variant="headlineSmall" style={styles.statValue}>{fitness.workoutFrequency}</Text>
-              <Text variant="bodySmall" style={styles.statLabel}>Workouts/week</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text variant="headlineSmall" style={styles.statValue}>{fitness.averageDuration > 0 ? `${Math.round(fitness.averageDuration)}` : '--'}</Text>
-              <Text variant="bodySmall" style={styles.statLabel}>Avg duration (min)</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text variant="headlineSmall" style={styles.statValue}>{health.averageDailyCalories > 0 ? Math.round(health.averageDailyCalories) : '--'}</Text>
-              <Text variant="bodySmall" style={styles.statLabel}>Avg daily cal</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text variant="headlineSmall" style={styles.statValue}>{health.averageSleepHours > 0 ? health.averageSleepHours.toFixed(1) : '--'}</Text>
-              <Text variant="bodySmall" style={styles.statLabel}>Avg sleep (hrs)</Text>
-            </View>
-            {/* The three the web shows and this screen did not. All three are already on the
-                objects above — `getFitnessInsights`/`getHealthInsights` are the same shared
-                functions both clients call, so this is rendering, not computing. */}
-            <View style={styles.statItem}>
-              <Text variant="headlineSmall" style={styles.statValue}>{fitness.mostCommonType || '--'}</Text>
-              <Text variant="bodySmall" style={styles.statLabel}>Most common type</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text variant="headlineSmall" style={styles.statValue}>{health.sleepConsistency > 0 ? `${health.sleepConsistency.toFixed(1)}h` : '--'}</Text>
-              <Text variant="bodySmall" style={styles.statLabel}>Sleep std dev</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text variant="headlineSmall" style={styles.statValue}>
-                {health.averageDailyCalories > 0
-                  ? `P ${Math.round(health.averageMacros.protein)} · C ${Math.round(health.averageMacros.carbs)} · F ${Math.round(health.averageMacros.fats)}`
-                  : '--'}
-              </Text>
-              <Text variant="bodySmall" style={styles.statLabel}>Avg macros (g)</Text>
-            </View>
-          </View>
-        </Card.Content>
-      </Card>
     </MobileScreen>
   );
 }
