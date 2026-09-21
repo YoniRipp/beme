@@ -11,6 +11,12 @@ interface AuthContextType {
   loadUser: () => Promise<void>;
   logout: () => void;
   register: (email: string, password: string, name: string) => Promise<void>;
+  /**
+   * Exchanges a Google ID token for a TrackVibe session. Identical to `login` once the
+   * token is in hand — the provider only changes how the user proved who they are, not what
+   * this client then holds.
+   */
+  loginWithGoogle: (idToken: string) => Promise<void>;
 }
 
 function apiUserToUser(a: { id: string; email: string; name: string; role: 'admin' | 'user' | 'trainer'; createdAt?: string }): User {
@@ -79,6 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     queryClient.clear();
   }, []);
 
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    const res = await authApi.loginWithGoogle(idToken);
+    await setToken(res.token);
+    setUser(apiUserToUser(res.user));
+  }, []);
+
   const register = useCallback(async (email: string, password: string, name: string) => {
     const res = await authApi.register(email, password, name);
     await setToken(res.token);
@@ -86,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, authLoading, login, loadUser, logout, register }}>
+    <AuthContext.Provider value={{ user, authLoading, login, loadUser, logout, register, loginWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );
