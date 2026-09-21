@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SettingsProvider } from '../../context/SettingsContext';
 import { ThemeProvider } from '../../theme/ThemeContext';
@@ -14,6 +14,14 @@ import { filterCatalog, type CatalogExercise } from '../../hooks/useExercises';
  * until it resolves — so a synchronous `getBy*` here runs against an empty tree and comes
  * back undefined. `SettingsScreen.test.tsx` and `WorkoutFormScreen.test.tsx` carry the same
  * note for the same reason.
+ *
+ * Note also `await act(async () => ...)` around the presses that submit the create form.
+ * `handleCreate` awaits `createExercise` and then calls `setCreating`/`setCreateError`, so
+ * those updates land in a microtask after `fireEvent.press` has already returned — outside
+ * any act scope, which React reports as "the current testing environment is not configured
+ * to support act(...)". Awaiting an async `act` keeps the continuation inside the scope.
+ * The assertions still go through `findBy*`/`waitFor`; the wrapper silences the warning
+ * without changing what is being asserted.
  */
 
 const mockNavigate = jest.fn();
@@ -290,7 +298,10 @@ describe('adding a movement the catalog does not have', () => {
 
     fireEvent.press(await r.findByLabelText('Add an exercise to the library'));
     fireEvent.changeText(await r.findByLabelText('New exercise name'), 'Zercher Squat');
-    fireEvent.press(await r.findByText('Add exercise'));
+    const submit = await r.findByText('Add exercise');
+    await act(async () => {
+      fireEvent.press(submit);
+    });
 
     await waitFor(() =>
       expect(mockNavigate).toHaveBeenCalledWith({
@@ -307,7 +318,10 @@ describe('adding a movement the catalog does not have', () => {
     fireEvent.press(await r.findByLabelText('Add an exercise to the library'));
     fireEvent.changeText(await r.findByLabelText('New exercise name'), 'Zercher Squat');
     fireEvent.press(await r.findByLabelText('Legs muscle group'));
-    fireEvent.press(await r.findByText('Add exercise'));
+    const submit = await r.findByText('Add exercise');
+    await act(async () => {
+      fireEvent.press(submit);
+    });
 
     await waitFor(() => expect(mockCreateExercise).toHaveBeenCalled());
     expect(mockCreateExercise).toHaveBeenCalledWith({
@@ -334,7 +348,10 @@ describe('adding a movement the catalog does not have', () => {
 
     fireEvent.press(await r.findByLabelText('Add an exercise to the library'));
     fireEvent.changeText(await r.findByLabelText('New exercise name'), 'Zercher Squat');
-    fireEvent.press(await r.findByText('Add exercise'));
+    const submit = await r.findByText('Add exercise');
+    await act(async () => {
+      fireEvent.press(submit);
+    });
 
     await r.findByText('Name already taken by a different row');
     expect(mockNavigate).not.toHaveBeenCalled();
