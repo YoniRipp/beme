@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { ActivityIndicator, Card, Text } from 'react-native-paper';
 import { Button } from '../components/ui';
@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useGoals } from '../hooks/useGoals';
 import { useProfile } from '../hooks/useProfile';
+import { MacroTargetsModal, type MacroTargetsInput } from '../components/home/MacroTargetsModal';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { useEnergy } from '../hooks/useEnergy';
 import { useWeight } from '../hooks/useWeight';
@@ -213,7 +214,8 @@ export function HomeScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { goals, goalsLoading } = useGoals();
-  const { profile, profileLoading } = useProfile();
+  const { profile, profileLoading, updateProfile, isUpdating } = useProfile();
+  const [macroModalOpen, setMacroModalOpen] = useState(false);
   const { workouts, workoutsLoading, workoutsError, refetchWorkouts } = useWorkouts();
   const { foodEntries, checkIns, energyLoading, energyError, refetchEnergy } = useEnergy();
   const { weightEntries } = useWeight();
@@ -263,6 +265,29 @@ export function HomeScreen() {
     navigation.navigate('GoalForm', calorieGoal ? { goalId: calorieGoal.id } : undefined);
   };
 
+  /**
+   * Macro grams go to the PROFILE, not the goals table — the same split the web makes in
+   * `useDailyTargets.ts`. `null` clears a target rather than storing a zero: the server
+   * takes the column nullable and `resolveDailyTargets` reads any non-positive value as
+   * unset, so a 0 would be a second way to spell the same state.
+   */
+  const handleSaveMacroTargets = async (next: MacroTargetsInput) => {
+    try {
+      // Sent as null, not undefined. `JSON.stringify` drops undefined keys entirely, so
+      // `?? undefined` here meant a cleared field never reached the server at all and the
+      // old target survived -- the dialog offers to remove a target and could not.
+      await updateProfile({
+        macroProtein: next.protein,
+        macroCarbs: next.carbs,
+        macroFat: next.fat,
+      });
+      setMacroModalOpen(false);
+    } catch {
+      // The modal stays open with the typed values intact; `useProfile` surfaces the error
+      // and the screen's existing ErrorNotice renders it.
+    }
+  };
+
   const openActivity = (type: RecentActivityItem['type']) =>
     navigation.navigate(type === 'food' ? 'Energy' : 'Body');
 
@@ -294,6 +319,17 @@ export function HomeScreen() {
         loading={energyLoading}
         targetsLoading={targetsLoading}
         onEditCalorieTarget={openCalorieTarget}
+        onEditMacroTargets={() => setMacroModalOpen(true)}
+      />
+
+      {/* Writes GRAMS to the profile. The calorie target above is a different store (the
+          goals table), which is why the two affordances stay separate on this client. */}
+      <MacroTargetsModal
+        visible={macroModalOpen}
+        onDismiss={() => setMacroModalOpen(false)}
+        targets={progress.targets}
+        saving={isUpdating}
+        onSave={handleSaveMacroTargets}
       />
 
       {/* The two numbers nothing else on this screen states. Protein, carbs and fat moved
