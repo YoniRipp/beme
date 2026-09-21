@@ -39,9 +39,9 @@ export interface ApiProfile {
    * copy exists only so the eventual migration can find the affected rows.
    */
   units?: 'metric' | 'imperial';
-  macroCarbs?: number;
-  macroFat?: number;
-  macroProtein?: number;
+  macroCarbs?: number | null;
+  macroFat?: number | null;
+  macroProtein?: number | null;
 }
 
 export const profileApi = {

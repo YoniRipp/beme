@@ -257,10 +257,13 @@ export function HomeScreen() {
    */
   const handleSaveMacroTargets = async (next: MacroTargetsInput) => {
     try {
+      // Sent as null, not undefined. `JSON.stringify` drops undefined keys entirely, so
+      // `?? undefined` here meant a cleared field never reached the server at all and the
+      // old target survived -- the dialog offers to remove a target and could not.
       await updateProfile({
-        macroProtein: next.protein ?? undefined,
-        macroCarbs: next.carbs ?? undefined,
-        macroFat: next.fat ?? undefined,
+        macroProtein: next.protein,
+        macroCarbs: next.carbs,
+        macroFat: next.fat,
       });
       setMacroModalOpen(false);
     } catch {
