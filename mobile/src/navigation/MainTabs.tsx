@@ -8,6 +8,7 @@ import { EnergyScreen } from '../screens/EnergyScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { Icon } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { VoiceSheet } from '../components/voice/VoiceSheet';
 import { useThemeContext } from '../theme/ThemeContext';
 import { fonts, spacing } from '../theme';
 
@@ -138,6 +139,7 @@ export function MainTabs() {
       >
         <Icon source="microphone" size={26} color={colors.primaryForeground} />
       </Pressable>
+      <VoiceSheet visible={voiceOpen} onDismiss={() => setVoiceOpen(false)} />
     </View>
   );
 }
