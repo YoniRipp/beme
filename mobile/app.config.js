@@ -131,6 +131,14 @@ export default ({ config }) => ({
   web: {
     favicon: './assets/favicon.png',
   },
+  /**
+   * The app's deep-link scheme. There was none until Google sign-in needed one: the native
+   * Google SDK returns through a URL the OS routes back to this app, and with no scheme
+   * registered there is nothing to route to. Expo also warns that a project without one
+   * cannot be opened from a link in a standalone build.
+   */
+  scheme: 'trackvibe',
+
   plugins: [
     /**
      * SDK 57 requires these three to be declared explicitly -- they are no longer implied
@@ -142,6 +150,7 @@ export default ({ config }) => ({
     'expo-font',
     'expo-secure-store',
     'expo-status-bar',
+    '@react-native-google-signin/google-signin',
     [
       'expo-speech-recognition',
       {
@@ -153,6 +162,14 @@ export default ({ config }) => ({
   extra: {
     // Spread first so an `extra.eas.projectId` written by `eas init` survives.
     ...config.extra,
+    /**
+     * Written by hand because `eas init` could not: it refuses to edit a dynamic config and
+     * exits telling you to add this yourself. The spread above is what would have preserved
+     * it had a static `app.json` ever carried it.
+     *
+     * Not a secret — it identifies the project on expo.dev, it does not authorise anything.
+     */
+    eas: { projectId: '561fb07d-ba67-4c13-b813-eea1707055f6' },
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000',
     // Where the in-app privacy and terms links point -- the live web origin, confirmed by
     // the owner rather than inferred. It previously defaulted to `https://trackvibe.app`,
@@ -160,5 +177,30 @@ export default ({ config }) => ({
     // links 404'd, which App Store Guideline 5.1.1(i) treats as a rejection. Override with
     // `EXPO_PUBLIC_WEB_URL` if the app moves to its own domain. See `src/lib/appUrls.ts`.
     webUrl: process.env.EXPO_PUBLIC_WEB_URL ?? 'https://beme.up.railway.app',
+    /**
+     * Google OAuth client ids.
+     *
+     * THE WEB ONE IS THE ONE THAT MATTERS, and it is not a copy/paste slip that a native app
+     * carries a "web" id. It is passed to the native SDK as the SERVER client id, which makes
+     * Google mint an ID token whose `aud` is that web client rather than the platform one.
+     * The backend accepts a token only when `aud` OR `azp` equals its single
+     * `GOOGLE_CLIENT_ID` (`backend/src/services/auth.ts`) -- and that value is this same web
+     * client, the one the deployed web app signs in with. Configure a platform id here
+     * instead and every sign-in comes back "token was not issued for this app".
+     *
+     * `ios` is the iOS client id, which the SDK needs to start the flow on that platform.
+     * There is deliberately no `android` entry: Android identifies the caller by package name
+     * and signing certificate, so its OAuth client must EXIST in Google Cloud but is never
+     * named in code.
+     *
+     * Left `undefined` rather than `null` when unset: Expo's public-config serialiser turns a
+     * `null` here into `{}`, which is truthy and would read as configured. Absent values
+     * leave the button disabled rather than failing at the prompt, which is how the web
+     * behaves too (`frontend/src/components/auth/SocialLoginButtons.tsx`).
+     */
+    googleClientId: {
+      web: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB,
+      ios: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS,
+    },
   },
 });

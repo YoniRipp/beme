@@ -198,12 +198,16 @@ export const createWeightEntrySchema = z.object({
   date: dateString,
   weight: z.number().min(10).max(500),
   notes: z.string().max(500).optional().nullable(),
+  // The unit the CLIENT captured this in. Optional: an older client sends none and the
+  // row stays untagged, which readers treat as kilograms.
+  unit: z.enum(['kg', 'lbs']).optional(),
 });
 
 export const updateWeightEntrySchema = z.object({
   date: dateString.optional(),
   weight: z.number().min(10).max(500).optional(),
   notes: z.string().max(500).optional().nullable(),
+  unit: z.enum(['kg', 'lbs']).optional(),
 }).strict().refine((obj) => Object.keys(obj).length > 0, 'At least one field required');
 
 // ─── Water entry schemas ──────────────────────────────────────

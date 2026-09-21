@@ -39,9 +39,9 @@ export interface ApiProfile {
    * copy exists only so the eventual migration can find the affected rows.
    */
   units?: 'metric' | 'imperial';
-  macroCarbs?: number;
-  macroFat?: number;
-  macroProtein?: number;
+  macroCarbs?: number | null;
+  macroFat?: number | null;
+  macroProtein?: number | null;
 }
 
 export const profileApi = {
@@ -57,6 +57,12 @@ export interface ApiWeightEntry {
   date: string;
   weight: number;
   notes?: string;
+  /**
+   * The unit this reading was captured in. Absent on rows written before weights were
+   * tagged; `displayWeight` reads that absence as kilograms, which is what every
+   * consumer already did.
+   */
+  unit?: 'kg' | 'lbs';
 }
 
 /**
@@ -85,9 +91,9 @@ function toQuery(params: Record<string, string | number | undefined>): string {
 export const weightApi = {
   list: (params: WeightListParams = {}) =>
     request<ApiWeightEntry[]>(`/api/weight-entries${toQuery({ ...params })}`),
-  add: (data: { date: string; weight: number; notes?: string }) =>
+  add: (data: { date: string; weight: number; notes?: string; unit?: 'kg' | 'lbs' }) =>
     request<ApiWeightEntry>('/api/weight-entries', { method: 'POST', body: data }),
-  update: (id: string, data: Partial<{ date: string; weight: number; notes?: string }>) =>
+  update: (id: string, data: Partial<{ date: string; weight: number; notes?: string; unit?: 'kg' | 'lbs' }>) =>
     request<ApiWeightEntry>(`/api/weight-entries/${id}`, { method: 'PATCH', body: data }),
   delete: (id: string) => request<void>(`/api/weight-entries/${id}`, { method: 'DELETE' }),
 };

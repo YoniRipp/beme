@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
 import { fonts, radius, spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
@@ -137,6 +138,7 @@ export function LoginScreen() {
         <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleLogin} disabled={loading}>
           {loading ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={styles.buttonText}>Sign in</Text>}
         </Pressable>
+        <GoogleSignInButton disabled={loading} />
         <Pressable onPress={() => navigation.navigate('Signup' as never)} disabled={loading}>
           <Text style={styles.link}>Create an account</Text>
         </Pressable>

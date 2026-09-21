@@ -32,6 +32,20 @@ export const KCAL_PER_GRAM = { carbs: 4, fat: 9, protein: 4 } as const;
  */
 export const SUGGESTED_MACRO_TARGETS = { carbs: 300, fat: 80, protein: 120 } as const;
 
+/**
+ * The largest daily grams a target editor will accept, per macro.
+ *
+ * These are the SERVER's bounds, transcribed: `upsertProfileSchema` in
+ * `backend/src/schemas/routeSchemas.ts` caps `macroCarbs` at 1500 and `macroFat` /
+ * `macroProtein` at 500, and rejects anything above with a 400. A client that clamps to a
+ * different number either refuses a value the server would have taken or sends one it will
+ * not, so the number lives here and both clients read it rather than each carrying a copy.
+ *
+ * The minimum is 1 on the server too — a macro target of zero is "unset", which is
+ * expressed by clearing the field rather than by typing a 0.
+ */
+export const MACRO_TARGET_MAX = { carbs: 1500, fat: 500, protein: 500 } as const;
+
 /** The macro fields of a profile, structurally — the shared package never imports a client's API types. */
 export interface MacroTargetSource {
   macroCarbs?: number | null;

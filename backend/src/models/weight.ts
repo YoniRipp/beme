@@ -7,7 +7,7 @@ import { toDateString } from '../utils/date.js';
 import { buildUpdateQuery, type UpdateBuilder } from '../db/queryBuilder.js';
 import type { WeightEntry, CreateWeightEntryInput, UpdateWeightEntryInput, PaginationParams } from '../types/domain.js';
 
-const RETURNING = 'id, date, weight, notes';
+const RETURNING = 'id, date, weight, notes, unit';
 
 function rowToEntry(row: Record<string, unknown>): WeightEntry {
   return {
@@ -15,6 +15,8 @@ function rowToEntry(row: Record<string, unknown>): WeightEntry {
     date: toDateString(row.date),
     weight: Number(row.weight),
     notes: (row.notes as string) ?? undefined,
+    // NULL on every row written before tagging; readers take that as kilograms.
+    unit: (row.unit as 'kg' | 'lbs' | null) ?? undefined,
   };
 }
 
@@ -23,6 +25,7 @@ const UPDATE_SPEC: UpdateBuilder<UpdateWeightEntryInput> = {
     date: { column: 'date', cast: '::date' },
     weight: { column: 'weight' },
     notes: { column: 'notes' },
+    unit: { column: 'unit' },
   },
 };
 
@@ -76,12 +79,12 @@ export async function findLatest(userId: string, client?: pg.Pool | pg.PoolClien
 export async function create(input: CreateWeightEntryInput, client?: pg.Pool | pg.PoolClient): Promise<WeightEntry> {
   const db = client ?? getPool();
   const result = await db.query(
-    `INSERT INTO weight_entries (user_id, date, weight, notes)
-     VALUES ($1, $2::date, $3, $4)
+    `INSERT INTO weight_entries (user_id, date, weight, notes, unit)
+     VALUES ($1, $2::date, $3, $4, $5)
      ON CONFLICT (user_id, date)
-     DO UPDATE SET weight = $3, notes = $4
+     DO UPDATE SET weight = $3, notes = $4, unit = $5
      RETURNING ${RETURNING}`,
-    [input.userId, input.date, input.weight, input.notes ?? null],
+    [input.userId, input.date, input.weight, input.notes ?? null, input.unit ?? null],
   );
   return rowToEntry(result.rows[0]);
 }

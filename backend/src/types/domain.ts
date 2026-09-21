@@ -238,6 +238,12 @@ export interface WeightEntry {
   date: string;
   weight: number;
   notes?: string;
+  /**
+   * The unit this reading is actually in. Absent on rows written before weights were
+   * tagged, which every consumer reads as kilograms — see
+   * `migrations/1776700000000_add-weight-entry-unit.js`.
+   */
+  unit?: 'kg' | 'lbs';
 }
 
 export interface CreateWeightEntryInput {
@@ -245,12 +251,24 @@ export interface CreateWeightEntryInput {
   date: string;
   weight: number;
   notes?: string;
+  /**
+   * The unit this reading is actually in. Absent on rows written before weights were
+   * tagged, which every consumer reads as kilograms — see
+   * `migrations/1776700000000_add-weight-entry-unit.js`.
+   */
+  unit?: 'kg' | 'lbs';
 }
 
 export interface UpdateWeightEntryInput {
   date?: string;
   weight?: number;
   notes?: string;
+  /**
+   * The unit this reading is actually in. Absent on rows written before weights were
+   * tagged, which every consumer reads as kilograms — see
+   * `migrations/1776700000000_add-weight-entry-unit.js`.
+   */
+  unit?: 'kg' | 'lbs';
 }
 
 // ─── Water Entry ─────────────────────────────────────────────

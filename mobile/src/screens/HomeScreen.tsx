@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { ActivityIndicator, Card, Text } from 'react-native-paper';
 import { Button } from '../components/ui';
@@ -16,13 +16,18 @@ import {
   type GoalTargetSource,
   type MacroTargetSource,
   type RecentActivityItem,
+  convertWeight,
+  unitForSystem,
+  type WeightUnit,
 } from '@trackvibe/shared/domain';
 import { useAuth } from '../context/AuthContext';
 import { useGoals } from '../hooks/useGoals';
 import { useProfile } from '../hooks/useProfile';
+import { MacroTargetsModal, type MacroTargetsInput } from '../components/home/MacroTargetsModal';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { useEnergy } from '../hooks/useEnergy';
 import { useWeight } from '../hooks/useWeight';
+import { useSettings } from '../hooks/useSettings';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { ErrorNotice } from '../components/shared/ErrorNotice';
 import { MetricCard } from '../components/shared/MetricCard';
@@ -138,13 +143,21 @@ export interface QuickLogPills {
 export function buildQuickLogPills(
   sleepHours: number | null,
   weightEntries: readonly { date: string; weight: number }[],
-  now: Date
+  now: Date,
+  /**
+   * The unit to SHOW in. Entries arrive from `useWeight` already normalised to
+   * kilograms, so this only converts for display. Optional and defaulting to `kg` so the
+   * existing three-argument callers and tests keep meaning exactly what they did.
+   */
+  unit: WeightUnit = 'kg'
 ): QuickLogPills {
   const today = toLocalDateString(now);
   const todaysWeight = weightEntries.find((e) => e.date === today);
   return {
     sleep: sleepHours != null && sleepHours > 0 ? `${oneDecimal(sleepHours)}h` : undefined,
-    weight: todaysWeight ? `${oneDecimal(todaysWeight.weight)}kg` : undefined,
+    weight: todaysWeight
+      ? `${oneDecimal(convertWeight(todaysWeight.weight, 'kg', unit))}${unit}`
+      : undefined,
   };
 }
 
@@ -201,7 +214,8 @@ export function HomeScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { goals, goalsLoading } = useGoals();
-  const { profile, profileLoading } = useProfile();
+  const { profile, profileLoading, updateProfile, isUpdating } = useProfile();
+  const [macroModalOpen, setMacroModalOpen] = useState(false);
   const { workouts, workoutsLoading, workoutsError, refetchWorkouts } = useWorkouts();
   const { foodEntries, checkIns, energyLoading, energyError, refetchEnergy } = useEnergy();
   const { weightEntries } = useWeight();
@@ -210,6 +224,10 @@ export function HomeScreen() {
     () => Promise.all([refetchEnergy(), refetchWorkouts()]),
     [refetchEnergy, refetchWorkouts],
   );
+
+  /** Display unit only — entries are kilograms by the time they reach here. */
+  const { settings } = useSettings();
+  const weightUnit = unitForSystem(settings.units);
 
   const progress = useMemo(
     () => buildHomeProgress({ goals, profile, workouts, foodEntries, checkIns }),
@@ -222,8 +240,8 @@ export function HomeScreen() {
   );
 
   const pills = useMemo(
-    () => buildQuickLogPills(progress.sleepHours, weightEntries, new Date()),
-    [progress.sleepHours, weightEntries]
+    () => buildQuickLogPills(progress.sleepHours, weightEntries, new Date(), weightUnit),
+    [progress.sleepHours, weightEntries, weightUnit]
   );
 
   /**
@@ -245,6 +263,29 @@ export function HomeScreen() {
     // The same row `resolveCalorieTarget` reads, so editing changes the number on screen
     // rather than adding a second goal the resolver will keep ignoring.
     navigation.navigate('GoalForm', calorieGoal ? { goalId: calorieGoal.id } : undefined);
+  };
+
+  /**
+   * Macro grams go to the PROFILE, not the goals table — the same split the web makes in
+   * `useDailyTargets.ts`. `null` clears a target rather than storing a zero: the server
+   * takes the column nullable and `resolveDailyTargets` reads any non-positive value as
+   * unset, so a 0 would be a second way to spell the same state.
+   */
+  const handleSaveMacroTargets = async (next: MacroTargetsInput) => {
+    try {
+      // Sent as null, not undefined. `JSON.stringify` drops undefined keys entirely, so
+      // `?? undefined` here meant a cleared field never reached the server at all and the
+      // old target survived -- the dialog offers to remove a target and could not.
+      await updateProfile({
+        macroProtein: next.protein,
+        macroCarbs: next.carbs,
+        macroFat: next.fat,
+      });
+      setMacroModalOpen(false);
+    } catch {
+      // The modal stays open with the typed values intact; `useProfile` surfaces the error
+      // and the screen's existing ErrorNotice renders it.
+    }
   };
 
   const openActivity = (type: RecentActivityItem['type']) =>
@@ -278,6 +319,17 @@ export function HomeScreen() {
         loading={energyLoading}
         targetsLoading={targetsLoading}
         onEditCalorieTarget={openCalorieTarget}
+        onEditMacroTargets={() => setMacroModalOpen(true)}
+      />
+
+      {/* Writes GRAMS to the profile. The calorie target above is a different store (the
+          goals table), which is why the two affordances stay separate on this client. */}
+      <MacroTargetsModal
+        visible={macroModalOpen}
+        onDismiss={() => setMacroModalOpen(false)}
+        targets={progress.targets}
+        saving={isUpdating}
+        onSave={handleSaveMacroTargets}
       />
 
       {/* The two numbers nothing else on this screen states. Protein, carbs and fat moved
