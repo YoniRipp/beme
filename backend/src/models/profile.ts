@@ -71,16 +71,33 @@ const UPSERT_COLUMNS: ReadonlyArray<[Exclude<keyof UpsertProfileInput, 'userId'>
 ];
 
 /**
- * Create or patch the caller's profile. Only the fields actually supplied are written:
- * an omitted field keeps its stored value on update, and on insert it is left out of the
- * statement so the column DEFAULT applies. Binding it as an explicit NULL instead would
- * bypass that DEFAULT, which a NOT NULL column (water_goal_glasses, cycle_tracking_enabled
- * and setup_completed on a migration-built database) rejects with 23502 -- the first
- * profile write of a brand-new user is exactly the one that omits fields.
+ * Create or patch the caller's profile.
+ *
+ * `undefined` and `null` mean DIFFERENT things here, and the distinction is the point:
+ *
+ *   undefined -> the caller did not mention this field. Left out of the statement entirely,
+ *                so on update the stored value survives and on insert the column DEFAULT
+ *                applies. Binding an explicit NULL instead would bypass that DEFAULT, and
+ *                on a migration-built database water_goal_glasses, cycle_tracking_enabled
+ *                and setup_completed are NOT NULL -- the insert would die with 23502, and
+ *                the first profile write of a brand-new user is exactly the one that omits
+ *                fields.
+ *   null      -> the caller is actively clearing this field. Written as SQL NULL.
+ *
+ * This used to filter on `!= null`, which collapsed the two and made every nullable column
+ * permanently unclearable: a macro target typed by mistake could never be removed, from any
+ * client. That contradicted `upsertProfileSchema`, which marks exactly the clearable fields
+ * `.optional().nullable()`, and the mobile dialog, which offers "leave a field empty to
+ * remove its target".
+ *
+ * Safe because that schema is the only way in: the NOT NULL columns above are `.optional()`
+ * WITHOUT `.nullable()`, so zod rejects a null for them before it reaches this function. The
+ * DEFAULT protection is therefore still intact -- enforced one layer up rather than by
+ * flattening null into undefined here.
  */
 export async function upsert(input: UpsertProfileInput, client?: pg.Pool | pg.PoolClient): Promise<UserProfile> {
   const db = client ?? getPool();
-  const provided = UPSERT_COLUMNS.filter(([field]) => input[field] != null);
+  const provided = UPSERT_COLUMNS.filter(([field]) => input[field] !== undefined);
 
   const columns = ['user_id', ...provided.map(([, column]) => column)];
   const values = [input.userId, ...provided.map(([field]) => input[field])];
