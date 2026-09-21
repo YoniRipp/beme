@@ -46,7 +46,7 @@
     "@trackvibe/shared": "*",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
-    "date-fns": "^3.3.0",
+    "date-fns": "^4.4.0",
     "html5-qrcode": "^2.3.8",
     "idb": "^8.0.3",
     "lucide-react": "^0.577.0",
