@@ -5,6 +5,7 @@ import { BodyScreen } from '../screens/BodyScreen';
 import { EnergyScreen } from '../screens/EnergyScreen';
 import { GoalsScreen } from '../screens/GoalsScreen';
 import { InsightsScreen } from '../screens/InsightsScreen';
+import { ChatScreen } from '../screens/ChatScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { Icon } from 'react-native-paper';
 import { useThemeContext } from '../theme/ThemeContext';
@@ -18,6 +19,7 @@ const TAB_ICONS: Record<string, string> = {
   Energy: 'lightning-bolt',
   Goals: 'target',
   Insights: 'chart-line',
+  Coach: 'message-text',
   Settings: 'cog',
 };
 
@@ -71,6 +73,14 @@ export function MainTabs() {
       <Tab.Screen name="Energy" component={EnergyScreen} options={{ tabBarLabel: 'Energy' }} />
       <Tab.Screen name="Goals" component={GoalsScreen} options={{ tabBarLabel: 'Goals' }} />
       <Tab.Screen name="Insights" component={InsightsScreen} options={{ tabBarLabel: 'Insights' }} />
+      {/* The web has no tab for this — it is a Sparkles button pinned to every page
+          (`Base44Layout.tsx`), which a tab bar has no equivalent of. Placed before
+          Settings so the preferences screen stays last, as it is on the web. */}
+      <Tab.Screen
+        name="Coach"
+        component={ChatScreen}
+        options={{ tabBarLabel: 'Coach', headerTitle: 'AI Fitness Coach' }}
+      />
       <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarLabel: 'Settings' }} />
     </Tab.Navigator>
   );
