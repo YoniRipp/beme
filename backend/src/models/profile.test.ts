@@ -52,9 +52,22 @@ describe('profile model', () => {
       expect(insertedColumns(sql)).toEqual(['user_id', 'sex', 'height_cm']);
     });
 
-    // The API treats an explicit null the same as an omitted field: "leave this alone".
-    it('treats an explicit null as unprovided', async () => {
-      await upsert({ userId: 'u1', setupCompleted: true, sex: null as unknown as undefined });
+    // `undefined` and `null` are deliberately different: undefined means "I did not mention
+    // this", null means "clear it". This pair used to be collapsed -- the filter was
+    // `!= null` -- which made every nullable column permanently unclearable, so a macro
+    // target entered by mistake could never be removed from any client. The three NOT NULL
+    // columns are safe because `upsertProfileSchema` marks them `.optional()` without
+    // `.nullable()`, so a null for them is rejected before it can reach this function.
+    it('writes SQL NULL when a nullable field is explicitly null, so it can be cleared', async () => {
+      await upsert({ userId: 'u1', macroCarbs: null });
+
+      const [sql, params] = mockQuery.mock.calls[0];
+      expect(insertedColumns(sql)).toEqual(['user_id', 'macro_carbs']);
+      expect(params).toEqual(['u1', null]);
+    });
+
+    it('still omits a field that is undefined rather than null', async () => {
+      await upsert({ userId: 'u1', setupCompleted: true, sex: undefined });
 
       const [sql, params] = mockQuery.mock.calls[0];
       expect(insertedColumns(sql)).toEqual(['user_id', 'setup_completed']);
