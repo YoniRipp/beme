@@ -16,6 +16,13 @@ export const queryKeys = {
   // cache the same single-row read under the same name.
   profile: ['profile'] as const,
   weightEntries: ['weightEntries'] as const,
+  /**
+   * The shared exercise catalog. Not user-scoped — `GET /api/exercises` reads a global
+   * table, so unlike every other key here the cached value is the same for every account.
+   * Same name as the web's (`frontend/src/lib/queryClient.ts`), so the two clients cache
+   * one read under one name.
+   */
+  exercises: ['exercises'] as const,
   /** Parameterised by LOCAL calendar day — a UTC slice is the previous day east of UTC. */
   waterToday: (date: string) => ['waterToday', date] as const,
   /** Prefix for invalidating every day's water at once, e.g. across a midnight rollover. */
