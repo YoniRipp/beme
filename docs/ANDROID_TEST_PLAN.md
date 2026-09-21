@@ -1,0 +1,259 @@
+# Android test plan
+
+A full manual pass over the Expo client on Android, covering the four mobile PRs in flight
+(#373, #374, #375, #376) plus the app that was already there.
+
+There is a tickable version of this at
+<https://claude.ai/artifact/FiGhjkBjVeE3QhemkpwAka> — same checks, openable on the phone
+you are testing with, and it records pass/fail so the failures can be read back. This file is
+the canonical copy and the one an iOS sibling should be written against.
+
+Check ids (`G1`, `D3`, `M6`…) are stable. Quote them when reporting a failure.
+
+---
+
+## Why there is a `test/android-rc` branch
+
+The four features are on four separate branches and **no single PR branch contains all four**,
+so there is no build that exercises the app as a whole. `test/android-rc` is `main` with all
+four merged:
+
+| PR | Branch | What it adds |
+|---|---|---|
+| [#373](https://github.com/YoniRipp/beme/pull/373) | `feat/mobile-drawer-nav` | The left navigation drawer |
+| [#374](https://github.com/YoniRipp/beme/pull/374) | `feat/mobile-macro-targets` | Settable daily macro targets |
+| [#375](https://github.com/YoniRipp/beme/pull/375) | `feat/mobile-google-signin-v2` | Google sign-in, gated off iOS |
+| [#376](https://github.com/YoniRipp/beme/pull/376) | `feat/mobile-password-reset` | Password reset request |
+
+They stack cleanly apart from one collision: #373 and #376 both add imports to
+`mobile/src/navigation/RootNavigator.tsx`. It is resolved on the RC branch — `AppDrawer`
+supersedes the direct `MainTabs` import, because `AppDrawer` renders `MainTabs` itself.
+
+Verified on the RC branch at the time of writing: `tsc --noEmit` clean, **425 tests across 50
+suites** passing, and `expo export --platform android` producing a 5.2 MB bundle.
+
+The branch is a test vehicle, not a merge candidate. Merge the PRs individually; rebuild the
+RC branch from `main` if they land in a different order.
+
+---
+
+## Gates — do these in order
+
+Nothing downstream means anything until all four pass.
+
+### G1 · Point the build at the live API
+
+```bash
+eas env:set --environment preview --name EXPO_PUBLIC_API_URL --value https://bme-production.up.railway.app --visibility plaintext --non-interactive
+```
+
+**Expect:** `eas env:list --environment preview` lists it. It currently lists nothing, for any
+environment.
+
+**Do not skip this.** `mobile/app.config.js` falls back to `http://localhost:3000` when
+`EXPO_PUBLIC_API_URL` is unset, and EAS resolves the config *on the build server* — a variable
+exported in your own shell never reaches it. Build without this and every screen renders,
+every request fails, and it reads as a broken app rather than a broken build.
+
+Note the host: `bme-production.up.railway.app` is the API. `beme.up.railway.app` is the web
+SPA and answers 200 with HTML on every path, including paths that do not exist — which is why
+pointing the app at it fails as a JSON parse error rather than a 404.
+
+### G2 · Build from the combined branch
+
+```bash
+git checkout test/android-rc
+cd mobile
+eas build -p android --profile preview
+```
+
+**Expect:** a build link, then an installable APK. The `preview` profile produces a standalone
+APK — no Metro, no laptop, which is what you want for a test that reflects what a user gets.
+
+### G3 · Install and cold-start
+
+**Expect:** splash on the dark ground, then the sign-in screen. No red error screen, no blank
+white.
+
+A crash here is native or module resolution, which typecheck and Jest cannot see. Capture the
+first line of the error, not the stack.
+
+### G4 · Prove the phone reached the API
+
+Sign in with a deliberately wrong password.
+
+**Expect:** *"Invalid email or password."*
+
+A network error or a JSON parse error instead means G1 did not take. Cheapest possible proof
+that the rest of the run is worth doing.
+
+---
+
+## A · Getting in and out
+
+Create a throwaway account at A1 and use it for the whole run. X1 deletes it.
+
+- **A1** — Sign up a new throwaway account. → Lands on Home, signed in.
+- **A2** — Force-quit from the recents switcher, reopen. → Still signed in. *(The token is in
+  `expo-secure-store`, i.e. the Android keystore. A failure here means every launch is a login.)*
+- **A3** — Settings → Sign out. → Back to sign-in.
+- **A4** — Sign back in. → Home, data intact.
+- **A5** — Look for "Forgot your password?" on the sign-in screen. → Present, below the
+  create-an-account line. `#376`
+- **A6** — Tap it. → "Reset password" screen. `#376`
+- **A7** — Send with the field empty. → *"Enter the email address for your account"*, no
+  request sent. `#376`
+- **A8** — Type any address and send. → *"If an account exists for … a reset link is on its
+  way."* `#376`
+
+  The same message appears whatever you type, **on purpose**. A screen that said "no account
+  found" would let anyone check which addresses are registered. Identical wording for a real
+  and a fake address is the check passing, not the check being vague.
+- **A9** — "Back to sign in". → Returns. `#376`
+- **A10** — Confirm there is **no** Google button. → Absent is the pass. `#375`
+
+  It hides itself when no client ID is configured, which is the case today. A visible Google
+  button is the bug. See *Known blockers*.
+
+## B · Left navigation drawer `#373`
+
+- **D1** — Swipe in from the left edge on Home. → Drawer slides over the content.
+- **D2** — Read the rows. → Exactly six, in order: Home, Body, Energy, Goals, Insights,
+  Settings.
+- **D3** — Look at every row's icon. → House, dumbbell, lightning bolt, target, chart line,
+  cog. Real icons, not empty boxes.
+
+  **Regression trap.** Expo SDK 57 stopped shipping `@expo/vector-icons` as a transitive
+  dependency and every icon in the app silently became a tofu box. Typecheck, the full test
+  suite and the bundle were all green while it was broken. A guard test covers it now, but
+  this is the only check here that has already shipped broken once — give it a real look.
+- **D4** — Note the highlighted row. → Only the screen you are on. *(Was a real bug: the
+  drawer read the wrong level of navigation state and highlighted all six.)*
+- **D5** — Tap a different row. → Navigates **and** the drawer closes. *(Was a real bug: it
+  navigated and left the drawer open over the new screen.)*
+- **D6** — Check the tab bar after tapping. → Selected tab matches the row you tapped.
+- **D7** — Open the drawer, press Android back. → Closes the drawer, stays on the screen.
+
+## C · Daily macro targets `#374`
+
+- **M1** — Home → Fuel card. → Carbs, protein and fat bars.
+- **M2** — Tap the macro bars. → "Edit daily macro targets" dialog. *(The bars are a control
+  now; before this they looked identical and did nothing.)*
+- **M3** — Look at the fields. → Pre-filled with current targets, not blank.
+- **M4** — Set carbs 250, protein 150, fat 70; save. → Bars redraw against the new numbers.
+- **M5** — Clear one field; save. → That target unset, its bar shows no target — not zero, not
+  the old value.
+- **M6** — Enter 9999 for carbs. → Clamped to 1500. Protein and fat clamp at 500. *(These
+  mirror the server's caps in `upsertProfileSchema`. If an over-cap number saves, client and
+  server disagree and the save fails server-side instead.)*
+- **M7** — Enter 0, then a negative. → Both treated as "no target", not saved as 0.
+- **M8** — Force-quit and reopen. → Targets still set.
+
+## D · Logging
+
+- **L1** — Log a food entry. → Saves; appears on Home and Energy.
+- **L2** — Log a workout. → Saves; appears on Body; increments "Workouts this week".
+- **L3** — Log sleep. → Saves; appears on Energy.
+- **L4** — Log a weight entry. → Saves; appears on Body.
+- **L5** — Create a goal. → Saves; appears on Goals; progress reflects logged data.
+- **L6** — Open a form and dismiss without saving. → Nothing written.
+- **L7** — Reopen a saved entry and edit it. → Fields seeded with saved values; the edit sticks.
+
+## E · Every screen renders
+
+- **S1** — Home. → Renders; "Loading recent activity" resolves rather than spinning forever.
+- **S2** — Body → tap the workout type filter. → List and weekly chart both respond.
+- **S3** — Energy. → Renders with food and sleep entries.
+- **S4** — Goals. → Goals with progress. "Set your first goal" only when empty.
+- **S5** — Insights. → Calorie Trend, Workout Frequency and Workout Types all draw, axis
+  labels inside the chart rather than clipped. Stats show avg daily cal, most common type,
+  sleep std dev.
+- **S6** — Settings. → Account, Units, Appearance, Legal, Sign out, Delete account all present.
+
+## F · Settings that change other screens
+
+These are worth testing properly because their effect is somewhere other than where you
+changed them.
+
+- **T1** — Appearance → Light / Dark / System. → Applies immediately, including the drawer and
+  an open modal, not just the screen behind them.
+- **T2** — Set System, flip Android's dark mode with the app open. → Follows without a restart.
+- **T3** — Change accent colour. → Buttons, highlights and the drawer's active row change
+  together.
+- **T4** — Units metric → imperial. → kg becomes lbs and cm becomes in *everywhere* — Body,
+  the weight form, Insights.
+- **T5** — Privacy and terms links. → A real page, not a 404. *(These previously pointed at a
+  domain that is not ours and both 404'd. Store review treats a dead privacy link as a
+  rejection — confirm on a device rather than assuming.)*
+- **T6** — Account card. → Your actual name and email, not `--`.
+
+## G · Android behaviour
+
+Only true on a real phone; an emulator or a unit test will not tell you.
+
+- **P1** — Rotate on several screens. → Stays portrait.
+- **P2** — Look at the top and bottom edges. → Content clears the status bar and the gesture
+  bar. *(Edge-to-edge is on, so the app draws behind the system bars and insets its own
+  content — exactly the kind of thing that looks fine in an emulator with a different bar
+  height.)*
+- **P3** — Back, gesture and button, from a nested screen, a modal and a tab. → One level each
+  time; never drops out of the app from a nested screen.
+- **P4** — Background for a few minutes, return. → Same screen, data loaded, no re-login.
+- **P5** — Airplane mode, then try to save. → Readable failure message. No crash, no endless
+  spinner.
+- **P6** — Airplane mode off, retry. → Works without restarting.
+- **P7** — Check the app's storage and battery entries in Android settings afterwards. →
+  Nothing alarming.
+
+## H · Destructive — last, throwaway account only
+
+- **X1** — Settings → Delete account → confirm. → Account gone, app returns to sign-in, old
+  credentials rejected.
+
+  **Irreversible.** No undo, no admin restore. Do not run this signed in as yourself.
+
+---
+
+## Known blockers
+
+Not checks. These cannot pass today; they are here so a run does not stall on them.
+
+**Google sign-in.** Needs an Android OAuth client in Google Cloud — package
+`com.trackvibe.app` plus the SHA-1 of the keystore that signed *this* build — and
+`EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB` set on the build. Read the fingerprint with
+`eas credentials -p android`: EAS holds its own keystore, so a local debug fingerprint is the
+wrong one. The Android OAuth client is matched by package + fingerprint and is never passed to
+the app as a value; the *web* client ID is the one the app sends, because the backend validates
+the token's `aud`/`azp` against it.
+
+**The password reset email itself.** A8 checks the request; the mail will not arrive.
+`RESEND_API_KEY` is unset in Railway, and `email.ts` defaults the sender to
+`onboarding@resend.dev`, Resend's shared sandbox, which only delivers to the Resend account's
+own inbox. Both `RESEND_API_KEY` **and** `RESEND_FROM` need setting against a verified domain —
+an API key alone gives a flow that works when you test it on yourself and silently reaches
+nobody else. This is the highest-value fix available: it unblocks reset for the web at the same
+time.
+
+**Not built on mobile yet.** AI chat, AI insights, the exercises library, push notifications
+and billing. Backend endpoints exist for the first three; the mobile screens do not.
+
+---
+
+## When iOS comes
+
+Most of this plan carries over unchanged. The deltas:
+
+- **G1–G2 differ.** `eas env:set --environment preview` covers both platforms, but the build
+  is `eas build -p ios --profile preview`, which needs an Apple Developer account and a
+  registered device UDID for an internal-distribution build. `development-simulator` builds
+  for the simulator without either.
+- **A10 inverts in meaning but not in outcome.** No Google button on iOS either — but on iOS
+  it is hidden by a deliberate platform gate, not by missing configuration. App Store
+  guideline 4.8 requires Sign in with Apple wherever a third-party social login is offered,
+  and there is no Apple provider in the backend. `isBlockedByAppleGuideline()` hides it, with
+  a test pinning the reason.
+- **P1–P7 are Android-specific.** The iOS equivalents are the back-swipe gesture, the home
+  indicator inset, and the microphone and speech-recognition permission prompts — iOS raises
+  SIGABRT the first time an app touches `SFSpeechRecognizer` without
+  `NSSpeechRecognitionUsageDescription`, so that prompt appearing correctly is a real check.
+- **Everything in A (except A10), B, C, D, E, F and H applies as written.**
