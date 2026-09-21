@@ -1,6 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { WEIGHT_HISTORY_LIMIT } from '@trackvibe/shared/domain';
+import { WEIGHT_HISTORY_LIMIT, convertWeight } from '@trackvibe/shared/domain';
 import { weightApi, type ApiWeightEntry } from '../core/api/health';
 import { queryKeys } from '../lib/queryKeys';
 
@@ -25,7 +25,7 @@ export function useWeight() {
   const queryClient = useQueryClient();
 
   const {
-    data: weightEntries = [],
+    data: rawEntries = [],
     isLoading: weightLoading,
     error: weightQueryError,
   } = useQuery({
@@ -34,8 +34,31 @@ export function useWeight() {
     queryFn: () => weightApi.list({ limit: WEIGHT_HISTORY_LIMIT, offset: 0 }),
   });
 
+  /**
+   * Normalised to kilograms, once, here.
+   *
+   * The invariant this establishes: INSIDE the app a weight is always kilograms, and
+   * conversion happens only at the two edges — the input, which tags what the user typed,
+   * and the display, which converts through `displayWeight`. Every consumer of this hook
+   * does arithmetic (trend, distance to target, the sparkline), and arithmetic across mixed
+   * units is silently wrong rather than loudly wrong.
+   *
+   * A row with no `unit` was written before tagging and is read as kilograms, which is what
+   * every consumer already did — so this changes the meaning of nothing already logged.
+   */
+  const weightEntries = useMemo(
+    () =>
+      rawEntries.map((e) => ({
+        ...e,
+        weight: convertWeight(e.weight, e.unit ?? 'kg', 'kg'),
+        unit: 'kg' as const,
+      })),
+    [rawEntries]
+  );
+
   const addMutation = useMutation({
-    mutationFn: (data: { date: string; weight: number; notes?: string }) => weightApi.add(data),
+    mutationFn: (data: { date: string; weight: number; notes?: string; unit?: 'kg' | 'lbs' }) =>
+      weightApi.add(data),
     onSuccess: (created) => {
       queryClient.setQueryData(queryKeys.weightEntries, (prev: ApiWeightEntry[] | undefined) =>
         mergeEntry(prev, created)
@@ -53,7 +76,7 @@ export function useWeight() {
   });
 
   const addWeight = useCallback(
-    (data: { date: string; weight: number; notes?: string }): Promise<void> =>
+    (data: { date: string; weight: number; notes?: string; unit?: 'kg' | 'lbs' }): Promise<void> =>
       addMutation.mutateAsync(data).then(() => undefined),
     [addMutation]
   );

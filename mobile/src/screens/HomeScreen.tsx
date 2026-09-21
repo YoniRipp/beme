@@ -16,6 +16,9 @@ import {
   type GoalTargetSource,
   type MacroTargetSource,
   type RecentActivityItem,
+  convertWeight,
+  unitForSystem,
+  type WeightUnit,
 } from '@trackvibe/shared/domain';
 import { useAuth } from '../context/AuthContext';
 import { useGoals } from '../hooks/useGoals';
@@ -23,6 +26,7 @@ import { useProfile } from '../hooks/useProfile';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { useEnergy } from '../hooks/useEnergy';
 import { useWeight } from '../hooks/useWeight';
+import { useSettings } from '../hooks/useSettings';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { ErrorNotice } from '../components/shared/ErrorNotice';
 import { MetricCard } from '../components/shared/MetricCard';
@@ -138,13 +142,21 @@ export interface QuickLogPills {
 export function buildQuickLogPills(
   sleepHours: number | null,
   weightEntries: readonly { date: string; weight: number }[],
-  now: Date
+  now: Date,
+  /**
+   * The unit to SHOW in. Entries arrive from `useWeight` already normalised to
+   * kilograms, so this only converts for display. Optional and defaulting to `kg` so the
+   * existing three-argument callers and tests keep meaning exactly what they did.
+   */
+  unit: WeightUnit = 'kg'
 ): QuickLogPills {
   const today = toLocalDateString(now);
   const todaysWeight = weightEntries.find((e) => e.date === today);
   return {
     sleep: sleepHours != null && sleepHours > 0 ? `${oneDecimal(sleepHours)}h` : undefined,
-    weight: todaysWeight ? `${oneDecimal(todaysWeight.weight)}kg` : undefined,
+    weight: todaysWeight
+      ? `${oneDecimal(convertWeight(todaysWeight.weight, 'kg', unit))}${unit}`
+      : undefined,
   };
 }
 
@@ -211,6 +223,10 @@ export function HomeScreen() {
     [refetchEnergy, refetchWorkouts],
   );
 
+  /** Display unit only — entries are kilograms by the time they reach here. */
+  const { settings } = useSettings();
+  const weightUnit = unitForSystem(settings.units);
+
   const progress = useMemo(
     () => buildHomeProgress({ goals, profile, workouts, foodEntries, checkIns }),
     [goals, profile, workouts, foodEntries, checkIns]
@@ -222,8 +238,8 @@ export function HomeScreen() {
   );
 
   const pills = useMemo(
-    () => buildQuickLogPills(progress.sleepHours, weightEntries, new Date()),
-    [progress.sleepHours, weightEntries]
+    () => buildQuickLogPills(progress.sleepHours, weightEntries, new Date(), weightUnit),
+    [progress.sleepHours, weightEntries, weightUnit]
   );
 
   /**

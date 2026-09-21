@@ -1,8 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
-import { summarizeWeight } from '@trackvibe/shared/domain';
+import { summarizeWeight, convertWeight, unitForSystem } from '@trackvibe/shared/domain';
 import { fonts, radius, spacing } from '../../theme';
+import { useSettings } from '../../hooks/useSettings';
 import { useThemeContext } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
 import { SectionCard } from '../shared/SectionCard';
@@ -29,6 +30,16 @@ export function WeightCard({ onLogWeight }: WeightCardProps) {
     weightEntries,
     profile.targetWeight
   );
+
+  /**
+   * Everything above is kilograms — `useWeight` normalises the rows and `targetWeight` is
+   * stored in the domain's unit — so conversion happens here, at the last moment before it
+   * is read. `convertWeight` is linear with no offset, which is why the deltas
+   * (`diffToTarget`, `trend`) go through the same call as the absolute values.
+   */
+  const { settings } = useSettings();
+  const unit = unitForSystem(settings.units);
+  const shown = (kg: number) => convertWeight(kg, 'kg', unit);
 
   const styles = useThemedStyles((colors) => ({
     logHint: {
@@ -133,10 +144,10 @@ export function WeightCard({ onLogWeight }: WeightCardProps) {
         <>
           <View style={styles.value}>
             <Text variant="headlineMedium" style={styles.current}>
-              {current.toFixed(1)}
+              {shown(current).toFixed(1)}
             </Text>
             <Text variant="bodyMedium" style={styles.unit}>
-              kg
+              {unit}
             </Text>
           </View>
 
@@ -147,7 +158,7 @@ export function WeightCard({ onLogWeight }: WeightCardProps) {
                   Target
                 </Text>
                 <Text variant="bodySmall" style={styles.factValue}>
-                  {target}kg
+                  {shown(target)}{unit}
                 </Text>
                 {diffToTarget != null && (
                   <Text
@@ -155,7 +166,7 @@ export function WeightCard({ onLogWeight }: WeightCardProps) {
                     style={{ color: diffToTarget > 0 ? colors.sleep : colors.success }}
                   >
                     ({diffToTarget > 0 ? '+' : ''}
-                    {diffToTarget.toFixed(1)})
+                    {shown(diffToTarget).toFixed(1)})
                   </Text>
                 )}
               </View>
@@ -164,7 +175,7 @@ export function WeightCard({ onLogWeight }: WeightCardProps) {
               <View style={styles.fact}>
                 <Icon source={trendIcon} size={12} color={trendTone} />
                 <Text variant="bodySmall" style={styles.factLabel}>
-                  {Math.abs(trend).toFixed(1)} kg / wk
+                  {Math.abs(shown(trend)).toFixed(1)} {unit} / wk
                 </Text>
               </View>
             )}

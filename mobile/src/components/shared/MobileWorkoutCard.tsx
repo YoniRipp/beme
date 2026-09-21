@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 import { Chip, Icon, Text } from 'react-native-paper';
 import { Card, IconButton } from '../ui';
-import { formatDate, getWeightUnit } from '@trackvibe/shared/domain';
+import { formatDate } from '@trackvibe/shared/domain';
 import { Workout } from '../../types/workout';
 import { fonts, radius, spacing } from '../../theme';
 import { useSettings } from '../../hooks/useSettings';
@@ -31,11 +31,20 @@ export function MobileWorkoutCard({
   onToggleCompleted,
 }: MobileWorkoutCardProps) {
   const { colors } = useThemeContext();
-  // The card used to hardcode `EEE, MMM d` and `kg`, so an imperial user was shown
-  // kilograms and nobody's date-format choice reached this screen. Both now resolve from
-  // the same settings blob the web reads, through the same shared helpers.
+  // The card used to hardcode `EEE, MMM d`, so nobody's date-format choice reached this
+  // screen. That now resolves from the same settings blob the web reads.
   const { settings } = useSettings();
-  const weightUnit = getWeightUnit(settings.units);
+  /**
+   * Deliberately NOT the user's preferred unit, unlike the weight card.
+   *
+   * This used to call `getWeightUnit(settings.units)`, which relabelled `60kg` to `60lbs`
+   * without touching the number -- a 2.2x misstatement of what the user lifted. Per-exercise
+   * weights live inside the workout's JSON payload and carry no unit, so unlike
+   * `weight_entries` (tagged in `1776700000000_add-weight-entry-unit.js`) there is nothing
+   * here to convert FROM. Showing the domain's own unit is the only honest option until
+   * those are tagged too; relabelling was worse than not honouring the preference.
+   */
+  const weightUnit = 'kg';
   const styles = useThemedStyles((colors) => ({
     card: {
     },
