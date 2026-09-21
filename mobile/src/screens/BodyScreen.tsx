@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
-import { Card } from '../components/ui';
+import { Button, Card } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { format, isToday, isYesterday, subWeeks } from 'date-fns';
 import { useWorkouts } from '../hooks/useWorkouts';
@@ -13,6 +13,7 @@ import { LoadingView } from '../components/shared/LoadingView';
 import { ErrorNotice } from '../components/shared/ErrorNotice';
 import { TruncationNotice } from '../components/shared/TruncationNotice';
 import { EmptyState } from '../components/shared/EmptyState';
+import { FilterChip } from '../components/shared/FilterChip';
 import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { MobileWorkoutCard } from '../components/shared/MobileWorkoutCard';
@@ -242,26 +243,11 @@ export function BodyScreen() {
       gap: spacing.sm,
       paddingRight: spacing.lg,
     },
-    filterChip: {
-      minHeight: 44,
-      justifyContent: 'center',
-      paddingHorizontal: spacing.lg,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
-    },
-    filterChipSelected: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    filterLabel: {
-      color: colors.textMuted,
-      fontFamily: fonts.bold,
-      fontWeight: '700',
-    },
-    filterLabelSelected: {
-      color: colors.primaryForeground,
+    // Left-aligned rather than full width: Paper stretches a `Button` to its container, and
+    // a full-bleed text button reads as a primary action, which this side trip is not.
+    libraryLinkRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
     },
     section: {
       gap: spacing.md,
@@ -450,7 +436,10 @@ export function BodyScreen() {
       <SearchBar value={search} onChangeText={setSearch} placeholder="Search workouts..." />
 
       {/* A scrolling chip row rather than Paper's SegmentedButtons: four equal segments
-          truncate "Flexibility" at 375px, and this is also the shape the web uses. */}
+          truncate "Flexibility" at 375px, and this is also the shape the web uses.
+
+          The chips themselves now come from `components/shared/FilterChip` — they were the
+          first copy of that pill and the exercise library needed three more rows of them. */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -459,23 +448,29 @@ export function BodyScreen() {
         accessibilityLabel="Filter workouts by type"
       >
         {WORKOUT_FILTERS.map(({ value, label }) => (
-          <Pressable
+          <FilterChip
             key={value}
+            label={label}
+            selected={filter === value}
             onPress={() => setFilter(value)}
-            style={[styles.filterChip, filter === value && styles.filterChipSelected]}
-            accessibilityRole="button"
-            accessibilityState={{ selected: filter === value }}
             accessibilityLabel={`${label} workouts`}
-          >
-            <Text
-              variant="labelMedium"
-              style={[styles.filterLabel, filter === value && styles.filterLabelSelected]}
-            >
-              {label}
-            </Text>
-          </Pressable>
+          />
         ))}
       </ScrollView>
+
+      {/* The browse entry to the exercise catalog, which otherwise only exists as a picker
+          inside the workout form. Kept to a text button rather than a card: this screen is
+          about the workouts you have logged, and the library is a side trip from it. */}
+      <View style={styles.libraryLinkRow}>
+        <Button
+          mode="text"
+          icon="book-open-variant"
+          onPress={() => navigation.navigate('Exercises')}
+          accessibilityLabel="Browse the exercise library"
+        >
+          Exercise library
+        </Button>
+      </View>
 
       {renderedCount === 0 ? (
         workouts.length === 0 ? (

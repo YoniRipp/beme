@@ -1,5 +1,7 @@
 import { Exercise, Workout } from '../../types/workout';
 import type { ApiExercise } from '../../core/api/workouts';
+import type { ApiCatalogExercise } from '../../core/api/exercises';
+import type { CatalogExercise } from '../../hooks/useExercises';
 import { parseLocalDateString, toLocalDateString } from '../../lib/dateRanges';
 
 /**
@@ -72,5 +74,46 @@ export function workoutToApiWorkout(w: Omit<Workout, 'id'>): ApiWorkoutPayload {
     exercises: w.exercises.map((e) => ({ ...e })),
     notes: w.notes,
     completed: w.completed,
+  };
+}
+
+/**
+ * Wire catalog exercise -> domain catalog exercise.
+ *
+ * The only transformation is folding the API's `null`s to `undefined`, and that is worth a
+ * mapper rather than a cast because the two spellings are NOT interchangeable where this
+ * type is read. `ex.equipment ?? ex.category` (see `exerciseFacetLabel` in
+ * `hooks/useExercises.ts`) falls through on `undefined` and stops on `null`, so a row whose
+ * `equipment` column is null would render with no gear label at all instead of the value
+ * its older `category` column is still holding. The catalog is a merge of ~117 curated rows
+ * (which populate `category`) and ~873 imported ones (which populate `equipment`), so that
+ * is the common row, not the edge case.
+ *
+ * `isCustom` defaults to false rather than staying undefined: the server sends
+ * `Boolean(row.is_custom)` for every row, so an absent value means an older payload rather
+ * than unknown provenance.
+ *
+ * Lives here, beside the workout mappers, because the web keeps its identical function in
+ * the file of the same name (`frontend/src/features/body/mappers.ts`). The two clients'
+ * mapper layers line up file for file, which is what makes a drift between them show up in
+ * review rather than in production.
+ */
+export function apiExerciseToCatalogExercise(a: ApiCatalogExercise): CatalogExercise {
+  return {
+    id: a.id,
+    name: a.name,
+    muscleGroup: a.muscleGroup ?? undefined,
+    category: a.category ?? undefined,
+    equipment: a.equipment ?? undefined,
+    discipline: a.discipline ?? undefined,
+    level: a.level ?? undefined,
+    mechanic: a.mechanic ?? undefined,
+    force: a.force ?? undefined,
+    primaryMuscles: a.primaryMuscles ?? undefined,
+    secondaryMuscles: a.secondaryMuscles ?? undefined,
+    imageUrl: a.imageUrl ?? undefined,
+    imageUrl2: a.imageUrl2 ?? undefined,
+    videoUrl: a.videoUrl ?? undefined,
+    isCustom: a.isCustom ?? false,
   };
 }

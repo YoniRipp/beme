@@ -19,6 +19,28 @@ function newExercise(): Exercise {
 }
 
 /**
+ * Apply a movement chosen in the exercise library to the row that asked for it.
+ *
+ * An `index` inside the list renames that row, keeping its sets, reps and weight — the user
+ * pressed "choose from library" on a row they had already dialled in, and throwing that away
+ * to get a name would be a worse trade than typing the name by hand. An index past the end
+ * appends instead, which is how "Add from library" reaches this without first creating a
+ * blank row for the user to then fill.
+ *
+ * Exported as a plain function so the contract can be pinned without a navigator: the whole
+ * value here is in "replace, don't rebuild", and a rendered test would assert it through two
+ * layers of navigation mock. It is also the same lesson `mergeExerciseEdits` below exists
+ * for — rebuilding an exercise from the fields in view is what silently destroyed per-set
+ * data once already.
+ */
+export function applyPickedExercise(exercises: Exercise[], index: number, name: string): Exercise[] {
+  if (index >= 0 && index < exercises.length) {
+    return exercises.map((ex, i) => (i === index ? { ...ex, name } : ex));
+  }
+  return [...exercises, { ...newExercise(), name }];
+}
+
+/**
  * Apply the five fields this form edits on top of the exercise it is holding.
  *
  * The spread is the whole point: per-set reps, weights and completion flags
@@ -51,9 +73,11 @@ export function WorkoutFormScreen() {
     divider: { marginVertical: 16 },
     exerciseCard: { marginBottom: 12 },
     exerciseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    exerciseActions: { flexDirection: 'row', alignItems: 'center' },
     exerciseInput: { marginBottom: 8 },
     exerciseRow: { flexDirection: 'row', gap: 8 },
     exerciseSmall: { flex: 1 },
+    addFromLibrary: { marginTop: 8 },
     addExercise: { marginTop: 8, marginBottom: 16 },
     saveButton: { marginTop: 8, backgroundColor: colors.primary },
   }));
@@ -79,6 +103,34 @@ export function WorkoutFormScreen() {
   useEffect(() => {
     navigation.setOptions({ title: existing ? 'Edit Workout' : 'New Workout' });
   }, [existing, navigation]);
+
+  /**
+   * Receive a movement chosen in the exercise library.
+   *
+   * The library hands its result back as a route param rather than through a callback:
+   * React Navigation warns about non-serializable params (they break state persistence and
+   * deep linking), and "navigate back to the previous screen with a result" is the pattern
+   * its own docs prescribe. The param is cleared as soon as it is applied, so re-rendering
+   * for any other reason — a keystroke in the title field — cannot apply the same pick
+   * twice, and picking the *same* exercise again still arrives as a fresh object and works.
+   *
+   * `setParams` is called after `setExercises` rather than instead of it: clearing the param
+   * is bookkeeping, and doing it first would drop the pick if the state update threw.
+   */
+  const picked = route.params?.pickedExercise as { index: number; name: string } | undefined;
+  useEffect(() => {
+    if (!picked) return;
+    setExercises((prev) => applyPickedExercise(prev, picked.index, picked.name));
+    navigation.setParams({ pickedExercise: undefined });
+  }, [picked, navigation]);
+
+  /**
+   * Open the library for one exercise row, or (with an index past the end) to append a new
+   * one. The picker replaces nothing until the user chooses, so backing out of it leaves
+   * the form exactly as it was.
+   */
+  const openLibrary = (index: number) =>
+    navigation.navigate('Exercises', { selectForIndex: index, returnTo: 'WorkoutForm' });
 
   const updateExercise = (index: number, field: keyof Exercise, value: any) => {
     setExercises((prev) => prev.map((ex, i) => (i === index ? { ...ex, [field]: value } : ex)));
@@ -205,9 +257,26 @@ export function WorkoutFormScreen() {
             <Card.Content>
               <View style={styles.exerciseHeader}>
                 <Text variant="labelLarge">Exercise {i + 1}</Text>
-                {exercises.length > 1 && (
-                  <IconButton icon="close" size={18} onPress={() => removeExercise(i)} />
-                )}
+                <View style={styles.exerciseActions}>
+                  {/* The catalog route onto a row that already exists. Before this, the
+                      only way to name an exercise on this client was to type it free-hand,
+                      which is how a workout ends up logged as "bench pres" and matching
+                      nothing in the ~900-row library. */}
+                  <IconButton
+                    icon="magnify"
+                    size={18}
+                    onPress={() => openLibrary(i)}
+                    accessibilityLabel={`Choose exercise ${i + 1} from the library`}
+                  />
+                  {exercises.length > 1 && (
+                    <IconButton
+                      icon="close"
+                      size={18}
+                      onPress={() => removeExercise(i)}
+                      accessibilityLabel={`Remove exercise ${i + 1}`}
+                    />
+                  )}
+                </View>
               </View>
               <TextInput
                 mode="outlined"
@@ -252,6 +321,21 @@ export function WorkoutFormScreen() {
             </Card.Content>
           </Card>
         ))}
+
+        {/* Two ways in, because they answer different questions. "Add from library" is for
+            someone who knows the movement but not how this app spells it; "Add Exercise" is
+            for someone entering something the catalog does not have, or who simply types
+            faster than they browse. The library one leads: a name that matches the catalog
+            is what lets a saved workout resolve to a photo and to the user's own history
+            for that movement. */}
+        <Button
+          mode="contained-tonal"
+          icon="magnify"
+          onPress={() => openLibrary(exercises.length)}
+          style={styles.addFromLibrary}
+        >
+          Add from library
+        </Button>
 
         <Button
           mode="outlined"
