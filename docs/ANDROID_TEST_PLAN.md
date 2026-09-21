@@ -39,23 +39,48 @@ RC branch from `main` if they land in a different order.
 
 ## What the first run found
 
-Claude ran gates G1–G4 and suites A and B on a signed preview APK against the live API on
-2026-09-21. Results are in the artifact linked above; the short version:
+Claude ran the whole plan on a signed preview APK against the live API on 2026-09-21, on an
+emulator. **51 of 56 checks pass.** Results per check are in the artifact linked above.
 
-- **One real bug: P2.** The tab bar never applied the bottom safe-area inset, so the system
-  home indicator struck through two tab labels on every screen. Fixed in `5e98fd3`, pending
-  on-device confirmation.
-- **D3 cleared.** The `@expo/vector-icons` regression is genuinely gone on a signed build,
-  not just under Metro. This was the check most worth running.
-- **Two checks were mis-specified, not failing** — A10 and D1, both corrected in place below.
-  Worth knowing as a pattern: on the first run through a new plan, a surprising result is
-  about as likely to be a wrong expectation as a real defect. Read the code before filing it.
-- **A local build is impossible on the author's machine.** `expo prebuild` leaves
-  `mobile/android/` empty and dies with `MainApplication does not exist`, because the repo
-  path contains Hebrew characters inside OneDrive. EAS builds on Linux and is unaffected, so
-  G2 is the only route there.
-- **Untested so far:** M, D (logging), E, F, and most of G. X1 has not been run, so the
-  throwaway account `android-run-21sep@example.com` still exists.
+**Four genuine defects.** Two are fixed, one is known and tracked, one is open:
+
+| | | |
+|---|---|---|
+| **P2** | Tab labels struck through by the home indicator — no bottom safe-area inset | **fixed**, `5e98fd3`, confirmed on device |
+| **M5 / M7** | A macro target can never be cleared, on any client | **fixed** in two layers, [#380](https://github.com/YoniRipp/beme/pull/380) + [#374](https://github.com/YoniRipp/beme/pull/374); needs #380 deployed |
+| **P5** | Saving offline gives no feedback at all — silent failure | **open** |
+| **T4** | Imperial relabels `kg`→`lbs` without converting, and only on the workout card | known; groundwork for the migration already in place |
+
+**P5 is the one still worth fixing.** With airplane mode on, tapping Save produced nothing for
+55 seconds — no error, no spinner, no toast. It doesn't crash, hang or falsely succeed, but a
+user gets no signal and would navigate away having lost the entry. Proven to be the offline
+path and not a dead button: the same tap saved instantly once the network returned.
+
+**M5/M7 was the most interesting.** The clear-a-target path was broken *twice over*, and either
+half alone would have hidden the other: the mobile client converted the deliberate `null` to
+`undefined` (which `JSON.stringify` drops), and the backend then filtered explicit nulls out
+anyway. The backend half means **no client, web included, can clear any nullable profile
+field** — sex, height, weights, activity level, cycle length. That behaviour was pinned by a
+test on purpose, so changing it was a decision, not just a fix.
+
+**D3 cleared.** The `@expo/vector-icons` regression is genuinely gone on a signed build.
+
+**Three checks were mis-specified by Claude, not failing** — A10, D1 and L4, each corrected in
+place below. That is worth knowing as a pattern: on a first run through a new plan, a
+surprising result is about as likely to be a wrong expectation as a real defect. Read the code
+before filing it.
+
+**Two method notes worth carrying to iOS.** An HTTP 200 from `beme.up.railway.app` proves
+nothing — it is an SPA that answers 200 on every path, so T5 had to be checked by rendering the
+pages, not curling them. And a local build is impossible from the author's machine: `expo
+prebuild` leaves `mobile/android/` empty and dies with `MainApplication does not exist`,
+because the repo path contains Hebrew characters inside OneDrive. EAS builds on Linux and is
+unaffected.
+
+**Smaller observations, none failing:** Workout Frequency ellipsises all twelve x-axis labels
+to `Jul…Jul…Jul…` so they convey nothing, and uses fractional ticks (0.2, 0.4, 0.7) for what is
+a count of workouts. The Google button's hint names an environment variable to the user. And
+`Home`'s water card is stuck at the hardcoded 8-glass default because mobile has no profile UI.
 
 ---
 
@@ -191,7 +216,9 @@ Create a throwaway account at A1 and use it for the whole run. X1 deletes it.
 - **L1** — Log a food entry. → Saves; appears on Home and Energy.
 - **L2** — Log a workout. → Saves; appears on Body; increments "Workouts this week".
 - **L3** — Log sleep. → Saves; appears on Energy.
-- **L4** — Log a weight entry. → Saves; appears on Body.
+- **L4** — Log a weight entry. → Saves; appears on **Home** — both as a quick-log tile and a
+  Weight card. *Corrected after the first run: this said Body, which is wrong. Body is
+  workouts only; `WeightCard.tsx` is imported by `HomeScreen`, not `BodyScreen`.*
 - **L5** — Create a goal. → Saves; appears on Goals; progress reflects logged data.
 - **L6** — Open a form and dismiss without saving. → Nothing written.
 - **L7** — Reopen a saved entry and edit it. → Fields seeded with saved values; the edit sticks.
