@@ -1,14 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { DrawerActions } from '@react-navigation/native';
-import { Pressable } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { HomeScreen } from '../screens/HomeScreen';
 import { BodyScreen } from '../screens/BodyScreen';
 import { EnergyScreen } from '../screens/EnergyScreen';
-import { GoalsScreen } from '../screens/GoalsScreen';
-import { InsightsScreen } from '../screens/InsightsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { Icon } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { VoiceSheet } from '../components/voice/VoiceSheet';
 import { useThemeContext } from '../theme/ThemeContext';
 import { fonts, spacing } from '../theme';
 
@@ -17,16 +17,42 @@ const Tab = createBottomTabNavigator();
 const TAB_ICONS: Record<string, string> = {
   Home: 'home',
   Body: 'dumbbell',
-  Energy: 'lightning-bolt',
-  Goals: 'target',
-  Insights: 'chart-line',
-  Settings: 'cog',
+  Energy: 'fire',
+  Settings: 'account',
 };
+
+/**
+ * Bare height of the tab bar, before the device's bottom inset is added.
+ *
+ * Edge-to-edge is mandatory from Android 16, so the app draws BEHIND the gesture bar and has
+ * to inset its own content. Without this the system home indicator is painted straight across
+ * the tab labels -- on a 1080x2400 gesture-nav device it struck through 'ENERGY' and
+ * 'GOALS' on every screen. `MobileScreen` and `AppDrawer` already take their insets
+ * from `react-native-safe-area-context`; the tab bar was the one piece of chrome still
+ * using a hardcoded height.
+ */
+const TAB_BAR_HEIGHT = 64;
+const TAB_BAR_PADDING_BOTTOM = 8;
+
+/**
+ * The centre voice button, mirroring `BottomNavigation.tsx` on the web: a 60px circle that
+ * rises 22px clear of the bar's top edge, so 38px of it overlaps the bar.
+ *
+ * Geometry rather than a magic number: the bar's own height already tracks the gesture-bar
+ * inset, so the button is offset from THAT and the two cannot drift apart on a device with a
+ * different inset — which is the bug the tab bar itself had.
+ */
+const FAB_SIZE = 60;
+const FAB_RISE = 22;
 
 export function MainTabs() {
   const { colors } = useThemeContext();
+  const insets = useSafeAreaInsets();
+
+  const [voiceOpen, setVoiceOpen] = useState(false);
 
   return (
+    <View style={{ flex: 1 }}>
     <Tab.Navigator
       screenOptions={({ route, navigation }) => ({
         // `BottomNavigation.tsx:30` on the web: `text-caption font-bold uppercase
@@ -71,8 +97,8 @@ export function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
-          height: 64,
-          paddingBottom: 8,
+          height: TAB_BAR_HEIGHT + insets.bottom,
+          paddingBottom: TAB_BAR_PADDING_BOTTOM + insets.bottom,
           paddingTop: 6,
         },
         tabBarIcon: ({ color, size }) => (
@@ -87,11 +113,33 @@ export function MainTabs() {
         component={HomeScreen}
         options={{ tabBarLabel: 'Home', headerTitle: 'TrackVibe' }}
       />
-      <Tab.Screen name="Body" component={BodyScreen} options={{ tabBarLabel: 'Body' }} />
-      <Tab.Screen name="Energy" component={EnergyScreen} options={{ tabBarLabel: 'Energy' }} />
-      <Tab.Screen name="Goals" component={GoalsScreen} options={{ tabBarLabel: 'Goals' }} />
-      <Tab.Screen name="Insights" component={InsightsScreen} options={{ tabBarLabel: 'Insights' }} />
-      <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarLabel: 'Settings' }} />
+      <Tab.Screen name="Body" component={BodyScreen} options={{ tabBarLabel: 'Workouts' }} />
+      <Tab.Screen name="Energy" component={EnergyScreen} options={{ tabBarLabel: 'Food' }} />
+      <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarLabel: 'Profile' }} />
     </Tab.Navigator>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open voice"
+        onPress={() => setVoiceOpen(true)}
+        style={{
+          position: 'absolute',
+          alignSelf: 'center',
+          bottom: TAB_BAR_HEIGHT + insets.bottom - (FAB_SIZE - FAB_RISE),
+          width: FAB_SIZE,
+          height: FAB_SIZE,
+          borderRadius: FAB_SIZE / 2,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.primary,
+          // The web rings the button in the page background so it punches cleanly out of
+          // the bar rather than merging with it.
+          borderWidth: 3,
+          borderColor: colors.background,
+        }}
+      >
+        <Icon source="microphone" size={26} color={colors.primaryForeground} />
+      </Pressable>
+      <VoiceSheet visible={voiceOpen} onDismiss={() => setVoiceOpen(false)} />
+    </View>
   );
 }
