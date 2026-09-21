@@ -37,6 +37,28 @@ RC branch from `main` if they land in a different order.
 
 ---
 
+## What the first run found
+
+Claude ran gates G1–G4 and suites A and B on a signed preview APK against the live API on
+2026-09-21. Results are in the artifact linked above; the short version:
+
+- **One real bug: P2.** The tab bar never applied the bottom safe-area inset, so the system
+  home indicator struck through two tab labels on every screen. Fixed in `5e98fd3`, pending
+  on-device confirmation.
+- **D3 cleared.** The `@expo/vector-icons` regression is genuinely gone on a signed build,
+  not just under Metro. This was the check most worth running.
+- **Two checks were mis-specified, not failing** — A10 and D1, both corrected in place below.
+  Worth knowing as a pattern: on the first run through a new plan, a surprising result is
+  about as likely to be a wrong expectation as a real defect. Read the code before filing it.
+- **A local build is impossible on the author's machine.** `expo prebuild` leaves
+  `mobile/android/` empty and dies with `MainApplication does not exist`, because the repo
+  path contains Hebrew characters inside OneDrive. EAS builds on Linux and is unaffected, so
+  G2 is the only route there.
+- **Untested so far:** M, D (logging), E, F, and most of G. X1 has not been run, so the
+  throwaway account `android-run-21sep@example.com` still exists.
+
+---
+
 ## Gates — do these in order
 
 Nothing downstream means anything until all four pass.
@@ -110,14 +132,29 @@ Create a throwaway account at A1 and use it for the whole run. X1 deletes it.
   found" would let anyone check which addresses are registered. Identical wording for a real
   and a fake address is the check passing, not the check being vague.
 - **A9** — "Back to sign in". → Returns. `#376`
-- **A10** — Confirm there is **no** Google button. → Absent is the pass. `#375`
+- **A10** — Look at the Google button. → Present but **disabled**, with the hint *"Set
+  EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB to enable Google sign-in."* `#375`
 
-  It hides itself when no client ID is configured, which is the case today. A visible Google
-  button is the bug. See *Known blockers*.
+  *Corrected after the first run — this check originally said the button should be absent,
+  which was wrong.* `GoogleSignInButton` returns `null` only for Expo Go and for the iOS
+  guideline gate. Missing **only** the client ID is a state someone running the build can
+  act on, so it renders disabled and explains itself, mirroring the web's
+  `SocialLoginButtons.tsx`. Absent would be the bug.
+
+  Worth raising separately: that hint is developer-facing copy in a shipped build. It shows
+  whenever the variable is unset, production included — a user would read an environment
+  variable name on the sign-in screen.
 
 ## B · Left navigation drawer `#373`
 
-- **D1** — Swipe in from the left edge on Home. → Drawer slides over the content.
+- **D1** — Tap the hamburger on Home. → Drawer slides over the content.
+
+  *Corrected after the first run.* This originally said to swipe in from the left edge. That
+  is not achievable on gesture navigation: swipes from x=3 and x=60 both fired Android's
+  system **back** gesture and exited the app. The system owns the left edge (the default
+  since Android 10), and React Navigation's 32dp `swipeEdgeWidth` loses to it. Universal to
+  Android drawers, not a defect here — Google's guidance is to provide the hamburger, which
+  this does. Try the swipe if you like, but the hamburger is the check.
 - **D2** — Read the rows. → Exactly six, in order: Home, Body, Energy, Goals, Insights,
   Settings.
 - **D3** — Look at every row's icon. → House, dumbbell, lightning bolt, target, chart line,
@@ -194,8 +231,14 @@ Only true on a real phone; an emulator or a unit test will not tell you.
 - **P1** — Rotate on several screens. → Stays portrait.
 - **P2** — Look at the top and bottom edges. → Content clears the status bar and the gesture
   bar. *(Edge-to-edge is on, so the app draws behind the system bars and insets its own
-  content — exactly the kind of thing that looks fine in an emulator with a different bar
-  height.)*
+  content.)*
+
+  **This failed on the first run and has been fixed** (commit `5e98fd3`). The system home
+  indicator was painted straight through the ENERGY and GOALS tab labels on every screen:
+  `MainTabs.tsx` hardcoded `height: 64, paddingBottom: 8` and never read the safe-area
+  insets, while `MobileScreen` and `AppDrawer` both did — which is why only the bottom edge
+  was wrong. Re-check it rather than assuming; confirming it needs a build that postdates
+  that commit.
 - **P3** — Back, gesture and button, from a nested screen, a modal and a tab. → One level each
   time; never drops out of the app from a nested screen.
 - **P4** — Background for a few minutes, return. → Same screen, data loaded, no re-login.
@@ -256,4 +299,11 @@ Most of this plan carries over unchanged. The deltas:
   indicator inset, and the microphone and speech-recognition permission prompts — iOS raises
   SIGABRT the first time an app touches `SFSpeechRecognizer` without
   `NSSpeechRecognitionUsageDescription`, so that prompt appearing correctly is a real check.
+
+  Two of these carry straight over from what the Android run found. The home-indicator inset
+  is the **same** class of bug as P2 and iOS has a home indicator too, so check the tab bar's
+  bottom edge there specifically rather than trusting the Android fix to cover it. And the
+  drawer's left-edge swipe competes with iOS's interactive back-swipe exactly as it competes
+  with Android's system back gesture — expect the hamburger to be the only reliable way in on
+  both platforms.
 - **Everything in A (except A10), B, C, D, E, F and H applies as written.**
