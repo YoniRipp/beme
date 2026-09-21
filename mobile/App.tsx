@@ -1,6 +1,7 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 // Per-weight subpaths, never the package root. `@expo-google-fonts/inter/index.js` is a
 // barrel that `require()`s all 18 Inter weights, and Metro cannot tree-shake a `require` of
@@ -82,6 +83,9 @@ function AppShell() {
   const { scheme } = useThemeContext();
 
   return (
+    // `flex: 1` is not optional: without it the root measures zero and the whole app
+    // renders blank. The drawer's swipe-to-open gesture is detected here, at the root.
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <AuthProvider>
         <RootNavigator />
@@ -92,5 +96,6 @@ function AppShell() {
         <Toast />
       </AuthProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

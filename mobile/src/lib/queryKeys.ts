@@ -16,6 +16,13 @@ export const queryKeys = {
   // cache the same single-row read under the same name.
   profile: ['profile'] as const,
   weightEntries: ['weightEntries'] as const,
+  /**
+   * The shared exercise catalog. Not user-scoped — `GET /api/exercises` reads a global
+   * table, so unlike every other key here the cached value is the same for every account.
+   * Same name as the web's (`frontend/src/lib/queryClient.ts`), so the two clients cache
+   * one read under one name.
+   */
+  exercises: ['exercises'] as const,
   /** Parameterised by LOCAL calendar day — a UTC slice is the previous day east of UTC. */
   waterToday: (date: string) => ['waterToday', date] as const,
   /** Prefix for invalidating every day's water at once, e.g. across a midnight rollover. */
@@ -30,4 +37,21 @@ export const queryKeys = {
    * registry's camelCase so it reads with its neighbours.
    */
   chatHistory: ['chatHistory'] as const,
+  /**
+   * The three AI Insights reads. The string values match what the web uses so the two clients
+   * still name the same read the same thing — but note the web **inlines** these at the call
+   * site (`frontend/src/components/insights/AiInsightsSection.tsx`) rather than registering
+   * them here, which is the one thing `data-fetching.md` says not to do. Mirrored by value,
+   * not by that habit.
+   *
+   * `aiInsights` is parameterised because the backend caches a separate `ai_insights` row per
+   * `period_days` (`services/insights.ts:ALL_PERIODS`), and because each period costs its own
+   * AI call to fetch — keeping them in separate cache entries is what stops a period switch
+   * from spending one again on the way back.
+   */
+  aiInsights: (days: number) => ['ai-insights', days] as const,
+  /** Prefix, for touching every period at once after a regeneration. */
+  aiInsightsAll: ['ai-insights'] as const,
+  aiToday: ['ai-today-recs'] as const,
+  aiFreshness: ['ai-insights-freshness'] as const,
 };

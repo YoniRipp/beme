@@ -287,9 +287,21 @@ export async function initSchema() {
         date date NOT NULL,
         weight numeric NOT NULL,
         notes text,
+        -- Nullable with no default on purpose: NULL means "written before weights carried
+        -- a unit", which readers take as kilograms -- the reading they already took. A
+        -- DEFAULT would assert that about rows nobody has checked. See
+        -- migrations/1776700000000_add-weight-entry-unit.js.
+        unit text CHECK (unit IN ('kg', 'lbs')),
         created_at timestamptz DEFAULT now(),
         UNIQUE (user_id, date)
       );
+    `);
+
+    // CREATE TABLE IF NOT EXISTS is a no-op on a database that predates the column, so add
+    // it explicitly too -- same approach as exercises above.
+    await client.query(`
+      ALTER TABLE weight_entries
+        ADD COLUMN IF NOT EXISTS unit text CHECK (unit IN ('kg', 'lbs'));
     `);
 
     await client.query(`

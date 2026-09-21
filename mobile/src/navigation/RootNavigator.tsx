@@ -4,12 +4,15 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
-import { MainTabs } from './MainTabs';
+import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
+import { AppDrawer } from './AppDrawer';
 import { WorkoutFormScreen } from '../screens/WorkoutFormScreen';
 import { FoodEntryFormScreen } from '../screens/FoodEntryFormScreen';
 import { SleepFormScreen } from '../screens/SleepFormScreen';
 import { GoalFormScreen } from '../screens/GoalFormScreen';
 import { WeightFormScreen } from '../screens/WeightFormScreen';
+import { ExercisesScreen } from '../screens/ExercisesScreen';
+import { ChatScreen } from '../screens/ChatScreen';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { fonts } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
@@ -22,6 +25,7 @@ function AuthStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </Stack.Navigator>
   );
 }
@@ -44,7 +48,7 @@ function AppStack() {
         contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+      <Stack.Screen name="Main" component={AppDrawer} options={{ headerShown: false }} />
       <Stack.Screen
         name="WorkoutForm"
         component={WorkoutFormScreen}
@@ -69,6 +73,46 @@ function AppStack() {
         name="WeightForm"
         component={WeightFormScreen}
         options={{ title: 'Log Weight', presentation: 'modal' }}
+      />
+      {/*
+        A stack route, deliberately NOT a seventh tab.
+
+        On the web the exercise catalog has no page of its own — it is the contents of a
+        bottom sheet the workout editor opens (`frontend/src/components/body/ExercisePickerSheet.tsx`),
+        so a permanent tab would be inventing navigation the product does not have. It is
+        also the shape that matches how it is used: you arrive here from a workout row, pick
+        a movement, and leave. A modal presentation says that, a tab would not.
+
+        The practical half of the same call: `MainTabs.tsx` is untouched by this PR. Four PRs
+        are in flight over `src/navigation/`, and PR #373 adds a `drawerItems.ts` with a guard
+        asserting the drawer's items match the tabs IN ORDER — a seventh tab here would fail
+        that guard in whichever of the two landed second, for a screen that does not want to
+        be a tab anyway. Reached instead from the Workouts screen (browse) and from each
+        exercise row of the workout form (pick).
+      */}
+      <Stack.Screen
+        name="Exercises"
+        component={ExercisesScreen}
+        options={{ title: 'Exercises', presentation: 'modal' }}
+      />
+
+      {/*
+        AI chat, for the same reason as Exercises above and one more.
+
+        This arrived as a seventh TAB, with a comment conceding the web has no tab for it --
+        it is a Sparkles button pinned beside the bottom bar -- and adding one anyway because
+        a tab bar had no equivalent. The bar now has that equivalent: the coach button docked
+        next to the voice mic, which is what `BottomNavigation.tsx` does with `showAiCoach`.
+
+        The web's reason for keeping it off the bar is worth restating, because it is about
+        behaviour rather than taste: AI access is conditional, so a tab would appear and
+        disappear as a user's monthly allowance ran out, shifting the four fixed tabs under
+        their thumb mid-session.
+      */}
+      <Stack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{ title: 'AI Fitness Coach', presentation: 'modal' }}
       />
     </Stack.Navigator>
   );

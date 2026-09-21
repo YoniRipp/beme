@@ -119,3 +119,22 @@ describe('buildQuickLogPills — the local calendar day, not a UTC-derived one',
     });
   });
 });
+
+/**
+ * The pill is the one place on Home that prints a weight, so it is where the unit choice
+ * becomes visible. Entries reach it already normalised to kilograms by `useWeight`, so the
+ * unit argument only decides what is SHOWN -- and, unlike the old behaviour, the number
+ * moves with the label instead of the label changing under a fixed number.
+ */
+describe('buildQuickLogPills — the unit shown', () => {
+  it('shows kilograms by default, so three-argument callers are unchanged', () => {
+    expect(buildQuickLogPills(null, [entry(TODAY, 82)], NOON).weight).toBe('82kg');
+    expect(buildQuickLogPills(null, [entry(TODAY, 82)], NOON, 'kg').weight).toBe('82kg');
+  });
+
+  it('converts the number as well as the label for an imperial viewer', () => {
+    // 82 kg is 180.8 lbs. The bug this replaces printed '82lbs' -- same number, new label,
+    // a 2.2x misstatement of the reading.
+    expect(buildQuickLogPills(null, [entry(TODAY, 82)], NOON, 'lbs').weight).toBe('180.8lbs');
+  });
+});

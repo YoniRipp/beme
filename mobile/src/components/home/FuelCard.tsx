@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { ActivityIndicator, Text } from 'react-native-paper';
 import { Button } from '../ui';
 import { targetFraction, type DailyTargets } from '@trackvibe/shared/domain';
@@ -53,6 +53,8 @@ interface FuelCardProps {
   targetsLoading: boolean;
   /** Opens the goal form on the `calories`/`daily` row — the store that owns the kcal target. */
   onEditCalorieTarget: () => void;
+  /** Opens the macro editor, which writes GRAMS to the profile — a different store. */
+  onEditMacroTargets: () => void;
 }
 
 /**
@@ -69,14 +71,19 @@ interface FuelCardProps {
  * offering "Set a daily calorie target" while the goals query is still in flight invites a
  * user who already has one to set the goal they already have.
  *
- * THE MACRO BARS ARE NOT CONTROLS HERE, and the web's are. The web's pencil opens
- * `DailyTargetsModal`, which writes macro GRAMS to the profile — and Expo has no profile
- * editor of any kind yet (`agent-os/specs/2026-09-14-1202-parity-onboarding-and-profile`
- * adds one, and its field list is the web's `ProfileSection`, which does not include macro
- * grams either). A pencil that opened the calorie-goal form while its label said "Edit
- * Protein target" would be a lie, so the bars render and do not pretend. The calorie half of
- * the affordance IS available, because that target lives in the goals table this client can
- * already write.
+ * THE MACRO BARS ARE A CONTROL, as the web's are. Tapping them opens `MacroTargetsModal`,
+ * which writes macro GRAMS to the profile — the same store the web's `DailyTargetsModal`
+ * writes, through the `useProfile` hook this client already had.
+ *
+ * They were inert until then, and the note here used to explain why: there was no profile
+ * EDITOR on Expo, so a pencil that opened the calorie-goal form while its label said "Edit
+ * Protein target" would have been a lie. For an Expo-only account that left the three bars
+ * permanently at zero — able to fill, never filling, with nowhere in the app to say what
+ * they should fill against.
+ *
+ * Calories keep their own separate affordance below, because they are a separate STORE: the
+ * goals table's `calories`/`daily` row, not the profile. Folding both into one editor here
+ * would put two validation paths behind one number.
  */
 export function FuelCard({
   todayCalories,
@@ -88,6 +95,7 @@ export function FuelCard({
   loading,
   targetsLoading,
   onEditCalorieTarget,
+  onEditMacroTargets,
 }: FuelCardProps) {
   const { colors } = useThemeContext();
   const styles = useThemedStyles((colors) => ({
@@ -176,7 +184,12 @@ export function FuelCard({
               label={calorieTarget != null ? `of ${calorieTarget} kcal` : 'kcal in'}
             />
 
-            <View style={styles.macros}>
+            <Pressable
+              onPress={onEditMacroTargets}
+              accessibilityRole="button"
+              accessibilityLabel="Edit daily macro targets"
+              style={styles.macros}
+            >
               {buildMacroRows(todayProtein, todayCarbs, todayFats, targets).map((row) => {
                 const pct = targetFraction(row.current, row.target) ?? 0;
                 return (
@@ -200,7 +213,7 @@ export function FuelCard({
                   </View>
                 );
               })}
-            </View>
+            </Pressable>
           </View>
 
           <Text variant="bodySmall" style={styles.summary}>

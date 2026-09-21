@@ -33,3 +33,6 @@ test-results/
 
 # Subagent-driven development scratch workspace
 .superpowers/
+
+# Agent worktrees are scratch checkouts, not project content.
+.claude/worktrees/

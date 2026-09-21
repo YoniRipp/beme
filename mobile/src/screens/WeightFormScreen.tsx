@@ -6,6 +6,8 @@ import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 import Toast from 'react-native-toast-message';
 import { messageFor } from '../lib/errorMessage';
+import { unitForSystem } from '@trackvibe/shared/domain';
+import { useSettings } from '../hooks/useSettings';
 import { DayPicker } from '../components/shared/DayPicker';
 import { useWeight } from '../hooks/useWeight';
 import { toLocalDateString, parseLocalDateString } from '../lib/dateRanges';
@@ -116,6 +118,16 @@ export function WeightFormScreen() {
   }));
   const navigation = useNavigation<any>();
   const { weightEntries, addWeight } = useWeight();
+  /**
+   * The unit this reading is being TYPED in, sent with it so the row is unambiguous.
+   *
+   * The field used to be labelled from the same preference while the value went into a
+   * column the domain defines as kilograms, so an imperial user's pounds were stored raw
+   * and read back as kilograms by every other consumer. Sending the unit is what makes the
+   * label honest rather than decorative.
+   */
+  const { settings } = useSettings();
+  const unit = unitForSystem(settings.units);
   // Captured once per mount, so a form left open across midnight keeps the row it rendered.
   const [today] = useState(() => new Date());
   const [date, setDate] = useState(today);
@@ -132,7 +144,7 @@ export function WeightFormScreen() {
     }
     setSaving(true);
     try {
-      await addWeight({ date: day, weight: value, notes: notes || undefined });
+      await addWeight({ date: day, weight: value, notes: notes || undefined, unit });
       Toast.show({ type: 'success', text1: 'Weight saved' });
       navigation.goBack();
     } catch (error) {
@@ -156,7 +168,7 @@ export function WeightFormScreen() {
           onChangeText={setWeight}
           keyboardType="decimal-pad"
           placeholder="e.g. 70.5"
-          right={<TextInput.Affix text="kg" />}
+          right={<TextInput.Affix text={unit} />}
           style={styles.input}
         />
         <TextInput

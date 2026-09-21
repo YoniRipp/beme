@@ -348,7 +348,10 @@ async function executeOne(action: VoiceAction, userId: string, today: string): P
       case 'log_weight': {
         const dateStr = parseDate(action.date, today);
         const weightKg = Number(action.weightKg) || 0;
-        await weightModel.create({ userId, date: dateStr, weight: weightKg, notes: action.notes as string });
+        // Tagged 'kg' explicitly: the voice path parses into kilograms (the variable says so,
+        // and the confirmation message below states the unit), so this row's unit is known and
+        // should not be left NULL for a backfill to guess at later.
+        await weightModel.create({ userId, date: dateStr, weight: weightKg, notes: action.notes as string, unit: 'kg' });
         return { intent: 'log_weight', success: true, message: `Logged weight: ${weightKg} kg` };
       }
 
