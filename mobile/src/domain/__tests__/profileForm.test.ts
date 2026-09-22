@@ -67,6 +67,23 @@ describe('bmiFor', () => {
   it('has no answer for a height of zero rather than reporting Infinity', () => {
     expect(bmiFor('0', '70', 'metric')).toBeNull();
   });
+
+  /**
+   * Squaring the height loses the sign, so a negative one does not divide by zero — it
+   * quietly produces a plausible-looking number from an impossible body. -170 cm reads as
+   * the same 24.2 as 170 cm, which is worse than an error because nothing about it looks
+   * wrong.
+   *
+   * Reachable: `keyboardType="numeric"` offers a minus key on several Android keyboards,
+   * and a paste is always possible.
+   */
+  it('has no answer for a negative height rather than squaring the sign away', () => {
+    expect(bmiFor('-170', '70', 'metric')).toBeNull();
+  });
+
+  it('has no answer for a negative weight', () => {
+    expect(bmiFor('170', '-70', 'metric')).toBeNull();
+  });
 });
 
 describe('profileToForm', () => {

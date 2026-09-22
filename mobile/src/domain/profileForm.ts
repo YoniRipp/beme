@@ -235,9 +235,18 @@ export const WIZARD_SKIP_PAYLOAD: Partial<ApiProfile> = { setupCompleted: true }
 export function bmiFor(heightCm: string, weight: string, system: Units): string | null {
   const height = numberOrUndefined(heightCm);
   const weightKg = weightToKg(weight, system);
-  // `!height` also catches 0, which would otherwise divide to Infinity and render the
-  // literal string "Infinity" while the user was still typing the height.
-  if (!height || !weightKg) return null;
+  /**
+   * Both have to be positive, and the two halves fail differently.
+   *
+   * A height of 0 divides to Infinity, and `Infinity.toFixed(1)` is the string "Infinity" —
+   * rendered rather than caught, while the user is still typing.
+   *
+   * A NEGATIVE height is the quieter one: the height is squared, so the sign disappears and
+   * -170 cm reports the same 24.2 as 170 cm. Nothing about that number looks wrong, which
+   * is worse than an error. Reachable because `keyboardType="numeric"` offers a minus key
+   * on several Android keyboards, and a paste is always possible.
+   */
+  if (!height || height < 0 || !weightKg || weightKg < 0) return null;
   const metres = height / 100;
   return (weightKg / metres ** 2).toFixed(1);
 }
