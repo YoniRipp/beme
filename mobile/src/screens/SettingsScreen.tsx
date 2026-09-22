@@ -16,12 +16,16 @@ import { authApi } from '../core/api/auth';
 import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 import { useProfile } from '../hooks/useProfile';
 import { LegalLinks } from '../components/settings/LegalLinks';
+import { ProfileSection } from '../components/settings/ProfileSection';
+import { CycleSection } from '../components/settings/CycleSection';
 import { MobileScreen } from '../components/shared/MobileScreen';
 import { fonts, spacing } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
 import { useThemedStyles } from '../theme/useThemedStyles';
 
 const ACCOUNT_TITLE = 'Account';
+const PROFILE_TITLE = 'Profile';
+const CYCLE_TITLE = 'Cycle Tracking';
 const UNITS_TITLE = 'Units';
 const APPEARANCE_TITLE = 'Appearance';
 const LEGAL_TITLE = 'Legal';
@@ -53,9 +57,25 @@ export const DELETE_ACCOUNT_CONFIRMATION_PHRASE = 'DELETE';
  * that can create an account to let the user delete it from inside the app, and it is
  * deliberately the final section: a destructive, irreversible control does not belong
  * between two preference pickers.
+ *
+ * "Profile" and "Cycle Tracking" sit between Account and Units, which is where the web
+ * renders them (`frontend/src/pages/Settings.tsx:62-67`). They closed the one gap on this
+ * screen that was not cosmetic: three features this client already ships read
+ * `user_profiles` fields that nothing on this client could write. `WaterCard.tsx:29`
+ * divides by `waterGoalGlasses`, so every phone-only user's goal was the column default of
+ * 8; `CycleCard.tsx:37` falls back to 28 days; and `HomeScreen.tsx:388` renders `CycleCard`
+ * only when `cycleTrackingEnabled`, so the card could never appear. Telling the user to
+ * "set it on the web" did not work either — the web hides its own cycle switch unless
+ * `sex === 'female'`, and `sex` was equally unreachable from here.
+ *
+ * "Cycle Tracking" is in this list but rendered conditionally, on that same `sex` check.
+ * The list is the set of titles a `SettingsCard` may carry, not a promise that every one is
+ * on screen at once.
  */
 export const SETTINGS_SECTION_TITLES = [
   ACCOUNT_TITLE,
+  PROFILE_TITLE,
+  CYCLE_TITLE,
   UNITS_TITLE,
   APPEARANCE_TITLE,
   LEGAL_TITLE,
@@ -77,7 +97,7 @@ export function SettingsScreen() {
   const { user, logout } = useAuth();
   const { colors } = useThemeContext();
   const { settings, updateSettings } = useSettings();
-  const { updateProfile } = useProfile();
+  const { profile, updateProfile } = useProfile();
   const [deleteVisible, setDeleteVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -134,6 +154,20 @@ export function SettingsScreen() {
         <List.Item title="Name" description={user?.name || '--'} left={(props) => <List.Icon {...props} icon="account" />} />
         <List.Item title="Email" description={user?.email || '--'} left={(props) => <List.Icon {...props} icon="email" />} />
       </SettingsCard>
+
+      <SettingsCard title={PROFILE_TITLE}>
+        <ProfileSection />
+      </SettingsCard>
+
+      {/* The same condition the web applies (`frontend/src/pages/Settings.tsx:64`) — one
+          row, two clients, so the gate has to be the same expression rather than a
+          differently-spelled equivalent. `sex` is now settable from the Profile section
+          just above, which is what makes this reachable on a phone at all. */}
+      {profile.sex === 'female' && (
+        <SettingsCard title={CYCLE_TITLE}>
+          <CycleSection />
+        </SettingsCard>
+      )}
 
       <SettingsCard title={UNITS_TITLE}>
         <RadioButton.Group
