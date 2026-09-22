@@ -6,6 +6,8 @@ import { unitForSystem } from '@trackvibe/shared/domain';
 import { Button } from '../ui';
 import { messageFor } from '../../lib/errorMessage';
 import {
+  ACTIVITY_OPTIONS,
+  SEX_OPTIONS,
   bmiFor,
   emptyProfileForm,
   profileSectionPayload,
@@ -31,26 +33,10 @@ import { DateOfBirthInput } from './DateOfBirthInput';
  * second half of that: the web only shows its own cycle switch when `sex === 'female'`, so
  * a phone-only user could not turn cycle tracking on from either client.
  *
- * The option VALUES below are contract, not copy. They are written to `user_profiles` and
- * read back by the AI prompt builders (`backend/src/services/insights.ts:159-176`,
- * `chat.ts:125-136`), so an invented value would be a data bug rather than a wording
- * difference. Taken verbatim from `ProfileSection.tsx:72-77` and `:111-115`.
+ * The sex and activity option lists live in `src/domain/profileForm.ts`, shared with the
+ * first-run wizard: they are values written to the database, not labels, so the two screens
+ * must not be able to drift apart on them.
  */
-
-const SEX_OPTIONS = [
-  { value: 'male', label: 'Male' },
-  { value: 'female', label: 'Female' },
-  { value: 'other', label: 'Other' },
-  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
-] as const;
-
-const ACTIVITY_OPTIONS = [
-  { value: 'sedentary', label: 'Sedentary' },
-  { value: 'light', label: 'Lightly Active' },
-  { value: 'moderate', label: 'Moderately Active' },
-  { value: 'active', label: 'Active' },
-  { value: 'very_active', label: 'Very Active' },
-] as const;
 
 export function ProfileSection() {
   const styles = useThemedStyles((colors) => ({

@@ -59,6 +59,40 @@ export interface WizardFormValues extends ProfileFormValues {
   averageCycleLength: string;
 }
 
+/**
+ * The values `sex` and `activity_level` may take.
+ *
+ * Contract, not copy. They are written to `user_profiles` and read back by the AI prompt
+ * builders (`backend/src/services/insights.ts:159-176`, `chat.ts:125-136`), so an invented
+ * value would be a data bug rather than a wording difference. Verbatim from
+ * `frontend/src/components/settings/ProfileSection.tsx:72-77` and `:111-115`; the activity
+ * descriptions are the wizard's (`SetupWizard.tsx:193-199`), which the settings form has no
+ * room for and does not show.
+ *
+ * Here rather than in either component because both screens write the same column, and a
+ * fifth activity level added to one and not the other is the kind of drift that only shows
+ * up as a CHECK violation in production.
+ */
+export const SEX_OPTIONS = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'other', label: 'Other' },
+  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+] as const;
+
+export const ACTIVITY_OPTIONS = [
+  { value: 'sedentary', label: 'Sedentary', description: 'Little to no exercise' },
+  { value: 'light', label: 'Lightly Active', description: 'Light exercise 1-3 days/week' },
+  { value: 'moderate', label: 'Moderately Active', description: 'Moderate exercise 3-5 days/week' },
+  { value: 'active', label: 'Active', description: 'Hard exercise 6-7 days/week' },
+  { value: 'very_active', label: 'Very Active', description: 'Very hard exercise, physical job' },
+] as const;
+
+/** The label for a stored activity value, for the wizard's closing summary. */
+export function activityLabel(value: string): string {
+  return ACTIVITY_OPTIONS.find((option) => option.value === value)?.label ?? value;
+}
+
 /** The web's own fallback (`ProfileSection.tsx:38`), matching the column's NOT NULL DEFAULT 8. */
 const DEFAULT_WATER_GOAL_GLASSES = 8;
 
