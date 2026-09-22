@@ -15,6 +15,17 @@ import { CycleSection } from '../CycleSection';
  * set that flag — nor `sex`, which is what the web gates its own copy of this section on
  * (`frontend/src/pages/Settings.tsx:64`), so a phone-only user could not reach the switch
  * from either client.
+ *
+ * `await render(...)` and `findBy*` throughout — RNTL 14 made render async, so an unawaited
+ * render hands back a promise and every query on it reads undefined.
+ *
+ * The three `getByLabelText` calls below are the one deliberate exception, and only inside
+ * `waitFor`. What they wait for is an existing element's PROP changing, which `findBy*`
+ * cannot express: it resolves as soon as the element exists, whatever its value. Nesting a
+ * `findBy*` inside a `waitFor` instead makes every poll of a failing assertion serve its
+ * own 1000 ms timeout, which turns a clean failure into a five-second one. Each of them is
+ * preceded by an awaited render and an awaited `findBy*`, so the tree is real by then —
+ * the same shape `ErrorBoundary.test.tsx:83` already uses.
  */
 
 jest.mock('../../../core/api/health', () => ({
