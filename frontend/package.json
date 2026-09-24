@@ -80,7 +80,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^4.1.8",
     "autoprefixer": "^10.4.17",
-    "express": "^5.0.1",
+    "express": "^5.2.1",
     "jsdom": "^23.0.1",
     "postcss": "^8.4.35",
     "serve": "^14.2.5",
