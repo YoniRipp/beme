@@ -207,6 +207,7 @@ export function Home() {
             <div className="relative z-10 flex items-center gap-5">
               <ProgressRing
                 pct={calPct}
+                hasTarget={calorieTarget != null}
                 label="Calories today"
                 valueText={
                   calorieTarget != null
