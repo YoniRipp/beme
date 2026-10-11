@@ -32,7 +32,12 @@ function MacroRing({
   gradientId: string;
 }) {
   const pct = targetFraction(current, goal) ?? 0;
-  const offset = CIRCUMFERENCE * (1 - pct);
+  // A null target makes `pct` 0, which offsets the arc by its whole circumference and hides
+  // it -- the ring goes flat grey and reads as "nothing logged" when the number beside it says
+  // otherwise. Show the full ring dimmed instead: present, clearly not progress toward a goal,
+  // and not mistakable for a target met. Same treatment as the calorie ring on Energy.
+  const hasTarget = goal != null;
+  const offset = hasTarget ? CIRCUMFERENCE * (1 - pct) : 0;
 
   return (
     <div className="flex flex-col items-center gap-2 flex-1">
@@ -59,6 +64,7 @@ function MacroRing({
             strokeLinecap="round"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={offset}
+            opacity={hasTarget ? 1 : 0.35}
             className="transition-all duration-700 ease-out"
           />
         </svg>
