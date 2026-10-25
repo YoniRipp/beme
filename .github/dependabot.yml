@@ -27,3 +27,15 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+
+  # Docker base images. Nothing was watching these: the backend and frontend images sat on
+  # `node:20-alpine` through Node 20's end-of-life (April 2026) and silently stopped
+  # receiving security patches, which is how CVE-2026-111497 reached production. npm
+  # ecosystem entries do not see a Dockerfile `FROM`.
+  - package-ecosystem: docker
+    directories:
+      - /backend
+      - /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
