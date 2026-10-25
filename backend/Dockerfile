@@ -18,7 +18,7 @@
 # images, so a pinned patch would silently rot exactly the way 20 did. Rebuilds pick up
 # 22.x security patches on their own; revisit before 22 goes EOL (April 2027).
 #
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /repo
 
@@ -49,7 +49,7 @@ RUN npm run build --workspace backend \
 # Relative to the WORKDIR the layout is exactly the pre-workspace image: package.json is the
 # backend's, with dist/, migrations/ and scripts/ beside it, and node_modules resolves upward
 # to the hoisted workspace install at /repo/node_modules.
-FROM node:22-alpine
+FROM node:26-alpine
 
 WORKDIR /repo
 
