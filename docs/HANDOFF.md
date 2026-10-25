@@ -1207,3 +1207,98 @@ The `travelcard-io` repos are not cloned into this container, so none of them we
 at. The same question applies there and is worth asking separately: `travel-card-app`
 (NestJS), `travelcard-mcp-server`, `integrations-service`, and the Node runtime pinned in
 the ECS task definitions and Lambdas under `travel-card-terraform`.
+
+---
+
+## 2026-10-25 — proxy-addr CVE-2026-90711, and a correction
+
+### The bump
+
+`proxy-addr` 2.0.7 → **2.0.8** ([GHSA-jqcg-44mw-7w3h](https://github.com/advisories/GHSA-jqcg-44mw-7w3h),
+CVE-2026-90711, *critical*): an IPv4-mapped IPv6 address could match an IPv6 trust
+subnet across address families, so an allowlist check could admit an address outside
+its range.
+
+It is a transitive dependency — `express@4.22.3` declares `proxy-addr: ~2.0.7`, which
+already admits 2.0.8, so this is a **lockfile-only change** and Express is untouched.
+
+### Correction: it was not reachable here
+
+This was previously written up as the advisory with "a real path", on the grounds that
+`backend/app.ts:66` sets `app.set('trust proxy', 1)` and the rate limiter keys on client
+IP. **That was wrong, and backwards.**
+
+The entire 2.0.8 patch lives in `trustsubnet()` / `trustmulti()` — the subnet matchers,
+which are *only* constructed by `proxyaddr.compile()`. Express's `compileTrust()`
+(`lib/utils.js:215`) short-circuits before ever reaching it:
+
+```js
+if (typeof val === 'number') {
+  // Support trusting hop count
+  return function(a, i){ return i < val };
+}
+...
+return proxyaddr.compile(val || []);   // <- only this path builds the vulnerable matcher
+```
+
+Verified by instrumenting `proxyaddr.compile` and resetting the counter *after* app
+construction (Express compiles its `false` default at init, which is what made a first,
+sloppier version of this test read as a false positive):
+
+| `trust proxy` | `proxyaddr.compile` called? |
+|---|---|
+| `1` (what we set) | **never** |
+| `'::ffff:10.0.0.0/104'` | yes |
+| `'10.0.0.0/8'` | yes |
+
+`req.ip` was also byte-identical across 2.0.7 and 2.0.8 for our config. So the bump is
+hygiene and future-proofing — it matters the day someone changes `trust proxy` to a
+subnet string — not the closing of a live hole. **The numeric form is precisely the one
+that does not reach the vulnerable code.**
+
+### Why the lockfile was edited by hand
+
+`npm update proxy-addr --package-lock-only` rewrote far more than proxy-addr. Among other
+churn it **stripped `libc: ["glibc"]` markers** from optional platform packages. Both
+images are `node:22-alpine`, i.e. musl — that metadata is how npm picks the right native
+binary. Carrying that into a security patch risked changing which binaries install on
+Alpine, so the single `node_modules/proxy-addr` entry was edited directly instead
+(version, `resolved`, `integrity`; 2.0.8 adds no dependencies and keeps the same
+`engines`, checked against the published tarball). `npm ci` then validated it: exit 0.
+
+The lockfile's stale `backend.engines` (`>=18`) was synced in the same commit — a loose
+end from the Node 22 change, which updated `backend/package.json` but not the lockfile's
+copy of it.
+
+### What this fixes in CI, and what it does not
+
+`npm audit` goes from *11 vulnerabilities (1 critical)* to *10, none critical* in the
+backend/frontend scopes. Since the jobs run `--audit-level=critical`, that flips
+**`security-audit (backend)` and `(frontend)` to passing**.
+
+**`security-audit (mobile)` stays red**, on a different critical: `shell-quote@1.10.0`
+(`quote()` command injection via a line terminator after a `{ comment }` token), pulled
+in by `react-devtools-core` — React Native's dev-tools chain. It is not a server
+dependency and is not reachable in a shipped app. Left alone deliberately; a fix is
+available if you want the job green.
+
+Still outstanding in the audit: `vite` 8.3.0–8.3.2, `zod` <4.6.6 (the fix is a major
+bump), `ip-address`, `source-map-js`.
+
+### The question worth more than the CVE
+
+With `trust proxy: 1`, `req.ip` resolves to the **rightmost `X-Forwarded-For` entry** —
+demonstrated directly: a request carrying `X-Forwarded-For: 1.2.3.4, ::ffff:10.0.0.9`
+yields `req.ip === '::ffff:10.0.0.9'`. `express-rate-limit@8.7.0` is configured with no
+`keyGenerator` (`backend/app.ts:23-33`), so it keys on exactly that value.
+
+Whether that is spoofable in production depends on Railway's edge:
+
+- if it **appends** the observed client IP to `X-Forwarded-For` (normal proxy behaviour,
+  and what Envoy does by default) → rightmost is the real client, and this is correct;
+- if it **passes the client's header through** without appending → rightmost is
+  attacker-controlled, and the rate limiter can be bypassed by rotating a header value.
+
+This cannot be settled from an agent session — it needs a check against the live
+deployment. Until it is settled, treat the IP-keyed rate limit as unproven rather than
+as broken.
