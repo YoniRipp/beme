@@ -54,7 +54,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: dist/lambdas/event-handler.handler
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Timeout: 30
       MemorySize: 256
       Environment:
@@ -75,7 +75,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: dist/lambdas/voice-handler.handler
-      Runtime: nodejs20.x
+      Runtime: nodejs22.x
       Timeout: 60
       MemorySize: 512
       Environment:

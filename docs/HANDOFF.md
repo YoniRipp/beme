@@ -1112,3 +1112,98 @@ The merge was still made rather than the branch deleted, so the history records 
 line was folded in deliberately. The conflicts were all cases where `main`'s newer work
 wins — notably `App.tsx`, where taking the branch's side would have restored the
 `@expo-google-fonts` barrel import and undone #350's 13MB -> 7.1MB export fix.
+
+---
+
+## 2026-10-25 — CVE-2026-111497 and the Node 20 problem underneath it
+
+### The CVE
+
+Node.js shipped a security release on 2026-10-21 carrying ten CVEs. The one being passed
+around is **CVE-2026-111497** ("Node2Shell", also circulating as "HTTP2Shell"), rated
+*high*. In the project's own words:
+
+> A flaw in the Brotli decoder bundled with Node.js allows malformed compressed input to
+> write past the end of an internal decoder buffer. An invalid block switch was reported as
+> a temporary need for more input instead of a permanent format error, so the streaming
+> decoder kept appending input bytes to an eight-byte internal buffer. An attacker who can
+> supply Brotli data that an application decompresses with `node:zlib` can corrupt process
+> memory, which can lead to a crash, disclosure of process memory, or remote code execution.
+
+Fixed in **22.23.4**, **24.22.1**, **26.12.1**. It is in the runtime, under `deps/brotli` —
+the npm package called `brotli` is a different thing and is not involved, so no dependency
+bump fixes it.
+
+### The actual finding was not the CVE
+
+Every Node surface in this repo ran **Node 20**: both `Dockerfile`s (backend and the
+frontend's static server), all ten CI jobs, and both Lambdas in `backend/template.yaml`.
+
+Node 20 reached end-of-life in April 2026. Its last release was **v20.20.2, 2026-03-24** —
+check `https://nodejs.org/dist/index.json` if you want to confirm it rather than take this
+on trust. It was not in the October release and will not be in any future one. **There was
+no patched Node 20 to upgrade to**, and the same is true of the other three *high*-severity
+CVEs in that release (a `dns.resolve` NUL-truncation bypass and two TLS hostname-
+verification bypasses). This was never a patch bump; it was a line move that was nine
+months overdue and that nothing in the repo was watching for.
+
+### Exposure, checked rather than assumed
+
+Two paths were tested, not reasoned about.
+
+**Inbound request bodies are not a path.** `express@4.22.3` resolves `body-parser@1.20.x`,
+whose `contentstream()` accepts `deflate`, `gzip` and `identity` only and answers
+`Content-Encoding: br` with a 415. Sending a brotli-encoded body to an `express.json()`
+route was confirmed to be rejected. (Note for later: `body-parser@2.x` is also in the tree,
+hoisted for something else. Express 5 would resolve to it, and 2.x does handle `br`. An
+Express 4 → 5 upgrade silently opens this path.)
+
+**Outbound HTTP is a path, and "we don't use brotli" is not a defence.** Node's global
+`fetch()` advertises `accept-encoding: gzip, deflate` — it does *not* ask for brotli — and
+decompresses a `Content-Encoding: br` response anyway. Verified directly on v22.22.0: a
+local server that replies `br` to a request that never asked for it still round-trips
+through `node:zlib`. **The remote server decides whether our process decodes brotli, not
+us.** That covers every outbound call the backend makes: Google / Facebook / Twitter token
+and profile lookups in `backend/src/services/auth.ts`, LemonSqueezy in
+`backend/src/services/subscription.ts`, Gemini, Resend and web-push.
+
+Nothing in `backend/`, `frontend/`, `mobile/`, `packages/` or `backend/mcp-server/` calls
+`zlib.brotli*` directly — which is exactly why the exposure was easy to miss.
+
+### What changed
+
+| File | Change |
+|---|---|
+| `backend/Dockerfile`, `frontend/Dockerfile` | `node:20-alpine` → `node:22-alpine`, both stages of each |
+| `.github/workflows/ci.yml`, `pwa-checks.yml` | `node-version: '20'` → `'22'` (10 jobs) |
+| `backend/template.yaml` | `Runtime: nodejs20.x` → `nodejs22.x`, both Lambdas |
+| `backend/package.json` | `engines.node` was `>=18`; now `>=22.23.4 <23 \|\| >=24.22.1 <25 \|\| >=26.12.1` |
+| `.nvmrc` | new, `22.23.4` |
+| `.github/dependabot.yml` | new `docker` ecosystem entry for `/backend` and `/frontend` |
+
+The base-image tags **float within the major** (`node:22-alpine`, not `node:22.23.4-alpine`)
+on purpose. Dependabot covered npm and `backend/mcp-server` but nothing was looking at a
+Dockerfile `FROM`, so a pinned patch would rot in exactly the way `node:20-alpine` did. A
+floating tag picks up 22.x security patches on the next rebuild without anyone remembering.
+Revisit before 22 goes EOL in April 2027 — which is what the new `docker` Dependabot entry
+is there to make noisy rather than silent.
+
+`engines` names the three patched lines rather than a single `>=` floor, because `>=22.23.4`
+would happily accept a vulnerable 24.0.0. It warns, it does not block: `.npmrc` sets
+`legacy-peer-deps` but not `engine-strict`.
+
+### Still needed, and not doable from an agent session
+
+1. **Railway has to actually rebuild.** Both services build from these Dockerfiles, so the
+   new base image only lands on the next deploy. Until then production is still on Node 20.
+2. **The Lambda runtime change needs a SAM deploy** — editing `template.yaml` does not move
+   a deployed function.
+3. **Local machines.** `nvm install` / `fnm use` against the new `.nvmrc`. Node 22.22.0 is
+   *not* far enough: the fix is 22.23.4.
+
+### Not checked
+
+The `travelcard-io` repos are not cloned into this container, so none of them were looked
+at. The same question applies there and is worth asking separately: `travel-card-app`
+(NestJS), `travelcard-mcp-server`, `integrations-service`, and the Node runtime pinned in
+the ECS task definitions and Lambdas under `travel-card-terraform`.
