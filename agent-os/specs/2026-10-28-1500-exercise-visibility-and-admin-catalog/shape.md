@@ -81,7 +81,41 @@ entirely in the **catalog**, which is the thing the picker reads.
   the field name invites the other reading, and `created_by` already holds the one it suggests.
 - **No admin screen in this spec.** The role-driven destination means an admin adds exercises
   through the form they already use. `GET`/`PATCH`/`DELETE /api/admin/exercises` stay unused by
-  any UI, exactly as they are today; see open question 3.
+  any UI, exactly as they are today; see open question 1.
+- **A private exercise may shadow a global name.** You can have your own "Bench Press"
+  alongside the catalog's, because a gym's "bench press" is sometimes a specific thing. The
+  partial indexes already permit this; what makes it *reachable* is the next decision.
+- **A private exercise is hard-deleted with its owner** — `ON DELETE CASCADE`, no soft delete.
+  Safe because `workouts.exercises` copies the name into `jsonb`, so logged history keeps the
+  movement and only the offer disappears. The alternative keeps dead rows in a table that only
+  grows.
+
+### Two different scopings, and confusing them is the bug
+
+This is the subtlety the rest of the spec hangs on, so it gets its own heading.
+
+| Path | Scoped to | Why |
+|---|---|---|
+| `list`, `findById` — **what you can see** | global **OR** yours | The picker must show the shared catalog plus your own movements |
+| `findByName` on create — **what you would be duplicating** | **yours only** | Resolving against global rows would hand you the catalog's row and no shadow could ever be created |
+
+The create path deliberately does **not** consider global rows. Typing "Bench Press" into the
+Add form gives you *your own* private "Bench Press"; the catalog's is untouched and you then
+see both, told apart by the chip.
+
+**This reverses a deliberate behaviour, and the comments that state it have to change too.**
+`services/exercise.ts:28-31`, `models/exercise.ts:192-195` and the identical comments in both
+clients' `handleCreate` all promise that *"an existing name resolves to that catalog row, so
+they still leave with a usable exercise"*. After this spec that is false for global rows and
+true only for your own. A stale comment asserting the opposite is worse than none.
+
+The cost, stated plainly: someone who skips the search and goes straight to Add gets a private
+duplicate of a catalog exercise without being told. Accepted — both clients show search results
+before the Add form, so reaching it is a deliberate "this is not here" act. The warn-first
+variant was considered and dropped as a second screen's worth of UI for an edge.
+
+One thing this buys back: a create-path lookup scoped to your own rows **cannot see another
+user's row at all**, which is strictly safer than the global-or-yours alternative.
 
 ## The two things that will break if nobody reads this
 
@@ -96,10 +130,11 @@ SELECT … FROM exercises WHERE lower(name) = lower($1) LIMIT 1     -- models/ex
 ```
 
 Once rows are private, typing a name another user privately owns **returns their row**, and the
-picker then displays it. The lookup has to be scoped to the caller's visible set (global +
-theirs). Two callers, both on the create path (`models/exercise.ts:216`,
-`services/exercise.ts:39`), so it is contained — but it is silent if missed, and it leaks
-exactly the data this spec exists to make private.
+picker then displays it. The lookup has to be scoped — and per the decision above, on the
+create path it scopes to the caller's **own rows only**, not to global-plus-theirs. Two
+callers, both on that path (`models/exercise.ts:216`, `services/exercise.ts:39`), so it is
+contained — but it is silent if missed, and it leaks exactly the data this spec exists to make
+private.
 
 ### 2. `ON CONFLICT (name)` stops resolving, and every creation 500s
 
@@ -131,18 +166,17 @@ as one.
 
 ## Open questions for the owner
 
-1. **Should a private exercise be allowed to shadow a global name?** The indexes above permit
-   it — you could have your own "Bench Press" alongside the catalog's. It is the honest answer
-   for someone whose gym's "bench press" means something specific, but it means a picker can
-   show two rows with one name, distinguished only by the chip. **Recommendation: allow it**,
-   and let the chip carry the distinction; forbidding it needs a cross-partition check no index
-   can express.
-2. **What happens to a private exercise already used in logged workouts when its owner deletes
-   it?** Nothing, today — `workouts.exercises` copies the name into `jsonb`, so history is
-   unaffected and the movement simply stops being offered. Worth confirming that is wanted
-   rather than a soft delete. **Recommendation: leave it**; the alternative keeps dead rows in
-   a table that only grows.
-3. **Does the unused admin exercise CRUD want a screen?** `GET`/`PATCH`/`DELETE
+1. **Does the unused admin exercise CRUD want a screen?** `GET`/`PATCH`/`DELETE
    /api/admin/exercises` have existed with no caller for some time, and a ~900-row catalog
    accumulates typos and junk. Out of scope here by the owner's choice.
    **Recommendation: schedule it separately** rather than growing this spec.
+
+### Resolved on 2026-10-28
+
+- *May a private exercise shadow a global name?* **Yes** — now a decision above.
+- *Hard delete or soft delete a private exercise with its owner?* **Hard**, via
+  `ON DELETE CASCADE` — now a decision above.
+- *What does the Add form return for a name already in the shared catalog?* **Your own private
+  copy.** This is what makes shadowing reachable rather than permitted-on-paper, and it is why
+  the create-path lookup scopes to your rows only. See "Two different scopings" above — it is
+  the one decision here that changes existing, deliberate behaviour.

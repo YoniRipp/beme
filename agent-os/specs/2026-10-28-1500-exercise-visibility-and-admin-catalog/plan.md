@@ -86,17 +86,25 @@ calls `exerciseService.list(filters)` with no user at all
 - [ ] **Step 1: `exerciseService.create` takes the caller's role**, not just the id, and sets
       `owner_id` to `null` for an admin and to the caller otherwise. The request body is
       unchanged, so a non-admin cannot ask for a global row.
-- [ ] **Step 2: Scope `findByName`** to `(owner_id IS NULL OR owner_id = $viewerId)`. **This is
-      the leak in `shape.md`** — unscoped, it hands the caller another user's private exercise
-      and the picker renders it.
+- [ ] **Step 2: Scope `findByName` to the caller's OWN rows** — `owner_id = $viewerId`, not
+      `(owner_id IS NULL OR owner_id = $viewerId)`. Read "Two different scopings" in
+      `shape.md` before writing this line; it is the one place in the spec where the create
+      path and the read path deliberately disagree, and using the read scoping here makes
+      shadowing unreachable. Unscoped entirely, it is the leak.
 - [ ] **Step 3: Repair `ON CONFLICT`.** `(name)` no longer infers anything once the constraint
       is gone; see the table in `shape.md` for the two clauses. Getting this wrong is a 500 on
       every creation, not a subtle bug.
-- [ ] **Step 4: Tests.** Two users create the same private name and both succeed (the case the
-      old UNIQUE made impossible); an admin's creation is visible to a second user; a
-      non-admin's is not; re-adding your own existing name returns it with `created: false`
+- [ ] **Step 4: Correct the comments that now lie.** `services/exercise.ts:28-31` and
+      `models/exercise.ts:192-195` both promise that an existing name resolves to the catalog
+      row. After step 2 that is true only for your own rows. Both clients carry the same
+      sentence in `handleCreate` and are fixed in Task 4.
+- [ ] **Step 5: Tests.** Two users create the same private name and both succeed (the case the
+      old UNIQUE made impossible); **a user creates a name that already exists globally and
+      gets their own row back, not the catalog's** (the shadowing decision, and the one a
+      future refactor is most likely to undo); an admin's creation is visible to a second user;
+      a non-admin's is not; re-adding your own existing name returns it with `created: false`
       rather than erroring.
-- [ ] **Step 5: Verify + commit.**
+- [ ] **Step 6: Verify + commit.**
 
 ## Task 4 — The clients say whose it is
 
@@ -104,14 +112,21 @@ Smallest task, and the only user-visible one. Ships last so the behaviour is alr
 underneath it.
 
 - [ ] **Step 1: A "Yours" chip** on rows where `isMine`, in `ExercisesScreen` and
-      `ExercisePickerSheet`. This is what makes two same-named rows (open question 1) legible.
+      `ExercisePickerSheet`. This is what makes two same-named rows legible — see the shadowing
+      decision in `shape.md`; without the chip a picker showing "Bench Press" twice is just
+      broken-looking.
 - [ ] **Step 2: Destination copy** under the create form — one line, driven off `user.role`,
       which both clients already receive. A user should not have to guess whether they are
       publishing to everyone.
-- [ ] **Step 3: Tests.** `await render(...)` and `findBy*` on the Expo side (RNTL 14 resolves
+- [ ] **Step 3: Fix the comment both clients repeat.** `ExercisesScreen.handleCreate` and
+      `ExercisePickerSheet.handleCreate` each say *"An existing name resolves to that catalog
+      row, so they still leave with a usable exercise."* After Task 3 they leave with **their
+      own** row. The select-after-create behaviour the comment is really about is unchanged
+      and worth keeping stated.
+- [ ] **Step 4: Tests.** `await render(...)` and `findBy*` on the Expo side (RNTL 14 resolves
       render asynchronously). Assert the chip appears only for `isMine` rows and that the copy
       differs by role.
-- [ ] **Step 4: Verify + commit.**
+- [ ] **Step 5: Verify + commit.**
 
 ## Verification for the whole spec
 
@@ -122,5 +137,11 @@ underneath it.
 - [ ] Manual, once, with two accounts: A adds "Tyre Carry"; B cannot see it in the picker or by
       hitting its id directly; B adds their own "Tyre Carry" and succeeds; an admin adds
       "Zercher Squat" and both A and B see it.
+- [ ] Manual, once: A types a name the shared catalog already has — "Bench Press" — into the
+      Add form and gets **their own** row, with both visible in the picker and only one
+      chipped. This is the decision most likely to look like a bug to someone who did not read
+      the spec.
+- [ ] Manual, once: delete an account that owns a private exercise; confirm the exercise is
+      gone and that a workout logged with it still shows the movement's name.
 - [ ] Manual, once: confirm an exercise added **before** this shipped is still visible to a user
       who did not create it. This is critical rule 1 for this spec, and it is one query.
