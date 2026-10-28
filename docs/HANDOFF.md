@@ -1112,3 +1112,193 @@ The merge was still made rather than the branch deleted, so the history records 
 line was folded in deliberately. The conflicts were all cases where `main`'s newer work
 wins — notably `App.tsx`, where taking the branch's side would have restored the
 `@expo-google-fonts` barrel import and undone #350's 13MB -> 7.1MB export fix.
+
+---
+
+## 2026-10-25 — CVE-2026-111497 and the Node 20 problem underneath it
+
+### The CVE
+
+Node.js shipped a security release on 2026-10-21 carrying ten CVEs. The one being passed
+around is **CVE-2026-111497** ("Node2Shell", also circulating as "HTTP2Shell"), rated
+*high*. In the project's own words:
+
+> A flaw in the Brotli decoder bundled with Node.js allows malformed compressed input to
+> write past the end of an internal decoder buffer. An invalid block switch was reported as
+> a temporary need for more input instead of a permanent format error, so the streaming
+> decoder kept appending input bytes to an eight-byte internal buffer. An attacker who can
+> supply Brotli data that an application decompresses with `node:zlib` can corrupt process
+> memory, which can lead to a crash, disclosure of process memory, or remote code execution.
+
+Fixed in **22.23.4**, **24.22.1**, **26.12.1**. It is in the runtime, under `deps/brotli` —
+the npm package called `brotli` is a different thing and is not involved, so no dependency
+bump fixes it.
+
+### The actual finding was not the CVE
+
+Every Node surface in this repo ran **Node 20**: both `Dockerfile`s (backend and the
+frontend's static server), all ten CI jobs, and both Lambdas in `backend/template.yaml`.
+
+Node 20 reached end-of-life in April 2026. Its last release was **v20.20.2, 2026-03-24** —
+check `https://nodejs.org/dist/index.json` if you want to confirm it rather than take this
+on trust. It was not in the October release and will not be in any future one. **There was
+no patched Node 20 to upgrade to**, and the same is true of the other three *high*-severity
+CVEs in that release (a `dns.resolve` NUL-truncation bypass and two TLS hostname-
+verification bypasses). This was never a patch bump; it was a line move that was nine
+months overdue and that nothing in the repo was watching for.
+
+### Exposure, checked rather than assumed
+
+Two paths were tested, not reasoned about.
+
+**Inbound request bodies are not a path.** `express@4.22.3` resolves `body-parser@1.20.x`,
+whose `contentstream()` accepts `deflate`, `gzip` and `identity` only and answers
+`Content-Encoding: br` with a 415. Sending a brotli-encoded body to an `express.json()`
+route was confirmed to be rejected. (Note for later: `body-parser@2.x` is also in the tree,
+hoisted for something else. Express 5 would resolve to it, and 2.x does handle `br`. An
+Express 4 → 5 upgrade silently opens this path.)
+
+**Outbound HTTP is a path, and "we don't use brotli" is not a defence.** Node's global
+`fetch()` advertises `accept-encoding: gzip, deflate` — it does *not* ask for brotli — and
+decompresses a `Content-Encoding: br` response anyway. Verified directly on v22.22.0: a
+local server that replies `br` to a request that never asked for it still round-trips
+through `node:zlib`. **The remote server decides whether our process decodes brotli, not
+us.** That covers every outbound call the backend makes: Google / Facebook / Twitter token
+and profile lookups in `backend/src/services/auth.ts`, LemonSqueezy in
+`backend/src/services/subscription.ts`, Gemini, Resend and web-push.
+
+Nothing in `backend/`, `frontend/`, `mobile/`, `packages/` or `backend/mcp-server/` calls
+`zlib.brotli*` directly — which is exactly why the exposure was easy to miss.
+
+### What changed
+
+| File | Change |
+|---|---|
+| `backend/Dockerfile`, `frontend/Dockerfile` | `node:20-alpine` → `node:22-alpine`, both stages of each |
+| `.github/workflows/ci.yml`, `pwa-checks.yml` | `node-version: '20'` → `'22'` (10 jobs) |
+| `backend/template.yaml` | `Runtime: nodejs20.x` → `nodejs22.x`, both Lambdas |
+| `backend/package.json` | `engines.node` was `>=18`; now `>=22.23.4 <23 \|\| >=24.22.1 <25 \|\| >=26.12.1` |
+| `.nvmrc` | new, `22.23.4` |
+| `.github/dependabot.yml` | new `docker` ecosystem entry for `/backend` and `/frontend` |
+
+The base-image tags **float within the major** (`node:22-alpine`, not `node:22.23.4-alpine`)
+on purpose. Dependabot covered npm and `backend/mcp-server` but nothing was looking at a
+Dockerfile `FROM`, so a pinned patch would rot in exactly the way `node:20-alpine` did. A
+floating tag picks up 22.x security patches on the next rebuild without anyone remembering.
+Revisit before 22 goes EOL in April 2027 — which is what the new `docker` Dependabot entry
+is there to make noisy rather than silent.
+
+`engines` names the three patched lines rather than a single `>=` floor, because `>=22.23.4`
+would happily accept a vulnerable 24.0.0. It warns, it does not block: `.npmrc` sets
+`legacy-peer-deps` but not `engine-strict`.
+
+### Still needed, and not doable from an agent session
+
+1. **Railway has to actually rebuild.** Both services build from these Dockerfiles, so the
+   new base image only lands on the next deploy. Until then production is still on Node 20.
+2. **The Lambda runtime change needs a SAM deploy** — editing `template.yaml` does not move
+   a deployed function.
+3. **Local machines.** `nvm install` / `fnm use` against the new `.nvmrc`. Node 22.22.0 is
+   *not* far enough: the fix is 22.23.4.
+
+### Not checked
+
+The `travelcard-io` repos are not cloned into this container, so none of them were looked
+at. The same question applies there and is worth asking separately: `travel-card-app`
+(NestJS), `travelcard-mcp-server`, `integrations-service`, and the Node runtime pinned in
+the ECS task definitions and Lambdas under `travel-card-terraform`.
+
+---
+
+## 2026-10-25 — proxy-addr CVE-2026-90711, and a correction
+
+### The bump
+
+`proxy-addr` 2.0.7 → **2.0.8** ([GHSA-jqcg-44mw-7w3h](https://github.com/advisories/GHSA-jqcg-44mw-7w3h),
+CVE-2026-90711, *critical*): an IPv4-mapped IPv6 address could match an IPv6 trust
+subnet across address families, so an allowlist check could admit an address outside
+its range.
+
+It is a transitive dependency — `express@4.22.3` declares `proxy-addr: ~2.0.7`, which
+already admits 2.0.8, so this is a **lockfile-only change** and Express is untouched.
+
+### Correction: it was not reachable here
+
+This was previously written up as the advisory with "a real path", on the grounds that
+`backend/app.ts:66` sets `app.set('trust proxy', 1)` and the rate limiter keys on client
+IP. **That was wrong, and backwards.**
+
+The entire 2.0.8 patch lives in `trustsubnet()` / `trustmulti()` — the subnet matchers,
+which are *only* constructed by `proxyaddr.compile()`. Express's `compileTrust()`
+(`lib/utils.js:215`) short-circuits before ever reaching it:
+
+```js
+if (typeof val === 'number') {
+  // Support trusting hop count
+  return function(a, i){ return i < val };
+}
+...
+return proxyaddr.compile(val || []);   // <- only this path builds the vulnerable matcher
+```
+
+Verified by instrumenting `proxyaddr.compile` and resetting the counter *after* app
+construction (Express compiles its `false` default at init, which is what made a first,
+sloppier version of this test read as a false positive):
+
+| `trust proxy` | `proxyaddr.compile` called? |
+|---|---|
+| `1` (what we set) | **never** |
+| `'::ffff:10.0.0.0/104'` | yes |
+| `'10.0.0.0/8'` | yes |
+
+`req.ip` was also byte-identical across 2.0.7 and 2.0.8 for our config. So the bump is
+hygiene and future-proofing — it matters the day someone changes `trust proxy` to a
+subnet string — not the closing of a live hole. **The numeric form is precisely the one
+that does not reach the vulnerable code.**
+
+### Why the lockfile was edited by hand
+
+`npm update proxy-addr --package-lock-only` rewrote far more than proxy-addr. Among other
+churn it **stripped `libc: ["glibc"]` markers** from optional platform packages. Both
+images are `node:22-alpine`, i.e. musl — that metadata is how npm picks the right native
+binary. Carrying that into a security patch risked changing which binaries install on
+Alpine, so the single `node_modules/proxy-addr` entry was edited directly instead
+(version, `resolved`, `integrity`; 2.0.8 adds no dependencies and keeps the same
+`engines`, checked against the published tarball). `npm ci` then validated it: exit 0.
+
+The lockfile's stale `backend.engines` (`>=18`) was synced in the same commit — a loose
+end from the Node 22 change, which updated `backend/package.json` but not the lockfile's
+copy of it.
+
+### What this fixes in CI, and what it does not
+
+`npm audit` goes from *11 vulnerabilities (1 critical)* to *10, none critical* in the
+backend/frontend scopes. Since the jobs run `--audit-level=critical`, that flips
+**`security-audit (backend)` and `(frontend)` to passing**.
+
+**`security-audit (mobile)` stays red**, on a different critical: `shell-quote@1.10.0`
+(`quote()` command injection via a line terminator after a `{ comment }` token), pulled
+in by `react-devtools-core` — React Native's dev-tools chain. It is not a server
+dependency and is not reachable in a shipped app. Left alone deliberately; a fix is
+available if you want the job green.
+
+Still outstanding in the audit: `vite` 8.3.0–8.3.2, `zod` <4.6.6 (the fix is a major
+bump), `ip-address`, `source-map-js`.
+
+### The question worth more than the CVE
+
+With `trust proxy: 1`, `req.ip` resolves to the **rightmost `X-Forwarded-For` entry** —
+demonstrated directly: a request carrying `X-Forwarded-For: 1.2.3.4, ::ffff:10.0.0.9`
+yields `req.ip === '::ffff:10.0.0.9'`. `express-rate-limit@8.7.0` is configured with no
+`keyGenerator` (`backend/app.ts:23-33`), so it keys on exactly that value.
+
+Whether that is spoofable in production depends on Railway's edge:
+
+- if it **appends** the observed client IP to `X-Forwarded-For` (normal proxy behaviour,
+  and what Envoy does by default) → rightmost is the real client, and this is correct;
+- if it **passes the client's header through** without appending → rightmost is
+  attacker-controlled, and the rate limiter can be bypassed by rotating a header value.
+
+This cannot be settled from an agent session — it needs a check against the live
+deployment. Until it is settled, treat the IP-keyed rate limit as unproven rather than
+as broken.

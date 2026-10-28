@@ -8,7 +8,17 @@
 # Railway must therefore have this service's Root Directory set to `/`, not `/backend` —
 # Root Directory is the build context, and a backend/ context cannot see the root lockfile.
 # See docs/RUNNING-RAILWAY.md.
-FROM node:20-alpine AS builder
+# Node 22, not 20. Node 20 reached end-of-life in April 2026 (last release v20.20.2,
+# 2026-03-24) and did NOT receive the October 2026 security release, which fixes
+# CVE-2026-111497 - an out-of-bounds write in the bundled Brotli decoder that Node rates
+# high and that can reach remote code execution. There is no patched 20.x and there never
+# will be, so this is a line move, not a patch bump. Minimum safe: 22.23.4 / 24.22.1 / 26.12.1.
+#
+# The tag floats within the major on purpose: Dependabot covers npm here, not Docker base
+# images, so a pinned patch would silently rot exactly the way 20 did. Rebuilds pick up
+# 22.x security patches on their own; revisit before 22 goes EOL (April 2027).
+#
+FROM node:22-alpine AS builder
 
 WORKDIR /repo
 
@@ -39,7 +49,7 @@ RUN npm run build --workspace backend \
 # Relative to the WORKDIR the layout is exactly the pre-workspace image: package.json is the
 # backend's, with dist/, migrations/ and scripts/ beside it, and node_modules resolves upward
 # to the hoisted workspace install at /repo/node_modules.
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /repo
 

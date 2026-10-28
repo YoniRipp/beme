@@ -5,7 +5,17 @@
 # (docker build -f frontend/Dockerfile --build-arg VITE_API_URL=... .).
 # Two reasons: this repo is an npm workspace with a single root package-lock.json, and the
 # frontend imports @trackvibe/shared from packages/, which a frontend-only context cannot see.
-FROM node:20-alpine AS build
+# Node 22, not 20. Node 20 reached end-of-life in April 2026 (last release v20.20.2,
+# 2026-03-24) and did NOT receive the October 2026 security release, which fixes
+# CVE-2026-111497 - an out-of-bounds write in the bundled Brotli decoder that Node rates
+# high and that can reach remote code execution. There is no patched 20.x and there never
+# will be, so this is a line move, not a patch bump. Minimum safe: 22.23.4 / 24.22.1 / 26.12.1.
+#
+# The tag floats within the major on purpose: Dependabot covers npm here, not Docker base
+# images, so a pinned patch would silently rot exactly the way 20 did. Rebuilds pick up
+# 22.x security patches on their own; revisit before 22 goes EOL (April 2027).
+#
+FROM node:22-alpine AS build
 ARG VITE_API_URL
 ARG VITE_GOOGLE_CLIENT_ID
 ENV VITE_API_URL=$VITE_API_URL
@@ -26,7 +36,7 @@ COPY frontend ./frontend
 RUN npm run build --workspace frontend
 
 # Stage 2: serve static files (Express with COOP header for Google OAuth)
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 RUN npm init -y && npm install express

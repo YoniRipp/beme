@@ -383,7 +383,21 @@ export function Energy() {
               <div className="relative h-[132px] w-[132px]">
                 <svg viewBox="0 0 100 100" className="h-[132px] w-[132px] -rotate-90">
                   <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="11" />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="11" strokeLinecap="round" strokeDasharray={2 * Math.PI * 40} strokeDashoffset={2 * Math.PI * 40 * (1 - calPct)} className="transition-all duration-700 ease-out" />
+                  {/* With no target, `targetFraction` is null and `calPct` falls back to 0 --
+                      which offsets the arc by its whole circumference and hides it, leaving a
+                      dead grey ring beside three coloured ones. A full ring at reduced opacity
+                      instead reads as "this is the total" rather than "you logged nothing", and
+                      the dimming keeps it from being mistaken for a goal met at 100%. */}
+                  <circle
+                    cx="50" cy="50" r="40" fill="none"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth="11"
+                    strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 40}
+                    strokeDashoffset={calGoalTarget != null ? 2 * Math.PI * 40 * (1 - calPct) : 0}
+                    opacity={calGoalTarget != null ? 1 : 0.35}
+                    className="transition-all duration-700 ease-out"
+                  />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-[34px] font-extrabold tabular-nums leading-none tracking-tight">{Math.round(periodTotals.calories)}</span>
