@@ -1,6 +1,27 @@
 # Handoff — native client parity and App Store readiness
 
-**Written 2026-09-14. Last verified 2026-09-17 against `main` at `0d8511d`.**
+**Written 2026-09-14. Last verified 2026-10-28 against `main` at `11b315f`.**
+
+> **2026-10-28 — the single thing to know before reading on.** On **2026-09-21 eight of the
+> nine outstanding spec PRs were merged**: #306, #310, #311, #312, #313, #315, #316 and #320.
+> #317 had merged earlier, on 2026-09-16. **#304 (food Journal screen) is the one still
+> open.** Checked one by one with `gh pr view <n> --json files`: **all ten are spec-only**,
+> zero files outside `agent-os/` and `docs/`.
+>
+> Two consequences, and the second is a trap.
+>
+> 1. **The specs are in the repo now.** Everything below that says a spec "exists only on its
+>    own branch" or is "94+ commits behind `main`" is obsolete — read them at
+>    `agent-os/specs/`.
+> 2. **Every one of those numbers is now a merged PR that shipped no code.** This file already
+>    documents that trap for #317 ("anyone who looks up #317 will find a merged PR and
+>    reasonably conclude the work shipped — it did not"). As of 2026-09-21 it applies to the
+>    whole parity backlog. A merged PR number in this file means the SPEC landed; the
+>    implementation is a separate, mostly unwritten piece of work.
+>
+> The sections below have been corrected where they are now false and left alone where they
+> are still true. Per-PR scope measurements from 2026-09-17 are unchanged and still worth
+> reading — merging a spec did not make it smaller.
 
 Everything described here is pushed. Nothing in flight lives only on one machine, so this
 work can be picked up from a fresh clone.
@@ -128,7 +149,66 @@ packages and the root one has not been retried since.
 
 ## In flight — one PR with code
 
-### #337 · Self-service account deletion — the App Store blocker
+### #383 · The fitness profile, cycle tracking and first run on Expo
+
+`feat/mobile-profile-and-onboarding` → open. **This is #315's implementation**, which #315
+itself did not contain (see the note at the top: #315 merged 2026-09-21 as spec only).
+Client work in `mobile/` only — no backend change, no API-shape change; `GET`/`PUT
+/api/profile` already existed and already accepted partial writes.
+
+What it closes is not "a missing form". Expo could read the profile but only ever wrote one
+field of it, `units`, from the Units radio — so three features this client already ships were
+degraded: `WaterCard.tsx:29` divided by a `waterGoalGlasses` stuck at the column default of
+8, `CycleCard.tsx:37` fell back to 28 days, and `HomeScreen.tsx:388` renders `CycleCard` only
+when `cycleTrackingEnabled`, so that card could never appear at all. The documented
+workaround — set it on the web — did not work either: the web hides its own cycle switch
+unless `sex === 'female'`, and `sex` was equally unreachable from the phone.
+
+Adds `ProfileSection`, `CycleSection`, a five-step `SetupWizardScreen`, a `DateOfBirthInput`,
+and the first-run gate in `RootNavigator`.
+
+**Three things a reviewer should not have to rediscover:**
+
+- **The gate expression in the spec is wrong, and was not used.** `plan.md` Task 3 Step 4
+  transcribes `!profileLoading && !profile.id && !profile.setupCompleted` from
+  `frontend/src/pages/Home.tsx:149`. `useProfile` falls back to `UNLOADED_PROFILE` on a failed
+  read, and that fallback has no `id` and `setupCompleted: false` — indistinguishable, to that
+  expression, from the brand-new account it describes. So an established user who is merely
+  offline is put through first-run setup, and because finishing the wizard writes a profile,
+  they could overwrite their own height and weight. `shouldShowOnboarding` refuses to decide
+  on a failed read.
+- **Profile weights convert; `weight_entries` weights are tagged. The asymmetry is deliberate.**
+  `user_profiles.current_weight`/`target_weight` have no per-row unit column, and
+  `profile.units` cannot stand in as one — `SettingsScreen.reportUnits` rewrites it on every
+  Units-radio change, which would re-read a stored 80 kg as 80 lbs. That is exactly the
+  re-interpretation `packages/shared/src/domain/units.ts` exists to have prevented. But the
+  column is provably kilograms: its only two writers, `ProfileSection.tsx:97` and
+  `SetupWizard.tsx:152`, both hardcode "(kg)". So `'kg'` is passed to `displayWeight` as a
+  constant that a test pins, and the field is shown in the user's own system. **This diverges
+  from the web**, which still shows kg to an imperial user — owner's call to keep or flip.
+- **Date of birth is three numeric fields, not a native picker.** `shape.md` open question 2
+  recommended `@react-native-community/datetimepicker` without citing `mobile/CLAUDE.md`:
+  "every new native module means everyone rebuilds their dev client", which is also the call
+  `components/shared/DayPicker.tsx` already made and documented.
+
+Verified: `cd mobile && npx tsc --noEmit` exit 0, `npx jest -w 2` exit 0 — 70 suites / 730
+tests, against a 63/628 baseline on `main`. CI green on every pushed commit. **Not verified on
+a device or simulator** — the spec's two manual passes (onboard on Expo then open the web; ask
+the AI coach something personal) have not been done.
+
+### ~~#337 · Self-service account deletion — the App Store blocker~~ — MERGED 2026-09-18
+
+**Everything in this section is history.** #337 merged on 2026-09-18; `deleteAccount` is in
+`mobile/src/screens/SettingsScreen.tsx` on `main`, along with the Delete account section and
+`ConfirmDialog`'s typed confirmation. The merge conflict it warns about below was resolved in
+`f569e2c` ("Merge main into account deletion: keep both new Settings sections"), and the
+review findings in `1660705`. Kept because the `--write-tree` lesson below is worth not
+relearning, and because the unilateral decision it flags — scrubbing PII on deletion versus
+not writing PII into those tables at all — **was merged without the second opinion it asked
+for**, and is still owed one.
+
+The original section follows.
+
 `claude/appstore-account-deletion` → `953461f`. 28 files of application code, plus a merge of
 `main` and one fix taken on 2026-09-17 (below).
 
@@ -201,8 +281,15 @@ It touches `mobile/src/screens/SettingsScreen.tsx`, which is why #317's implemen
 
 Every PR in this table is **spec only** — verified by diffing each PR head against its merge
 base: zero files outside `agent-os/specs/` and `docs/`. None of them contains application
-code. They are all **94+ commits behind `main`**, and more than a dozen of the PRs they were
-written against have merged since.
+code. ~~They are all **94+ commits behind `main`**, and more than a dozen of the PRs they were
+written against have merged since.~~
+
+**Corrected 2026-10-28: they are no longer behind anything — all but #304 merged on
+2026-09-21, still spec only.** Re-verified per PR with `gh pr view <n> --json files`; #304 is
+the only row here whose PR is still open, and it is spec-only too. So the specs are in
+`agent-os/specs/` now and need no branch hunting; what has not been written is still the
+implementation of any of them, with the one exception in the #315 row below. "Not started" in
+this heading means the code, never the spec.
 
 **Four of them were re-derived from the code on 2026-09-17, one agent per PR, and every one came
 back smaller than its spec.** The sizes in the table below are those measurements, not the
@@ -213,7 +300,7 @@ this file opens by warning about.
 
 | PR | Scope |
 |---|---|
-| #315 · first-run and profile | Scope shrank once #302 added a profile client. Conflicts with #337. **Not re-derived** — the only one of these still sized from its spec. |
+| #315 · first-run and profile | **Implemented — see #383 under In flight.** The spec merged 2026-09-21 carrying no code. Its Task 1 ("Expo can read and write the profile") was already done before anyone started, in `core/api/health.ts` rather than the `core/api/profile.ts` the plan names — this row's "not re-derived" warning was right. Its #337 conflict is resolved: #337 merged first, and #383 is built on top of it. |
 | #311 · voice, barcode, meal tools, copy day | Three of its eight rows are already built. What is left is one **M** (voice), two **XS** (batch plumbing, "look up with AI") and an owner decision (barcode). |
 | #304 · food Journal screen | ~~A whole screen~~ — **S**. `EnergyScreen` already renders the Journal; what is left is four numeric/layout deltas and five polish items. Its Task 3 shipped elsewhere. |
 | #313 · workout recording | One of its five tasks is **already shipped** (weight). Voice is ~half its stated size. **Per-set logging is the genuine L** and the one capability that makes Expo feel like a different product. |
@@ -221,13 +308,19 @@ this file opens by warning about.
 | #320 · rest of App Store readiness | **Partly done — see below.** The in-app policy links, the privacy manifest and the Tier 2 error handling shipped 2026-09-17; nutrition labels, metadata, screenshots, age rating and guideline 4.2 remain, and most of what remains needs a person. The one sizeable piece of code left is 2.4, below. |
 | #306 · tab set, destinations, screen names | **Last, and alone.** It renames every tab and screen title, so it conflicts with every other Expo PR here. |
 
-### #312 and #316 shipped in #343 — but both PRs are still open
+### #312 and #316 shipped in #343 — ~~but both PRs are still open~~ both have since merged
 
-Read that before you look them up. #343 implemented both; the **spec PRs themselves were never
+Read that before you look them up. #343 implemented both; ~~the **spec PRs themselves were never
 merged**, so `agent-os/specs/2026-09-14-1112-parity-radius-elevation-spacing/` and
 `…-1114-parity-typography/` exist only on their own branches and are not in the repo. Anyone
 who finds two open PRs will reasonably conclude the work is outstanding. It is not — and this
-is the mirror image of the #317 trap below, where a merged PR shipped no code.
+is the mirror image of the #317 trap below, where a merged PR shipped no code.~~
+
+**Corrected 2026-10-28.** Both spec PRs merged on 2026-09-21, so the two spec directories are
+in the repo now and the "exists only on its own branch" warning is spent. The substance is
+unchanged and still the point: **the work shipped in #343, not in #312 or #316.** These two
+are the only entries here where a merged spec number does correspond to shipped code — and it
+shipped under a different number, which is its own way of being confusing.
 
 Neither spec should be merged as-is without reading the corrections below: three of #312's
 numbers and one of #316's are wrong against the code that shipped.
@@ -510,16 +603,35 @@ two do nothing — has never been written and has no branch. Anyone who looks up
 find a merged PR and reasonably conclude the work shipped. It did not. The spec is at
 `agent-os/specs/2026-09-14-1204-parity-settings-sections/`.
 
+**2026-10-28: this is no longer the exception, it is the rule.** The 2026-09-21 batch put
+eight more merged-but-codeless PR numbers in the same position — see the note at the top of
+this file. #317 is simply the first one anybody noticed.
+
+Two of its nine sections have since been built, by #383 rather than by any settings PR:
+Profile and Cycle Tracking, which are profile-backed and were owned by spec 1202 all along.
+Subscription/AI quota, Date Format, Notifications and Export remain, and
+`SETTINGS_SECTION_TITLES` in `mobile/src/screens/SettingsScreen.tsx` is still the list to
+edit — with its test — when adding any of them.
+
 ### Sequencing that matters
 
+Rewritten 2026-10-28. Two edges are live:
+
 ```
-#308 ──► #312, #316      (both rewrite mobile/src/theme.ts; #308 has landed, so both are open)
-#337 ──► #317-impl, #315 (all three touch SettingsScreen)
+#383 ──► #317-impl       (both touch SettingsScreen.tsx and its pinned SETTINGS_SECTION_TITLES
+                          test; whichever lands second rebases)
 everything ──► #306      (renames every screen; rebase it last)
 ```
 
-Resolved: `#319 ──► #299` (both merged), `#308` as a blocker, and `#312`/`#316` themselves,
-which merged as #343 on 2026-09-17. Only the two rows above are still live.
+**Resolved, and why — so nobody re-adds them.**
+
+- `#319 ──► #299` — both merged.
+- `#308 ──► #312, #316` — #308 landed, and #312/#316's work shipped as #343 on 2026-09-17.
+  (The spec PRs themselves merged on 2026-09-21, which changes nothing about the code.)
+- `#337 ──► #315` — #337 merged 2026-09-18, and #383, which is #315's implementation, is
+  built on top of it.
+- `#337 ──► #317-impl` — #337 has landed, so the settings implementation merges against it
+  rather than racing it. What actually constrains that work now is #383, above.
 
 ---
 

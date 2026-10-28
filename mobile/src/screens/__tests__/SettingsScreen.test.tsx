@@ -6,6 +6,7 @@ import { AuthProvider } from '../../context/AuthContext';
 import { loadStoredSettings, SettingsProvider } from '../../context/SettingsContext';
 import { ThemeProvider } from '../../theme/ThemeContext';
 import { authApi } from '../../core/api/auth';
+import { profileApi, type ApiProfile } from '../../core/api/health';
 import {
   DELETE_ACCOUNT_CONFIRMATION_PHRASE,
   SETTINGS_SECTION_TITLES,
@@ -16,9 +17,25 @@ jest.mock('../../core/api/auth', () => ({
   authApi: { me: jest.fn().mockRejectedValue(new Error('no session')), deleteAccount: jest.fn() },
 }));
 
+// The screen reads the profile now — the Profile section edits it, and the Cycle section is
+// gated on its `sex`. Mocked so each case can state the profile it is about.
+jest.mock('../../core/api/health', () => ({
+  profileApi: { get: jest.fn(), upsert: jest.fn() },
+}));
+
 jest.mock('react-native-toast-message', () => ({ show: jest.fn() }));
 
 const mockDeleteAccount = authApi.deleteAccount as jest.Mock;
+const mockProfileGet = profileApi.get as jest.Mock;
+const mockProfileUpsert = profileApi.upsert as jest.Mock;
+
+const serverProfile = (over: Partial<ApiProfile> = {}): ApiProfile => ({
+  id: 'profile-1',
+  setupCompleted: true,
+  waterGoalGlasses: 8,
+  cycleTrackingEnabled: false,
+  ...over,
+});
 
 // Three defects fixed here, all verified against the web (frontend/src/pages/Settings.tsx):
 //
@@ -37,6 +54,10 @@ const mockDeleteAccount = authApi.deleteAccount as jest.Mock;
 beforeEach(async () => {
   await AsyncStorage.clear();
   mockDeleteAccount.mockReset().mockResolvedValue(undefined);
+  mockProfileGet.mockReset().mockResolvedValue(serverProfile());
+  mockProfileUpsert.mockReset().mockImplementation((body) =>
+    Promise.resolve(serverProfile(body))
+  );
 });
 
 describe('SettingsScreen sections', () => {
@@ -51,11 +72,27 @@ describe('SettingsScreen sections', () => {
   it("offers exactly the sections that are real, working settings, in the web's order", () => {
     expect(SETTINGS_SECTION_TITLES).toEqual([
       'Account',
+      'Profile',
+      'Cycle Tracking',
       'Units',
       'Appearance',
       'Legal',
       'Delete account',
     ]);
+  });
+
+  /**
+   * Profile and Cycle sit between Account and Units on the web
+   * (`frontend/src/pages/Settings.tsx:62-67`), and this client had neither — which left
+   * `waterGoalGlasses`, `averageCycleLength` and `cycleTrackingEnabled` unwritable from the
+   * phone, so the Home water card counted to a permanent 8 and the cycle card could never
+   * appear at all.
+   */
+  it('puts the fitness profile where the web puts it, between Account and Units', () => {
+    const order = SETTINGS_SECTION_TITLES;
+    expect(order.indexOf('Profile')).toBeGreaterThan(order.indexOf('Account'));
+    expect(order.indexOf('Profile')).toBeLessThan(order.indexOf('Units'));
+    expect(order.indexOf('Cycle Tracking')).toBe(order.indexOf('Profile') + 1);
   });
 
   // App Store Guideline 5.1.1(v): an app that supports account creation must offer account
@@ -122,6 +159,57 @@ describe('Units section', () => {
     await r.findByText('Metric (kg, cm)');
     expect(r.queryByText('Kilograms (kg)')).toBeNull();
     expect(r.queryByText('Pounds (lbs)')).toBeNull();
+  });
+});
+
+describe('Profile section', () => {
+  it('offers the fitness profile this client could not edit at all', async () => {
+    const r = await renderScreen();
+
+    await r.findByText('Profile');
+    await r.findByLabelText('Height (cm)');
+    await r.findByText('Save Profile');
+  });
+
+  /**
+   * The water card's denominator. `WaterCard.tsx:29` divides by `profile.waterGoalGlasses`,
+   * and with nothing on Expo able to write it the goal was a permanent 8 for every
+   * phone-only user.
+   */
+  it('offers the water goal the Home water card counts against', async () => {
+    const r = await renderScreen();
+
+    await r.findByLabelText('Water goal (glasses)');
+  });
+});
+
+describe('Cycle section', () => {
+  /**
+   * The web renders its copy only for `profile.sex === 'female'`
+   * (`frontend/src/pages/Settings.tsx:64`), and this client matches rather than inventing a
+   * different condition — the two clients read and write one row.
+   */
+  it('offers cycle tracking to a user whose profile says female', async () => {
+    mockProfileGet.mockResolvedValue(serverProfile({ sex: 'female' }));
+    const r = await renderScreen();
+
+    await r.findByText('Cycle Tracking');
+    await r.findByLabelText('Enable cycle tracking');
+  });
+
+  it('does not offer it to a user whose profile says otherwise', async () => {
+    mockProfileGet.mockResolvedValue(serverProfile({ sex: 'male' }));
+    const r = await renderScreen();
+
+    await r.findByText('Profile');
+    expect(r.queryByText('Cycle Tracking')).toBeNull();
+  });
+
+  it('does not offer it before the user has said, which is the state every new account is in', async () => {
+    const r = await renderScreen();
+
+    await r.findByText('Profile');
+    expect(r.queryByText('Cycle Tracking')).toBeNull();
   });
 });
 

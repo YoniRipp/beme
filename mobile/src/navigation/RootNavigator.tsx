@@ -2,6 +2,8 @@ import React from 'react';
 import { DarkTheme, DefaultTheme, NavigationContainer, type Theme as NavigationTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
+import { useProfile } from '../hooks/useProfile';
+import { shouldShowOnboarding } from './onboardingGate';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
@@ -13,6 +15,7 @@ import { GoalFormScreen } from '../screens/GoalFormScreen';
 import { WeightFormScreen } from '../screens/WeightFormScreen';
 import { ExercisesScreen } from '../screens/ExercisesScreen';
 import { ChatScreen } from '../screens/ChatScreen';
+import { SetupWizardScreen } from '../screens/onboarding/SetupWizardScreen';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { fonts } from '../theme';
 import { useThemeContext } from '../theme/ThemeContext';
@@ -26,6 +29,26 @@ function AuthStack() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    </Stack.Navigator>
+  );
+}
+
+/**
+ * First run, as a navigator of its own rather than a screen inside `AppStack`.
+ *
+ * It replaces `AppStack` wholesale while it is up, which is what keeps the tab bar off
+ * screen for its duration — the web gets the same effect with `fixed inset-0 z-50`
+ * (`SetupWizard.tsx:72`). A `fullScreenModal` route inside `AppStack` would have left the
+ * tabs mounted underneath and given the wizard a dismiss gesture, and a half-dismissed
+ * first run is a user sitting on an empty Home with no way back to it.
+ *
+ * Shaped like `AuthStack` above for the same reason: `NavigationContainer` wants a
+ * navigator, not a bare component.
+ */
+function OnboardingStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="SetupWizard" component={SetupWizardScreen} />
     </Stack.Navigator>
   );
 }
@@ -165,6 +188,37 @@ function buildNavigationTheme(scheme: 'light' | 'dark', palette: { primary: stri
   };
 }
 
+/**
+ * The signed-in half, split out so `useProfile` is only ever called behind the auth check.
+ *
+ * Calling it in `RootNavigator` itself would fire `GET /api/profile` for signed-out users
+ * too — a guaranteed 401 on every visit to the login screen.
+ */
+function AuthedApp() {
+  const { profile, profileLoading, profileError } = useProfile();
+
+  /**
+   * Waiting rather than rendering `AppStack` and swapping it out underneath the user.
+   *
+   * It costs every returning user one request's worth of spinner on a cold start, on top of
+   * the auth check that already shows one, and that is the honest price of this line. What
+   * it buys: a brand-new account does not mount Home first — which would fire the seven
+   * queries Home makes (streaks, water, weight, cycle, goals, food, workouts) against an
+   * account that has none of it, on that user's very first session, only to cover the
+   * result a moment later. The web has no equivalent choice to make; it reloads the page
+   * (`Home.tsx:150`).
+   */
+  if (profileLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (shouldShowOnboarding({ profile, profileLoading, profileError })) {
+    return <OnboardingStack />;
+  }
+
+  return <AppStack />;
+}
+
 export function RootNavigator() {
   const { user, authLoading } = useAuth();
   const { scheme, colors: resolvedColors } = useThemeContext();
@@ -175,7 +229,7 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer theme={buildNavigationTheme(scheme, resolvedColors)}>
-      {user ? <AppStack /> : <AuthStack />}
+      {user ? <AuthedApp /> : <AuthStack />}
     </NavigationContainer>
   );
 }
