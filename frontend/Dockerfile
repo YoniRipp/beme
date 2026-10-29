@@ -15,7 +15,7 @@
 # images, so a pinned patch would silently rot exactly the way 20 did. Rebuilds pick up
 # 22.x security patches on their own; revisit before 22 goes EOL (April 2027).
 #
-FROM node:22-alpine AS build
+FROM node:25-alpine AS build
 ARG VITE_API_URL
 ARG VITE_GOOGLE_CLIENT_ID
 ENV VITE_API_URL=$VITE_API_URL
@@ -36,7 +36,7 @@ COPY frontend ./frontend
 RUN npm run build --workspace frontend
 
 # Stage 2: serve static files (Express with COOP header for Google OAuth)
-FROM node:22-alpine
+FROM node:25-alpine
 WORKDIR /app
 
 RUN npm init -y && npm install express
